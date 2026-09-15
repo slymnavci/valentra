@@ -9,8 +9,8 @@ namespace Valentra\Ajan;
 final class Http
 {
     public function __construct(
-        private readonly int $zamanAsimi = 20,
-        private readonly string $kullaniciAjani = 'ValentraBot/1.0 (+https://valentra.com.tr)',
+        private readonly int $zamanAsimi = 15,
+        private readonly string $kullaniciAjani = 'Mozilla/5.0 (compatible; ValentraBot/1.0; +https://valentra.com.tr)',
     ) {
     }
 
@@ -24,9 +24,15 @@ final class Http
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_MAXREDIRS      => 4,
             CURLOPT_TIMEOUT        => $this->zamanAsimi,
-            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 7,
             CURLOPT_USERAGENT      => $this->kullaniciAjani,
+            CURLOPT_HTTPHEADER     => [
+                'Accept: application/rss+xml, application/atom+xml, application/xml, text/xml, text/html;q=0.9, */*;q=0.8',
+                'Accept-Language: tr-TR,tr;q=0.9,en;q=0.8',
+            ],
             CURLOPT_ENCODING       => '',
+            CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
+            CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
             // Devasa bir dosyayı belleğe çekmemek için erken kes.
             CURLOPT_NOPROGRESS     => false,
             CURLOPT_PROGRESSFUNCTION => static function ($ch, $inecek, $inen) use ($enFazlaBayt): int {
@@ -63,9 +69,15 @@ final class Http
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_MAXREDIRS      => 4,
             CURLOPT_TIMEOUT        => $this->zamanAsimi,
-            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 7,
             CURLOPT_USERAGENT      => $this->kullaniciAjani,
+            CURLOPT_HTTPHEADER     => [
+                'Accept: application/rss+xml, application/atom+xml, application/xml, text/xml, text/html;q=0.9, */*;q=0.8',
+                'Accept-Language: tr-TR,tr;q=0.9,en;q=0.8',
+            ],
             CURLOPT_ENCODING       => '',
+            CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
+            CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
             CURLOPT_NOPROGRESS     => false,
             CURLOPT_PROGRESSFUNCTION => static function ($ch, $inecek, $inen) use ($enFazlaBayt): int {
                 return $inen > $enFazlaBayt ? 1 : 0;
