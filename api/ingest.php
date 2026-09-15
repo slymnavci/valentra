@@ -21,10 +21,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     ajan_json(405, ['hata' => 'Yalnızca POST kabul edilir.']);
 }
 
-$anahtarId = ajan_anahtar_dogrula();
+$anahtarId = ajan_anahtar_dogrula($neden);
 
 if ($anahtarId === null) {
-    ajan_json(401, ['hata' => 'Geçersiz veya eksik anahtar.']);
+    ajan_json(401, ajan_yetki_hatasi($neden));
 }
 
 $govde = file_get_contents('php://input');

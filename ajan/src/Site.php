@@ -25,7 +25,9 @@ final class Site
         [$kod, $govde] = $this->istek('GET', '/api/kaynaklar.php');
 
         if ($kod !== 200) {
-            throw new \RuntimeException("Yapılandırma alınamadı (HTTP {$kod}): {$govde}");
+            throw new \RuntimeException(
+                'Yapılandırma alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde)
+            );
         }
 
         $veri = json_decode($govde, true);
@@ -61,10 +63,35 @@ final class Site
         $veri = json_decode($govde, true);
 
         if ($kod !== 200 || !is_array($veri)) {
-            throw new \RuntimeException("Gönderim başarısız (HTTP {$kod}): {$govde}");
+            throw new \RuntimeException(
+                'Gönderim başarısız (HTTP ' . $kod . '): ' . $this->hatayiOku($govde)
+            );
         }
 
         return $veri;
+    }
+
+    /**
+     * Sunucunun JSON hata yanıtını okunur hâle getirir.
+     *
+     * Uç, sorunun ne olduğunu ve nasıl çözüleceğini "detay" alanında
+     * söylüyor; ham JSON yerine onu göstermek gerekiyor.
+     */
+    private function hatayiOku(string $govde): string
+    {
+        $veri = json_decode($govde, true);
+
+        if (!is_array($veri)) {
+            return $govde;
+        }
+
+        $mesaj = (string) ($veri['hata'] ?? 'bilinmeyen hata');
+
+        if (isset($veri['detay']) && $veri['detay'] !== '') {
+            $mesaj .= "\n  -> " . $veri['detay'];
+        }
+
+        return $mesaj;
     }
 
     /**

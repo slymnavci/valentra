@@ -18,8 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     ajan_json(405, ['hata' => 'Yalnızca GET kabul edilir.']);
 }
 
-if (ajan_anahtar_dogrula() === null) {
-    ajan_json(401, ['hata' => 'Geçersiz veya eksik anahtar.']);
+if (ajan_anahtar_dogrula($neden) === null) {
+    ajan_json(401, ajan_yetki_hatasi($neden));
 }
 
 $kaynaklar = db()->query(
