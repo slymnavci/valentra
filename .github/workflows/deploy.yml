@@ -28,6 +28,7 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
           mkdir -p includes
+
           python3 - <<'PY'
           import os
           import base64
@@ -61,7 +62,7 @@ jobs:
               exit('Veritabani baglantisi kurulamadi.');
           }}
           """
-          
+
           Path("includes/database.php").write_text(
               content,
               encoding="utf-8"
@@ -82,7 +83,6 @@ jobs:
           set net:reconnect-interval-base 5
           set ftp:ssl-allow no
           set ftp:passive-mode yes
-          set ftp:use-epsv no
 
           cd "$FTP_DIRECTORY"
 
