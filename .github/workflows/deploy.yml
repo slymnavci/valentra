@@ -1,0 +1,65 @@
+name: Deploy Valentra to IHS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository kodlarini al
+        uses: actions/checkout@v4
+
+      - name: FTP aracini kur
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
+      - name: Veritabani ayar dosyasini olustur
+        run: |
+          mkdir -p includes
+          cat > includes/database.php <<'PHP'
+          <?php
+
+          $dbHost = '${{ secrets.DB_HOST }}';
+          $dbName = '${{ secrets.DB_NAME }}';
+          $dbUser = '${{ secrets.DB_USERNAME }}';
+          $dbPass = '${{ secrets.DB_PASSWORD }}';
+
+          try {
+              $pdo = new PDO(
+                  "mysql:host={$dbHost};dbname={$dbName};charset=utf8mb4",
+                  $dbUser,
+                  $dbPass,
+                  [
+                      PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                      PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                      PDO::ATTR_EMULATE_PREPARES => false
+                  ]
+              );
+          } catch (PDOException $e) {
+              exit('Veritabani baglantisi kurulamadi.');
+          }
+          PHP
+
+      - name: IHS sunucusuna yukle
+        run: |
+          lftp -c "
+          set ftp:ssl-allow no;
+          set ftp:passive-mode yes;
+
+          open -u '${{ secrets.FTP_USERNAME }}','${{ secrets.FTP_PASSWORD }}' '${{ secrets.FTP_SERVER }}';
+
+          mirror --reverse --verbose \
+            --exclude-glob .git/ \
+            --exclude-glob .git/** \
+            --exclude-glob .github/ \
+            --exclude-glob .github/** \
+            --exclude-glob node_modules/ \
+            --exclude-glob node_modules/** \
+            ./ '${{ secrets.FTP_DIRECTORY }}';
+
+          bye
+          "
