@@ -276,6 +276,7 @@ function haber_guncelle(int $id, array $veri): bool
                 ozet = :ozet,
                 icerik = :icerik,
                 gorsel_url = :gorsel_url,
+                iframe_url = :iframe_url,
                 etiketler = :etiketler,
                 one_cikan = :one_cikan,
                 kategori_id = :kategori_id
@@ -290,6 +291,9 @@ function haber_guncelle(int $id, array $veri): bool
         'ozet'       => mb_substr($ozet !== '' ? $ozet : kisalt($icerik, 220), 0, 600, 'UTF-8'),
         'icerik'     => $icerik,
         'gorsel_url' => guvenli_url((string) ($veri['gorsel_url'] ?? '')) ?: null,
+        'iframe_url' => ($iframeUrl = guvenli_url((string) ($veri['iframe_url'] ?? ''))) !== ''
+            ? mb_substr($iframeUrl, 0, 1000, 'UTF-8')
+            : null,
         'etiketler'  => mb_substr(trim((string) ($veri['etiketler'] ?? '')), 0, 400, 'UTF-8'),
         'one_cikan'  => !empty($veri['one_cikan']) ? 1 : 0,
         'kategori_id'=> ($veri['kategori_id'] ?? '') !== '' ? (int) $veri['kategori_id'] : null,
