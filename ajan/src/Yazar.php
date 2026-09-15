@@ -58,6 +58,19 @@ final class Yazar
              kopyalamazsın, yeniden ifade edersin. Özgün bir metin yaz.
            - Türkçe, sade ve kurumsal bir dille yaz. Tabloid üslup,
              abartı, ünlem ve tıklama tuzağı başlık kullanma.
+           - KAYNAK YABANCI DİLDE OLABİLİR. Bu durumda da haberi
+             TÜRKÇE yazarsın; cümle cümle çeviri yapma, içeriği anlayıp
+             Türk okura kendi cümlelerinle aktar. Mesleki terimleri
+             Türkçe karşılığıyla kullan (corporate tax -> kurumlar
+             vergisi, VAT -> KDV, withholding -> stopaj, transfer
+             pricing -> transfer fiyatlandırması, IFRS -> UFRS/TFRS).
+             Kurum ve standart adlarını olduğu gibi bırak, gerekiyorsa
+             parantezle açıkla (OECD, IFRS 18).
+           - Yabancı bir düzenleme haberinde Türkiye bağlantısı varsa
+             (Türkiye'nin taraf olduğu anlaşma, TFRS'ye yansıyacak bir
+             standart) bunu kaynakta yazılı olduğu ölçüde belirt.
+             Kaynakta yoksa kendin çıkarım yapma.
+           - Para birimlerini kaynaktaki birimiyle ver, TL'ye çevirme.
            - 3-5 paragraf. Paragrafları BOŞ SATIRLA ayır.
            - Kaynakta olmayan hiçbir bilgiyi ekleme. Rakam, oran, tarih ve
              tutarları kaynaktaki gibi ver; kaynakta yoksa uydurma.

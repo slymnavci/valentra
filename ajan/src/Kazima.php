@@ -27,7 +27,7 @@ final class Kazima
      * güvenilir olmadığı için tarih null bırakılır; kopya engeli zaten
      * kaynak adresi üzerinden çalışır.
      *
-     * @return list<array{baslik:string,baglanti:string,ozet:string,tarih:?string}>
+     * @return list<array{baslik:string,baglanti:string,ozet:string,tarih:?string,gorsel:string}>
      */
     public function oku(string $listeUrl, string $secici = '', int $enFazla = 40): array
     {
@@ -40,11 +40,14 @@ final class Kazima
         $bulunan = kazima_haberleri_bul($html, $listeUrl, $secici, $enFazla);
 
         return array_map(
+            // Gorsel liste sayfasindan degil haber sayfasindan alinir:
+            // listedeki kucuk resimler sikca kirpik ya da yer tutucu.
             static fn (array $h): array => [
                 'baslik'   => $h['baslik'],
                 'baglanti' => $h['baglanti'],
                 'ozet'     => '',
                 'tarih'    => null,
+                'gorsel'   => '',
             ],
             $bulunan
         );

@@ -25,6 +25,24 @@ final class Suzgec
         'yapılandırma', 'matrah artırımı', 'asgari kurumlar',
         'yeminli mali müşavir', 'mali müşavir', 'türmob', 'tebliğ', 'sirküler',
         'amortisman', 'istisna', 'muafiyet', 'vergi incelemesi', 'vergi cezası',
+        // Muhasebe ve raporlama standartlari. "muhasebe" ve "denetim"
+        // zayif listede tek puan aliyor; "TFRS 18 yayimlandi" gibi bir
+        // baslik bu yuzden esigi gecemeyip modele hic ulasmiyordu.
+        'tms', 'tfrs', 'ufrs', 'bobi frs', 'kums frs', 'kgk',
+        'finansal raporlama', 'bağımsız denetim', 'denetim standardı',
+        'muhasebe standardı', 'raporlama standardı', 'finansal tablo',
+        'enflasyon muhasebesi', 'vergi bülteni',
+        // Yabanci kaynaklar Ingilizce yayin yapiyor; Turkce terim listesi
+        // bu basliklarin hicbirini yakalamiyordu, hepsi modele hic
+        // ulasmadan eleniyordu. Kisa kisaltmalar (vat, tax) icerir()
+        // icinde ek payi almaz, yoksa "vatandas" ve "taxi" yakalanirdi.
+        'tax', 'taxation', 'vat', 'income tax', 'corporate tax',
+        'tax rate', 'tax reform', 'tax treaty', 'withholding',
+        'transfer pricing', 'pillar one', 'pillar two', 'beps',
+        'minimum tax', 'tax avoidance', 'tax evasion', 'tax ruling',
+        'ifrs', 'ias', 'accounting standard', 'auditing standard',
+        'financial reporting', 'oecd', 'e-invoicing', 'customs duty',
+        'excise duty', 'tax compliance', 'double taxation',
     ];
 
     /**
@@ -44,6 +62,13 @@ final class Suzgec
         'kapasite kullanım', 'tüketici güven', 'dış ticaret açığı',
         'ihracat rakamları', 'ithalat rakamları', 'teşvik paketi',
         'destek paketi', 'kredi garanti', 'yeniden değerleme oranı',
+        // Ingilizce ekonomi terimleri.
+        'inflation', 'interest rate', 'policy rate', 'rate cut',
+        'rate hike', 'central bank', 'unemployment rate', 'gdp',
+        'budget deficit', 'current account', 'trade deficit',
+        'consumer price', 'producer price', 'industrial production',
+        'economic growth', 'recession', 'fiscal policy', 'monetary policy',
+        'sovereign rating', 'credit rating',
     ];
 
     /** Tek başına zayıf; yalnızca bir başkasıyla birlikte sayılır. */
@@ -117,16 +142,33 @@ final class Suzgec
 
     private function normalize(string $metin): string
     {
-        // Türkçe küçültme mb_strtolower ile tam doğru değil: "İ" harfi
-        // "i" + U+0307 (birleşen üst nokta) olarak iner, böylece
-        // "İşsizlik" -> "i̇şsizlik" olur ve listedeki "işsizlik"
-        // terimiyle eşleşmez. Noktalı/noktasız I çiftini önce elle
-        // eşleyip, kalan birleşen noktaları da temizliyoruz.
-        $metin = str_replace(['İ', 'I'], ['i', 'ı'], $metin);
-        $metin = mb_strtolower($metin, 'UTF-8');
-        $metin = str_replace("\xCC\x87", '', $metin);
+        return (string) preg_replace('/\s+/u', ' ', $this->katla($metin));
+    }
 
-        return (string) preg_replace('/\s+/u', ' ', $metin);
+    /**
+     * Noktalı/noktasız i ayrımını kaldırarak küçültür.
+     *
+     * İki ayrı sorun var ve ikisi birbirini kesiyor:
+     *
+     * 1) mb_strtolower("İ") harfi "i" + U+0307 (birleşen üst nokta)
+     *    olarak indiriyor; "İşsizlik" bu yüzden listedeki "işsizlik"
+     *    terimiyle eşleşmiyordu.
+     * 2) Türkçe'de "I" harfinin küçüğü "ı", İngilizce'de "i". Metin iki
+     *    dilden de gelebildiği için tek bir kural yetmiyor: "I" harfini
+     *    Türkçe kuralıyla indirmek "IFRS" kısaltmasını "ıfrs" yapıp
+     *    yabancı kaynakların başlıklarını eleniyordu.
+     *
+     * Çözüm ikisini birden kapsıyor: noktalı ve noktasız i tek harfe
+     * katlanıyor. Terimler de aynı işlemden geçtiği için karşılaştırma
+     * tutarlı; "oranı" ile "orani" aynı şeye iniyor.
+     */
+    private function katla(string $metin): string
+    {
+        $metin = str_replace(['İ', 'I', 'ı'], 'i', $metin);
+        $metin = mb_strtolower($metin, 'UTF-8');
+
+        // mb_strtolower'in urettigi birlesen noktalar.
+        return str_replace("\xCC\x87", '', $metin);
     }
 
     /**
@@ -143,7 +185,22 @@ final class Suzgec
      */
     private function icerir(string $metin, string $terim): bool
     {
-        $desen = '/(?<![\p{L}\p{N}])' . preg_quote($terim, '/') . '\p{L}{0,8}(?![\p{L}])/u';
+        // Kisa kisaltmalarda ek payi verilmez.
+        //
+        // Ek payi Turkce icin gerekli ("vergi" -> "vergisi"), ama uc
+        // harfli bir kisaltmada felakete yol aciyor: "vat" araması
+        // "vatandas" kelimesini, "tax" araması "taxi" kelimesini
+        // yakalardi. Bu kisaltmalar zaten ek almadan yazilir, "KDV'nin"
+        // gibi yazimlarda da kesme isareti harf olmadigi icin sinir
+        // kurali tutuyor.
+        $ekPayi = mb_strlen($terim, 'UTF-8') <= 3 ? '' : '\p{L}{0,8}';
+
+        // Terim de metinle ayni katlamadan gecmeli, yoksa listedeki
+        // "işsizlik oranı" ile katlanmis metindeki "issizlik orani"
+        // hicbir zaman eslesmez.
+        $terim = $this->katla($terim);
+
+        $desen = '/(?<![\p{L}\p{N}])' . preg_quote($terim, '/') . $ekPayi . '(?![\p{L}])/u';
 
         return preg_match($desen, $metin) === 1;
     }

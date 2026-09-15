@@ -33,6 +33,27 @@ $kategoriler = db()->query(
     'SELECT ad, slug, aciklama FROM kategoriler WHERE aktif = 1 ORDER BY sira, ad'
 )->fetchAll();
 
+/*
+ * Bilinen haberlerin parmak izleri.
+ *
+ * Kopya engeli yazma aninda calisiyordu: ayni haber her calismada
+ * yeniden modele gidip ucretlendiriliyor, sonra "zaten vardi" diye
+ * atiliyordu. Ajan gunde bir kez kosarken bu kucuk bir israfti; gunde
+ * on kez kosunca maliyetin neredeyse tamami buna gidiyor.
+ *
+ * Parmak izlerini onden verip ajanin modele hic sormamasini sagliyoruz.
+ * Durum farketmez: reddedilmis bir haberi tekrar yazdirmak da istemiyoruz.
+ *
+ * 21 gun: beslemelerin geriye bakis penceresinden (en fazla 36 saat) kat
+ * kat uzun, ama liste sinirsiz buyumuyor.
+ */
+$parmaklar = db()->query(
+    'SELECT kaynak_parmak
+       FROM haberler
+      WHERE kaynak_parmak IS NOT NULL
+        AND olusturuldu >= DATE_SUB(NOW(), INTERVAL 21 DAY)'
+)->fetchAll(PDO::FETCH_COLUMN);
+
 ajan_json(200, [
     'kaynaklar' => array_map(static fn (array $k): array => [
         'id'          => (int) $k['id'],
@@ -44,4 +65,5 @@ ajan_json(200, [
         'tur'          => $k['tur'],
     ], $kaynaklar),
     'kategoriler' => $kategoriler,
+    'bilinen'     => array_values(array_map('strval', $parmaklar)),
 ]);

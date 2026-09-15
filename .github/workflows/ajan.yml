@@ -2,8 +2,21 @@ name: Vergi haberleri ajani
 
 on:
   schedule:
-    # Her gun 06:30 Turkiye saati (UTC+3) -> 03:30 UTC
-    - cron: '30 3 * * *'
+    # Gunde 10 kez, Turkiye saatiyle 05:20'den 23:20'ye kadar iki saat
+    # arayla. Cron UTC calisir, Turkiye UTC+3: 02:20 UTC = 05:20 TR.
+    #
+    # Gece 01:20-03:20 arasi atlandi: o saatlerde yeni haber cikmiyor,
+    # bos calisma GitHub dakikasi harciyor. Sabah 05:20 ise Resmi
+    # Gazete'nin erken yayinini yakalamak icin duruyor.
+    #
+    # Dakika 20: saat basi GitHub'da yogun ve zamanlanmis isler
+    # gecikebiliyor.
+    #
+    # Geriye bakis 6 saat: aralik iki saat oldugu icin 36 saat gereksiz
+    # genis. Bir calisma kacsa bile sonraki uc calisma ayni pencereyi
+    # tariyor, haber kaybolmaz. Sitede zaten olan haberler modele
+    # sorulmadigi icin ustuste binen pencere para harcamiyor.
+    - cron: '20 2,4,6,8,10,12,14,16,18,20 * * *'
   workflow_dispatch:
     inputs:
       mod:
@@ -80,7 +93,8 @@ jobs:
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
         run: |
-          BAYRAKLAR="--saat=${{ inputs.saat || '36' }} --enfazla=${{ inputs.enfazla || '25' }}"
+          # Zamanli calismada girdi yok; varsayilanlar burada.
+          BAYRAKLAR="--saat=${{ inputs.saat || '6' }} --enfazla=${{ inputs.enfazla || '25' }}"
 
           if [ "${{ inputs.kuru }}" = "true" ]; then
             BAYRAKLAR="$BAYRAKLAR --kuru"

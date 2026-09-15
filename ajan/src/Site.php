@@ -18,7 +18,7 @@ final class Site
     /**
      * Taranacak kaynaklar ve konu grupları.
      *
-     * @return array{kaynaklar:list<array<string,mixed>>,kategoriler:list<array<string,mixed>>}
+     * @return array{kaynaklar:list<array<string,mixed>>,kategoriler:list<array<string,mixed>>,bilinen:list<string>}
      */
     public function yapilandirma(): array
     {
@@ -39,6 +39,10 @@ final class Site
         return [
             'kaynaklar'   => $veri['kaynaklar'] ?? [],
             'kategoriler' => $veri['kategoriler'] ?? [],
+            // Eski surum bir site bu alani gondermez; bos liste ile
+            // calismak yine dogru, yalnizca kopya suzgeci devre disi
+            // kalir ve eski davranisa donulur.
+            'bilinen'     => $veri['bilinen'] ?? [],
         ];
     }
 
@@ -123,7 +127,18 @@ final class Site
         // baglanti kurma zaman asimi gorulebiliyor. IPv4'e zorlamak,
         // daha uzun baglanti suresi vermek ve gecici ag hatalarinda
         // yeniden denemek bu durumu buyuk olcude giderir.
-        for ($deneme = 1; $deneme <= 3; $deneme++) {
+        //
+        // Bekleme suresi kasten uzun: site yayina alinirken (FTP
+        // yuklemesi sirasinda) bir-iki dakika cevap vermeyebiliyor.
+        // Uc deneme 70 saniyeye sigiyordu ve bir deploy penceresine
+        // denk gelen calisma bu yuzden tamamen dusuyordu. Bes deneme
+        // ile pencere ~3,5 dakikaya cikiyor. Gonderim adimi ozellikle
+        // onemli: model cagrilari zaten yapilmis oluyor, burada
+        // vazgecmek para harcanmis sonucu cope atmak demek.
+        $beklemeler = [5, 15, 30, 60];
+        $enFazlaDeneme = count($beklemeler) + 1;
+
+        for ($deneme = 1; $deneme <= $enFazlaDeneme; $deneme++) {
             $ch = curl_init($adres);
 
             curl_setopt_array($ch, [
@@ -156,8 +171,8 @@ final class Site
                 break;
             }
 
-            if ($deneme < 3) {
-                sleep($deneme * 3);
+            if ($deneme < $enFazlaDeneme) {
+                sleep($beklemeler[$deneme - 1]);
             }
         }
 

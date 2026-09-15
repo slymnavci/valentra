@@ -84,12 +84,39 @@ try {
 $kaynaklar   = $yapilandirma['kaynaklar'];
 $kategoriler = $yapilandirma['kategoriler'];
 
+/*
+ * Sitede zaten bulunan haberlerin parmak izleri.
+ *
+ * Kopya engeli yalnizca yazma aninda calisiyordu; ayni haber her
+ * calismada yeniden modele gidip ucretlendiriliyor, sonra "zaten vardi"
+ * diye atiliyordu. Ajan sik kostugunda maliyetin buyuk kismi buna
+ * gidiyor. Artik bilinen adresler modele hic sorulmuyor.
+ *
+ * Parmak izi hesabi site tarafindaki haber_parmak_izi() ile birebir
+ * ayni olmali: kaynak adresi kucultulup kirpilir, sonra sha256.
+ * Ayrilirsa suzgec sessizce hicbir seyi yakalamaz.
+ */
+$bilinen = array_fill_keys($yapilandirma['bilinen'], true);
+
 if ($kaynaklar === []) {
     gunluk('Aktif kaynak yok. Yönetim panelinden kaynak ekleyin.');
     exit(0);
 }
 
-gunluk(count($kaynaklar) . ' kaynak, ' . count($kategoriler) . ' konu grubu alındı.');
+gunluk(
+    count($kaynaklar) . ' kaynak, ' . count($kategoriler) . ' konu grubu, '
+    . count($bilinen) . ' bilinen haber alındı.'
+);
+
+/** Site tarafindaki haber_parmak_izi() ile ayni hesap. */
+function parmak_izi(string $kaynakUrl, string $baslik): string
+{
+    $temel = $kaynakUrl !== ''
+        ? mb_strtolower(trim($kaynakUrl), 'UTF-8')
+        : 'baslik:' . mb_strtolower(trim(preg_replace('/\s+/u', ' ', $baslik) ?? ''), 'UTF-8');
+
+    return hash('sha256', $temel);
+}
 
 // --- 2 ve 3. Beslemeleri oku, ön elemeden geçir ---------------------------
 
@@ -123,9 +150,16 @@ foreach ($kaynaklar as $kaynak) {
     }
 
     $gecen = 0;
+    $zatenVar = 0;
 
     foreach ($girdiler as $girdi) {
         if (!$suzgec->gecer($girdi['baslik'], $girdi['ozet'])) {
+            continue;
+        }
+
+        // Sitede zaten olan haberi modele sormak bosa para.
+        if (isset($bilinen[parmak_izi($girdi['baglanti'], $girdi['baslik'])])) {
+            $zatenVar++;
             continue;
         }
 
@@ -137,7 +171,8 @@ foreach ($kaynaklar as $kaynak) {
         $gecen++;
     }
 
-    gunluk("  {$kaynak['ad']} ({$yontem}): " . count($girdiler) . " girdi, {$gecen} aday");
+    $zatenNotu = $zatenVar > 0 ? ", {$zatenVar} zaten var" : '';
+    gunluk("  {$kaynak['ad']} ({$yontem}): " . count($girdiler) . " girdi, {$gecen} aday{$zatenNotu}");
 }
 
 if ($adaylar === []) {
@@ -174,10 +209,22 @@ foreach ($gruplar as $grupNo => $grup) {
     // Sayfa metinleri once toplanir; model cagrisi tek seferde yapilir.
     $modelAdaylari = [];
 
-    foreach ($grup as $aday) {
+    /** @var array<int,string> Aday sirasina gore gorsel adresi */
+    $gorseller = [];
+
+    foreach ($grup as $sira => $aday) {
+        $okunan = $sayfa->oku($aday['girdi']['baglanti']);
+
+        // Gorsel once beslemeden, yoksa haber sayfasinin og:image'inden.
+        // Besleme gorseli daha guvenilir: siteyi yazan kisi haberin
+        // gorselini oraya koyuyor, og:image bazen genel site kapagi.
+        $gorseller[$sira] = ($aday['girdi']['gorsel'] ?? '') !== ''
+            ? (string) $aday['girdi']['gorsel']
+            : $okunan['gorsel'];
+
         $modelAdaylari[] = [
             'girdi'      => $aday['girdi'],
-            'sayfaMetni' => $sayfa->metin($aday['girdi']['baglanti']),
+            'sayfaMetni' => $okunan['metin'],
             'kaynakAdi'  => (string) $aday['kaynak']['ad'],
             'kaynakTuru' => (string) ($aday['kaynak']['tur'] ?? 'rss'),
         ];
@@ -238,6 +285,7 @@ foreach ($gruplar as $grupNo => $grup) {
             'kaynak_url'  => $girdi['baglanti'],
             'guven_skoru' => (int) ($sonuc['guven_skoru'] ?? 0),
             'ajan_notu'   => (string) ($sonuc['ajan_notu'] ?? ''),
+            'gorsel_url'  => $gorseller[$sira] ?? '',
         ];
 
         gunluk("  kabul (%{$sonuc['guven_skoru']}, {$sonuc['kategori']}) — {$sonuc['baslik']}");
@@ -272,6 +320,7 @@ if ($kuruCalisma) {
     foreach ($haberler as $haber) {
         echo PHP_EOL, '--- ', $haber['baslik'], ' ---', PHP_EOL;
         echo 'Grup: ', $haber['kategori'], ' | Güven: %', $haber['guven_skoru'], PHP_EOL;
+        echo 'Görsel: ', $haber['gorsel_url'] !== '' ? $haber['gorsel_url'] : '(yok)', PHP_EOL;
         echo 'Not: ', $haber['ajan_notu'], PHP_EOL;
         echo $haber['icerik'], PHP_EOL;
     }
@@ -288,6 +337,18 @@ try {
     $yanit = $site->gonder($haberler);
 } catch (Throwable $e) {
     fwrite(STDERR, 'Gönderim başarısız: ' . $e->getMessage() . "\n");
+
+    // Model cagrilari bu noktada zaten yapildi ve odendi. Gonderim
+    // dustugunde haberleri sessizce kaybetmek yerine gunluge dokuyoruz;
+    // boylece metin elde kaliyor, gerekirse panelden elle girilebiliyor.
+    fwrite(STDERR, "\nYazılan haberler aşağıda; site tekrar ayağa kalktığında\n");
+    fwrite(STDERR, "ajanı yeniden çalıştırmak yeterli, kopya engeli aynı haberi\n");
+    fwrite(STDERR, "iki kez eklemez.\n\n");
+    fwrite(
+        STDERR,
+        json_encode($haberler, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n"
+    );
+
     exit(1);
 }
 

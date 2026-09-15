@@ -43,8 +43,20 @@ if (!function_exists('besleme_url_birlestir')) {
      */
     function besleme_url_birlestir(string $taban, string $goreli): string
     {
+        $goreli = trim($goreli);
+
         if (preg_match('#^https?://#i', $goreli) === 1) {
             return $goreli;
+        }
+
+        // Semasi olan ama http/https olmayan adres goreli DEGILDIR.
+        // Reddedilmezse "javascript:alert(1)" tabanla birlestirilip
+        // "https://site/javascript:alert(1)" gibi ise yaramaz bir adrese
+        // donusuyor ve sema denetiminden gecip kirik <img> uretiyordu.
+        // ("//host/yol" bicimi semasiz mutlak adres, o asagida ele aliniyor.)
+        if (!str_starts_with($goreli, '//')
+            && preg_match('#^[a-z][a-z0-9+.\-]*:#i', $goreli) === 1) {
+            return '';
         }
 
         $parca = parse_url($taban);

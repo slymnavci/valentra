@@ -358,6 +358,77 @@ UPDATE kaynaklar SET liste_url = 'https://www.aa.com.tr/tr/ekonomi'
  WHERE ad = 'Anadolu Ajansı Ekonomi' AND liste_url IS NULL;
 
 -- ---------------------------------------------------------------------------
+-- Denetim ve danismanlik sirketleri
+--
+-- TMS/TFRS ve bagimsiz denetim haberciliginin asil kaynagi bunlar: KGK
+-- bir standardi yayimladiginda yorumu ve uygulama ornegini bu
+-- sirketlerin bultenlerinde buluyorsun. Vergi sirkulerleri de duzenli.
+--
+-- Hicbiri RSS yayinlamiyor; yalnizca kazima adresi verildi. Adresler bu
+-- ortamdan dogrulanamadi, "Kaynaklari sina" ile kontrol edin.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) VALUES
+    ('Deloitte Türkiye',        'https://www.deloitte.com/tr/tr.html', NULL,
+     'https://www.deloitte.com/tr/tr/services/tax/perspectives.html', 'web', 1),
+    ('PwC Türkiye',             'https://www.pwc.com.tr', NULL,
+     'https://www.pwc.com.tr/tr/hizmetlerimiz/vergi/bultenler.html', 'web', 1),
+    ('KPMG Türkiye',            'https://kpmg.com/tr/tr/home.html', NULL,
+     'https://kpmg.com/tr/tr/home/insights.html', 'web', 1),
+    ('BDO Türkiye',             'https://www.bdo.com.tr', NULL,
+     'https://www.bdo.com.tr/tr-tr/yayinlar', 'web', 1),
+    ('EY Türkiye',              'https://www.ey.com/tr_tr', NULL,
+     'https://www.ey.com/tr_tr/insights/tax', 'web', 1),
+    ('Grant Thornton Türkiye',  'https://www.grantthornton.com.tr', NULL,
+     'https://www.grantthornton.com.tr/tr/icgorulerimiz/', 'web', 1),
+    ('Vergi Dünyası',           'https://www.vergidunyasi.com.tr', NULL,
+     'https://www.vergidunyasi.com.tr/makaleler', 'web', 1);
+
+-- ---------------------------------------------------------------------------
+-- Yabanci kaynaklar
+--
+-- Uluslararasi vergi gundemi (OECD asgari kurumlar vergisi, AB KDV
+-- reformu, IFRS degisiklikleri) Turkiye'yi dogrudan etkiliyor ama Turkce
+-- basina gecikmeli ve eksik yansiyor. Ajan bu kaynaklari okuyup haberi
+-- TURKCE yaziyor: ceviri degil, kendi cumleleriyle yeniden yazim.
+--
+-- On eleyici Ingilizce terimleri de taniyor; yoksa bu basliklar modele
+-- hic ulasmadan elenirdi.
+--
+-- Adresler bu ortamdan dogrulanamadi, "Kaynaklari sina" ile kontrol edin.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) VALUES
+    -- Uluslararasi kurumlar: vergi gundeminin kaynagi
+    ('OECD Vergi',              'https://www.oecd.org',
+     NULL, 'https://www.oecd.org/en/topics/policy-issues/tax.html', 'resmi', 1),
+    ('Avrupa Komisyonu Vergi',  'https://taxation-customs.ec.europa.eu',
+     NULL, 'https://taxation-customs.ec.europa.eu/news_en', 'resmi', 1),
+    ('IFRS Foundation',         'https://www.ifrs.org',
+     NULL, 'https://www.ifrs.org/news-and-events/news/', 'resmi', 1),
+    ('IMF',                     'https://www.imf.org',
+     NULL, 'https://www.imf.org/en/News', 'resmi', 1),
+    ('IRS',                     'https://www.irs.gov',
+     NULL, 'https://www.irs.gov/newsroom', 'resmi', 1),
+
+    -- Uluslararasi mesleki yayinlar
+    ('Tax Foundation',          'https://taxfoundation.org',
+     'https://taxfoundation.org/feed/',        'https://taxfoundation.org/blog/', 'rss', 1),
+    ('Accountancy Age',         'https://www.accountancyage.com',
+     'https://www.accountancyage.com/feed/',   'https://www.accountancyage.com/category/tax/', 'rss', 1),
+    ('Tax Justice Network',     'https://taxjustice.net',
+     'https://taxjustice.net/feed/',           'https://taxjustice.net/blog/', 'rss', 1),
+    ('ICAEW',                   'https://www.icaew.com',
+     NULL, 'https://www.icaew.com/insights/tax-news', 'web', 1),
+    ('IFAC',                    'https://www.ifac.org',
+     NULL, 'https://www.ifac.org/knowledge-gateway', 'web', 1),
+
+    -- Uluslararasi ekonomi ajanslari
+    ('Reuters Business',        'https://www.reuters.com',
+     'https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best',
+     'https://www.reuters.com/business/', 'rss', 1),
+    ('Bloomberg Ekonomi',       'https://www.bloomberg.com',
+     NULL, 'https://www.bloomberg.com/economics', 'web', 1);
+
+-- ---------------------------------------------------------------------------
 -- Ekonomi grubu
 --
 -- Site vergi odakli ama ekonomi gundemi de izleniyor; ajan vergi disi
