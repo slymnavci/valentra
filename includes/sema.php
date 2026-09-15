@@ -187,6 +187,25 @@ function sema_yukselt(): array
         $yapilanlar[] = 'kategoriler.ust_id sutunu eklendi';
     }
 
+    // kaynaklar.besleme_url benzersiz olmali; yoksa sema her
+    // calistirildiginda INSERT IGNORE kopya kayit uretir.
+    if (!sema_indeks_var('kaynaklar', 'uq_kaynak_besleme')) {
+        // Kisiti ekleyebilmek icin once mevcut kopyalari temizle
+        // (her besleme adresinden en eskisini birak).
+        db()->exec(
+            'DELETE k FROM kaynaklar k
+               JOIN kaynaklar digeri
+                 ON digeri.besleme_url = k.besleme_url AND digeri.id < k.id'
+        );
+
+        try {
+            db()->exec('ALTER TABLE kaynaklar ADD UNIQUE KEY uq_kaynak_besleme (besleme_url)');
+            $yapilanlar[] = 'kaynaklar benzersizlik kisiti eklendi';
+        } catch (PDOException $e) {
+            error_log('[valentra] kaynak benzersizlik kisiti eklenemedi: ' . $e->getMessage());
+        }
+    }
+
     if (!sema_indeks_var('haberler', 'ix_haber_kategori')) {
         db()->exec('ALTER TABLE haberler ADD INDEX ix_haber_kategori (kategori_id, durum, yayin_tarihi)');
         $yapilanlar[] = 'kategori indeksi eklendi';
@@ -227,4 +246,25 @@ function sema_indeks_var(string $tablo, string $indeks): bool
     $ifade->execute(['tablo' => $tablo, 'indeks' => $indeks]);
 
     return (int) $ifade->fetchColumn() > 0;
+}
+
+/**
+ * Sema guncel mi? (panelde uyari gostermek icin)
+ *
+ * Tablolarin varligini degil, sonradan eklenen sutunlari kontrol eder;
+ * eksik sutun tipik olarak "veritabani guncellenmemis" demektir.
+ */
+function sema_guncel_mi(): bool
+{
+    try {
+        foreach ([['haberler', 'kategori_id'], ['kategoriler', 'ust_id']] as [$tablo, $sutun]) {
+            if (!sema_sutun_var($tablo, $sutun)) {
+                return false;
+            }
+        }
+    } catch (PDOException $e) {
+        return false;
+    }
+
+    return true;
 }

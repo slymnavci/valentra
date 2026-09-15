@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS kaynaklar (
     son_tarama    DATETIME      NULL,
     olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
+    UNIQUE KEY uq_kaynak_besleme (besleme_url),
     KEY ix_kaynak_aktif (aktif)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
