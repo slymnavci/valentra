@@ -82,9 +82,21 @@ final class Besleme
         }
 
         // RSS 1.0 / RDF: DW gibi bazı büyük yayıncılar item öğelerini
-        // channel altında değil doğrudan rdf:RDF kökünde taşır.
+        // channel altında değil doğrudan rdf:RDF kökünde taşır. RSS 1.0
+        // çoğu kez öğeleri varsayılan http://purl.org/rss/1.0/ ad alanına
+        // koyduğu için hem doğrudan hem namespace üzerinden bakılır.
         if (isset($xml->item)) {
             foreach ($xml->item as $oge) {
+                $ogeler[] = $this->rssOgesi($oge);
+            }
+
+            return $ogeler;
+        }
+
+        $rss10 = $xml->children('http://purl.org/rss/1.0/');
+
+        if ($rss10 !== null && isset($rss10->item)) {
+            foreach ($rss10->item as $oge) {
                 $ogeler[] = $this->rssOgesi($oge);
             }
 
