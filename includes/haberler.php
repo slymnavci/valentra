@@ -339,15 +339,15 @@ function kategori_listesi(bool $sadeceAktif = true): array
 function kategori_menusu(): array
 {
     $satirlar = db()->query(
-        'SELECT k.id, k.ad, k.slug, k.ust_id, k.sira,
+        "SELECT k.id, k.ad, k.slug, k.ust_id, k.sira,
                 COUNT(h.id) AS adet
            FROM kategoriler k
            LEFT JOIN haberler h
-             ON h.kategori_id = k.id AND h.durum = ' . db()->quote(HABER_YAYINDA) . '
+             ON h.kategori_id = k.id AND h.durum = " . db()->quote(HABER_YAYINDA) . "
           WHERE k.aktif = 1
              OR k.slug IN ('vergi-kanunlari','muhasebe-denetim','ekonomi','tms-tfrs','genel')
           GROUP BY k.id, k.ad, k.slug, k.ust_id, k.sira
-          ORDER BY k.sira, k.ad'
+          ORDER BY k.sira, k.ad"
     )->fetchAll();
 
     $altlar = [];
