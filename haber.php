@@ -68,6 +68,20 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <?php endforeach; ?>
     </div>
 
+    <?php $iframeUrl = guvenli_url((string) ($haber['iframe_url'] ?? '')); ?>
+    <?php if ($iframeUrl !== ''): ?>
+        <div class="gomulu-icerik">
+            <iframe
+                src="<?= e($iframeUrl) ?>"
+                title="<?= e($haber['baslik']) ?>"
+                loading="lazy"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allow="fullscreen; autoplay; encrypted-media; picture-in-picture"
+                allowfullscreen>
+            </iframe>
+        </div>
+    <?php endif; ?>
+
     <?php if ($haber['kaynak_url'] !== ''): ?>
         <div class="kaynak-kutusu">
             Bu haber,
