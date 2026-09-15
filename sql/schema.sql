@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS kaynaklar (
     son_tarama    DATETIME      NULL,
     olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_kaynak_besleme (besleme_url),
+    UNIQUE KEY uq_kaynak_besleme (besleme_url(190)),
     KEY ix_kaynak_aktif (aktif)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS haberler (
     ozet            VARCHAR(600)  NOT NULL DEFAULT '',
     icerik          MEDIUMTEXT    NOT NULL,
     gorsel_url      VARCHAR(500)  NULL,
+    iframe_url      VARCHAR(1000) NULL,
     etiketler       VARCHAR(400)  NOT NULL DEFAULT '',
 
     durum           ENUM('taslak','yayinda','reddedildi') NOT NULL DEFAULT 'taslak',
