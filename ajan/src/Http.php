@@ -44,4 +44,47 @@ final class Http
 
         return $govde;
     }
+
+    /**
+     * Tani amacli indirme: basarisizlikta da ayrinti dondurur.
+     *
+     * indir() hatayi yutup null dondurur; akis icin dogru ama "bu kaynak
+     * neden okunmuyor" sorusunu cevaplamiyor. Burada HTTP kodu, icerik
+     * turu ve curl hatasi birlikte geliyor.
+     *
+     * @return array{kod:int,tur:string,hata:string,boyut:int,govde:?string,adres:string}
+     */
+    public function dene(string $url, int $enFazlaBayt = 2_000_000): array
+    {
+        $ch = curl_init($url);
+
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS      => 4,
+            CURLOPT_TIMEOUT        => $this->zamanAsimi,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_USERAGENT      => $this->kullaniciAjani,
+            CURLOPT_ENCODING       => '',
+            CURLOPT_NOPROGRESS     => false,
+            CURLOPT_PROGRESSFUNCTION => static function ($ch, $inecek, $inen) use ($enFazlaBayt): int {
+                return $inen > $enFazlaBayt ? 1 : 0;
+            },
+        ]);
+
+        $govde = curl_exec($ch);
+
+        $sonuc = [
+            'kod'   => (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE),
+            'tur'   => (string) (curl_getinfo($ch, CURLINFO_CONTENT_TYPE) ?? ''),
+            'hata'  => curl_error($ch),
+            'boyut' => is_string($govde) ? strlen($govde) : 0,
+            'govde' => is_string($govde) ? $govde : null,
+            'adres' => (string) curl_getinfo($ch, CURLINFO_EFFECTIVE_URL),
+        ];
+
+        curl_close($ch);
+
+        return $sonuc;
+    }
 }

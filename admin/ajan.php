@@ -43,11 +43,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ayar_sil(AJAN_GITHUB_ANAHTAR);
         $bildirim = 'GitHub anahtarı silindi.';
 
-    } elseif ($islem === 'calistir' || $islem === 'calistir_kuru') {
+    } elseif ($islem === 'calistir' || $islem === 'calistir_kuru' || $islem === 'kaynak_testi') {
         $sonuc = ajan_tetikle(
             $islem === 'calistir_kuru',
             max(1, (int) ($_POST['saat'] ?? 36)),
             max(1, (int) ($_POST['enfazla'] ?? 25)),
+            $islem === 'kaynak_testi' ? 'kaynak-testi' : 'topla',
         );
 
         if ($sonuc['tamam']) {
@@ -114,11 +115,21 @@ require __DIR__ . '/ust.php';
 
                 <button type="submit" name="islem" value="calistir_kuru"
                         class="dugme">Kuru çalıştır (kaydetmeden dene)</button>
+
+                <button type="submit" name="islem" value="kaynak_testi"
+                        class="dugme">Kaynakları sına</button>
             </div>
 
             <p class="ipucu" style="margin:14px 0 0;">
                 Kuru çalışmada haberler kaydedilmez, yalnızca GitHub
                 kayıtlarında görünür. Metin kalitesini denemek için kullanışlı.
+            </p>
+
+            <p class="ipucu" style="margin:8px 0 0;">
+                <strong>Kaynakları sına:</strong> her kaynağın hem RSS hem
+                kazıma yolunu dener ve çalışmayanın nedenini yazar. Model
+                çağrısı yapmaz, siteye hiçbir şey yazmaz — ücretsizdir.
+                Sonuç GitHub kayıtlarında görünür.
             </p>
         </form>
     <?php endif; ?>

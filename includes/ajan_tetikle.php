@@ -38,7 +38,7 @@ function ajan_tetikleyebilir_mi(): bool
  *
  * @return array{tamam:bool,mesaj:string}
  */
-function ajan_tetikle(bool $kuru = false, int $saat = 36, int $enFazla = 25): array
+function ajan_tetikle(bool $kuru = false, int $saat = 36, int $enFazla = 25, string $mod = 'topla'): array
 {
     $anahtar = trim(ayar_oku(AJAN_GITHUB_ANAHTAR));
 
@@ -61,6 +61,9 @@ function ajan_tetikle(bool $kuru = false, int $saat = 36, int $enFazla = 25): ar
     $govde = json_encode([
         'ref'    => 'main',
         'inputs' => [
+            // Bilinmeyen bir mod GitHub'dan 422 dondurur; ikisiyle
+            // sinirlayip anlasilir hata veriyoruz.
+            'mod'     => $mod === 'kaynak-testi' ? 'kaynak-testi' : 'topla',
             'kuru'    => $kuru ? 'true' : 'false',
             'saat'    => (string) max(1, $saat),
             'enfazla' => (string) max(1, $enFazla),
@@ -94,6 +97,15 @@ function ajan_tetikle(bool $kuru = false, int $saat = 36, int $enFazla = 25): ar
 
     // Basarili tetikleme 204 doner, govde bostur.
     if ($kod === 204) {
+        if ($mod === 'kaynak-testi') {
+            return [
+                'tamam' => true,
+                'mesaj' => 'Kaynak testi başladı. Sonucu GitHub kayıtlarında '
+                         . 'göreceksiniz: hangi kaynak okunuyor, hangisi '
+                         . 'neden okunmuyor. Siteye hiçbir şey yazılmaz.',
+            ];
+        }
+
         return [
             'tamam' => true,
             'mesaj' => 'Ajan çalışmaya başladı. Haberler birkaç dakika içinde '

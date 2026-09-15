@@ -244,6 +244,28 @@ function sema_yukselt(array &$hatalar = []): array
         return true;
     });
 
+    // RSS'i olmayan kaynaklarin besleme_url alani NULL kalir ve MySQL
+    // birden fazla NULL'a izin verir; ad kisiti olmadan bu kaynaklar
+    // sema her calistiginda yeniden eklenirdi.
+    $adim('kaynak adi benzersizlik kisiti', static function (): bool {
+        if (sema_indeks_var('kaynaklar', 'uq_kaynak_ad')) {
+            return false;
+        }
+
+        // Ayni adli kopyalardan en eskisini birak.
+        db()->exec(
+            'DELETE k FROM kaynaklar k
+               JOIN kaynaklar digeri
+                 ON digeri.ad = k.ad AND digeri.id < k.id'
+        );
+
+        // ad VARCHAR(160): utf8mb4'te 640 bayt, 767 bayt sinirinin
+        // altinda kaldigi icin on ek gerekmiyor.
+        db()->exec('ALTER TABLE kaynaklar ADD UNIQUE KEY uq_kaynak_ad (ad)');
+
+        return true;
+    });
+
     $adim('kategori indeksi', static function (): bool {
         if (sema_indeks_var('haberler', 'ix_haber_kategori')) {
             return false;
@@ -369,6 +391,7 @@ function sema_ayrintili_durum(): array
 
     foreach ([
         'kaynaklar.uq_kaynak_besleme' => ['kaynaklar', 'uq_kaynak_besleme'],
+        'kaynaklar.uq_kaynak_ad'      => ['kaynaklar', 'uq_kaynak_ad'],
         'haberler.ix_haber_kategori'  => ['haberler', 'ix_haber_kategori'],
     ] as $ad => [$tablo, $indeks]) {
         try {

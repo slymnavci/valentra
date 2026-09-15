@@ -91,14 +91,20 @@ function kazima_kalip(string $url): string
 }
 
 /**
- * Listeleme sayfasındaki haber bağlantılarını bulur.
+ * Sayfadaki baglanti adaylarini toplar.
  *
- * @return list<array{baslik:string,baglanti:string}>
+ * kazima_haberleri_bul() ile kazima_tani() bu isi paylasiyor; ayni
+ * fonksiyonu kullandiklari icin panelin gosterdigi tani, ajanin
+ * gerceklestirdigi elemeyle birebir ayni.
+ *
+ * @return array{toplam_a:int,kapsam_var:bool,adaylar:array<string,array{baslik:string,baglanti:string,kalip:string}>}
  */
-function kazima_haberleri_bul(string $html, string $tabanUrl, string $secici = '', int $enFazla = 40): array
+function kazima_adaylari_topla(string $html, string $tabanUrl, string $secici = ''): array
 {
+    $bos = ['toplam_a' => 0, 'kapsam_var' => false, 'adaylar' => []];
+
     if (trim($html) === '') {
-        return [];
+        return $bos;
     }
 
     $belge = new DOMDocument();
@@ -183,13 +189,30 @@ function kazima_haberleri_bul(string $html, string $tabanUrl, string $secici = '
         ];
     }
 
+    return [
+        'toplam_a'   => count($baglantilar),
+        'kapsam_var' => $kapsam !== null,
+        'adaylar'    => $adaylar,
+    ];
+}
+
+/**
+ * Listeleme sayfasındaki haber bağlantılarını bulur.
+ *
+ * @return list<array{baslik:string,baglanti:string}>
+ */
+function kazima_haberleri_bul(string $html, string $tabanUrl, string $secici = '', int $enFazla = 40): array
+{
+    $toplama = kazima_adaylari_topla($html, $tabanUrl, $secici);
+    $adaylar = $toplama['adaylar'];
+
     if ($adaylar === []) {
         return [];
     }
 
     // Seçici verilmişse kapsam zaten daraltılmıştır; kalıba göre ayıklama
     // yapmadan hepsini döndür.
-    if ($kapsam !== null) {
+    if ($toplama['kapsam_var']) {
         return array_map(
             static fn (array $a): array => ['baslik' => $a['baslik'], 'baglanti' => $a['baglanti']],
             array_slice(array_values($adaylar), 0, $enFazla)
@@ -226,4 +249,51 @@ function kazima_haberleri_bul(string $html, string $tabanUrl, string $secici = '
     }
 
     return $sonuc;
+}
+
+/**
+ * Kazimanin neden sonuc vermedigini anlatir.
+ *
+ * Bir kaynak "okunamadi" dediginde sebebi tek basina bilinmiyor: sayfa
+ * bos mu geldi, baglantilar mi elendi, yoksa kalip esigi mi tutmadi?
+ * Burada her adimin sayisi ve en kalabalik adres kaliplari donuyor.
+ *
+ * @return array{
+ *     toplam_a:int, aday:int, kapsam_var:bool, en_iyi_kalip:string,
+ *     en_iyi_adet:int, kaliplar:array<string,int>, ornekler:list<string>,
+ *     sonuc:int
+ * }
+ */
+function kazima_tani(string $html, string $tabanUrl, string $secici = ''): array
+{
+    $toplama = kazima_adaylari_topla($html, $tabanUrl, $secici);
+    $adaylar = $toplama['adaylar'];
+
+    $sayimlar = [];
+
+    foreach ($adaylar as $aday) {
+        $sayimlar[$aday['kalip']] = ($sayimlar[$aday['kalip']] ?? 0) + 1;
+    }
+
+    arsort($sayimlar);
+
+    $enIyiKalip = $sayimlar === [] ? '' : (string) array_key_first($sayimlar);
+    $enIyiAdet  = $enIyiKalip === '' ? 0 : $sayimlar[$enIyiKalip];
+
+    $ornekler = [];
+
+    foreach (array_slice(array_values($adaylar), 0, 3) as $aday) {
+        $ornekler[] = $aday['baslik'] . ' -> ' . $aday['baglanti'];
+    }
+
+    return [
+        'toplam_a'     => $toplama['toplam_a'],
+        'aday'         => count($adaylar),
+        'kapsam_var'   => $toplama['kapsam_var'],
+        'en_iyi_kalip' => $enIyiKalip,
+        'en_iyi_adet'  => $enIyiAdet,
+        'kaliplar'     => array_slice($sayimlar, 0, 5, true),
+        'ornekler'     => $ornekler,
+        'sonuc'        => count(kazima_haberleri_bul($html, $tabanUrl, $secici)),
+    ];
 }

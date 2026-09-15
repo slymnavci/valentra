@@ -6,6 +6,13 @@ on:
     - cron: '30 3 * * *'
   workflow_dispatch:
     inputs:
+      mod:
+        description: 'Ne yapilsin'
+        type: choice
+        default: 'topla'
+        options:
+          - topla
+          - kaynak-testi
       kuru:
         description: 'Kuru calisma (siteye gonderme, sadece ciktiyi goster)'
         type: boolean
@@ -49,7 +56,21 @@ jobs:
         working-directory: ajan
         run: composer install --no-interaction --no-progress --prefer-dist
 
+      # Kaynak testi model cagrisi yapmaz ve siteye hicbir sey yazmaz;
+      # yalnizca hangi kaynagin okunabildigini raporlar. Testin burada
+      # kosmasi onemli: paylasimli hostingin CA deposu eksik oldugu icin
+      # panelden yapilan deneme bazi kaynaklarda yanlislikla SSL hatasi
+      # veriyor, ajan ise ayni kaynagi buradan okuyabiliyor.
+      - name: Kaynaklari sina
+        if: inputs.mod == 'kaynak-testi'
+        working-directory: ajan
+        env:
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: php kaynak_dene.php --saat=${{ inputs.saat || '36' }}
+
       - name: Ajani calistir
+        if: inputs.mod != 'kaynak-testi'
         working-directory: ajan
         env:
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}

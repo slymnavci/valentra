@@ -33,6 +33,10 @@ CREATE TABLE IF NOT EXISTS kaynaklar (
     olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_kaynak_besleme (besleme_url(190)),
+    -- Ad uzerinde de benzersizlik: RSS'i olmayan kaynaklarin besleme_url
+    -- alani NULL kalir, MySQL ise birden fazla NULL'a izin verir. Ad
+    -- kisiti olmasa sema her calistiginda bu kaynaklar kopyalanirdi.
+    UNIQUE KEY uq_kaynak_ad (ad),
     KEY ix_kaynak_aktif (aktif)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -261,6 +265,97 @@ UPDATE kaynaklar SET liste_url = 'https://www.ismmmo.org.tr/Duyurular'
 
 UPDATE kaynaklar SET liste_url = 'https://www.resmigazete.gov.tr/'
  WHERE ad = 'Resmî Gazete' AND liste_url IS NULL;
+
+-- ---------------------------------------------------------------------------
+-- Ekonomi kaynaklari
+--
+-- Iki katmanli: ustte veriyi ureten resmi kurumlar, altta ekonomi basini.
+-- Resmi kurumlar oncelikli, cunku "enflasyon aciklandi", "faiz karari" gibi
+-- haberler oradan cikar ve ikinci elden aktarilirken ayrinti kaybediyor.
+--
+-- Cogu kurum RSS yayinlamiyor; bu kayitlarda besleme_url NULL birakilip
+-- yalnizca kazima adresi veriliyor. Ajan RSS bulamazsa liste_url'i kazir.
+--
+-- Adreslerin hicbiri buradan dogrulanamadi (gelistirme ortamindan dis
+-- sitelere cikis kapali). Hangisinin calistigini gormek icin panelden
+-- "Kaynaklari sina" dugmesini kullanin; calismayani duzeltin ya da
+-- kapatin. Kapali kaynak taranmaz.
+-- ---------------------------------------------------------------------------
+
+-- Veriyi ureten kurumlar (kazima)
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) VALUES
+    ('TÜİK',                'https://data.tuik.gov.tr', NULL,
+     'https://data.tuik.gov.tr/Bulten/Index', 'resmi', 1),
+    ('TCMB',                'https://www.tcmb.gov.tr',  NULL,
+     'https://www.tcmb.gov.tr/wps/wcm/connect/TR/TCMB+TR/Main+Menu/Duyurular', 'resmi', 1),
+    ('BDDK',                'https://www.bddk.org.tr',  NULL,
+     'https://www.bddk.org.tr/Duyuru', 'resmi', 1),
+    ('SPK',                 'https://spk.gov.tr',       NULL,
+     'https://spk.gov.tr/duyuru-listesi', 'resmi', 1),
+    ('Rekabet Kurumu',      'https://www.rekabet.gov.tr', NULL,
+     'https://www.rekabet.gov.tr/tr/Guncel/duyurular', 'resmi', 1),
+    ('SGK',                 'https://www.sgk.gov.tr',   NULL,
+     'https://www.sgk.gov.tr/Duyuru', 'resmi', 1),
+    ('Ticaret Bakanlığı',   'https://www.ticaret.gov.tr', NULL,
+     'https://www.ticaret.gov.tr/duyurular', 'resmi', 1),
+    ('KOSGEB',              'https://www.kosgeb.gov.tr', NULL,
+     'https://www.kosgeb.gov.tr/site/tr/genel/duyurular', 'resmi', 1);
+
+-- Ekonomi basini (RSS, kazima yedekli)
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) VALUES
+    ('Dünya Gazetesi',      'https://www.dunya.com',
+     'https://www.dunya.com/rss',                    'https://www.dunya.com/ekonomi', 'rss', 1),
+    ('BigPara',             'https://bigpara.hurriyet.com.tr',
+     'https://bigpara.hurriyet.com.tr/rss/',         'https://bigpara.hurriyet.com.tr/haberler/ekonomi-haberleri/', 'rss', 1),
+    ('TRT Haber Ekonomi',   'https://www.trthaber.com',
+     'https://www.trthaber.com/ekonomi_articles.rss','https://www.trthaber.com/haber/ekonomi/', 'rss', 1),
+    ('CNN Türk Ekonomi',    'https://www.cnnturk.com',
+     'https://www.cnnturk.com/feed/rss/ekonomi/news','https://www.cnnturk.com/ekonomi', 'rss', 1),
+    ('Sözcü Ekonomi',       'https://www.sozcu.com.tr',
+     'https://www.sozcu.com.tr/feeds-rss-category-ekonomi', 'https://www.sozcu.com.tr/kategori/ekonomi/', 'rss', 1),
+    ('Cumhuriyet Ekonomi',  'https://www.cumhuriyet.com.tr',
+     'https://www.cumhuriyet.com.tr/rss/9',          'https://www.cumhuriyet.com.tr/ekonomi', 'rss', 1),
+    ('Para Analiz',         'https://www.paraanaliz.com',
+     'https://www.paraanaliz.com/feed/',             'https://www.paraanaliz.com/kategori/ekonomi/', 'rss', 1),
+    ('Ekonomi Gazetesi',    'https://www.ekonomigazetesi.com.tr',
+     'https://www.ekonomigazetesi.com.tr/rss',       'https://www.ekonomigazetesi.com.tr/ekonomi', 'rss', 1),
+    ('Fortune Türkiye',     'https://www.fortuneturkey.com',
+     'https://www.fortuneturkey.com/rss',            'https://www.fortuneturkey.com/ekonomi', 'rss', 1),
+    ('A Haber Ekonomi',     'https://www.ahaber.com.tr',
+     'https://www.ahaber.com.tr/rss/ekonomi.xml',    'https://www.ahaber.com.tr/ekonomi', 'rss', 1),
+    ('Star Ekonomi',        'https://www.star.com.tr',
+     'https://www.star.com.tr/rss/ekonomi.xml',      'https://www.star.com.tr/ekonomi/', 'rss', 1),
+    ('Yeni Şafak Ekonomi',  'https://www.yenisafak.com',
+     'https://www.yenisafak.com/rss?xml=ekonomi',    'https://www.yenisafak.com/ekonomi', 'rss', 1);
+
+-- Mevcut ekonomi kaynaklarina kazima yedegi: RSS adresi degisirse ajan
+-- sessizce bos donmek yerine duyuru sayfasini kazimayi dener.
+UPDATE kaynaklar SET liste_url = 'https://www.ekonomim.com/ekonomi'
+ WHERE ad = 'Ekonomim' AND liste_url IS NULL;
+
+UPDATE kaynaklar SET liste_url = 'https://www.bloomberght.com/ekonomi'
+ WHERE ad = 'Bloomberg HT' AND liste_url IS NULL;
+
+UPDATE kaynaklar SET liste_url = 'https://www.ntv.com.tr/ekonomi'
+ WHERE ad = 'NTV Ekonomi' AND liste_url IS NULL;
+
+UPDATE kaynaklar SET liste_url = 'https://www.hurriyet.com.tr/ekonomi/'
+ WHERE ad = 'Hürriyet Ekonomi' AND liste_url IS NULL;
+
+UPDATE kaynaklar SET liste_url = 'https://www.milliyet.com.tr/ekonomi/'
+ WHERE ad = 'Milliyet Ekonomi' AND liste_url IS NULL;
+
+UPDATE kaynaklar SET liste_url = 'https://www.haberturk.com/ekonomi'
+ WHERE ad = 'Habertürk Ekonomi' AND liste_url IS NULL;
+
+UPDATE kaynaklar SET liste_url = 'https://www.sabah.com.tr/ekonomi'
+ WHERE ad = 'Sabah Ekonomi' AND liste_url IS NULL;
+
+UPDATE kaynaklar SET liste_url = 'https://www.patronlardunyasi.com/ekonomi'
+ WHERE ad = 'Patronlar Dünyası' AND liste_url IS NULL;
+
+UPDATE kaynaklar SET liste_url = 'https://www.aa.com.tr/tr/ekonomi'
+ WHERE ad = 'Anadolu Ajansı Ekonomi' AND liste_url IS NULL;
 
 -- ---------------------------------------------------------------------------
 -- Ekonomi grubu
