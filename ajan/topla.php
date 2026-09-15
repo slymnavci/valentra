@@ -16,7 +16,7 @@ declare(strict_types=1);
  * yönetim panelindedir.
  *
  * Çalıştırma:
- *   php ajan/topla.php [--kuru] [--saat=36] [--enfazla=25]
+ *   php ajan/topla.php [--kuru] [--saat=36] [--enfazla=25] [--grup=5]
  */
 
 require_once __DIR__ . '/vendor/autoload.php';
@@ -36,7 +36,7 @@ date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
 /** Komut satırı seçenekleri */
-$secenekler = getopt('', ['kuru', 'saat::', 'enfazla::']);
+$secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::']);
 $kuruCalisma = isset($secenekler['kuru']);
 $saat        = max(1, (int) ($secenekler['saat'] ?? 36));
 $enFazlaAday = max(1, (int) ($secenekler['enfazla'] ?? 25));
@@ -158,71 +158,90 @@ $elenen    = 0;
 $hatali    = 0;
 $kotaBitti = false;
 
-foreach ($adaylar as $sira => $aday) {
-    $girdi  = $aday['girdi'];
-    $kaynak = $aday['kaynak'];
-    $no     = $sira + 1;
+// Adaylar gruplar halinde islenir: tek istekte birden cok haber.
+// Ucretsiz katmanda istek sayisi sinirli oldugu icin her haber icin ayri
+// cagri yapmak kotayi hemen tuketiyor.
+$grupBoyu = max(1, (int) ($secenekler['grup'] ?? 5));
+$gruplar  = array_chunk($adaylar, $grupBoyu);
 
-    // Ucretsiz katman dakikalik istek sinirina takilmasin diye adaylar
-    // arasinda kisa bir ara veriliyor.
-    if ($sira > 0) {
+gunluk(count($gruplar) . ' grup halinde işlenecek (grup başına en fazla ' . $grupBoyu . ' aday).');
+
+foreach ($gruplar as $grupNo => $grup) {
+    if ($grupNo > 0) {
         sleep(4);
     }
 
-    $kisaBaslik = mb_substr($girdi['baslik'], 0, 60, 'UTF-8');
+    // Sayfa metinleri once toplanir; model cagrisi tek seferde yapilir.
+    $modelAdaylari = [];
+
+    foreach ($grup as $aday) {
+        $modelAdaylari[] = [
+            'girdi'      => $aday['girdi'],
+            'sayfaMetni' => $sayfa->metin($aday['girdi']['baglanti']),
+            'kaynakAdi'  => (string) $aday['kaynak']['ad'],
+            'kaynakTuru' => (string) ($aday['kaynak']['tur'] ?? 'rss'),
+        ];
+    }
+
+    $no = $grupNo + 1;
 
     try {
-        $sayfaMetni = $sayfa->metin($girdi['baglanti']);
-
-        $sonuc = $yazar->isle(
-            $girdi,
-            $sayfaMetni,
-            (string) $kaynak['ad'],
-            (string) ($kaynak['tur'] ?? 'rss'),
-            $kategoriler,
-        );
+        $sonuclar = $yazar->topluIsle($modelAdaylari, $kategoriler);
     } catch (KotaBittiException $e) {
-        // Gunluk kota bitti: kalan adaylari denemek bosuna.
-        gunluk("  [{$no}] günlük model kotası doldu — kalan "
-            . (count($adaylar) - $sira) . " aday atlanıyor.");
+        $kalan = count($adaylar) - ($grupNo * $grupBoyu);
+        gunluk("  [grup {$no}] günlük model kotası doldu — kalan {$kalan} aday atlanıyor.");
         gunluk('  ' . $e->getMessage());
         $kotaBitti = true;
         break;
     } catch (Throwable $e) {
-        $hatali++;
-        gunluk("  [{$no}] HATA — {$kisaBaslik}: " . $e->getMessage());
+        $hatali += count($grup);
+        gunluk("  [grup {$no}] HATA: " . $e->getMessage());
         continue;
     }
 
-    if ($sonuc === null) {
-        $hatali++;
-        gunluk("  [{$no}] yanıt çözümlenemedi — {$kisaBaslik}");
+    if ($sonuclar === []) {
+        $hatali += count($grup);
+        gunluk("  [grup {$no}] yanıt çözümlenemedi.");
         continue;
     }
 
-    if (empty($sonuc['ilgili'])) {
-        $elenen++;
-        $neden = trim((string) ($sonuc['red_nedeni'] ?? 'belirtilmedi'));
-        gunluk("  [{$no}] vergi dışı — {$kisaBaslik} ({$neden})");
-        continue;
+    foreach ($grup as $sira => $aday) {
+        $girdi  = $aday['girdi'];
+        $kaynak = $aday['kaynak'];
+        $sonuc  = $sonuclar[$sira] ?? null;
+
+        $kisaBaslik = mb_substr($girdi['baslik'], 0, 60, 'UTF-8');
+
+        if ($sonuc === null) {
+            $hatali++;
+            gunluk("  [grup {$no}] yanıtta yok — {$kisaBaslik}");
+            continue;
+        }
+
+        if (empty($sonuc['ilgili'])) {
+            $elenen++;
+            $neden = trim((string) ($sonuc['red_nedeni'] ?? 'belirtilmedi'));
+            gunluk("  vergi dışı — {$kisaBaslik} ({$neden})");
+            continue;
+        }
+
+        $etiketler = $sonuc['etiketler'] ?? [];
+
+        $haberler[] = [
+            'baslik'      => (string) $sonuc['baslik'],
+            'ozet'        => (string) $sonuc['ozet'],
+            'icerik'      => (string) $sonuc['icerik'],
+            'etiketler'   => is_array($etiketler) ? implode(', ', $etiketler) : (string) $etiketler,
+            'kategori'    => (string) ($sonuc['kategori'] ?? 'genel'),
+            'kaynak_id'   => (int) $kaynak['id'],
+            'kaynak_adi'  => (string) $kaynak['ad'],
+            'kaynak_url'  => $girdi['baglanti'],
+            'guven_skoru' => (int) ($sonuc['guven_skoru'] ?? 0),
+            'ajan_notu'   => (string) ($sonuc['ajan_notu'] ?? ''),
+        ];
+
+        gunluk("  kabul (%{$sonuc['guven_skoru']}, {$sonuc['kategori']}) — {$sonuc['baslik']}");
     }
-
-    $etiketler = $sonuc['etiketler'] ?? [];
-
-    $haberler[] = [
-        'baslik'      => (string) $sonuc['baslik'],
-        'ozet'        => (string) $sonuc['ozet'],
-        'icerik'      => (string) $sonuc['icerik'],
-        'etiketler'   => is_array($etiketler) ? implode(', ', $etiketler) : (string) $etiketler,
-        'kategori'    => (string) ($sonuc['kategori'] ?? 'genel'),
-        'kaynak_id'   => (int) $kaynak['id'],
-        'kaynak_adi'  => (string) $kaynak['ad'],
-        'kaynak_url'  => $girdi['baglanti'],
-        'guven_skoru' => (int) ($sonuc['guven_skoru'] ?? 0),
-        'ajan_notu'   => (string) ($sonuc['ajan_notu'] ?? ''),
-    ];
-
-    gunluk("  [{$no}] kabul (%{$sonuc['guven_skoru']}, {$sonuc['kategori']}) — {$sonuc['baslik']}");
 }
 
 // --- 5. Siteye gönder ------------------------------------------------------

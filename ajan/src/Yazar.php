@@ -73,6 +73,52 @@ final class Yazar
         red_nedeni'ni tek cümleyle doldur.
         METIN;
 
+    /**
+     * Toplu sema: tek istekte birden cok haber degerlendirilir.
+     *
+     * Ucretsiz katmanda istek sayisi sinirli oldugu icin her haber icin
+     * ayri cagri yapmak kotayi hemen tuketiyor. Adaylar gruplanip tek
+     * istekte gonderilir; "sira" alani sonuclari adaylarla eslestirir.
+     *
+     * @var array<string,mixed>
+     */
+    private const TOPLU_SEMA = [
+        'type' => 'object',
+        'properties' => [
+            'sonuclar' => [
+                'type'  => 'array',
+                'description' => 'Her aday icin bir sonuc, sirasiyla',
+                'items' => self::HABER_SEMA_ITEM,
+            ],
+        ],
+        'required' => ['sonuclar'],
+    ];
+
+    /** @var array<string,mixed> */
+    private const HABER_SEMA_ITEM = [
+        'type' => 'object',
+        'properties' => [
+            'sira'        => ['type' => 'integer', 'description' => 'Adayin kullanici mesajindaki sira numarasi'],
+            'ilgili'      => ['type' => 'boolean', 'description' => 'Haber vergiyle ilgili mi'],
+            'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
+            'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı, en fazla 90 karakter'],
+            'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
+            'icerik'      => ['type' => 'string',  'description' => '3-5 paragraf, paragraflar boş satırla ayrılmış'],
+            'etiketler'   => [
+                'type'  => 'array',
+                'items' => ['type' => 'string'],
+                'description' => '2-4 vergi terimi',
+            ],
+            'kategori'    => ['type' => 'string',  'description' => 'Verilen konu grubu listesinden TAM olarak bir slug'],
+            'guven_skoru' => ['type' => 'integer', 'description' => '0-100 arası güven'],
+            'ajan_notu'   => ['type' => 'string',  'description' => 'Onaylayacak editöre tek cümlelik not'],
+        ],
+        'required' => [
+            'sira', 'ilgili', 'red_nedeni', 'baslik', 'ozet', 'icerik',
+            'etiketler', 'kategori', 'guven_skoru', 'ajan_notu',
+        ],
+    ];
+
     /** @var array<string,mixed> */
     private const SEMA = [
         'type' => 'object',
@@ -259,6 +305,146 @@ final class Yazar
         }
 
         throw new \RuntimeException('Gemini API hatası: ' . $sonMesaj);
+    }
+
+    /**
+     * Birden çok adayı tek istekte değerlendirir.
+     *
+     * Ücretsiz katmanda istek sayısı sınırlı; her haber için ayrı çağrı
+     * kotayı hemen tüketiyor. Beş adaylık bir grup tek istekte işlenince
+     * aynı iş beşte bir istekle yapılır.
+     *
+     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string}> $adaylar
+     * @param list<array<string,mixed>> $kategoriler
+     * @return array<int,array<string,mixed>> sira => sonuc
+     */
+    public function topluIsle(array $adaylar, array $kategoriler): array
+    {
+        if ($adaylar === []) {
+            return [];
+        }
+
+        $istem = $this->topluIstemHazirla($adaylar, $kategoriler);
+
+        $govde = [
+            'systemInstruction' => [
+                'parts' => [['text' => self::YONERGE]],
+            ],
+            'contents' => [[
+                'role'  => 'user',
+                'parts' => [['text' => $istem]],
+            ]],
+            'generationConfig' => [
+                // Grup basina daha fazla cikti gerekiyor.
+                'maxOutputTokens'  => 24000,
+                'responseMimeType' => 'application/json',
+                'responseSchema'   => self::TOPLU_SEMA,
+            ],
+        ];
+
+        $yanit   = $this->geminiIstegi($govde);
+        $parcalar = $yanit['candidates'][0]['content']['parts'] ?? [];
+
+        if (!is_array($parcalar)) {
+            return [];
+        }
+
+        foreach ($parcalar as $parca) {
+            if (!is_array($parca) || !isset($parca['text']) || !is_string($parca['text'])) {
+                continue;
+            }
+
+            $veri = json_decode($parca['text'], true);
+
+            if (!is_array($veri) || !isset($veri['sonuclar']) || !is_array($veri['sonuclar'])) {
+                continue;
+            }
+
+            $sonuclar = [];
+
+            foreach ($veri['sonuclar'] as $sonuc) {
+                if (!is_array($sonuc) || !array_key_exists('ilgili', $sonuc)) {
+                    continue;
+                }
+
+                // Sira numarasi 1'den baslar; dizi indisine cevriliyor.
+                $sira = (int) ($sonuc['sira'] ?? 0) - 1;
+
+                if ($sira >= 0 && $sira < count($adaylar)) {
+                    $sonuclar[$sira] = $sonuc;
+                }
+            }
+
+            return $sonuclar;
+        }
+
+        return [];
+    }
+
+    /**
+     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string}> $adaylar
+     * @param list<array<string,mixed>> $kategoriler
+     */
+    private function topluIstemHazirla(array $adaylar, array $kategoriler): string
+    {
+        $gruplar = $this->gruplariYaz($kategoriler);
+        $bloklar = [];
+
+        foreach ($adaylar as $sira => $aday) {
+            $no     = $sira + 1;
+            $girdi  = $aday['girdi'];
+            $tur    = $aday['kaynakTuru'] === 'resmi'
+                ? 'Birincil/resmî kaynak.'
+                : 'İkincil haber kaynağı.';
+
+            // Grup halinde gonderildigi icin sayfa metni kisaltiliyor;
+            // aksi halde istek gereksiz buyur ve model dagilir.
+            $metin = $aday['sayfaMetni'] !== ''
+                ? mb_substr($aday['sayfaMetni'], 0, 3000, 'UTF-8')
+                : '(Sayfa metni alınamadı; yalnızca başlık ve özet mevcut.)';
+
+            $bloklar[] = <<<METIN
+            ### ADAY {$no}
+            Kaynak: {$aday['kaynakAdi']} — {$tur}
+            Adres: {$girdi['baglanti']}
+            Başlık: {$girdi['baslik']}
+            Özet: {$girdi['ozet']}
+            Sayfa metni:
+            ---
+            {$metin}
+            ---
+            METIN;
+        }
+
+        $adayMetni = implode("\n\n", $bloklar);
+        $adet      = count($adaylar);
+
+        return <<<METIN
+        Konu grupları (kategori alanına bunlardan birinin slug'ını yaz):
+        {$gruplar}
+
+        Aşağıda {$adet} haber adayı var. HER BİRİNİ ayrı ayrı değerlendir
+        ve "sonuclar" dizisinde {$adet} sonuç döndür. Her sonucun "sira"
+        alanına ilgili adayın numarasını yaz (1'den {$adet}'e kadar).
+        Hiçbir adayı atlama; vergiyle ilgili olmayanlar için de ilgili
+        değerini false yapıp red_nedeni'ni doldur.
+
+        {$adayMetni}
+        METIN;
+    }
+
+    /** @param list<array<string,mixed>> $kategoriler */
+    private function gruplariYaz(array $kategoriler): string
+    {
+        $satirlar = [];
+
+        foreach ($kategoriler as $kategori) {
+            $aciklama = trim((string) ($kategori['aciklama'] ?? ''));
+            $satirlar[] = '- ' . $kategori['slug'] . ' (' . $kategori['ad'] . ')'
+                . ($aciklama !== '' ? ': ' . $aciklama : '');
+        }
+
+        return implode("\n", $satirlar);
     }
 
     /**
