@@ -76,7 +76,18 @@ jobs:
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           FTP_DIRECTORY: ${{ secrets.FTP_DIRECTORY }}
         run: |
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER" <<EOF
+          # IHS'in FTP sunucusu zaman zaman baglantiyi hic kabul etmiyor
+          # ("cd: max-retries exceeded — Connection timed out") ve deploy
+          # tamamen dusuyor. Bu uc kez yasandi; her seferinde kod dogru
+          # oldugu halde degisiklikler sunucuya hic gitmedi ve sorun
+          # ancak siteye bakilinca fark edildi.
+          #
+          # Sunucu genelde birkac dakika sonra aciliyor, o yuzden
+          # basarisiz yukleme artan beklemeyle tekrar deneniyor.
+          # Yukleme "mirror" oldugu icin tekrar denemek zararsiz:
+          # ayni dosyalar yeniden yazilir, yarim kalan yukleme tamamlanir.
+          yukle() {
+            lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER" <<EOF
           set cmd:fail-exit yes
           set net:timeout 20
           set net:max-retries 2
@@ -97,3 +108,25 @@ jobs:
 
           bye
           EOF
+          }
+
+          BEKLEME="30 60 120"
+          DENEME=1
+
+          for bekle in $BEKLEME ""; do
+            echo "--- Yukleme denemesi $DENEME ---"
+
+            if yukle; then
+              echo "Yukleme basarili (deneme $DENEME)."
+              exit 0
+            fi
+
+            if [ -z "$bekle" ]; then
+              echo "Yukleme $DENEME denemede de basarisiz oldu."
+              exit 1
+            fi
+
+            echo "Yukleme basarisiz. $bekle saniye sonra tekrar denenecek."
+            sleep "$bekle"
+            DENEME=$((DENEME + 1))
+          done

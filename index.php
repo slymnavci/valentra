@@ -11,7 +11,7 @@ require_once __DIR__ . '/includes/bootstrap.php';
 $sayfa = max(1, (int) ($_GET['sayfa'] ?? 1));
 
 $adet       = 10;   // izgaradaki kart sayisi
-$mansetAdet = 5;    // kaydiraktaki haber sayisi
+$mansetAdet = 10;   // kaydiraktaki haber sayisi
 
 $toplam = haber_yayinda_sayisi();
 
