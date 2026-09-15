@@ -7,7 +7,21 @@ $sayfaBasligi  = $sayfaBasligi ?? 'Valentra — Vergi Haberleri';
 $sayfaAciklama = $sayfaAciklama ?? 'Vergi mevzuatı, tebliğler ve ekonomi gündeminden derlenen güncel vergi haberleri.';
 $aktifKategori = $aktifKategori ?? '';
 
+require_once __DIR__ . '/seo.php';
+
 $menu = kategori_menusu();
+
+/*
+ * Arama motoru etiketleri.
+ *
+ * $seoGorsel ve $seoSema sayfalar tarafindan doldurulabilir; haber
+ * sayfasi kendi gorselini ve NewsArticle semasini veriyor, digerleri
+ * varsayilanla yetiniyor.
+ */
+$seoAdres  = $seoAdres  ?? gecerli_adres();
+$seoGorsel = $seoGorsel ?? (site_adresi() . '/assets/logo.svg');
+$seoTur    = $seoTur    ?? 'website';
+$seoSema   = $seoSema   ?? seo_site_semasi();
 
 /** Bu ust baslik ya da altlarindan biri aktif mi? */
 $menuAktif = static function (array $grup) use ($aktifKategori): bool {
@@ -31,6 +45,29 @@ $menuAktif = static function (array $grup) use ($aktifKategori): bool {
     <title><?= e($sayfaBasligi) ?></title>
     <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
     <link rel="stylesheet" href="<?= e(varlik('/assets/style.css')) ?>">
+
+    <?php /* Ayni icerige birden fazla adresten ulasiliyorsa hangisinin
+             asil oldugunu soyler; aksi halde arama motoru ikisini ayri
+             sayfa sanip ikisinin de degerini dusurur. */ ?>
+    <link rel="canonical" href="<?= e($seoAdres) ?>">
+
+    <meta property="og:type" content="<?= e($seoTur) ?>">
+    <meta property="og:site_name" content="Valentra">
+    <meta property="og:locale" content="tr_TR">
+    <meta property="og:title" content="<?= e($sayfaBasligi) ?>">
+    <meta property="og:description" content="<?= e($sayfaAciklama) ?>">
+    <meta property="og:url" content="<?= e($seoAdres) ?>">
+    <meta property="og:image" content="<?= e($seoGorsel) ?>">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<?= e($sayfaBasligi) ?>">
+    <meta name="twitter:description" content="<?= e($sayfaAciklama) ?>">
+    <meta name="twitter:image" content="<?= e($seoGorsel) ?>">
+
+    <?php /* Yapisal veri: arama motoruna sayfanin ne oldugunu acikca
+             soyler. Haber siteleri icin belirleyici — haber olarak
+             taninmayan sayfa Haberler sekmesine hic girmez. */ ?>
+    <script type="application/ld+json"><?= $seoSema ?></script>
 </head>
 <body>
     <header class="ust-bant">
@@ -49,7 +86,7 @@ $menuAktif = static function (array $grup) use ($aktifKategori): bool {
     <?php if ($menu !== []): ?>
         <nav class="menu-bant" aria-label="Konu grupları">
             <div class="sinirli menu-satir">
-                <a class="menu-oge <?= $aktifKategori === '' ? 'aktif' : '' ?>" href="/">Gündem</a>
+                <a class="menu-oge <?= $aktifKategori === '' ? 'aktif' : '' ?>" href="/">Ana Sayfa</a>
 
                 <?php foreach ($menu as $grup): ?>
                     <?php if ($grup['altlar'] === []): ?>
@@ -69,6 +106,22 @@ $menuAktif = static function (array $grup) use ($aktifKategori): bool {
                             </button>
 
                             <div class="menu-acilir">
+                                <?php
+                                /*
+                                 * Kanun metinleri sayfasi bu acilir
+                                 * menunun icinde. Kategori olarak
+                                 * eklenmiyor: haber grubu degil, ajan
+                                 * oraya haber atamamali ve yaninda
+                                 * haber sayisi gostermek anlamsiz olur.
+                                 */
+                                ?>
+                                <?php if ($grup['slug'] === 'vergi-kanunlari'): ?>
+                                    <a href="/kanunlar.php"
+                                       class="<?= ($aktifKategori ?? '') === 'kanunlar' ? 'aktif' : '' ?>">
+                                        <span>Kanun Metinleri</span>
+                                    </a>
+                                <?php endif; ?>
+
                                 <?php foreach ($grup['altlar'] as $alt): ?>
                                     <a href="/kategori.php?k=<?= e($alt['slug']) ?>"
                                        class="<?= $aktifKategori === $alt['slug'] ? 'aktif' : '' ?>">
@@ -82,6 +135,7 @@ $menuAktif = static function (array $grup) use ($aktifKategori): bool {
                         </div>
                     <?php endif; ?>
                 <?php endforeach; ?>
+
             </div>
         </nav>
 

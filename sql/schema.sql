@@ -189,23 +189,61 @@ UPDATE kategoriler SET aciklama = 'Diğer vergi gündemi' WHERE slug = 'genel';
 -- Menu ust basliklari ve alt gruplarin baglanmasi
 -- ---------------------------------------------------------------------------
 INSERT IGNORE INTO kategoriler (ad, slug, aciklama, sira) VALUES
-    ('Vergi Türleri',        'vergi-turleri',       'Kurumlar, gelir, KDV ve diğer vergiler', 10),
-    ('Usul ve Mevzuat',      'usul-ve-mevzuat',     'VUK, tebliğler, teşvik ve dijital belge düzeni', 20),
-    ('Muhasebe ve Denetim',  'muhasebe-denetim',    'Raporlama standartları ve denetim', 30);
+    ('Vergi Kanunları',      'vergi-kanunlari',     'Kurumlar, gelir, KDV, VUK, ÖTV ve diğer vergi düzenlemeleri', 10),
+    ('Muhasebe ve Denetim',  'muhasebe-denetim',    'Raporlama standartları ve denetim', 20);
 
-UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'vergi-turleri') AS t), sira = 10 WHERE slug = 'kurumlar-vergisi';
-UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'vergi-turleri') AS t), sira = 20 WHERE slug = 'gelir-vergisi';
-UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'vergi-turleri') AS t), sira = 30 WHERE slug = 'kdv';
-UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'vergi-turleri') AS t), sira = 40 WHERE slug = 'otv-ve-diger';
+UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'vergi-kanunlari') AS t), sira = 10 WHERE slug = 'kurumlar-vergisi';
+UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'vergi-kanunlari') AS t), sira = 20 WHERE slug = 'gelir-vergisi';
+UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'vergi-kanunlari') AS t), sira = 30 WHERE slug = 'kdv';
+UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'vergi-kanunlari') AS t), sira = 40 WHERE slug = 'otv-ve-diger';
 
-UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'usul-ve-mevzuat') AS t), sira = 10 WHERE slug = 'vergi-usul-kanunu';
-UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'usul-ve-mevzuat') AS t), sira = 20 WHERE slug = 'tesvik-yapilandirma';
-UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'usul-ve-mevzuat') AS t), sira = 30 WHERE slug = 'e-belge';
+UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'vergi-kanunlari') AS t), sira = 50 WHERE slug = 'vergi-usul-kanunu';
+UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'vergi-kanunlari') AS t), sira = 60 WHERE slug = 'e-belge';
+UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'vergi-kanunlari') AS t), sira = 70 WHERE slug = 'tesvik-yapilandirma';
 
-UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'muhasebe-denetim') AS t), sira = 10 WHERE slug = 'tms-tfrs';
+UPDATE kategoriler SET ust_id = NULL, sira = 40 WHERE slug = 'tms-tfrs';
 UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'muhasebe-denetim') AS t), sira = 20 WHERE slug = 'denetim';
 
 UPDATE kategoriler SET ust_id = NULL, sira = 40 WHERE slug = 'genel';
+
+-- ---------------------------------------------------------------------------
+-- Eski kurulumlarin menu yapisini tasima
+--
+-- Menu su hale getirildi:
+--   Ana Sayfa | Vergi Kanunlari | Muhasebe ve Denetim |
+--   Ekonomik Gundem | TMS/TFRS | Diger
+--
+-- Yeni kurulumda yukaridaki tohum zaten bu yapiyi kuruyor. Bu blok
+-- yalnizca daha once "Vergi Turleri" ve "Usul ve Mevzuat" basliklariyla
+-- kurulmus veritabanlarini tasiyor.
+--
+-- Slug'i UPDATE ile yeniden adlandirmiyoruz: tohum her calistiginda
+-- eski slug'i geri koyar, sonraki UPDATE de benzersizlik kisitina
+-- carpar. (Bu hata bir kez yapildi; sema ikinci calistirmada
+-- "Duplicate entry 'vergi-kanunlari'" ile dusuyordu.) Bunun yerine
+-- eski basliklar pasife aliniyor, cocuklari zaten yukarida yeni
+-- basliga baglandi.
+--
+-- Silinmiyorlar cunku eski haberlerin kategori_id'si bunlara isaret
+-- ediyor olabilir; silmek o haberleri gruptan koparirdi.
+-- ---------------------------------------------------------------------------
+UPDATE kategoriler SET aktif = 0 WHERE slug IN ('vergi-turleri', 'usul-ve-mevzuat');
+
+-- Ekonomi basligi "Ekonomik Gundem" oluyor (slug ayni kaliyor).
+UPDATE kategoriler
+   SET ad = 'Ekonomik Gündem',
+       aciklama = 'Enflasyon, faiz, kur, büyüme ve kamu maliyesi'
+ WHERE slug = 'ekonomi';
+
+-- Menu sirasi.
+UPDATE kategoriler SET ust_id = NULL, sira = 10 WHERE slug = 'vergi-kanunlari';
+UPDATE kategoriler SET ust_id = NULL, sira = 20 WHERE slug = 'muhasebe-denetim';
+UPDATE kategoriler SET ust_id = NULL, sira = 30 WHERE slug = 'ekonomi';
+
+-- "Genel" -> "Diger", en sonda.
+UPDATE kategoriler
+   SET ad = 'Diğer', aciklama = 'Diğer vergi ve mali gündem', sira = 900
+ WHERE slug = 'genel';
 
 -- ---------------------------------------------------------------------------
 -- Baslangic kaynak listesi

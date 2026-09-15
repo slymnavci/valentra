@@ -33,9 +33,10 @@ use Valentra\Ajan\{Besleme, Http, Site, Suzgec};
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
-$secenekler = getopt('', ['saat::', 'kaynak::']);
+$secenekler = getopt('', ['saat::', 'kaynak::', 'kanunlar']);
 $saat       = max(1, (int) ($secenekler['saat'] ?? 36));
 $suzgu      = trim((string) ($secenekler['kaynak'] ?? ''));
+$kanunModu  = isset($secenekler['kanunlar']);
 
 function yaz(string $mesaj = ''): void
 {
@@ -65,6 +66,57 @@ function ayar(string $ad): string
     }
 
     return trim($deger);
+}
+
+/*
+ * Kanun baglantilari kontrolu.
+ *
+ * kanunlar.php mevzuat.gov.tr adreslerini tertip numarasiyla uretiyor
+ * ve tertip elle giriliyor; yanlissa bag sessizce kirilir. Kontrol
+ * burada cunku gelistirme ortamindan dis sitelere cikis kapali, ajan
+ * ise GitHub uzerinde calisiyor. Siteye baglanmadigi icin oturum ya da
+ * anahtar da gerekmiyor.
+ */
+if ($kanunModu) {
+    require_once __DIR__ . '/../includes/kanunlar.php';
+
+    $http    = new Http();
+    $kanunlar = kanun_listesi();
+    $kirik   = 0;
+
+    yaz(count($kanunlar) . ' kanun bağlantısı sınanacak.');
+    yaz();
+
+    foreach ($kanunlar as $kanun) {
+        $adres = kanun_adresi($kanun);
+        $yanit = $http->dene($adres);
+        $iyi   = $yanit['kod'] >= 200 && $yanit['kod'] < 300 && $yanit['boyut'] > 2000;
+
+        if (!$iyi) {
+            $kirik++;
+        }
+
+        yaz(sprintf(
+            '  %-3s %-52s HTTP %d, %d bayt',
+            $iyi ? 'OK' : 'X',
+            mb_substr($kanun['ad'], 0, 52),
+            $yanit['kod'],
+            $yanit['boyut']
+        ));
+
+        if (!$iyi) {
+            yaz('      ' . $adres);
+            yaz('      Tertip numarası yanlış olabilir; mevzuat.gov.tr\'de');
+            yaz('      kanunu arayıp adresteki MevzuatTertip değerine bakın.');
+        }
+    }
+
+    yaz();
+    yaz($kirik === 0
+        ? 'Tüm kanun bağlantıları çalışıyor.'
+        : $kirik . ' bağlantı kırık; includes/kanunlar.php içinde düzeltin.');
+
+    exit($kirik === 0 ? 0 : 1);
 }
 
 $site    = new Site(ayar('VALENTRA_SITE_URL'), ayar('VALENTRA_AGENT_KEY'));

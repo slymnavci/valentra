@@ -12,7 +12,9 @@ declare(strict_types=1);
  * siralamasini kullanmiyor, yalnizca yayin tarihine bakiyor.
  */
 
-$sonEklenenler = haber_son_eklenenler(7);
+// Yan pencere genisledigi icin daha fazla haber sigiyor; kolon
+// yuksekligi ana kolona yaklasinca sagda bosluk kalmiyor.
+$sonEklenenler = haber_son_eklenenler(10);
 $yanMenu       = kategori_menusu();
 $etiketler     = haber_etiket_bulutu(12);
 

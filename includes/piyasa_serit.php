@@ -40,14 +40,14 @@ $bicimle = static fn (?float $s, int $hane): string =>
         <div class="piyasa-grup"<?= $kopya === 1 ? ' aria-hidden="true"' : '' ?>>
             <?php if ($piyasa['usd'] !== null): ?>
                 <span class="piyasa-oge">
-                    <span class="ad">DOLAR</span>
+                    <span class="ad">USD/TL</span>
                     <span class="deger" data-piyasa="usd"><?= e($bicimle($piyasa['usd'], 4)) ?></span>
                 </span>
             <?php endif; ?>
 
             <?php if ($piyasa['eur'] !== null): ?>
                 <span class="piyasa-oge">
-                    <span class="ad">EURO</span>
+                    <span class="ad">EUR/TL</span>
                     <span class="deger" data-piyasa="eur"><?= e($bicimle($piyasa['eur'], 4)) ?></span>
                 </span>
             <?php endif; ?>

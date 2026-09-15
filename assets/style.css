@@ -13,7 +13,9 @@
     --vurgu:         #1b4f8f;
     --golge:         0 1px 2px rgba(20, 33, 58, .05), 0 4px 16px rgba(20, 33, 58, .06);
     --yuvarlak:      10px;
-    --genislik:      1180px;
+    /* 1180px genis ekranda iki yanda genis bosluk birakiyordu; haber
+       sitelerinin alistigi yogunluga yaklasmak icin genisletildi. */
+    --genislik:      1460px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -231,7 +233,7 @@ img { max-width: 100%; display: block; }
 
 .kart-izgara {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 20px;
 }
 
@@ -788,8 +790,11 @@ a.menu-oge.aktif::after,
  */
 .ana-duzen {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 320px;
-    gap: 28px;
+    /* Yan pencere 320'den 380'e cikti: genisleyen kapta sagdaki bosluk
+       aksi halde buyuyordu, "Son Eklenen" basliklari da iki satira
+       sikismak yerine rahat okunuyor. */
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 30px;
     align-items: start;
 }
 
@@ -1155,4 +1160,67 @@ a.menu-oge.aktif::after,
 @media (prefers-reduced-motion: reduce) {
     .piyasa-akis { animation: none; }
     .piyasa-grup[aria-hidden="true"] { display: none; }
+}
+
+/* --- Kanun listesi -------------------------------------------------------- */
+
+.kanun-listesi {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.kanun {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.kanun:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(20, 33, 58, .07), 0 10px 26px rgba(20, 33, 58, .1);
+}
+
+.kanun > a {
+    display: block;
+    padding: 18px 20px 16px;
+    border-top: 3px solid var(--altin);
+    border-radius: var(--yuvarlak);
+}
+
+.kanun-ust {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.kanun-ust h3 {
+    margin: 0;
+    font-size: 1.02rem;
+    line-height: 1.3;
+}
+
+.kanun:hover h3 { color: var(--vurgu); }
+
+.kanun-no {
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--metin-soluk);
+    white-space: nowrap;
+}
+
+.kanun p {
+    margin: 0 0 12px;
+    font-size: .87rem;
+    color: var(--metin-soluk);
+    line-height: 1.5;
+}
+
+.kanun-bag {
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--vurgu);
 }

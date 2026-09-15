@@ -1,0 +1,9 @@
+# Valentra
+
+# Site haritasi PHP ile uretiliyor (haberler surekli degisiyor) ama
+# arama motorlari .xml uzantisini bekliyor.
+RewriteEngine On
+RewriteRule ^sitemap\.xml$ /sitemap.php [L]
+
+# Dizin listelemesi kapali: istenmeyen dosyalar gorunmesin.
+Options -Indexes

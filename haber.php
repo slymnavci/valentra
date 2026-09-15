@@ -30,6 +30,19 @@ $sayfaBasligi  = $haber['baslik'] . ' — Valentra';
 $sayfaAciklama = $haber['ozet'];
 $aktifKategori = (string) ($haber['kategori_slug'] ?? '');
 
+// Arama motoruna bunun bir haber oldugunu acikca soyle; yayim tarihi
+// ve gorsel de semaya giriyor.
+require_once __DIR__ . '/includes/seo.php';
+
+$seoTur  = 'article';
+$seoSema = seo_haber_semasi($haber);
+
+$haberGorseli = guvenli_url((string) ($haber['gorsel_url'] ?? ''));
+
+if ($haberGorseli !== '') {
+    $seoGorsel = $haberGorseli;
+}
+
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
 

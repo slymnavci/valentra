@@ -48,10 +48,14 @@ function piyasa_verisi(bool $zorla = false): array
 
     // Cekim basarisizsa eski veriyi gostermek bos kutudan iyidir;
     // yaninda zaman damgasi zaten duruyor.
+    //
+    // Ama eski veri de denetimden gecmeli: bir donem yanlis deger
+    // (ornegin EUR/USD paritesi) onbellege yazilmis olabilir ve o
+    // deger duzeltmeden sonra da ekranda kalirdi.
     if ($veri['usd'] === null && $veri['bist'] === null) {
         $eski = piyasa_onbellekten(true);
 
-        if ($eski !== null) {
+        if ($eski !== null && piyasa_kur_makul($eski['usd'], $eski['eur'])) {
             return $eski + ['tazelendi' => false];
         }
     }
@@ -176,10 +180,63 @@ function piyasa_kur_kazi(string $url, string $bicim): array
         return ['usd' => null, 'eur' => null];
     }
 
-    $usd = piyasa_etiketli_sayi($html, ['dolar', 'usd', 'usdtry', 'usd/try']);
-    $eur = piyasa_etiketli_sayi($html, ['euro', 'eur', 'eurtry', 'eur/try']);
+    // Once TL'yi acikca soyleyen etiketler denenir. Duz "dolar" ya da
+    // "euro" araması sayfadaki EUR/USD paritesini yakalayabiliyor;
+    // ilk surumde ikisi de 1,1540 cikmisti (parite, TL kuru degil).
+    $usd = piyasa_etiketli_sayi($html, [
+        'usd/try', 'usdtry', 'dolar/tl', 'dolar kuru', 'amerikan dolari',
+        'dolar', 'usd',
+    ]);
+    $eur = piyasa_etiketli_sayi($html, [
+        'eur/try', 'eurtry', 'euro/tl', 'euro kuru', 'euro', 'eur',
+    ]);
+
+    if (!piyasa_kur_makul($usd, $eur)) {
+        return ['usd' => null, 'eur' => null];
+    }
 
     return ['usd' => $usd, 'eur' => $eur];
+}
+
+/**
+ * Çekilen kur çifti mantıklı mı?
+ *
+ * Kazima kor bir yontem; yanlis sayiyi sessizce gostermektense hic
+ * gostermemek dogru. Uc denetim var ve ucu de gercek bir hatayi
+ * yakaliyor:
+ *
+ * - Ikisi birebir ayni olamaz. Ilk surumde ikisi de 1,1540 cikti:
+ *   sayfadan EUR/USD paritesi alinmisti.
+ * - Euro her zaman dolardan pahali. Tersse siralar karismis demektir.
+ * - Parite (1 civari) ve endeks (binler) TL kuru olamaz.
+ */
+function piyasa_kur_makul(?float $usd, ?float $eur): bool
+{
+    if ($usd === null) {
+        return false;
+    }
+
+    // TL kuru bu araligin disina cikarsa aldigimiz sayi kur degildir.
+    if ($usd < 5 || $usd > 500) {
+        return false;
+    }
+
+    if ($eur === null) {
+        // Dolar makulse tek basina da kullanilabilir.
+        return true;
+    }
+
+    if ($eur < 5 || $eur > 500) {
+        return false;
+    }
+
+    // Ayni sayi iki kez: parite ya da yanlis eslesme.
+    if (abs($eur - $usd) < 0.0001) {
+        return false;
+    }
+
+    // Euro dolardan ucuz cikiyorsa eslesme yanlis.
+    return $eur > $usd;
 }
 
 /**
@@ -209,7 +266,9 @@ function piyasa_etiketli_sayi(string $html, array $etiketler): ?float
             foreach ($eslesmeler[0] as $ham) {
                 $sayi = piyasa_sayiya_cevir($ham);
 
-                if ($sayi !== null && $sayi > 1 && $sayi < 1000) {
+                // Alt sinir 5: parite degerleri (1,15 gibi) TL kuru
+                // olamaz ve ilk surumde tam bu hataya dusmustuk.
+                if ($sayi !== null && $sayi > 5 && $sayi < 500) {
                     return $sayi;
                 }
             }

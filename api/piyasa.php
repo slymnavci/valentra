@@ -29,4 +29,7 @@ echo json_encode([
     'bist'         => $veri['bist'],
     'bist_degisim' => $veri['bist_degisim'],
     'zaman'        => $veri['zaman'],
+    // Hangi saglayicinin verdigi gorunsun: kazima kirildiginda
+    // "TCMB" yazmasi sorunu tek bakista anlatiyor.
+    'kaynak'       => $veri['kaynak'] ?? '',
 ], JSON_UNESCAPED_UNICODE);

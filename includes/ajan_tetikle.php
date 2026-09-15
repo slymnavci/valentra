@@ -61,9 +61,11 @@ function ajan_tetikle(bool $kuru = false, int $saat = 36, int $enFazla = 25, str
     $govde = json_encode([
         'ref'    => 'main',
         'inputs' => [
-            // Bilinmeyen bir mod GitHub'dan 422 dondurur; ikisiyle
-            // sinirlayip anlasilir hata veriyoruz.
-            'mod'     => $mod === 'kaynak-testi' ? 'kaynak-testi' : 'topla',
+            // Bilinmeyen bir mod GitHub'dan 422 dondurur; bilinen
+            // degerlerle sinirlayip anlasilir hata veriyoruz.
+            'mod'     => in_array($mod, ['kaynak-testi', 'kanun-testi'], true)
+                ? $mod
+                : 'topla',
             'kuru'    => $kuru ? 'true' : 'false',
             'saat'    => (string) max(1, $saat),
             'enfazla' => (string) max(1, $enFazla),
@@ -103,6 +105,15 @@ function ajan_tetikle(bool $kuru = false, int $saat = 36, int $enFazla = 25, str
                 'mesaj' => 'Kaynak testi başladı. Sonucu GitHub kayıtlarında '
                          . 'göreceksiniz: hangi kaynak okunuyor, hangisi '
                          . 'neden okunmuyor. Siteye hiçbir şey yazılmaz.',
+            ];
+        }
+
+        if ($mod === 'kanun-testi') {
+            return [
+                'tamam' => true,
+                'mesaj' => 'Kanun bağlantıları sınanıyor. Sonucu GitHub '
+                         . 'kayıtlarında göreceksiniz: hangi kanun adresi '
+                         . 'açılıyor, hangisi kırık.',
             ];
         }
 
