@@ -34,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'ozet'       => $_POST['ozet'] ?? '',
             'icerik'     => $_POST['icerik'] ?? '',
             'gorsel_url' => $_POST['gorsel_url'] ?? '',
+            'iframe_url' => $_POST['iframe_url'] ?? '',
             'etiketler'  => $_POST['etiketler'] ?? '',
             'one_cikan'   => $_POST['one_cikan'] ?? null,
             'kategori_id' => $_POST['kategori_id'] ?? '',
@@ -53,6 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'ozet'       => (string) ($_POST['ozet'] ?? ''),
             'icerik'     => (string) ($_POST['icerik'] ?? ''),
             'gorsel_url' => (string) ($_POST['gorsel_url'] ?? ''),
+            'iframe_url' => (string) ($_POST['iframe_url'] ?? ''),
             'etiketler'  => (string) ($_POST['etiketler'] ?? ''),
         ]);
     }
@@ -132,6 +134,17 @@ require __DIR__ . '/ust.php';
         <label for="gorsel_url">Görsel adresi</label>
         <input type="url" id="gorsel_url" name="gorsel_url" maxlength="500"
                value="<?= e($haber['gorsel_url'] ?? '') ?>">
+    </div>
+
+    <div class="alan">
+        <label for="iframe_url">Gömülü içerik adresi (iframe)</label>
+        <input type="url" id="iframe_url" name="iframe_url" maxlength="1000"
+               placeholder="https://..."
+               value="<?= e($haber['iframe_url'] ?? '') ?>">
+        <div class="ipucu">
+            Yalnızca http/https adresleri kabul edilir. Bazı dış siteler güvenlik
+            politikaları nedeniyle iframe içinde açılmaya izin vermeyebilir.
+        </div>
     </div>
 
     <div class="alan">
