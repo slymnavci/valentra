@@ -65,12 +65,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } elseif ($islem === 'test') {
         $id = (int) ($_POST['id'] ?? 0);
-        $ifade = db()->prepare('SELECT besleme_url FROM kaynaklar WHERE id = :id');
+        $ifade = db()->prepare(
+            'SELECT besleme_url, liste_url, liste_secici FROM kaynaklar WHERE id = :id'
+        );
         $ifade->execute(['id' => $id]);
-        $url = (string) $ifade->fetchColumn();
+        $kaynak = $ifade->fetch();
 
-        if ($url !== '') {
-            $testSonuclari[$id] = besleme_dene($url);
+        if ($kaynak !== false) {
+            $testSonuclari[$id] = kaynak_test_et($kaynak);
         }
 
     } elseif ($islem === 'bul') {

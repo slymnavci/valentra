@@ -316,3 +316,55 @@ function kazima_sayfayi_dene(string $listeUrl, string $secici = '', int $zamanAs
         'ornek' => mb_substr($haberler[0]['baslik'], 0, 110, 'UTF-8'),
     ];
 }
+
+/**
+ * Bir kaynağı, ajanın gerçekte izlediği sırayla dener.
+ *
+ * Ajan once RSS'i okur, bos donerse duyuru sayfasini kazir. Test de
+ * ayni sirayi izlemeli; aksi halde kazima ile sorunsuz okunan bir
+ * kaynak panelde "kirik" gorunur.
+ *
+ * Onceden yalnizca besleme adresi deneniyordu ve RSS'i olmayan
+ * kaynaklarda (BDDK, SPK, SGK, TCMB, Rekabet Kurumu) bos adres test
+ * edilip "Adres http:// ile baslamali" hatasi veriliyordu.
+ *
+ * @param array<string,mixed> $kaynak
+ * @return array{tamam:bool,mesaj:string,adet:int,ornek:string}
+ */
+function kaynak_test_et(array $kaynak): array
+{
+    $beslemeUrl = trim((string) ($kaynak['besleme_url'] ?? ''));
+    $listeUrl   = trim((string) ($kaynak['liste_url'] ?? ''));
+    $secici     = (string) ($kaynak['liste_secici'] ?? '');
+
+    if ($beslemeUrl === '' && $listeUrl === '') {
+        return [
+            'tamam' => false,
+            'mesaj' => 'Bu kaynakta ne RSS ne de kazıma adresi tanımlı.',
+            'adet'  => 0,
+            'ornek' => '',
+        ];
+    }
+
+    if ($beslemeUrl === '') {
+        return kazima_sayfayi_dene($listeUrl, $secici);
+    }
+
+    $sonuc = besleme_dene($beslemeUrl);
+
+    if ($sonuc['tamam'] || $listeUrl === '') {
+        return $sonuc;
+    }
+
+    $kazima = kazima_sayfayi_dene($listeUrl, $secici);
+
+    if (!$kazima['tamam']) {
+        // Ikisi de calismiyor: asil sorun RSS'te, onun mesaji daha
+        // aciklayici (404, XML degil, sertifika...).
+        return $sonuc;
+    }
+
+    $kazima['mesaj'] = 'RSS okunamadı ama kazıma çalışıyor: ' . $kazima['mesaj'];
+
+    return $kazima;
+}

@@ -1,9 +1,14 @@
 # Valentra
 
-# Site haritasi PHP ile uretiliyor (haberler surekli degisiyor) ama
-# arama motorlari .xml uzantisini bekliyor.
-RewriteEngine On
-RewriteRule ^sitemap\.xml$ /sitemap.php [L]
-
-# Dizin listelemesi kapali: istenmeyen dosyalar gorunmesin.
-Options -Indexes
+# Site haritasi PHP ile uretiliyor; bu kural yalnizca kolaylik icin,
+# /sitemap.xml adresini de calisir kiliyor. Hicbir sey buna bagli
+# degil: robots.txt dogrudan /sitemap.php adresini bildiriyor, cunku
+# arama motorlari harita adresinde .xml uzantisi sart kosmuyor.
+#
+# IfModule sarmalayicisi sart: mod_rewrite yoksa yonerge sunucuyu 500
+# ile dusurur ve TUM site erisilemez olur. Paylasimli hostingde bunu
+# onceden denemek mumkun degil, o yuzden en temkinli hali.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^sitemap\.xml$ /sitemap.php [L]
+</IfModule>

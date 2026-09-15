@@ -43,3 +43,15 @@ function db(): PDO
 }
 
 require_once __DIR__ . '/haberler.php';
+
+/*
+ * Sema dosyasi degistiyse veritabanini kendiliginden yukselt.
+ *
+ * Onceden bu adim elle yapiliyordu: kod deploy ile gidiyor ama
+ * veritabani eski kaliyordu ve fark ancak menu ya da kaynak listesi
+ * degismeyince anlasiliyordu. Maliyeti imza tutuyorsa tek kucuk
+ * SELECT.
+ */
+require_once __DIR__ . '/sema_otomatik.php';
+
+sema_otomatik_yukselt();

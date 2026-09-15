@@ -13,4 +13,4 @@ Disallow: /tani.php
 # Sayfalama ayni haberleri tekrar gosteriyor; asil deger ana sayfada.
 Disallow: /*?sayfa=
 
-Sitemap: https://valentra.com.tr/sitemap.xml
+Sitemap: https://valentra.com.tr/sitemap.php
