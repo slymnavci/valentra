@@ -1,7 +1,81 @@
-      - name: IHS sunucusuna yukle
-        timeout-minutes: 3
+name: Deploy Valentra to IHS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Repository kodlarini al
+        uses: actions/checkout@v5
+
+      - name: FTP aracini kur
         run: |
-          lftp <<EOF
+          sudo apt-get update
+          sudo apt-get install -y lftp
+
+      - name: Veritabani ayar dosyasini olustur
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          mkdir -p includes
+          python3 - <<'PY'
+          import os
+          import base64
+          from pathlib import Path
+
+          def enc(name):
+              return base64.b64encode(
+                  os.environ[name].encode("utf-8")
+              ).decode("ascii")
+
+          content = f"""<?php
+          declare(strict_types=1);
+
+          $dbHost = base64_decode('{enc("DB_HOST")}');
+          $dbName = base64_decode('{enc("DB_NAME")}');
+          $dbUser = base64_decode('{enc("DB_USERNAME")}');
+          $dbPass = base64_decode('{enc("DB_PASSWORD")}');
+
+          try {{
+              $pdo = new PDO(
+                  "mysql:host={{$dbHost}};dbname={{$dbName}};charset=utf8mb4",
+                  $dbUser,
+                  $dbPass,
+                  [
+                      PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                      PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                      PDO::ATTR_EMULATE_PREPARES => false
+                  ]
+              );
+          }} catch (PDOException $e) {{
+              exit('Veritabani baglantisi kurulamadi.');
+          }}
+          """
+          
+          Path("includes/database.php").write_text(
+              content,
+              encoding="utf-8"
+          )
+          PY
+
+      - name: IHS sunucusuna yukle
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_DIRECTORY: ${{ secrets.FTP_DIRECTORY }}
+        run: |
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER" <<EOF
           set cmd:fail-exit yes
           set net:timeout 20
           set net:max-retries 2
@@ -10,9 +84,7 @@
           set ftp:passive-mode yes
           set ftp:use-epsv no
 
-          open -u "${{ secrets.FTP_USERNAME }}","${{ secrets.FTP_PASSWORD }}" ftp://${{ secrets.FTP_SERVER }}
-
-          cd "${{ secrets.FTP_DIRECTORY }}"
+          cd "$FTP_DIRECTORY"
 
           mirror --reverse --verbose \
             --exclude-glob .git/ \
