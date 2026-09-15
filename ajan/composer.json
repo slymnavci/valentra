@@ -3,14 +3,9 @@
     "description": "Valentra vergi haberleri toplama ajani",
     "type": "project",
     "require": {
-        "php": ">=8.1",
-        "anthropic-ai/sdk": "*",
-        "guzzlehttp/guzzle": "^7.8"
+        "php": ">=8.1"
     },
     "config": {
-        "optimize-autoloader": true,
-        "allow-plugins": {
-            "php-http/discovery": true
-        }
+        "optimize-autoloader": true
     }
 }
