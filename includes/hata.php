@@ -15,15 +15,82 @@ declare(strict_types=1);
 /** Eksik tablo hatası mı? (MySQL: 42S02 / 1146) */
 function hata_tablo_eksik(Throwable $e): bool
 {
+    return hata_sqlstate_mi($e, '42S02', 1146);
+}
+
+/** Eksik sütun hatası mı? (MySQL: 42S22 / 1054) */
+function hata_sutun_eksik(Throwable $e): bool
+{
+    return hata_sqlstate_mi($e, '42S22', 1054);
+}
+
+function hata_sqlstate_mi(Throwable $e, string $durum, int $surucuKodu): bool
+{
     if (!$e instanceof PDOException) {
         return false;
     }
 
-    if ($e->getCode() === '42S02') {
+    if ($e->getCode() === $durum) {
         return true;
     }
 
-    return isset($e->errorInfo[1]) && (int) $e->errorInfo[1] === 1146;
+    return isset($e->errorInfo[1]) && (int) $e->errorInfo[1] === $surucuKodu;
+}
+
+/**
+ * Sema eksikse kendini onarmayi dener.
+ *
+ * Site guncellendiginde yeni bir sutun gerekebilir; kurulum.php ilk hesap
+ * olustuktan sonra kapandigi icin guncelleme baska turlu uygulanamaz ve
+ * ziyaretci hata sayfasi gorur. Burada semayi bir kez uygulayip ayni
+ * adrese geri donuyoruz.
+ *
+ * Yalnizca GET isteklerinde ve bir kez denenir: adrese eklenen isaret
+ * sonsuz donguyu onler, POST verisi yonlendirmede kaybolacagi icin
+ * form gonderimlerinde denenmez.
+ */
+function hata_semayi_onar(Throwable $e): bool
+{
+    if (!hata_tablo_eksik($e) && !hata_sutun_eksik($e)) {
+        return false;
+    }
+
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+        return false;
+    }
+
+    if (isset($_GET['sema_onarildi'])) {
+        return false;
+    }
+
+    $semaDosyasi = dirname(__DIR__) . '/sql/schema.sql';
+
+    if (!is_file($semaDosyasi)) {
+        return false;
+    }
+
+    require_once __DIR__ . '/sema.php';
+
+    try {
+        $sonuc = sema_kur($semaDosyasi);
+    } catch (Throwable $onarimHatasi) {
+        error_log('[valentra] sema onarimi basarisiz: ' . $onarimHatasi->getMessage());
+
+        return false;
+    }
+
+    if (empty($sonuc['tamam'])) {
+        return false;
+    }
+
+    error_log('[valentra] sema otomatik guncellendi (' . $sonuc['calisan'] . ' islem)');
+
+    $hedef = (string) ($_SERVER['REQUEST_URI'] ?? '/');
+    $ayrac = str_contains($hedef, '?') ? '&' : '?';
+
+    header('Location: ' . $hedef . $ayrac . 'sema_onarildi=1', true, 302);
+
+    return true;
 }
 
 function hata_sayfasi_bas(string $baslik, string $mesaj, string $baglantiMetni = '', string $baglanti = ''): void
@@ -79,6 +146,11 @@ function hata_yakala(Throwable $e): void
 
     while (ob_get_level() > 0) {
         ob_end_clean();
+    }
+
+    // Once kendini onarmayi dene: eksik sutun/tablo ise semayi uygula.
+    if (!headers_sent() && hata_semayi_onar($e)) {
+        return;
     }
 
     if (hata_tablo_eksik($e)) {

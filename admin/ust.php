@@ -15,6 +15,7 @@
             <nav>
                 <a href="/" target="_blank" rel="noopener">Siteyi gör</a>
                 <a href="kaynaklar.php">Kaynaklar</a>
+                <a href="veritabani.php">Veritabanı</a>
                 <a href="anahtarlar.php">Ajan anahtarları</a>
                 <a href="cikis.php"><?= e(aktif_yonetici_ad()) ?> — Çıkış</a>
             </nav>

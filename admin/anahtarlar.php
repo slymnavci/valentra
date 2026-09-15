@@ -39,6 +39,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ->execute(['id' => (int) ($_POST['id'] ?? 0)]);
 
         yonlendir('anahtarlar.php');
+
+    } elseif ($islem === 'sil') {
+        db()->prepare('DELETE FROM ajan_anahtarlari WHERE id = :id')
+            ->execute(['id' => (int) ($_POST['id'] ?? 0)]);
+
+        yonlendir('anahtarlar.php');
+
+    } elseif ($islem === 'kullanilmayanlari_sil') {
+        // Hic kullanilmamis anahtarlari topluca temizler.
+        $silinen = db()->prepare('DELETE FROM ajan_anahtarlari WHERE son_kullanim IS NULL');
+        $silinen->execute();
+
+        yonlendir('anahtarlar.php');
     }
 }
 
@@ -68,20 +81,35 @@ require __DIR__ . '/ust.php';
     <div class="uyari uyari-hata" style="margin-top:14px;"><?= e($hata) ?></div>
 <?php endif; ?>
 
-<div class="kutu" style="margin-top:18px;">
-    <h2 style="margin:0 0 6px;font-size:1.05rem;">Yeni anahtar üret</h2>
+<div class="uyari uyari-bilgi" style="margin-top:18px;">
+    <strong>Bu sayfa arama kelimesi sayfası değildir.</strong>
+    Buradaki anahtar, ajanın siteye bağlanırken kullandığı parola gibidir —
+    tek bir tane yeterlidir. Ajanın hangi konuları arayacağı
+    <a href="kaynaklar.php">Kaynaklar</a> sayfasındaki sitelerden ve
+    vergi konularından belirlenir; burada ayarlanmaz.
+</div>
+
+<div class="kutu">
+    <h2 style="margin:0 0 6px;font-size:1.05rem;">Yeni erişim anahtarı üret</h2>
     <p class="ipucu" style="margin:0 0 16px;">
-        Ajan, haberleri <code>POST /api/ingest.php</code> adresine
+        Ajan haberleri <code>POST /api/ingest.php</code> adresine
         <code>Authorization: Bearer &lt;anahtar&gt;</code> başlığıyla gönderir.
+        Ürettiğiniz değeri GitHub'da <code>VALENTRA_AGENT_KEY</code> secret'ına
+        yazın. Zaten aktif bir anahtarınız varsa yenisini üretmeniz gerekmez.
     </p>
 
     <form method="post" action="anahtarlar.php" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
         <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
         <input type="hidden" name="islem" value="uret">
 
-        <div class="alan" style="flex:1;min-width:220px;margin-bottom:0;">
-            <label for="ad">Anahtar adı</label>
-            <input type="text" id="ad" name="ad" placeholder="Günlük vergi ajanı" required>
+        <div class="alan" style="flex:1;min-width:260px;margin-bottom:0;">
+            <label for="ad">Bu anahtarı nerede kullanacaksınız?</label>
+            <input type="text" id="ad" name="ad"
+                   placeholder="GitHub Actions ajanı" required>
+            <div class="ipucu">
+                Yalnızca hatırlatma amaçlı bir etiket. Anahtarın kendisi
+                üretildikten sonra gösterilir.
+            </div>
         </div>
 
         <button type="submit" class="dugme dugme-ana">Üret</button>
@@ -89,7 +117,21 @@ require __DIR__ . '/ust.php';
 </div>
 
 <div class="kutu">
-    <h2 style="margin:0 0 14px;font-size:1.05rem;">Anahtarlar</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+        <h2 style="margin:0;font-size:1.05rem;">Anahtarlar</h2>
+
+        <?php $kullanilmayan = (int) db()->query('SELECT COUNT(*) FROM ajan_anahtarlari WHERE son_kullanim IS NULL')->fetchColumn(); ?>
+        <?php if ($kullanilmayan > 1): ?>
+            <form method="post" action="anahtarlar.php"
+                  onsubmit="return confirm('Hiç kullanılmamış <?= $kullanilmayan ?> anahtar silinecek. Emin misiniz?');">
+                <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                <input type="hidden" name="islem" value="kullanilmayanlari_sil">
+                <button type="submit" class="dugme dugme-ret">
+                    Hiç kullanılmamış <?= $kullanilmayan ?> anahtarı sil
+                </button>
+            </form>
+        <?php endif; ?>
+    </div>
 
     <?php if ($anahtarlar === []): ?>
         <p class="ipucu" style="margin:0;">Henüz anahtar üretilmedi.</p>
@@ -111,14 +153,24 @@ require __DIR__ . '/ust.php';
                             : 'hiç' ?>
                 </span>
 
-                <?php if ((int) $anahtar['aktif'] === 1): ?>
-                    <form method="post" action="anahtarlar.php" style="margin-left:auto;">
+                <span style="margin-left:auto;display:flex;gap:8px;">
+                    <?php if ((int) $anahtar['aktif'] === 1): ?>
+                        <form method="post" action="anahtarlar.php">
+                            <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                            <input type="hidden" name="islem" value="kapat">
+                            <input type="hidden" name="id" value="<?= (int) $anahtar['id'] ?>">
+                            <button type="submit" class="dugme">Kapat</button>
+                        </form>
+                    <?php endif; ?>
+
+                    <form method="post" action="anahtarlar.php"
+                          onsubmit="return confirm('Bu anahtar kalıcı olarak silinecek. Ajanda kullanılıyorsa çalışmayı durdurur. Emin misiniz?');">
                         <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
-                        <input type="hidden" name="islem" value="kapat">
+                        <input type="hidden" name="islem" value="sil">
                         <input type="hidden" name="id" value="<?= (int) $anahtar['id'] ?>">
-                        <button type="submit" class="dugme dugme-ret">Kapat</button>
+                        <button type="submit" class="dugme dugme-ret">Sil</button>
                     </form>
-                <?php endif; ?>
+                </span>
             </div>
         <?php endforeach; ?>
     <?php endif; ?>
