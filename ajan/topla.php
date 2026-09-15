@@ -8,7 +8,7 @@ declare(strict_types=1);
  *   1. Siteden taranacak kaynakları ve konu gruplarını çeker
  *   2. Her kaynağın RSS/Atom beslemesini okur
  *   3. Anahtar kelime ön elemesiyle açıkça alakasız girdileri atar
- *   4. Kalan her aday için Claude'a sorar: vergiyle ilgili mi, ilgiliyse
+ *   4. Kalan her aday için Gemini'ye sorar: vergiyle ilgili mi, ilgiliyse
  *      özgün haber metnini yazdırır ve bir konu grubuna atatır
  *   5. Kabul edilenleri siteye TASLAK olarak gönderir
  *
@@ -59,7 +59,7 @@ function ayar(string $ad): string
 
 $siteUrl   = ayar('VALENTRA_SITE_URL');
 $ajanKey   = ayar('VALENTRA_AGENT_KEY');
-$apiKey    = ayar('ANTHROPIC_API_KEY');
+$apiKey    = ayar('GEMINI_API_KEY');
 
 gunluk('Valentra ajanı başlıyor' . ($kuruCalisma ? ' (KURU ÇALIŞMA — gönderim yok)' : ''));
 
@@ -69,7 +69,7 @@ $besleme = new Besleme($http);
 $sayfa   = new Sayfa($http);
 $kazima  = new Kazima($http);
 $suzgec  = new Suzgec();
-$yazar   = new Yazar(new Client(apiKey: $apiKey));
+$yazar   = new Yazar($apiKey);
 
 // --- 1. Yapılandırma -------------------------------------------------------
 
@@ -150,7 +150,7 @@ $adaylar = array_slice($adaylar, 0, $enFazlaAday);
 
 gunluk(count($adaylar) . ' aday modele gönderilecek.');
 
-// --- 4. Claude: sınıflandır ve yaz ----------------------------------------
+// --- 4. Gemini: sınıflandır ve yaz ----------------------------------------
 
 $haberler = [];
 $elenen   = 0;
