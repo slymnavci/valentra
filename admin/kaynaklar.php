@@ -97,6 +97,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+    } elseif ($islem === 'duzenle') {
+        $id          = (int) ($_POST['id'] ?? 0);
+        $beslemeUrl  = guvenli_url((string) ($_POST['besleme_url'] ?? ''));
+        $listeUrl    = guvenli_url((string) ($_POST['liste_url'] ?? ''));
+        $listeSecici = trim((string) ($_POST['liste_secici'] ?? ''));
+
+        if ($beslemeUrl === '' && $listeUrl === '') {
+            $hata = 'RSS adresi ya da duyuru sayfası adresinden en az birini girin.';
+        } else {
+            db()->prepare(
+                'UPDATE kaynaklar
+                    SET besleme_url = :besleme, liste_url = :liste, liste_secici = :secici
+                  WHERE id = :id'
+            )->execute([
+                'besleme' => $beslemeUrl !== '' ? $beslemeUrl : null,
+                'liste'   => $listeUrl !== '' ? $listeUrl : null,
+                'secici'  => $listeSecici !== '' ? mb_substr($listeSecici, 0, 200, 'UTF-8') : null,
+                'id'      => $id,
+            ]);
+
+            $bildirim = 'Kaynak güncellendi.';
+        }
+
     } elseif ($islem === 'kazima_test') {
         $id = (int) ($_POST['id'] ?? 0);
         $ifade = db()->prepare('SELECT liste_url, liste_secici FROM kaynaklar WHERE id = :id');
@@ -343,6 +366,43 @@ require __DIR__ . '/ust.php';
                         <span style="color:var(--kirmizi);">Adres tanımlı değil</span>
                     <?php endif; ?>
                 </div>
+
+                <details style="margin-top:8px;">
+                    <summary style="cursor:pointer;font-size:.8rem;color:var(--vurgu);">
+                        Adresleri düzenle
+                    </summary>
+
+                    <form method="post" action="kaynaklar.php"
+                          style="margin-top:10px;padding:12px;background:var(--zemin);border-radius:8px;">
+                        <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                        <input type="hidden" name="islem" value="duzenle">
+                        <input type="hidden" name="id" value="<?= (int) $kaynak['id'] ?>">
+
+                        <div class="alan" style="margin-bottom:10px;">
+                            <label>RSS besleme adresi</label>
+                            <input type="url" name="besleme_url"
+                                   value="<?= e($kaynak['besleme_url'] ?? '') ?>"
+                                   placeholder="https://ornek.com/rss">
+                        </div>
+
+                        <div class="alan" style="margin-bottom:10px;">
+                            <label>Duyuru sayfası adresi (RSS yoksa kazınır)</label>
+                            <input type="url" name="liste_url"
+                                   value="<?= e($kaynak['liste_url'] ?? '') ?>"
+                                   placeholder="https://kurum.gov.tr/duyurular">
+                        </div>
+
+                        <div class="alan" style="margin-bottom:10px;">
+                            <label>Kazıma seçicisi (isteğe bağlı)</label>
+                            <input type="text" name="liste_secici"
+                                   value="<?= e($kaynak['liste_secici'] ?? '') ?>"
+                                   placeholder=".duyuru-listesi a">
+                            <div class="ipucu">Boş bırakın; ajan bağlantıları kendi bulur.</div>
+                        </div>
+
+                        <button type="submit" class="dugme dugme-ana">Kaydet</button>
+                    </form>
+                </details>
 
                 <?php $test = $testSonuclari[(int) $kaynak['id']] ?? null; ?>
                 <?php if ($test !== null): ?>

@@ -223,3 +223,28 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, aktif) VALUES
     ('Habertürk Ekonomi',       'https://www.haberturk.com',       'https://www.haberturk.com/rss/ekonomi.xml',        'rss', 1),
     ('Sabah Ekonomi',           'https://www.sabah.com.tr',        'https://www.sabah.com.tr/rss/ekonomi.xml',         'rss', 1),
     ('Patronlar Dünyası',       'https://www.patronlardunyasi.com','https://www.patronlardunyasi.com/rss',             'rss', 1);
+
+-- ---------------------------------------------------------------------------
+-- Resmi kaynaklar icin duyuru sayfasi adresleri (kazima)
+--
+-- Bu kurumlarin cogu RSS yayinlamiyor; ajan RSS bulamazsa bu sayfayi
+-- kazir. Adres yanlissa panelden "Adresleri duzenle" ile degistirin,
+-- "Kazimayi dene" ile sonucu gorun.
+-- ---------------------------------------------------------------------------
+UPDATE kaynaklar SET liste_url = 'https://www.gib.gov.tr/duyurular'
+ WHERE ad = 'Gelir İdaresi Başkanlığı' AND liste_url IS NULL;
+
+UPDATE kaynaklar SET liste_url = 'https://www.hmb.gov.tr/duyurular'
+ WHERE ad = 'Hazine ve Maliye Bakanlığı' AND liste_url IS NULL;
+
+UPDATE kaynaklar SET liste_url = 'https://www.kgk.gov.tr/duyurular'
+ WHERE ad = 'KGK' AND liste_url IS NULL;
+
+UPDATE kaynaklar SET liste_url = 'https://www.turmob.org.tr/haberler'
+ WHERE ad = 'TÜRMOB' AND liste_url IS NULL;
+
+UPDATE kaynaklar SET liste_url = 'https://www.ismmmo.org.tr/Duyurular'
+ WHERE ad = 'İSMMMO' AND liste_url IS NULL;
+
+UPDATE kaynaklar SET liste_url = 'https://www.resmigazete.gov.tr/'
+ WHERE ad = 'Resmî Gazete' AND liste_url IS NULL;

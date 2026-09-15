@@ -199,6 +199,7 @@ function besleme_kesfet(string $siteUrl, int $enFazlaDeneme = 8): array
 
     $adaylar = array_values(array_unique($adaylar));
     $denenen = 0;
+    $hatalar = [];
 
     foreach ($adaylar as $aday) {
         if ($denenen >= $enFazlaDeneme) {
@@ -216,13 +217,40 @@ function besleme_kesfet(string $siteUrl, int $enFazlaDeneme = 8): array
                 'denenen' => $denenen,
             ];
         }
+
+        $hatalar[] = $sonuc['mesaj'];
+    }
+
+    // Basarisizligin sebebini ozetle: hepsi sertifika hatasiysa bu
+    // sunucunun sorunudur, kaynagin degil — ajan GitHub'da calistigi
+    // icin ayni adresi okuyabilir.
+    $sertifikaHatasi = 0;
+
+    foreach ($hatalar as $h) {
+        if (str_contains($h, 'sertifika')) {
+            $sertifikaHatasi++;
+        }
+    }
+
+    if ($denenen > 0 && $sertifikaHatasi === $denenen) {
+        return [
+            'bulundu' => false,
+            'url'     => '',
+            'mesaj'   => $denenen . ' adresin hepsinde güvenlik sertifikası doğrulanamadı. '
+                       . 'Bu hosting sunucunuzun kök sertifika listesinden kaynaklanıyor, '
+                       . 'sitenin RSS yayınlamamasından değil. Ajan GitHub üzerinde '
+                       . 'çalıştığı için besleme adresini elle girerseniz okuyabilir.',
+            'denenen' => $denenen,
+        ];
     }
 
     return [
         'bulundu' => false,
         'url'     => '',
         'mesaj'   => $denenen . ' adres denendi, çalışan besleme bulunamadı. '
-                   . 'Site RSS yayınlamıyor olabilir.',
+                   . ($sertifikaHatasi > 0 ? $sertifikaHatasi . ' tanesinde sertifika sorunu vardı. ' : '')
+                   . 'Site RSS yayınlamıyor olabilir — bu durumda kaynağa duyuru sayfası '
+                   . 'adresi girip kazıma kullanın.',
         'denenen' => $denenen,
     ];
 }
