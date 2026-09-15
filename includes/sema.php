@@ -182,6 +182,11 @@ function sema_yukselt(): array
         $yapilanlar[] = 'haberler.kategori_id sutunu eklendi';
     }
 
+    if (!sema_sutun_var('haberler', 'iframe_url')) {
+        db()->exec('ALTER TABLE haberler ADD COLUMN iframe_url VARCHAR(1000) NULL AFTER gorsel_url');
+        $yapilanlar[] = 'haberler.iframe_url sutunu eklendi';
+    }
+
     if (!sema_sutun_var('kategoriler', 'ust_id')) {
         db()->exec('ALTER TABLE kategoriler ADD COLUMN ust_id INT UNSIGNED NULL AFTER aciklama');
         $yapilanlar[] = 'kategoriler.ust_id sutunu eklendi';
@@ -206,7 +211,10 @@ function sema_yukselt(): array
         );
 
         try {
-            db()->exec('ALTER TABLE kaynaklar ADD UNIQUE KEY uq_kaynak_besleme (besleme_url)');
+            // utf8mb4 + eski InnoDB satir bicimlerinde 500 karakterlik
+            // indeks 767 bayt sinirini asabilir. 190 karakterlik on ek
+            // 760 baytta kalir ve paylasimli hostinglerle uyumludur.
+            db()->exec('ALTER TABLE kaynaklar ADD UNIQUE KEY uq_kaynak_besleme (besleme_url(190))');
             $yapilanlar[] = 'kaynaklar benzersizlik kisiti eklendi';
         } catch (PDOException $e) {
             error_log('[valentra] kaynak benzersizlik kisiti eklenemedi: ' . $e->getMessage());
@@ -264,7 +272,15 @@ function sema_indeks_var(string $tablo, string $indeks): bool
 function sema_guncel_mi(): bool
 {
     try {
-        foreach ([['haberler', 'kategori_id'], ['kategoriler', 'ust_id']] as [$tablo, $sutun]) {
+        $beklenenSutunlar = [
+            ['haberler', 'kategori_id'],
+            ['haberler', 'iframe_url'],
+            ['kategoriler', 'ust_id'],
+            ['kaynaklar', 'liste_url'],
+            ['kaynaklar', 'liste_secici'],
+        ];
+
+        foreach ($beklenenSutunlar as [$tablo, $sutun]) {
             if (!sema_sutun_var($tablo, $sutun)) {
                 return false;
             }
