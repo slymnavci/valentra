@@ -145,3 +145,24 @@ function guvenli_url(?string $url): string
 
     return $url;
 }
+
+/**
+ * Varlık adresine sürüm ekler.
+ *
+ * Deploy sonrası tarayıcı eski CSS'i önbellekten vermesin diye dosyanın
+ * değişiklik zamanını sorgu dizesine koyar. Dosya değişmediği sürece
+ * adres sabit kalır, yani önbellek yine çalışır.
+ */
+function varlik(string $yol): string
+{
+    $tamYol = __DIR__ . '/..' . $yol;
+    $zaman  = is_file($tamYol) ? filemtime($tamYol) : false;
+
+    return $zaman === false ? $yol : $yol . '?s=' . $zaman;
+}
+
+/** varlik() + kaçış: HTML özniteliğine doğrudan basılabilir. */
+function e_varlik(string $yol): string
+{
+    return e(varlik($yol));
+}

@@ -41,12 +41,14 @@ CREATE TABLE IF NOT EXISTS kategoriler (
     ad            VARCHAR(120)  NOT NULL,
     slug          VARCHAR(140)  NOT NULL,
     aciklama      VARCHAR(300)  NOT NULL DEFAULT '',
+    ust_id        INT UNSIGNED  NULL,
     sira          SMALLINT UNSIGNED NOT NULL DEFAULT 100,
     aktif         TINYINT(1)    NOT NULL DEFAULT 1,
     olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_kategori_slug (slug),
-    KEY ix_kategori_sira (aktif, sira)
+    KEY ix_kategori_sira (aktif, sira),
+    KEY ix_kategori_ust (ust_id, sira)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
@@ -162,3 +164,59 @@ UPDATE kategoriler SET aciklama = 'VUK, değerleme, amortisman ve ceza hükümle
 UPDATE kategoriler SET aciklama = 'e-Fatura, e-Arşiv, e-Defter ve dijital vergi' WHERE slug = 'e-belge';
 UPDATE kategoriler SET aciklama = 'Bağımsız denetim ve vergi incelemeleri' WHERE slug = 'denetim';
 UPDATE kategoriler SET aciklama = 'Diğer vergi gündemi' WHERE slug = 'genel';
+
+-- ---------------------------------------------------------------------------
+-- Menu ust basliklari ve alt gruplarin baglanmasi
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kategoriler (ad, slug, aciklama, sira) VALUES
+    ('Vergi Türleri',        'vergi-turleri',       'Kurumlar, gelir, KDV ve diğer vergiler', 10),
+    ('Usul ve Mevzuat',      'usul-ve-mevzuat',     'VUK, tebliğler, teşvik ve dijital belge düzeni', 20),
+    ('Muhasebe ve Denetim',  'muhasebe-denetim',    'Raporlama standartları ve denetim', 30);
+
+UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'vergi-turleri') AS t), sira = 10 WHERE slug = 'kurumlar-vergisi';
+UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'vergi-turleri') AS t), sira = 20 WHERE slug = 'gelir-vergisi';
+UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'vergi-turleri') AS t), sira = 30 WHERE slug = 'kdv';
+UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'vergi-turleri') AS t), sira = 40 WHERE slug = 'otv-ve-diger';
+
+UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'usul-ve-mevzuat') AS t), sira = 10 WHERE slug = 'vergi-usul-kanunu';
+UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'usul-ve-mevzuat') AS t), sira = 20 WHERE slug = 'tesvik-yapilandirma';
+UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'usul-ve-mevzuat') AS t), sira = 30 WHERE slug = 'e-belge';
+
+UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'muhasebe-denetim') AS t), sira = 10 WHERE slug = 'tms-tfrs';
+UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'muhasebe-denetim') AS t), sira = 20 WHERE slug = 'denetim';
+
+UPDATE kategoriler SET ust_id = NULL, sira = 40 WHERE slug = 'genel';
+
+-- ---------------------------------------------------------------------------
+-- Baslangic kaynak listesi
+--
+-- Besleme adresleri siteler tarafindan degistirilebilir. Panelde her
+-- kaynagin yanindaki "Test et" dugmesi adresin calisip calismadigini
+-- soyler; calismayanin adresini duzeltin ya da kaynagi kapatin.
+-- Kapali kaynaklar taranmaz.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, aktif) VALUES
+    -- Resmi kaynaklar: vergi haberciliginde birincil kaynak
+    ('Resmî Gazete',            'https://www.resmigazete.gov.tr',  'https://www.resmigazete.gov.tr/rss/Mukerrer.xml', 'resmi', 1),
+    ('Gelir İdaresi Başkanlığı','https://www.gib.gov.tr',          'https://www.gib.gov.tr/rss.xml',                   'resmi', 1),
+    ('Hazine ve Maliye Bakanlığı','https://www.hmb.gov.tr',        'https://www.hmb.gov.tr/rss',                       'resmi', 1),
+    ('KGK',                     'https://www.kgk.gov.tr',          'https://www.kgk.gov.tr/rss',                       'resmi', 1),
+    ('TÜRMOB',                  'https://www.turmob.org.tr',       'https://www.turmob.org.tr/rss',                    'resmi', 1),
+
+    -- Mesleki yayinlar: vergi ve muhasebe odakli, en verimli kaynaklar
+    ('Alomaliye',               'https://www.alomaliye.com',       'https://www.alomaliye.com/feed/',                  'rss', 1),
+    ('Muhasebe News',           'https://www.muhasebenews.com',    'https://www.muhasebenews.com/feed/',               'rss', 1),
+    ('Vergi Algı',              'https://www.vergialgi.net',       'https://www.vergialgi.net/feed',                   'rss', 1),
+    ('MuhasebeTR',              'https://www.muhasebetr.com',      'https://www.muhasebetr.com/rss/',                  'rss', 1),
+    ('İSMMMO',                  'https://www.ismmmo.org.tr',       'https://www.ismmmo.org.tr/rss',                    'rss', 1),
+
+    -- Ekonomi basini: mevzuat disi gelismeleri yakalamak icin
+    ('Ekonomim',                'https://www.ekonomim.com',        'https://www.ekonomim.com/rss',                     'rss', 1),
+    ('Anadolu Ajansı Ekonomi',  'https://www.aa.com.tr',           'https://www.aa.com.tr/tr/rss/default?cat=ekonomi', 'rss', 1),
+    ('Bloomberg HT',            'https://www.bloomberght.com',     'https://www.bloomberght.com/rss',                  'rss', 1),
+    ('NTV Ekonomi',             'https://www.ntv.com.tr',          'https://www.ntv.com.tr/ekonomi.rss',               'rss', 1),
+    ('Hürriyet Ekonomi',        'https://www.hurriyet.com.tr',     'https://www.hurriyet.com.tr/rss/ekonomi',          'rss', 1),
+    ('Milliyet Ekonomi',        'https://www.milliyet.com.tr',     'https://www.milliyet.com.tr/rss/rssnew/ekonomirss.xml', 'rss', 1),
+    ('Habertürk Ekonomi',       'https://www.haberturk.com',       'https://www.haberturk.com/rss/ekonomi.xml',        'rss', 1),
+    ('Sabah Ekonomi',           'https://www.sabah.com.tr',        'https://www.sabah.com.tr/rss/ekonomi.xml',         'rss', 1),
+    ('Patronlar Dünyası',       'https://www.patronlardunyasi.com','https://www.patronlardunyasi.com/rss',             'rss', 1);

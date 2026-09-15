@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title><?= e($panelBasligi ?? 'Yönetim Paneli') ?> — Valentra</title>
-    <link rel="stylesheet" href="/assets/admin.css">
+    <link rel="stylesheet" href="<?= e_varlik('/assets/admin.css') ?>">
 </head>
 <body>
     <header class="panel-ust">

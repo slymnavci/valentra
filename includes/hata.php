@@ -42,7 +42,7 @@ function hata_sayfasi_bas(string $baslik, string $mesaj, string $baglantiMetni =
     <meta name="robots" content="noindex, nofollow">
     <title><?= $e($baslik) ?> — Valentra</title>
     <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/assets/admin.css">
+    <link rel="stylesheet" href="<?= e_varlik('/assets/admin.css') ?>">
 </head>
 <body>
     <div class="giris-sayfa">

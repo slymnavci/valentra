@@ -8,11 +8,14 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/besleme_test.php';
 
 giris_zorunlu();
 
 $hata = '';
 $bildirim = '';
+/** @var array<int,array{tamam:bool,mesaj:string,adet:int,ornek:string}> */
+$testSonuclari = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_dogrula($_POST['csrf'] ?? null);
@@ -52,6 +55,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         db()->prepare('UPDATE kaynaklar SET aktif = 1 - aktif WHERE id = :id')
             ->execute(['id' => (int) ($_POST['id'] ?? 0)]);
         yonlendir('kaynaklar.php');
+
+    } elseif ($islem === 'test') {
+        $id = (int) ($_POST['id'] ?? 0);
+        $ifade = db()->prepare('SELECT besleme_url FROM kaynaklar WHERE id = :id');
+        $ifade->execute(['id' => $id]);
+        $url = (string) $ifade->fetchColumn();
+
+        if ($url !== '') {
+            $testSonuclari[$id] = besleme_dene($url);
+        }
+
+    } elseif ($islem === 'hepsini_test') {
+        foreach (db()->query('SELECT id, besleme_url FROM kaynaklar WHERE aktif = 1')->fetchAll() as $k) {
+            $testSonuclari[(int) $k['id']] = besleme_dene((string) $k['besleme_url'], 10);
+        }
 
     } elseif ($islem === 'sil') {
         db()->prepare('DELETE FROM kaynaklar WHERE id = :id')
@@ -120,7 +138,26 @@ require __DIR__ . '/ust.php';
 </div>
 
 <div class="kutu">
-    <h2 style="margin:0 0 14px;font-size:1.05rem;">Kaynaklar (<?= count($kaynaklar) ?>)</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+        <h2 style="margin:0;font-size:1.05rem;">Kaynaklar (<?= count($kaynaklar) ?>)</h2>
+
+        <?php if ($kaynaklar !== []): ?>
+            <form method="post" action="kaynaklar.php">
+                <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                <input type="hidden" name="islem" value="hepsini_test">
+                <button type="submit" class="dugme">Aktif kaynakların hepsini test et</button>
+            </form>
+        <?php endif; ?>
+    </div>
+
+    <?php if ($testSonuclari !== []): ?>
+        <?php $calisan = count(array_filter($testSonuclari, static fn (array $t): bool => $t['tamam'])); ?>
+        <div class="uyari uyari-bilgi" style="margin-bottom:14px;">
+            <?= count($testSonuclari) ?> kaynak denendi, <?= $calisan ?> tanesi çalışıyor.
+            Çalışmayanların besleme adresini düzeltin ya da kaynağı kapatın;
+            ajan kapalı kaynakları taramaz.
+        </div>
+    <?php endif; ?>
 
     <?php if ($kaynaklar === []): ?>
         <p class="ipucu" style="margin:0;">
@@ -146,6 +183,13 @@ require __DIR__ . '/ust.php';
                     <span style="margin-left:auto;display:flex;gap:8px;">
                         <form method="post" action="kaynaklar.php">
                             <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                            <input type="hidden" name="islem" value="test">
+                            <input type="hidden" name="id" value="<?= (int) $kaynak['id'] ?>">
+                            <button type="submit" class="dugme">Test et</button>
+                        </form>
+
+                        <form method="post" action="kaynaklar.php">
+                            <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
                             <input type="hidden" name="islem" value="durum">
                             <input type="hidden" name="id" value="<?= (int) $kaynak['id'] ?>">
                             <button type="submit" class="dugme">
@@ -166,6 +210,17 @@ require __DIR__ . '/ust.php';
                 <div class="satir-bilgi" style="margin-top:4px;font-size:.74rem;">
                     <span><?= e($kaynak['besleme_url'] ?? '') ?></span>
                 </div>
+
+                <?php $test = $testSonuclari[(int) $kaynak['id']] ?? null; ?>
+                <?php if ($test !== null): ?>
+                    <div class="uyari uyari-<?= $test['tamam'] ? 'basari' : 'hata' ?>"
+                         style="margin:8px 0 0;font-size:.82rem;">
+                        <?= e($test['mesaj']) ?>
+                        <?php if ($test['ornek'] !== ''): ?>
+                            <br><span style="opacity:.75;">Örnek başlık: <?= e($test['ornek']) ?></span>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
             </div>
         <?php endforeach; ?>
     <?php endif; ?>

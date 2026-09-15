@@ -324,21 +324,57 @@ function kategori_listesi(bool $sadeceAktif = true): array
 }
 
 /**
- * Menu icin kategoriler + her birinin yayindaki haber sayisi.
- * Hic haberi olmayan grup menude yer kaplamasin diye sayiyi da veriyoruz.
+ * Ust menu agaci.
+ *
+ * Ust basliklar (ust_id'si olmayanlar) menude gorunur; altlarindaki
+ * gruplar acilir listede listelenir. Her grubun yaninda yayindaki haber
+ * sayisi gosterilir; ust basligin sayisi altlarinin toplamidir.
+ *
+ * @return list<array{ad:string,slug:string,adet:int,altlar:list<array<string,mixed>>}>
  */
 function kategori_menusu(): array
 {
-    return db()->query(
-        'SELECT k.id, k.ad, k.slug,
+    $satirlar = db()->query(
+        'SELECT k.id, k.ad, k.slug, k.ust_id, k.sira,
                 COUNT(h.id) AS adet
            FROM kategoriler k
            LEFT JOIN haberler h
              ON h.kategori_id = k.id AND h.durum = ' . db()->quote(HABER_YAYINDA) . '
           WHERE k.aktif = 1
-          GROUP BY k.id, k.ad, k.slug, k.sira
+          GROUP BY k.id, k.ad, k.slug, k.ust_id, k.sira
           ORDER BY k.sira, k.ad'
     )->fetchAll();
+
+    $altlar = [];
+
+    foreach ($satirlar as $satir) {
+        if ($satir['ust_id'] !== null) {
+            $altlar[(int) $satir['ust_id']][] = [
+                'ad'   => $satir['ad'],
+                'slug' => $satir['slug'],
+                'adet' => (int) $satir['adet'],
+            ];
+        }
+    }
+
+    $menu = [];
+
+    foreach ($satirlar as $satir) {
+        if ($satir['ust_id'] !== null) {
+            continue;
+        }
+
+        $cocuklar = $altlar[(int) $satir['id']] ?? [];
+
+        $menu[] = [
+            'ad'     => $satir['ad'],
+            'slug'   => $satir['slug'],
+            'adet'   => (int) $satir['adet'] + array_sum(array_column($cocuklar, 'adet')),
+            'altlar' => $cocuklar,
+        ];
+    }
+
+    return $menu;
 }
 
 function kategori_slug_bul(string $slug): ?array

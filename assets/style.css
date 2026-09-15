@@ -413,44 +413,152 @@ img { max-width: 100%; display: block; }
     background: var(--lacivert);
     position: sticky;
     top: 0;
-    z-index: 19;
+    z-index: 30;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset;
 }
 
 .menu-satir {
     display: flex;
-    gap: 2px;
-    overflow-x: auto;
-    scrollbar-width: thin;
-    -webkit-overflow-scrolling: touch;
+    align-items: stretch;
+    gap: 0;
+    flex-wrap: wrap;
+
+    /* Acilir liste bandin disina tasabilmeli. overflow-x: auto verilirse
+       CSS overflow-y'yi de kirpar ve liste gorunmez olur; bu yuzden genis
+       ekranda kaydirma yok, ogeler gerekirse alt satira gecer. */
+    overflow: visible;
 }
 
-.menu-satir a {
+.menu-satir::-webkit-scrollbar { display: none; }
+
+.menu-oge {
     flex: none;
-    padding: 12px 15px;
-    color: #c3d0e2;
-    font-size: .84rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 18px;
+    min-height: 48px;
+    border: none;
+    background: none;
+    color: #c8d5e6;
+    font-family: inherit;
+    font-size: .875rem;
     font-weight: 600;
+    letter-spacing: .01em;
     white-space: nowrap;
-    border-bottom: 3px solid transparent;
-    transition: color .12s ease, border-color .12s ease;
+    cursor: pointer;
+    position: relative;
+    transition: color .14s ease, background .14s ease;
 }
 
-.menu-satir a:hover { color: #fff; }
-
-.menu-satir a.aktif {
-    color: #fff;
-    border-bottom-color: var(--altin);
+.menu-oge::after {
+    content: "";
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 0;
+    height: 2px;
+    background: var(--altin);
+    transform: scaleX(0);
+    transition: transform .16s ease;
 }
 
-.menu-adet {
-    display: inline-block;
-    margin-left: 5px;
-    font-size: .7rem;
+.menu-oge:hover { color: #fff; background: rgba(255, 255, 255, .06); }
+
+a.menu-oge.aktif,
+.menu-grup.aktif > .menu-oge { color: #fff; }
+
+a.menu-oge.aktif::after,
+.menu-grup.aktif > .menu-oge::after { transform: scaleX(1); }
+
+.menu-oge .ok { transition: transform .16s ease; opacity: .7; }
+.menu-grup.acik .menu-oge .ok { transform: rotate(180deg); }
+.menu-grup.acik > .menu-oge { color: #fff; background: rgba(255, 255, 255, .09); }
+
+/* --- Acilir liste -------------------------------------------------------- */
+
+.menu-grup { position: relative; flex: none; }
+
+.menu-acilir {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 240px;
+    background: var(--kart);
+    border: 1px solid var(--cizgi);
+    border-top: 2px solid var(--altin);
+    border-radius: 0 0 9px 9px;
+    box-shadow: 0 12px 32px rgba(16, 26, 44, .18);
+    padding: 6px;
+    z-index: 40;
+
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    transition: opacity .14s ease, transform .14s ease, visibility .14s;
+}
+
+.menu-grup.acik .menu-acilir,
+.menu-grup:hover .menu-acilir {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.menu-acilir a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 9px 13px;
+    border-radius: 6px;
+    color: var(--metin);
+    font-size: .875rem;
+    font-weight: 500;
+    transition: background .12s ease, color .12s ease;
+}
+
+.menu-acilir a:hover { background: rgba(23, 48, 79, .07); color: var(--lacivert); }
+
+.menu-acilir a.aktif {
+    background: rgba(201, 168, 106, .16);
+    color: var(--lacivert);
+    font-weight: 700;
+}
+
+.menu-acilir .adet {
+    font-size: .72rem;
     font-weight: 600;
-    color: #8fa3bd;
+    color: var(--metin-soluk);
+    background: var(--zemin);
+    border-radius: 999px;
+    padding: 1px 8px;
 }
 
-.menu-satir a.aktif .menu-adet { color: var(--altin); }
+.menu-acilir a.aktif .adet { background: var(--altin); color: #14213a; }
+
+@media (prefers-color-scheme: dark) {
+    .menu-acilir a:hover { background: rgba(255, 255, 255, .07); color: #fff; }
+    .menu-acilir a.aktif { color: #fff; }
+}
+
+/* Dar ekranda acilir liste yatay kaydirmayi bozmasin: akisa gecer. */
+@media (max-width: 720px) {
+    /* Dar ekranda yatay kaydirma; acilir liste position:fixed oldugu icin
+       kirpilmadan gorunur. */
+    .menu-satir {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .menu-satir::-webkit-scrollbar { display: none; }
+    .menu-oge { padding: 0 14px; min-height: 44px; font-size: .82rem; }
+    .menu-acilir { position: fixed; left: 8px; right: 8px; min-width: 0; }
+    .menu-grup:hover .menu-acilir { opacity: 0; visibility: hidden; }
+    .menu-grup.acik .menu-acilir { opacity: 1; visibility: visible; }
+}
 
 /* --- Kayan manset -------------------------------------------------------- */
 

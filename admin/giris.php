@@ -44,7 +44,7 @@ $kurulumGerekli = !yonetici_var_mi();
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>Yönetici Girişi — Valentra</title>
-    <link rel="stylesheet" href="/assets/admin.css">
+    <link rel="stylesheet" href="<?= e_varlik('/assets/admin.css') ?>">
 </head>
 <body>
     <div class="giris-sayfa">

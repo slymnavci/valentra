@@ -97,35 +97,79 @@ function sema_kur(string $dosya): array
         return ['tamam' => false, 'calisan' => 0, 'mesaj' => 'sql/schema.sql okunamadı.'];
     }
 
-    $calisan = 0;
+    // Once tablolar, sonra eksik sutunlar, en son veri.
+    //
+    // Sema dosyasindaki INSERT/UPDATE ifadeleri yeni eklenen sutunlara
+    // deger yazabilir. Daha once kurulmus bir veritabaninda o sutun
+    // "CREATE TABLE IF NOT EXISTS" ile gelmeyecegi icin, veri yazan
+    // ifadelerden ONCE sema_yukselt() calismali.
+    $tabloIfadeleri = [];
+    $veriIfadeleri  = [];
 
     foreach (sema_ifadeleri($sql) as $ifade) {
-        try {
-            db()->exec($ifade);
-            $calisan++;
-        } catch (PDOException $e) {
-            return [
-                'tamam'   => false,
-                'calisan' => $calisan,
-                'mesaj'   => 'Tablo oluşturulamadı: ' . $e->getMessage(),
-            ];
+        if (preg_match('/^\s*CREATE\s/i', $ifade) === 1) {
+            $tabloIfadeleri[] = $ifade;
+        } else {
+            $veriIfadeleri[] = $ifade;
         }
     }
 
-    // Daha once kurulmus bir veritabaninda eksik sutunlari tamamla.
-    if (sema_hazir()) {
-        $calisan += count(sema_yukselt());
+    $calisan = 0;
+
+    foreach ($tabloIfadeleri as $ifade) {
+        $sonuc = sema_ifade_calistir($ifade, $calisan);
+
+        if ($sonuc !== null) {
+            return $sonuc;
+        }
+    }
+
+    if (!sema_hazir()) {
+        return ['tamam' => false, 'calisan' => $calisan, 'mesaj' => 'Tablolar oluşturulamadı.'];
+    }
+
+    $calisan += count(sema_yukselt());
+
+    foreach ($veriIfadeleri as $ifade) {
+        $sonuc = sema_ifade_calistir($ifade, $calisan);
+
+        if ($sonuc !== null) {
+            return $sonuc;
+        }
     }
 
     return ['tamam' => sema_hazir(), 'calisan' => $calisan, 'mesaj' => ''];
 }
 
 /**
+ * Tek ifadeyi calistirir. Basarili ise null, hatali ise sema_kur'un
+ * dondurecegi diziyi verir.
+ *
+ * @return array{tamam:bool,calisan:int,mesaj:string}|null
+ */
+function sema_ifade_calistir(string $ifade, int &$calisan): ?array
+{
+    try {
+        db()->exec($ifade);
+        $calisan++;
+
+        return null;
+    } catch (PDOException $e) {
+        return [
+            'tamam'   => false,
+            'calisan' => $calisan,
+            'mesaj'   => 'Şema uygulanamadı: ' . $e->getMessage(),
+        ];
+    }
+}
+
+/**
  * Var olan kurulumlari gunceller.
  *
- * "CREATE TABLE IF NOT EXISTS" yeni bir sutunu eklemez; daha once kurulmus
- * bir veritabani icin eksik sutunlari burada tamamliyoruz. Her adim once
- * varligi kontrol eder, bu yuzden tekrar calistirmak zararsizdir.
+ * "CREATE TABLE IF NOT EXISTS" yeni bir sutunu eklemez; daha once
+ * kurulmus bir veritabani icin eksik sutunlari burada tamamliyoruz.
+ * Her adim once varligi kontrol eder, bu yuzden tekrar calistirmak
+ * zararsizdir.
  *
  * @return list<string> Uygulanan degisikliklerin aciklamalari
  */
@@ -136,6 +180,11 @@ function sema_yukselt(): array
     if (!sema_sutun_var('haberler', 'kategori_id')) {
         db()->exec('ALTER TABLE haberler ADD COLUMN kategori_id INT UNSIGNED NULL AFTER one_cikan');
         $yapilanlar[] = 'haberler.kategori_id sutunu eklendi';
+    }
+
+    if (!sema_sutun_var('kategoriler', 'ust_id')) {
+        db()->exec('ALTER TABLE kategoriler ADD COLUMN ust_id INT UNSIGNED NULL AFTER aciklama');
+        $yapilanlar[] = 'kategoriler.ust_id sutunu eklendi';
     }
 
     if (!sema_indeks_var('haberler', 'ix_haber_kategori')) {
@@ -151,8 +200,7 @@ function sema_yukselt(): array
             );
             $yapilanlar[] = 'kategori yabanci anahtari eklendi';
         } catch (PDOException $e) {
-            // Yabanci anahtar kurulamazsa uygulama yine calisir; sema_kur
-            // bunu hata saymaz.
+            // Yabanci anahtar kurulamazsa uygulama yine calisir.
         }
     }
 
