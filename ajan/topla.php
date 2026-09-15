@@ -249,6 +249,17 @@ foreach ($gruplar as $grupNo => $grup) {
 gunluk('---');
 gunluk(count($haberler) . ' haber yazıldı, ' . $elenen . ' eleme, ' . $hatali . ' hata.');
 
+$kullanim = $yazar->kullanim();
+
+if ($kullanim['istek'] > 0) {
+    gunluk(sprintf(
+        'Model kullanımı: %d istek, %s giriş + %s çıkış token (düşünme dahil).',
+        $kullanim['istek'],
+        number_format($kullanim['girdi']),
+        number_format($kullanim['cikti'])
+    ));
+}
+
 if ($kotaBitti) {
     gunluk('Günlük model kotası dolduğu için çalışma erken bitti.');
     gunluk('Kota yenilendiğinde ajan kaldığı yerden devam eder; aynı haber');

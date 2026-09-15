@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/ayarlar.php';
+require_once __DIR__ . '/../includes/ajan_tetikle.php';
 
 giris_zorunlu();
 
@@ -39,6 +41,33 @@ require __DIR__ . '/ust.php';
 <?php if ($bildirim !== null): ?>
     <div class="uyari uyari-<?= e($bildirim[0]) ?>" style="margin-top:20px;"><?= e($bildirim[1]) ?></div>
 <?php endif; ?>
+
+<!--
+    Tek tikla toplama.
+    Form ajan.php'ye gider: calisma sonucu ve son durum orada gosterilir,
+    boylece dugmeye basan kisi isin basladigini goruyor.
+-->
+<div class="kutu toplama-cubugu" style="margin-top:20px;">
+    <div>
+        <strong>Haberleri topla</strong>
+        <p class="ipucu" style="margin:4px 0 0;">
+            Tüm kaynaklar taranır, haberler yazılır ve onay bekleyen
+            listesine eklenir. Hiçbir haber onayınız olmadan yayımlanmaz.
+        </p>
+    </div>
+
+    <?php if (ajan_tetikleyebilir_mi()): ?>
+        <form method="post" action="ajan.php" style="margin:0;">
+            <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+            <input type="hidden" name="islem" value="calistir">
+            <input type="hidden" name="saat" value="36">
+            <input type="hidden" name="enfazla" value="25">
+            <button type="submit" class="dugme dugme-ana">Haberleri topla</button>
+        </form>
+    <?php else: ?>
+        <a href="ajan.php" class="dugme">Ajanı ayarla</a>
+    <?php endif; ?>
+</div>
 
 <nav class="sekmeler">
     <a href="?durum=taslak" class="<?= $durum === HABER_TASLAK ? 'aktif' : '' ?>">

@@ -27,6 +27,25 @@ final class Suzgec
         'amortisman', 'istisna', 'muafiyet', 'vergi incelemesi', 'vergi cezası',
     ];
 
+    /**
+     * Ekonomi gündemi terimleri.
+     *
+     * Site vergi odakli ama ekonomi de izleniyor. Bu liste kasten dar:
+     * somut veri ya da karar iceren haberleri yakalamak icin. "Ekonomi",
+     * "piyasa" gibi genel kelimeler yok, cunku her ekonomi haberi degerli
+     * degil.
+     */
+    private const EKONOMI = [
+        'enflasyon', 'tüfe', 'üfe', 'merkez bankası', 'tcmb', 'politika faizi',
+        'faiz kararı', 'faiz indirimi', 'faiz artırımı', 'asgari ücret',
+        'büyüme oranı', 'gayri safi yurt içi hasıla', 'gsyh', 'cari açık',
+        'bütçe açığı', 'bütçe dengesi', 'kamu maliyesi', 'hazine ihalesi',
+        'işsizlik oranı', 'istihdam verisi', 'sanayi üretimi',
+        'kapasite kullanım', 'tüketici güven', 'dış ticaret açığı',
+        'ihracat rakamları', 'ithalat rakamları', 'teşvik paketi',
+        'destek paketi', 'kredi garanti', 'yeniden değerleme oranı',
+    ];
+
     /** Tek başına zayıf; yalnızca bir başkasıyla birlikte sayılır. */
     private const ZAYIF = [
         'resmî gazete', 'resmi gazete', 'hazine ve maliye', 'bakanlık',
@@ -35,41 +54,77 @@ final class Suzgec
     ];
 
     /**
-     * Girdi vergiyle ilgili olabilir mi?
+     * Girdi vergi ya da ekonomi başlığına giriyor olabilir mi?
      */
     public function gecer(string $baslik, string $ozet = ''): bool
     {
-        return $this->puan($baslik, $ozet) > 0;
+        $puanlar = $this->puanlar($baslik, $ozet);
+
+        return $puanlar['vergi'] > 0 || $puanlar['ekonomi'] > 0;
     }
 
     /**
-     * Kaba ilgi puanı: güçlü terim 2, zayıf terim 1 sayılır.
-     * Eşik 2 — tek bir güçlü terim ya da iki zayıf terim yeter.
+     * Geriye dönük uyumluluk: toplam puan.
      */
     public function puan(string $baslik, string $ozet = ''): int
     {
+        $puanlar = $this->puanlar($baslik, $ozet);
+
+        return $puanlar['vergi'] + $puanlar['ekonomi'];
+    }
+
+    /**
+     * Vergi ve ekonomi puanlarını ayrı döndürür.
+     *
+     * Ayrı tutulması gerekiyor: aday sayısı sınırlandığında vergi
+     * haberleri önce işlenmeli, ekonomi haberleri onların yerini
+     * almamalı.
+     *
+     * @return array{vergi:int,ekonomi:int}
+     */
+    public function puanlar(string $baslik, string $ozet = ''): array
+    {
         $metin = $this->normalize($baslik . ' ' . $ozet);
-        $puan  = 0;
+
+        $vergi = 0;
 
         foreach (self::GUCLU as $terim) {
             if ($this->icerir($metin, $terim)) {
-                $puan += 2;
+                $vergi += 2;
             }
         }
 
         foreach (self::ZAYIF as $terim) {
             if ($this->icerir($metin, $terim)) {
-                $puan += 1;
+                $vergi += 1;
             }
         }
 
-        return $puan >= 2 ? $puan : 0;
+        $ekonomi = 0;
+
+        foreach (self::EKONOMI as $terim) {
+            if ($this->icerir($metin, $terim)) {
+                $ekonomi += 2;
+            }
+        }
+
+        return [
+            // Esik 2: tek guclu terim ya da iki zayif terim yeter.
+            'vergi'   => $vergi >= 2 ? $vergi : 0,
+            'ekonomi' => $ekonomi >= 2 ? $ekonomi : 0,
+        ];
     }
 
     private function normalize(string $metin): string
     {
-        // Türkçe'de mb_strtolower "I" harfini doğru indirger; strtolower indirgemez.
+        // Türkçe küçültme mb_strtolower ile tam doğru değil: "İ" harfi
+        // "i" + U+0307 (birleşen üst nokta) olarak iner, böylece
+        // "İşsizlik" -> "i̇şsizlik" olur ve listedeki "işsizlik"
+        // terimiyle eşleşmez. Noktalı/noktasız I çiftini önce elle
+        // eşleyip, kalan birleşen noktaları da temizliyoruz.
+        $metin = str_replace(['İ', 'I'], ['i', 'ı'], $metin);
         $metin = mb_strtolower($metin, 'UTF-8');
+        $metin = str_replace("\xCC\x87", '', $metin);
 
         return (string) preg_replace('/\s+/u', ' ', $metin);
     }

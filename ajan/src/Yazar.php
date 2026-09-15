@@ -29,16 +29,29 @@ final class Yazar
         Sana bir haber kaynağından başlık, özet ve sayfa metni verilecek.
         İki iş yapacaksın:
 
-        1) SINIFLANDIR. Haber Türkiye'de vergi mevzuatını, vergi
-           uygulamalarını, mali yükümlülükleri veya mükellefleri doğrudan
-           ilgilendiriyor mu? Şunlar ilgilidir: vergi kanunu değişiklikleri,
-           tebliğ ve sirkülerler, oran/had/tutar güncellemeleri, beyanname
-           süreçleri, e-belge düzenlemeleri, vergi cezaları ve incelemeleri,
-           yapılandırma ve af düzenlemeleri, muhasebe ve denetim
-           yükümlülükleri. Şunlar ilgili DEĞİLDİR: genel ekonomi ve piyasa
-           haberleri, döviz ve borsa hareketleri, siyaset, magazin, spor,
-           yalnızca vergi kelimesi geçen ama vergi düzenlemesi içermeyen
-           haberler. Emin değilsen ilgili sayma.
+        1) SINIFLANDIR. Haber iki başlıktan birine giriyor mu?
+
+           A) VERGİ VE MALİ MEVZUAT (asıl odak). Vergi kanunu
+              değişiklikleri, tebliğ ve sirkülerler, oran/had/tutar
+              güncellemeleri, beyanname süreçleri, e-belge düzenlemeleri,
+              vergi cezaları ve incelemeleri, yapılandırma ve af
+              düzenlemeleri, muhasebe ve denetim yükümlülükleri.
+
+           B) EKONOMİ GÜNDEMİ (ikincil). Mükellefleri ve şirketleri
+              ilgilendiren makroekonomik gelişmeler: enflasyon ve TÜFE
+              verileri, Merkez Bankası faiz kararları, kur ve piyasa
+              hareketleri, büyüme ve istihdam verileri, bütçe ve kamu
+              maliyesi, teşvik ve destek programları, asgari ücret,
+              sektörel ekonomik düzenlemeler.
+
+           Şunlar İKİSİ DE DEĞİLDİR ve ilgili sayılmaz: siyaset, magazin,
+           spor, kültür-sanat, asayiş, hava durumu, tanıtım ve reklam
+           içerikleri, yalnızca bir bakanın katıldığı etkinlik duyuruları,
+           içeriği olmayan "şu yayına katılacak" türü duyurular.
+
+           Emin değilsen ilgili sayma. A grubuna girenler daha değerli;
+           B grubunda yalnızca somut veri ya da karar içeren haberleri al,
+           yorum ve beklenti yazılarını alma.
 
         2) İLGİLİYSE HABERİ YAZ. Kurallar:
            - Kaynak metni yalnızca anlamak için okursun. ASLA cümle
@@ -54,15 +67,21 @@ final class Yazar
            - Etiketler: 2-4 adet, vergi terimleri (örnek: KDV, Tebliğ,
              Gelir Vergisi, e-Fatura).
 
-        GÜVEN SKORU (0-100): Haberin doğruluğundan ve vergi alakasından ne
-        kadar eminsin. Resmî kaynak (Resmî Gazete, GİB, Bakanlık) ve net
-        mevzuat bilgisi varsa yüksek (85-100). İkincil kaynak, eksik
+        GÜVEN SKORU (0-100): Haberin doğruluğundan ve site için
+        değerinden ne kadar eminsin. Vergi mevzuatı haberleri ekonomi
+        haberlerinden daha değerli; aynı güvenilirlikteki bir ekonomi
+        haberini vergi haberinden birkaç puan aşağıda tut. Resmî kaynak
+        (Resmî Gazete, GİB, Bakanlık) ve net mevzuat bilgisi varsa
+        yüksek (85-100). İkincil kaynak, eksik
         ayrıntı veya "bekleniyor/planlanıyor" gibi kesinleşmemiş ifadeler
         varsa düşür (50-80). Şüpheliyse 50'nin altı.
 
         KONU GRUBU: Haberi, kullanıcı mesajında verilen gruplardan birine
         ata. Yanıtta grubun slug değerini TAM olarak yaz. Haber birden çok
-        grubu ilgilendiriyorsa ağırlıklı olanı seç. Hiçbiri uymuyorsa
+        grubu ilgilendiriyorsa ağırlıklı olanı seç.
+
+        Vergi mevzuatı haberleri ilgili vergi grubuna gider. Ekonomi
+        gündemi haberleri "ekonomi" grubuna gider. Hiçbiri uymuyorsa
         "genel" kullan.
 
         AJAN NOTU: Haberi onaylayacak editöre tek cümlelik not. Neyi
@@ -146,6 +165,9 @@ final class Yazar
     ];
 
     private readonly string $model;
+
+    /** @var array{girdi:int,cikti:int,istek:int} Calisma boyunca biriken kullanim */
+    private array $kullanim = ['girdi' => 0, 'cikti' => 0, 'istek' => 0];
 
     public function __construct(private readonly string $apiKey, string $model = '')
     {
@@ -279,6 +301,8 @@ final class Yazar
             $veri = json_decode($ham, true);
 
             if ($kod >= 200 && $kod < 300 && is_array($veri)) {
+                $this->kullanimiTopla($veri);
+
                 return $veri;
             }
 
@@ -445,6 +469,42 @@ final class Yazar
         }
 
         return implode("\n", $satirlar);
+    }
+
+    /**
+     * Yanittaki token sayilarini biriktirir.
+     *
+     * Gunluk maliyeti tahmin etmek yerine olcmek icin: Gemini her
+     * yanitta usageMetadata ile kac token harcandigini bildiriyor.
+     *
+     * @param array<string,mixed> $veri
+     */
+    private function kullanimiTopla(array $veri): void
+    {
+        $olcum = $veri['usageMetadata'] ?? [];
+
+        if (!is_array($olcum)) {
+            return;
+        }
+
+        // Dusunme tokenlari ayri alanda gelir ama cikti gibi faturalanir;
+        // saymazsak maliyet oldugundan az gorunur.
+        $cikti = (int) ($olcum['candidatesTokenCount'] ?? 0)
+               + (int) ($olcum['thoughtsTokenCount'] ?? 0);
+
+        $this->kullanim['istek']++;
+        $this->kullanim['girdi'] += (int) ($olcum['promptTokenCount'] ?? 0);
+        $this->kullanim['cikti'] += $cikti;
+    }
+
+    /**
+     * Çalışma boyunca harcanan token sayıları.
+     *
+     * @return array{girdi:int,cikti:int,istek:int}
+     */
+    public function kullanim(): array
+    {
+        return $this->kullanim;
     }
 
     /**

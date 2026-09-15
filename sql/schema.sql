@@ -261,3 +261,16 @@ UPDATE kaynaklar SET liste_url = 'https://www.ismmmo.org.tr/Duyurular'
 
 UPDATE kaynaklar SET liste_url = 'https://www.resmigazete.gov.tr/'
  WHERE ad = 'Resmî Gazete' AND liste_url IS NULL;
+
+-- ---------------------------------------------------------------------------
+-- Ekonomi grubu
+--
+-- Site vergi odakli ama ekonomi gundemi de izleniyor; ajan vergi disi
+-- ama mali/ekonomik onemi olan haberleri bu gruba atar.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kategoriler (ad, slug, aciklama, sira) VALUES
+    ('Ekonomi', 'ekonomi', 'Piyasalar, enflasyon, faiz ve makroekonomik gelismeler', 35);
+
+UPDATE kategoriler SET aciklama = 'Piyasalar, enflasyon, faiz ve makroekonomik gelişmeler',
+       ust_id = NULL, sira = 35
+ WHERE slug = 'ekonomi';

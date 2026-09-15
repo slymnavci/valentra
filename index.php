@@ -40,29 +40,39 @@ require __DIR__ . '/includes/sayfa_ust.php';
     </div>
 <?php else: ?>
 
-    <?php require __DIR__ . '/includes/kaydirak.php'; ?>
+    <?php /* Ana kolon + yan pencere. Yan pencere mobilde ana kolonun altina duser. */ ?>
+    <div class="ana-duzen">
+        <div class="ana-kolon">
+            <?php require __DIR__ . '/includes/kaydirak.php'; ?>
 
-    <?php if ($haberler !== []): ?>
-        <div class="bolum-basligi">
-            <h2><?= $sayfa > 1 ? 'Haberler' : 'Son Haberler' ?></h2>
-            <span class="cizgi"></span>
+            <?php if ($haberler !== []): ?>
+                <div class="bolum-basligi">
+                    <h2><?= $sayfa > 1 ? 'Haberler' : 'Son Haberler' ?></h2>
+                    <span class="cizgi"></span>
+                </div>
+
+                <?php $izgaraHaberleri = $haberler; ?>
+                <?php require __DIR__ . '/includes/kart_izgara.php'; ?>
+            <?php endif; ?>
+
+            <?php if ($sonSayfa > 1): ?>
+                <nav class="kart-alt" style="justify-content:center;margin:32px 0;gap:14px;">
+                    <?php if ($sayfa > 1): ?>
+                        <a href="/?sayfa=<?= $sayfa - 1 ?>">&larr; Önceki</a>
+                    <?php endif; ?>
+                    <span>Sayfa <?= $sayfa ?> / <?= $sonSayfa ?></span>
+                    <?php if ($sayfa < $sonSayfa): ?>
+                        <a href="/?sayfa=<?= $sayfa + 1 ?>">Sonraki &rarr;</a>
+                    <?php endif; ?>
+                </nav>
+            <?php endif; ?>
         </div>
 
-        <?php $izgaraHaberleri = $haberler; ?>
-        <?php require __DIR__ . '/includes/kart_izgara.php'; ?>
-    <?php endif; ?>
+        <?php require __DIR__ . '/includes/yan_pencere.php'; ?>
+    </div>
 
-    <?php if ($sonSayfa > 1): ?>
-        <nav class="kart-alt" style="justify-content:center;margin:32px 0;gap:14px;">
-            <?php if ($sayfa > 1): ?>
-                <a href="/?sayfa=<?= $sayfa - 1 ?>">&larr; Önceki</a>
-            <?php endif; ?>
-            <span>Sayfa <?= $sayfa ?> / <?= $sonSayfa ?></span>
-            <?php if ($sayfa < $sonSayfa): ?>
-                <a href="/?sayfa=<?= $sayfa + 1 ?>">Sonraki &rarr;</a>
-            <?php endif; ?>
-        </nav>
-    <?php endif; ?>
+    <?php /* Alt pencereler tam genislikte: konu konu bloklar. */ ?>
+    <?php require __DIR__ . '/includes/alt_pencereler.php'; ?>
 
 <?php endif; ?>
 

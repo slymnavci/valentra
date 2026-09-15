@@ -308,3 +308,22 @@ code.anahtar {
     word-break: break-all;
     margin: 10px 0;
 }
+
+/* --- Tek tikla toplama cubugu -------------------------------------------- */
+
+.toplama-cubugu {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    padding: 18px 24px;
+}
+
+.toplama-cubugu strong { font-size: 1.05rem; }
+
+@media (max-width: 600px) {
+    .toplama-cubugu .dugme,
+    .toplama-cubugu form { width: 100%; }
+    .toplama-cubugu .dugme { text-align: center; }
+}

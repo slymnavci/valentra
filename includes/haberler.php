@@ -457,3 +457,105 @@ function haber_manset(int $limit = 8): array
 
     return $ifade->fetchAll();
 }
+
+/**
+ * Yan kolondaki "son eklenen" listesi.
+ *
+ * Mansetten farkli siralama: one_cikan dikkate alinmaz, yalnizca en
+ * yeniler. Boylece yan kolon mansetin kopyasi olmaz.
+ */
+function haber_son_eklenenler(int $limit = 8): array
+{
+    $ifade = db()->prepare(
+        'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
+           FROM haberler h
+           LEFT JOIN kategoriler k ON k.id = h.kategori_id
+          WHERE h.durum = :durum
+          ORDER BY h.yayin_tarihi DESC
+          LIMIT :limit'
+    );
+    $ifade->bindValue('durum', HABER_YAYINDA);
+    $ifade->bindValue('limit', $limit, PDO::PARAM_INT);
+    $ifade->execute();
+
+    return $ifade->fetchAll();
+}
+
+/**
+ * Ana sayfanin alt bolumu: haberi olan her konu grubu ve o gruptaki son
+ * haberler.
+ *
+ * Tek sorguda cekip PHP tarafinda gruplamak, grup basina ayri sorgu
+ * acmaktan hizli; grup sayisi buyudukce fark artar.
+ *
+ * @return list<array{ad:string,slug:string,haberler:list<array<string,mixed>>}>
+ */
+function kategori_bloklari(int $grupBasiHaber = 4, int $enFazlaGrup = 6): array
+{
+    $satirlar = db()->query(
+        'SELECT h.id, h.baslik, h.slug, h.ozet, h.gorsel_url, h.yayin_tarihi,
+                h.kaynak_adi, k.ad AS kategori_adi, k.slug AS kategori_slug, k.sira
+           FROM haberler h
+           JOIN kategoriler k ON k.id = h.kategori_id
+          WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . '
+            AND k.aktif = 1
+          ORDER BY k.sira, k.ad, h.yayin_tarihi DESC'
+    )->fetchAll();
+
+    $bloklar = [];
+
+    foreach ($satirlar as $satir) {
+        $slug = (string) $satir['kategori_slug'];
+
+        if (!isset($bloklar[$slug])) {
+            $bloklar[$slug] = [
+                'ad'       => (string) $satir['kategori_adi'],
+                'slug'     => $slug,
+                'haberler' => [],
+            ];
+        }
+
+        if (count($bloklar[$slug]['haberler']) < $grupBasiHaber) {
+            $bloklar[$slug]['haberler'][] = $satir;
+        }
+    }
+
+    // Tek haberi olan grup blok olarak anlamli gorunmuyor; en az iki
+    // haberi olanlari gosteriyoruz.
+    $bloklar = array_filter(
+        $bloklar,
+        static fn (array $b): bool => count($b['haberler']) >= 2
+    );
+
+    return array_slice(array_values($bloklar), 0, $enFazlaGrup);
+}
+
+/**
+ * En cok kullanilan etiketler (yan kolon icin).
+ *
+ * @return list<array{etiket:string,adet:int}>
+ */
+function haber_etiket_bulutu(int $limit = 12): array
+{
+    $satirlar = db()->query(
+        'SELECT etiketler FROM haberler WHERE durum = ' . db()->quote(HABER_YAYINDA)
+    )->fetchAll(PDO::FETCH_COLUMN);
+
+    $sayimlar = [];
+
+    foreach ($satirlar as $ham) {
+        foreach (etiketleri_coz((string) $ham) as $etiket) {
+            $anahtar = mb_strtolower($etiket, 'UTF-8');
+
+            if (!isset($sayimlar[$anahtar])) {
+                $sayimlar[$anahtar] = ['etiket' => $etiket, 'adet' => 0];
+            }
+
+            $sayimlar[$anahtar]['adet']++;
+        }
+    }
+
+    usort($sayimlar, static fn (array $a, array $b): int => $b['adet'] <=> $a['adet']);
+
+    return array_slice($sayimlar, 0, $limit);
+}

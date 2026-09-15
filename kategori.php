@@ -44,31 +44,37 @@ require __DIR__ . '/includes/sayfa_ust.php';
     <?php endif; ?>
 </div>
 
-<div class="bolum-basligi">
-    <h2><?= $toplam ?> Haber</h2>
-    <span class="cizgi"></span>
-</div>
+<div class="ana-duzen">
+    <div class="ana-kolon">
+        <div class="bolum-basligi">
+            <h2><?= $toplam ?> Haber</h2>
+            <span class="cizgi"></span>
+        </div>
 
-<?php if ($haberler === []): ?>
-    <div class="bos-durum">
-        <strong>Bu grupta henüz haber yok.</strong>
-        Bu konuda gelişme olduğunda haberler burada listelenecek.
+        <?php if ($haberler === []): ?>
+            <div class="bos-durum">
+                <strong>Bu grupta henüz haber yok.</strong>
+                Bu konuda gelişme olduğunda haberler burada listelenecek.
+            </div>
+        <?php else: ?>
+            <?php $izgaraHaberleri = $haberler; ?>
+            <?php require __DIR__ . '/includes/kart_izgara.php'; ?>
+
+            <?php if ($sonSayfa > 1): ?>
+                <nav class="kart-alt" style="justify-content:center;margin:32px 0;gap:14px;">
+                    <?php if ($sayfa > 1): ?>
+                        <a href="/kategori.php?k=<?= e($kategori['slug']) ?>&sayfa=<?= $sayfa - 1 ?>">&larr; Önceki</a>
+                    <?php endif; ?>
+                    <span>Sayfa <?= $sayfa ?> / <?= $sonSayfa ?></span>
+                    <?php if ($sayfa < $sonSayfa): ?>
+                        <a href="/kategori.php?k=<?= e($kategori['slug']) ?>&sayfa=<?= $sayfa + 1 ?>">Sonraki &rarr;</a>
+                    <?php endif; ?>
+                </nav>
+            <?php endif; ?>
+        <?php endif; ?>
     </div>
-<?php else: ?>
-    <?php $izgaraHaberleri = $haberler; ?>
-    <?php require __DIR__ . '/includes/kart_izgara.php'; ?>
 
-    <?php if ($sonSayfa > 1): ?>
-        <nav class="kart-alt" style="justify-content:center;margin:32px 0;gap:14px;">
-            <?php if ($sayfa > 1): ?>
-                <a href="/kategori.php?k=<?= e($kategori['slug']) ?>&sayfa=<?= $sayfa - 1 ?>">&larr; Önceki</a>
-            <?php endif; ?>
-            <span>Sayfa <?= $sayfa ?> / <?= $sonSayfa ?></span>
-            <?php if ($sayfa < $sonSayfa): ?>
-                <a href="/kategori.php?k=<?= e($kategori['slug']) ?>&sayfa=<?= $sayfa + 1 ?>">Sonraki &rarr;</a>
-            <?php endif; ?>
-        </nav>
-    <?php endif; ?>
-<?php endif; ?>
+    <?php require __DIR__ . '/includes/yan_pencere.php'; ?>
+</div>
 
 <?php require __DIR__ . '/includes/sayfa_alt.php'; ?>
