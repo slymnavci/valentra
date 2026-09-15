@@ -99,7 +99,7 @@ final class Site
      */
     private function istek(string $yontem, string $yol, ?string $govde = null): array
     {
-        $ch = curl_init(rtrim($this->taban, '/') . $yol);
+        $adres = rtrim($this->taban, '/') . $yol;
 
         // Iki baslik birden gonderiliyor.
         //
@@ -116,28 +116,53 @@ final class Site
             $basliklar[] = 'Content-Type: application/json';
         }
 
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CUSTOMREQUEST  => $yontem,
-            CURLOPT_HTTPHEADER     => $basliklar,
-            CURLOPT_TIMEOUT        => $this->zamanAsimi,
-            CURLOPT_CONNECTTIMEOUT => 10,
-            CURLOPT_FOLLOWLOCATION => false,
-        ]);
+        $sonHata = '';
+        $sonKod  = 0;
 
-        if ($govde !== null) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $govde);
+        // IHS paylasimli hosting ile GitHub Actions arasinda zaman zaman
+        // baglanti kurma zaman asimi gorulebiliyor. IPv4'e zorlamak,
+        // daha uzun baglanti suresi vermek ve gecici ag hatalarinda
+        // yeniden denemek bu durumu buyuk olcude giderir.
+        for ($deneme = 1; $deneme <= 3; $deneme++) {
+            $ch = curl_init($adres);
+
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_CUSTOMREQUEST  => $yontem,
+                CURLOPT_HTTPHEADER     => $basliklar,
+                CURLOPT_TIMEOUT        => max($this->zamanAsimi, 45),
+                CURLOPT_CONNECTTIMEOUT => 20,
+                CURLOPT_FOLLOWLOCATION => false,
+                CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
+                CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+            ]);
+
+            if ($govde !== null) {
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $govde);
+            }
+
+            $yanit   = curl_exec($ch);
+            $sonKod  = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+            $sonHata = curl_error($ch);
+            $errno   = curl_errno($ch);
+            curl_close($ch);
+
+            if (is_string($yanit)) {
+                return [$sonKod, $yanit];
+            }
+
+            // DNS, baglanti ve timeout hatalari gecici olabilir.
+            if (!in_array($errno, [CURLE_COULDNT_RESOLVE_HOST, CURLE_COULDNT_CONNECT, CURLE_OPERATION_TIMEDOUT], true)) {
+                break;
+            }
+
+            if ($deneme < 3) {
+                sleep($deneme * 3);
+            }
         }
 
-        $yanit = curl_exec($ch);
-        $kod   = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-        $hata  = curl_error($ch);
-        curl_close($ch);
-
-        if (!is_string($yanit)) {
-            throw new \RuntimeException('Siteye ulaşılamadı: ' . $hata);
-        }
-
-        return [$kod, $yanit];
+        throw new \RuntimeException(
+            'Siteye ulaşılamadı: ' . ($sonHata !== '' ? $sonHata : 'HTTP ' . $sonKod)
+        );
     }
 }
