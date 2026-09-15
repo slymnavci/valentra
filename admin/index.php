@@ -87,6 +87,10 @@ require __DIR__ . '/ust.php';
                         <span class="rozet rozet-skor">güven %<?= (int) $haber['guven_skoru'] ?></span>
                     <?php endif; ?>
 
+                    <?php if (!empty($haber['kategori_adi'])): ?>
+                        <span class="rozet rozet-skor"><?= e($haber['kategori_adi']) ?></span>
+                    <?php endif; ?>
+
                     <?php if ($haber['kaynak_adi'] !== ''): ?>
                         <span><?= e($haber['kaynak_adi']) ?></span>
                     <?php endif; ?>

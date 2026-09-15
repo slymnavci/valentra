@@ -88,10 +88,10 @@ function haber_taslak_ekle(array $veri): array
 
     $ifade = db()->prepare(
         'INSERT INTO haberler
-            (baslik, slug, ozet, icerik, gorsel_url, etiketler, durum,
+            (baslik, slug, ozet, icerik, gorsel_url, etiketler, durum, kategori_id,
              kaynak_id, kaynak_adi, kaynak_url, kaynak_parmak, guven_skoru, ajan_notu)
          VALUES
-            (:baslik, :slug, :ozet, :icerik, :gorsel_url, :etiketler, :durum,
+            (:baslik, :slug, :ozet, :icerik, :gorsel_url, :etiketler, :durum, :kategori_id,
              :kaynak_id, :kaynak_adi, :kaynak_url, :kaynak_parmak, :guven_skoru, :ajan_notu)'
     );
 
@@ -103,6 +103,7 @@ function haber_taslak_ekle(array $veri): array
         'gorsel_url'    => guvenli_url((string) ($veri['gorsel_url'] ?? '')) ?: null,
         'etiketler'     => mb_substr(trim((string) ($veri['etiketler'] ?? '')), 0, 400, 'UTF-8'),
         'durum'         => HABER_TASLAK,
+        'kategori_id'   => kategori_id_cozumle((string) ($veri['kategori'] ?? '')),
         'kaynak_id'     => $veri['kaynak_id'] ?? null,
         'kaynak_adi'    => mb_substr(trim((string) ($veri['kaynak_adi'] ?? '')), 0, 160, 'UTF-8'),
         'kaynak_url'    => mb_substr($kaynakUrl, 0, 500, 'UTF-8'),
@@ -120,9 +121,11 @@ function haber_taslak_ekle(array $veri): array
 function haber_bekleyenler(int $limit = 100): array
 {
     $ifade = db()->prepare(
-        'SELECT * FROM haberler
-          WHERE durum = :durum
-          ORDER BY guven_skoru DESC, olusturuldu DESC
+        'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
+           FROM haberler h
+           LEFT JOIN kategoriler k ON k.id = h.kategori_id
+          WHERE h.durum = :durum
+          ORDER BY h.guven_skoru DESC, h.olusturuldu DESC
           LIMIT :limit'
     );
     $ifade->bindValue('durum', HABER_TASLAK);
@@ -138,9 +141,11 @@ function haber_bekleyenler(int $limit = 100): array
 function haber_listele(string $durum, int $limit = 100): array
 {
     $ifade = db()->prepare(
-        'SELECT * FROM haberler
-          WHERE durum = :durum
-          ORDER BY COALESCE(yayin_tarihi, guncellendi) DESC
+        'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
+           FROM haberler h
+           LEFT JOIN kategoriler k ON k.id = h.kategori_id
+          WHERE h.durum = :durum
+          ORDER BY COALESCE(h.yayin_tarihi, h.guncellendi) DESC
           LIMIT :limit'
     );
     $ifade->bindValue('durum', $durum);
@@ -165,7 +170,10 @@ function haber_bul(int $id): ?array
 function haber_yayinda_bul(string $slug): ?array
 {
     $ifade = db()->prepare(
-        'SELECT * FROM haberler WHERE slug = :slug AND durum = :durum LIMIT 1'
+        'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
+           FROM haberler h
+           LEFT JOIN kategoriler k ON k.id = h.kategori_id
+          WHERE h.slug = :slug AND h.durum = :durum LIMIT 1'
     );
     $ifade->execute(['slug' => $slug, 'durum' => HABER_YAYINDA]);
     $satir = $ifade->fetch();
@@ -179,9 +187,11 @@ function haber_yayinda_bul(string $slug): ?array
 function haber_yayindakiler(int $limit = 20, int $atla = 0): array
 {
     $ifade = db()->prepare(
-        'SELECT * FROM haberler
-          WHERE durum = :durum
-          ORDER BY one_cikan DESC, yayin_tarihi DESC
+        'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
+           FROM haberler h
+           LEFT JOIN kategoriler k ON k.id = h.kategori_id
+          WHERE h.durum = :durum
+          ORDER BY h.one_cikan DESC, h.yayin_tarihi DESC
           LIMIT :limit OFFSET :atla'
     );
     $ifade->bindValue('durum', HABER_YAYINDA);
@@ -267,7 +277,8 @@ function haber_guncelle(int $id, array $veri): bool
                 icerik = :icerik,
                 gorsel_url = :gorsel_url,
                 etiketler = :etiketler,
-                one_cikan = :one_cikan
+                one_cikan = :one_cikan,
+                kategori_id = :kategori_id
           WHERE id = :id'
     );
 
@@ -281,6 +292,7 @@ function haber_guncelle(int $id, array $veri): bool
         'gorsel_url' => guvenli_url((string) ($veri['gorsel_url'] ?? '')) ?: null,
         'etiketler'  => mb_substr(trim((string) ($veri['etiketler'] ?? '')), 0, 400, 'UTF-8'),
         'one_cikan'  => !empty($veri['one_cikan']) ? 1 : 0,
+        'kategori_id'=> ($veri['kategori_id'] ?? '') !== '' ? (int) $veri['kategori_id'] : null,
         'id'         => $id,
     ]);
 }
@@ -291,4 +303,117 @@ function haber_sil(int $id): bool
     $ifade->execute(['id' => $id]);
 
     return $ifade->rowCount() > 0;
+}
+
+// ---------------------------------------------------------------------------
+// Konu gruplari
+// ---------------------------------------------------------------------------
+
+/**
+ * Ust menude gosterilecek aktif kategoriler.
+ */
+function kategori_listesi(bool $sadeceAktif = true): array
+{
+    $sql = 'SELECT * FROM kategoriler';
+
+    if ($sadeceAktif) {
+        $sql .= ' WHERE aktif = 1';
+    }
+
+    return db()->query($sql . ' ORDER BY sira, ad')->fetchAll();
+}
+
+/**
+ * Menu icin kategoriler + her birinin yayindaki haber sayisi.
+ * Hic haberi olmayan grup menude yer kaplamasin diye sayiyi da veriyoruz.
+ */
+function kategori_menusu(): array
+{
+    return db()->query(
+        'SELECT k.id, k.ad, k.slug,
+                COUNT(h.id) AS adet
+           FROM kategoriler k
+           LEFT JOIN haberler h
+             ON h.kategori_id = k.id AND h.durum = ' . db()->quote(HABER_YAYINDA) . '
+          WHERE k.aktif = 1
+          GROUP BY k.id, k.ad, k.slug, k.sira
+          ORDER BY k.sira, k.ad'
+    )->fetchAll();
+}
+
+function kategori_slug_bul(string $slug): ?array
+{
+    $ifade = db()->prepare('SELECT * FROM kategoriler WHERE slug = :slug AND aktif = 1 LIMIT 1');
+    $ifade->execute(['slug' => $slug]);
+    $satir = $ifade->fetch();
+
+    return $satir === false ? null : $satir;
+}
+
+/**
+ * Slug'dan kategori id'si; bulunamazsa null.
+ */
+function kategori_id_cozumle(?string $slug): ?int
+{
+    if ($slug === null || trim($slug) === '') {
+        return null;
+    }
+
+    $ifade = db()->prepare('SELECT id FROM kategoriler WHERE slug = :slug LIMIT 1');
+    $ifade->execute(['slug' => trim($slug)]);
+    $id = $ifade->fetchColumn();
+
+    return $id === false ? null : (int) $id;
+}
+
+/**
+ * Bir kategorideki yayinda olan haberler.
+ */
+function haber_kategoride(int $kategoriId, int $limit = 20, int $atla = 0): array
+{
+    $ifade = db()->prepare(
+        'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
+           FROM haberler h
+           LEFT JOIN kategoriler k ON k.id = h.kategori_id
+          WHERE h.durum = :durum AND h.kategori_id = :kategori
+          ORDER BY h.yayin_tarihi DESC
+          LIMIT :limit OFFSET :atla'
+    );
+    $ifade->bindValue('durum', HABER_YAYINDA);
+    $ifade->bindValue('kategori', $kategoriId, PDO::PARAM_INT);
+    $ifade->bindValue('limit', $limit, PDO::PARAM_INT);
+    $ifade->bindValue('atla', $atla, PDO::PARAM_INT);
+    $ifade->execute();
+
+    return $ifade->fetchAll();
+}
+
+function haber_kategoride_sayi(int $kategoriId): int
+{
+    $ifade = db()->prepare(
+        'SELECT COUNT(*) FROM haberler WHERE durum = :durum AND kategori_id = :kategori'
+    );
+    $ifade->execute(['durum' => HABER_YAYINDA, 'kategori' => $kategoriId]);
+
+    return (int) $ifade->fetchColumn();
+}
+
+/**
+ * Mansette kayacak haberler (en yeni, one cikanlar once).
+ */
+function haber_manset(int $limit = 8): array
+{
+    $ifade = db()->prepare(
+        'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
+           FROM haberler h
+           LEFT JOIN kategoriler k ON k.id = h.kategori_id
+          WHERE h.durum = :durum
+          ORDER BY h.one_cikan DESC, h.yayin_tarihi DESC
+          LIMIT :limit'
+    );
+    $ifade->bindValue('durum', HABER_YAYINDA);
+    $ifade->bindValue('limit', $limit, PDO::PARAM_INT);
+    $ifade->execute();
+
+    return $ifade->fetchAll();
 }

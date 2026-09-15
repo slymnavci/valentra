@@ -35,7 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'icerik'     => $_POST['icerik'] ?? '',
             'gorsel_url' => $_POST['gorsel_url'] ?? '',
             'etiketler'  => $_POST['etiketler'] ?? '',
-            'one_cikan'  => $_POST['one_cikan'] ?? null,
+            'one_cikan'   => $_POST['one_cikan'] ?? null,
+            'kategori_id' => $_POST['kategori_id'] ?? '',
         ]);
 
         // "Kaydet ve onayla" dugmesi
@@ -131,6 +132,21 @@ require __DIR__ . '/ust.php';
         <label for="gorsel_url">Görsel adresi</label>
         <input type="url" id="gorsel_url" name="gorsel_url" maxlength="500"
                value="<?= e($haber['gorsel_url'] ?? '') ?>">
+    </div>
+
+    <div class="alan">
+        <label for="kategori_id">Konu grubu</label>
+        <select id="kategori_id" name="kategori_id"
+                style="width:100%;padding:10px 12px;border:1px solid var(--cizgi);border-radius:7px;font-family:inherit;font-size:.92rem;">
+            <option value="">— seçilmedi —</option>
+            <?php foreach (kategori_listesi() as $kategori): ?>
+                <option value="<?= (int) $kategori['id'] ?>"
+                    <?= (int) ($haber['kategori_id'] ?? 0) === (int) $kategori['id'] ? 'selected' : '' ?>>
+                    <?= e($kategori['ad']) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <div class="ipucu">Ajan bir grup önerir; buradan değiştirebilirsiniz.</div>
     </div>
 
     <div class="alan">

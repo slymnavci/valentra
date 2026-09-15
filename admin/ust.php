@@ -14,6 +14,7 @@
             <a class="logo" href="index.php" style="color:#fff;display:flex;align-items:center;gap:10px;"><img src="/assets/logo.svg" alt="" width="30" height="26" style="background:#fff;border-radius:4px;padding:2px;">VALENTRA</a>
             <nav>
                 <a href="/" target="_blank" rel="noopener">Siteyi gör</a>
+                <a href="kaynaklar.php">Kaynaklar</a>
                 <a href="anahtarlar.php">Ajan anahtarları</a>
                 <a href="cikis.php"><?= e(aktif_yonetici_ad()) ?> — Çıkış</a>
             </nav>

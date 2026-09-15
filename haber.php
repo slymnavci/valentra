@@ -28,14 +28,21 @@ if ($haber === null) {
 
 $sayfaBasligi  = $haber['baslik'] . ' — Valentra';
 $sayfaAciklama = $haber['ozet'];
+$aktifKategori = (string) ($haber['kategori_slug'] ?? '');
 
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
 
 <article class="detay">
-    <?php $etiketler = etiketleri_coz($haber['etiketler']); ?>
-    <?php if ($etiketler !== []): ?>
-        <span class="etiket">#<?= e($etiketler[0]) ?></span>
+    <?php if (!empty($haber['kategori_slug'])): ?>
+        <a class="etiket" href="/kategori.php?k=<?= e($haber['kategori_slug']) ?>">
+            <?= e($haber['kategori_adi']) ?>
+        </a>
+    <?php else: ?>
+        <?php $etiketler = etiketleri_coz($haber['etiketler']); ?>
+        <?php if ($etiketler !== []): ?>
+            <span class="etiket">#<?= e($etiketler[0]) ?></span>
+        <?php endif; ?>
     <?php endif; ?>
 
     <h1><?= e($haber['baslik']) ?></h1>

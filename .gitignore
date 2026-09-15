@@ -5,3 +5,7 @@ includes/database.php
 includes/database.local.php
 *.log
 .DS_Store
+
+# Ajan bagimliliklari (GitHub Actions'ta kurulur)
+ajan/vendor/
+ajan/composer.lock

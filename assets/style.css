@@ -397,3 +397,233 @@ img { max-width: 100%; display: block; }
 @media (max-width: 860px) {
     .manset { grid-template-columns: 1fr; }
 }
+
+/* --- Konu menusu --------------------------------------------------------- */
+
+.ust-satir {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 64px;
+    flex-wrap: wrap;
+}
+
+.menu-bant {
+    background: var(--lacivert);
+    position: sticky;
+    top: 0;
+    z-index: 19;
+}
+
+.menu-satir {
+    display: flex;
+    gap: 2px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+
+.menu-satir a {
+    flex: none;
+    padding: 12px 15px;
+    color: #c3d0e2;
+    font-size: .84rem;
+    font-weight: 600;
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+    transition: color .12s ease, border-color .12s ease;
+}
+
+.menu-satir a:hover { color: #fff; }
+
+.menu-satir a.aktif {
+    color: #fff;
+    border-bottom-color: var(--altin);
+}
+
+.menu-adet {
+    display: inline-block;
+    margin-left: 5px;
+    font-size: .7rem;
+    font-weight: 600;
+    color: #8fa3bd;
+}
+
+.menu-satir a.aktif .menu-adet { color: var(--altin); }
+
+/* --- Kayan manset -------------------------------------------------------- */
+
+.kaydirak {
+    position: relative;
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.kaydirak-pencere {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+}
+
+.kaydirak-pencere::-webkit-scrollbar { display: none; }
+
+.kaydirak-slayt {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+    min-width: 0;
+}
+
+.kaydirak-slayt > a {
+    display: flex;
+    flex-direction: column;
+    min-height: 330px;
+    background: linear-gradient(150deg, #17304f 0%, #23405f 55%, #2b4a73 100%);
+    color: #fff;
+}
+
+.kaydirak-slayt.gorselli > a {
+    position: relative;
+    justify-content: flex-end;
+    background: #17304f;
+}
+
+.kaydirak-slayt .ust-gorsel {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: .5;
+}
+
+.kaydirak-govde {
+    position: relative;
+    padding: 34px 44px 38px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+    gap: 10px;
+}
+
+.kaydirak-slayt.gorselli .kaydirak-govde {
+    flex: none;
+    background: linear-gradient(to top, rgba(10, 20, 36, .95), rgba(10, 20, 36, .55) 70%, transparent);
+    padding-top: 90px;
+}
+
+.kaydirak-govde .grup {
+    align-self: flex-start;
+    background: var(--altin);
+    color: #14213a;
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 4px 11px;
+    border-radius: 3px;
+}
+
+.kaydirak-govde h2 {
+    margin: 0;
+    font-size: clamp(1.45rem, 3.3vw, 2.3rem);
+    font-weight: 800;
+    line-height: 1.16;
+    letter-spacing: -.012em;
+    color: #fff;
+}
+
+.kaydirak-govde .ozet {
+    margin: 0;
+    color: #c8d5e6;
+    font-size: 1rem;
+    max-width: 62ch;
+}
+
+.kaydirak-govde .kunye {
+    font-size: .78rem;
+    color: #9db0c9;
+}
+
+.kaydirak-ok {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .16);
+    color: #fff;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    z-index: 2;
+}
+
+.kaydirak-ok:hover { background: rgba(255, 255, 255, .3); }
+.kaydirak-ok.sol  { left: 14px; }
+.kaydirak-ok.sag  { right: 14px; }
+
+.kaydirak-sayfalar {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    padding: 0 0 26px;
+}
+
+.kaydirak-sayfalar button {
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--cizgi);
+    border-radius: 50%;
+    background: var(--kart);
+    color: var(--metin-soluk);
+    font-size: .8rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all .12s ease;
+}
+
+.kaydirak-sayfalar button:hover { border-color: var(--altin); color: var(--metin); }
+
+.kaydirak-sayfalar button[aria-current="true"] {
+    background: var(--lacivert);
+    border-color: var(--lacivert);
+    color: #fff;
+}
+
+/* --- Kategori basligi ---------------------------------------------------- */
+
+.kategori-basligi {
+    margin: 30px 0 4px;
+}
+
+.kategori-basligi h1 {
+    margin: 0;
+    font-size: clamp(1.5rem, 3.4vw, 2.1rem);
+    font-weight: 800;
+    letter-spacing: -.012em;
+}
+
+.kategori-basligi p {
+    margin: 6px 0 0;
+    color: var(--metin-soluk);
+}
+
+@media (max-width: 640px) {
+    .kaydirak-govde { padding: 26px 22px 28px; }
+    .kaydirak-slayt > a { min-height: 320px; }
+    .kaydirak-ok { display: none; }
+}

@@ -15,65 +15,27 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/../includes/bootstrap.php';
-
-header('Content-Type: application/json; charset=utf-8');
-
-function json_cikis(int $kod, array $govde): void
-{
-    http_response_code($kod);
-    echo json_encode($govde, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit;
-}
+require_once __DIR__ . '/../includes/ajan_yetki.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    json_cikis(405, ['hata' => 'Yalnızca POST kabul edilir.']);
+    ajan_json(405, ['hata' => 'Yalnızca POST kabul edilir.']);
 }
 
-/** Authorization basligini sunucu farkliliklarina ragmen bulur. */
-function yetki_basligi(): string
-{
-    $baslik = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+$anahtarId = ajan_anahtar_dogrula();
 
-    if ($baslik === '' && function_exists('apache_request_headers')) {
-        foreach (apache_request_headers() as $ad => $deger) {
-            if (strcasecmp($ad, 'Authorization') === 0) {
-                $baslik = $deger;
-                break;
-            }
-        }
-    }
-
-    return is_string($baslik) ? $baslik : '';
+if ($anahtarId === null) {
+    ajan_json(401, ['hata' => 'Geçersiz veya eksik anahtar.']);
 }
-
-$baslik = yetki_basligi();
-
-if (!preg_match('/^Bearer\s+(\S+)$/i', trim($baslik), $eslesme)) {
-    json_cikis(401, ['hata' => 'Authorization başlığı eksik.']);
-}
-
-$ifade = db()->prepare(
-    'SELECT id FROM ajan_anahtarlari WHERE anahtar_hash = :hash AND aktif = 1 LIMIT 1'
-);
-$ifade->execute(['hash' => hash('sha256', $eslesme[1])]);
-$anahtarId = $ifade->fetchColumn();
-
-if ($anahtarId === false) {
-    json_cikis(401, ['hata' => 'Geçersiz anahtar.']);
-}
-
-db()->prepare('UPDATE ajan_anahtarlari SET son_kullanim = NOW() WHERE id = :id')
-    ->execute(['id' => $anahtarId]);
 
 $govde = file_get_contents('php://input');
 $veri  = json_decode($govde !== false ? $govde : '', true);
 
 if (!is_array($veri) || !isset($veri['haberler']) || !is_array($veri['haberler'])) {
-    json_cikis(400, ['hata' => 'Gövde {"haberler": [...]} biçiminde olmalı.']);
+    ajan_json(400, ['hata' => 'Gövde {"haberler": [...]} biçiminde olmalı.']);
 }
 
 if (count($veri['haberler']) > 100) {
-    json_cikis(400, ['hata' => 'Tek istekte en fazla 100 haber gönderilebilir.']);
+    ajan_json(400, ['hata' => 'Tek istekte en fazla 100 haber gönderilebilir.']);
 }
 
 $kayit = db()->prepare(
@@ -120,7 +82,7 @@ db()->prepare(
     'id'        => $kayitId,
 ]);
 
-json_cikis(200, [
+ajan_json(200, [
     'durum'     => 'tamam',
     'eklenen'   => $eklenen,
     'yinelenen' => $yinelenen,

@@ -1,0 +1,65 @@
+name: Vergi haberleri ajani
+
+on:
+  schedule:
+    # Her gun 06:30 Turkiye saati (UTC+3) -> 03:30 UTC
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+    inputs:
+      kuru:
+        description: 'Kuru calisma (siteye gonderme, sadece ciktiyi goster)'
+        type: boolean
+        default: false
+      saat:
+        description: 'Kac saat geriye bakilsin'
+        default: '36'
+      enfazla:
+        description: 'En fazla kac aday islensin'
+        default: '25'
+
+# Ayni anda iki ajan calismasin; ust uste binerse kopya istek olusur.
+concurrency:
+  group: valentra-ajan
+  cancel-in-progress: false
+
+jobs:
+  topla:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Repository kodlarini al
+        uses: actions/checkout@v5
+
+      - name: PHP kur
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: curl, mbstring, simplexml, json
+          coverage: none
+
+      - name: Composer onbellegi
+        uses: actions/cache@v4
+        with:
+          path: ajan/vendor
+          key: ajan-vendor-${{ hashFiles('ajan/composer.json') }}
+          restore-keys: ajan-vendor-
+
+      - name: Bagimliliklari kur
+        working-directory: ajan
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Ajani calistir
+        working-directory: ajan
+        env:
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: |
+          BAYRAKLAR="--saat=${{ inputs.saat || '36' }} --enfazla=${{ inputs.enfazla || '25' }}"
+
+          if [ "${{ inputs.kuru }}" = "true" ]; then
+            BAYRAKLAR="$BAYRAKLAR --kuru"
+          fi
+
+          php topla.php $BAYRAKLAR

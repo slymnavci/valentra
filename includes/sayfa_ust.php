@@ -1,10 +1,13 @@
 <?php
 declare(strict_types=1);
 
-/** Herkese acik sayfalarin ortak ust bolumu. $sayfaBasligi disaridan gelir. */
+/** Herkese acik sayfalarin ortak ust bolumu. */
 
-$sayfaBasligi = $sayfaBasligi ?? 'Valentra — Vergi Haberleri';
+$sayfaBasligi  = $sayfaBasligi ?? 'Valentra — Vergi Haberleri';
 $sayfaAciklama = $sayfaAciklama ?? 'Vergi mevzuatı, tebliğler ve ekonomi gündeminden derlenen güncel vergi haberleri.';
+$aktifKategori = $aktifKategori ?? '';
+
+$menu = kategori_menusu();
 ?>
 <!DOCTYPE html>
 <html lang="tr">
@@ -18,7 +21,7 @@ $sayfaAciklama = $sayfaAciklama ?? 'Vergi mevzuatı, tebliğler ve ekonomi günd
 </head>
 <body>
     <header class="ust-bant">
-        <div class="sinirli">
+        <div class="sinirli ust-satir">
             <a class="logo" href="/">
                 <img class="marka" src="/assets/logo.svg" alt="" width="40" height="35">
                 <span class="yazi">
@@ -29,5 +32,22 @@ $sayfaAciklama = $sayfaAciklama ?? 'Vergi mevzuatı, tebliğler ve ekonomi günd
             <div class="ust-bilgi"><?= e(tarih_bicimle(date('Y-m-d H:i:s'), false)) ?> &middot; Vergi Gündemi</div>
         </div>
     </header>
+
+    <?php if ($menu !== []): ?>
+        <nav class="menu-bant" aria-label="Konu grupları">
+            <div class="sinirli menu-satir">
+                <a href="/" class="<?= $aktifKategori === '' ? 'aktif' : '' ?>">Tümü</a>
+                <?php foreach ($menu as $grup): ?>
+                    <a href="/kategori.php?k=<?= e($grup['slug']) ?>"
+                       class="<?= $aktifKategori === $grup['slug'] ? 'aktif' : '' ?>">
+                        <?= e($grup['ad']) ?>
+                        <?php if ((int) $grup['adet'] > 0): ?>
+                            <span class="menu-adet"><?= (int) $grup['adet'] ?></span>
+                        <?php endif; ?>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        </nav>
+    <?php endif; ?>
 
     <main class="sinirli">
