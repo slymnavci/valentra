@@ -66,6 +66,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $testSonuclari[$id] = besleme_dene($url);
         }
 
+    } elseif ($islem === 'bul') {
+        $id = (int) ($_POST['id'] ?? 0);
+        $ifade = db()->prepare('SELECT site_url FROM kaynaklar WHERE id = :id');
+        $ifade->execute(['id' => $id]);
+        $siteUrl = (string) $ifade->fetchColumn();
+
+        if ($siteUrl !== '') {
+            $kesif = besleme_kesfet($siteUrl);
+
+            if ($kesif['bulundu']) {
+                db()->prepare('UPDATE kaynaklar SET besleme_url = :url WHERE id = :id')
+                    ->execute(['url' => $kesif['url'], 'id' => $id]);
+
+                $bildirim = 'Besleme bulundu ve kaydedildi: ' . $kesif['url'];
+            } else {
+                $testSonuclari[$id] = [
+                    'tamam' => false,
+                    'mesaj' => $kesif['mesaj'],
+                    'adet'  => 0,
+                    'ornek' => '',
+                ];
+            }
+        }
+
+    } elseif ($islem === 'bozuklari_bul') {
+        // Once calismayanlari belirle, sonra her biri icin besleme ara.
+        $bulunan = 0;
+        $denenen = 0;
+
+        foreach (db()->query('SELECT id, site_url, besleme_url FROM kaynaklar WHERE aktif = 1')->fetchAll() as $k) {
+            $mevcut = besleme_dene((string) $k['besleme_url'], 8);
+
+            if ($mevcut['tamam']) {
+                continue;
+            }
+
+            $denenen++;
+            $kesif = besleme_kesfet((string) $k['site_url'], 6);
+
+            if ($kesif['bulundu']) {
+                db()->prepare('UPDATE kaynaklar SET besleme_url = :url WHERE id = :id')
+                    ->execute(['url' => $kesif['url'], 'id' => (int) $k['id']]);
+                $bulunan++;
+            } else {
+                $testSonuclari[(int) $k['id']] = [
+                    'tamam' => false, 'mesaj' => $kesif['mesaj'], 'adet' => 0, 'ornek' => '',
+                ];
+            }
+        }
+
+        $bildirim = $denenen . ' çalışmayan kaynak incelendi, ' . $bulunan . ' tanesinin beslemesi bulundu.';
+
     } elseif ($islem === 'hepsini_test') {
         foreach (db()->query('SELECT id, besleme_url FROM kaynaklar WHERE aktif = 1')->fetchAll() as $k) {
             $testSonuclari[(int) $k['id']] = besleme_dene((string) $k['besleme_url'], 10);
@@ -100,8 +152,9 @@ require __DIR__ . '/ust.php';
     <h2 style="margin:0 0 6px;font-size:1.05rem;">Kaynak ekle</h2>
     <p class="ipucu" style="margin:0 0 16px;">
         Ajan her çalıştığında bu listedeki aktif kaynakların RSS beslemesini tarar.
-        Besleme adresi genelde sitenin ekonomi kategorisinin <code>/rss</code> ya da
-        <code>/feed</code> adresidir.
+        Besleme adresini bilmiyorsanız yalnızca site adresini girin ve ekledikten
+        sonra <strong>Besleme bul</strong> düğmesine basın; sitenin ilan ettiği
+        RSS adresi otomatik bulunur.
     </p>
 
     <form method="post" action="kaynaklar.php">
@@ -142,11 +195,19 @@ require __DIR__ . '/ust.php';
         <h2 style="margin:0;font-size:1.05rem;">Kaynaklar (<?= count($kaynaklar) ?>)</h2>
 
         <?php if ($kaynaklar !== []): ?>
-            <form method="post" action="kaynaklar.php">
-                <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
-                <input type="hidden" name="islem" value="hepsini_test">
-                <button type="submit" class="dugme">Aktif kaynakların hepsini test et</button>
-            </form>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <form method="post" action="kaynaklar.php">
+                    <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                    <input type="hidden" name="islem" value="hepsini_test">
+                    <button type="submit" class="dugme">Hepsini test et</button>
+                </form>
+
+                <form method="post" action="kaynaklar.php">
+                    <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                    <input type="hidden" name="islem" value="bozuklari_bul">
+                    <button type="submit" class="dugme dugme-ana">Çalışmayanların beslemesini bul</button>
+                </form>
+            </div>
         <?php endif; ?>
     </div>
 
@@ -186,6 +247,13 @@ require __DIR__ . '/ust.php';
                             <input type="hidden" name="islem" value="test">
                             <input type="hidden" name="id" value="<?= (int) $kaynak['id'] ?>">
                             <button type="submit" class="dugme">Test et</button>
+                        </form>
+
+                        <form method="post" action="kaynaklar.php">
+                            <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                            <input type="hidden" name="islem" value="bul">
+                            <input type="hidden" name="id" value="<?= (int) $kaynak['id'] ?>">
+                            <button type="submit" class="dugme">Besleme bul</button>
                         </form>
 
                         <form method="post" action="kaynaklar.php">
