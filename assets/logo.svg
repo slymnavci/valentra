@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 104" role="img" aria-label="Valentra">
+  <defs>
+    <linearGradient id="vLacivert" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#17304f"/>
+      <stop offset="100%" stop-color="#2b4a73"/>
+    </linearGradient>
+    <linearGradient id="vAltin" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%"   stop-color="#e2c894"/>
+      <stop offset="45%"  stop-color="#c9a86a"/>
+      <stop offset="100%" stop-color="#a8854a"/>
+    </linearGradient>
+  </defs>
+
+  <path fill="url(#vLacivert)"
+        d="M4 6 L29 6 L60 79 L91 6 L116 6 L73 98 L47 98 Z"/>
+
+  <path fill="#ffffff"
+        d="M57.5 20 C45 48 42.5 73 56 100 L63 100 C50 73 52 48 62 20 Z"/>
+
+  <path fill="url(#vAltin)"
+        d="M60 22 C49 49 47 72 58.5 96 C70 72 69 48 60 22 Z"/>
+</svg>

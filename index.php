@@ -2,128 +2,140 @@
 declare(strict_types=1);
 
 /**
- * Valentra - gecici test ana sayfasi.
- * Sistemin ve deploy akisinin calistigini dogrulamak icin kullanilir.
+ * Valentra ana sayfasi.
+ * Yalnizca yonetici tarafindan onaylanmis ("yayinda") haberleri listeler.
  */
 
-$baslik   = 'VALENTRA';
-$altYazi  = 'Sistem başarıyla çalışıyor';
-$phpSurum = PHP_VERSION;
-$zaman    = date('d.m.Y H:i');
+require_once __DIR__ . '/includes/bootstrap.php';
 
-header('Content-Type: text/html; charset=utf-8');
+$sayfa   = max(1, (int) ($_GET['sayfa'] ?? 1));
+$adet    = 13;
+$haberler = haber_yayindakiler($adet, ($sayfa - 1) * $adet);
+$toplam  = haber_yayinda_sayisi();
+$sonSayfa = max(1, (int) ceil($toplam / $adet));
+
+$manset  = $sayfa === 1 ? array_shift($haberler) : null;
+$yan     = $sayfa === 1 ? array_splice($haberler, 0, 2) : [];
+
+$sayfaBasligi = $sayfa > 1
+    ? 'Vergi Haberleri — Sayfa ' . $sayfa . ' | Valentra'
+    : 'Valentra — Vergi Haberleri';
+
+require __DIR__ . '/includes/sayfa_ust.php';
 ?>
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="robots" content="noindex, nofollow">
-    <title><?= htmlspecialchars($baslik, ENT_QUOTES, 'UTF-8') ?></title>
-    <style>
-        :root {
-            color-scheme: light dark;
-            --zemin: #0f1115;
-            --zemin-yumusak: #161a21;
-            --metin: #f4f5f7;
-            --metin-soluk: #9aa2b1;
-            --cizgi: rgba(255, 255, 255, .08);
-            --vurgu: #6ea8fe;
-        }
 
-        @media (prefers-color-scheme: light) {
-            :root {
-                --zemin: #f7f8fa;
-                --zemin-yumusak: #ffffff;
-                --metin: #14171c;
-                --metin-soluk: #5c6472;
-                --cizgi: rgba(0, 0, 0, .08);
-                --vurgu: #2563eb;
-            }
-        }
+<?php if ($toplam === 0): ?>
+    <div class="bos-durum">
+        <strong>Henüz yayımlanmış haber yok.</strong>
+        Ajanın derlediği haberler yönetici onayından geçtikten sonra burada görünecek.
+    </div>
+<?php else: ?>
 
-        * { box-sizing: border-box; }
+    <div class="bolum-basligi">
+        <h2>Vergi Gündemi</h2>
+        <span class="cizgi"></span>
+    </div>
 
-        html, body { height: 100%; }
+    <?php if ($manset !== null): ?>
+        <section class="manset">
+            <?php $mansetGorsel = guvenli_url($manset['gorsel_url'] ?? ''); ?>
+            <article class="manset-ana <?= $mansetGorsel === '' ? 'yazili' : '' ?>">
+                <a href="/haber.php?h=<?= e($manset['slug']) ?>">
+                    <?php if ($mansetGorsel !== ''): ?>
+                        <img class="gorsel" src="<?= e($mansetGorsel) ?>" alt="" loading="eager">
+                    <?php endif; ?>
+                    <div class="govde">
+                        <?php $etiketler = etiketleri_coz($manset['etiketler']); ?>
+                        <?php if ($etiketler !== []): ?>
+                            <span class="etiket">#<?= e($etiketler[0]) ?></span>
+                        <?php endif; ?>
+                        <h1><?= e($manset['baslik']) ?></h1>
+                        <p class="ozet"><?= e($manset['ozet']) ?></p>
+                        <div class="kart-alt">
+                            <span><?= e(tarih_bicimle($manset['yayin_tarihi'])) ?></span>
+                            <?php if ($manset['kaynak_adi'] !== ''): ?>
+                                <span>&middot; <?= e($manset['kaynak_adi']) ?></span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </a>
+            </article>
 
-        body {
-            margin: 0;
-            padding: 48px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--zemin);
-            color: var(--metin);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-                         "Helvetica Neue", Arial, sans-serif;
-            -webkit-font-smoothing: antialiased;
-        }
+            <div class="manset-yan">
+                <?php foreach ($yan as $haber): ?>
+                    <?php $kartGorsel = guvenli_url($haber['gorsel_url'] ?? ''); ?>
+                    <article class="kart <?= $kartGorsel === '' ? 'yazili' : '' ?>">
+                        <a href="/haber.php?h=<?= e($haber['slug']) ?>">
+                            <?php if ($kartGorsel !== ''): ?>
+                                <img class="gorsel" src="<?= e($kartGorsel) ?>" alt="" loading="lazy">
+                            <?php endif; ?>
+                            <div class="govde">
+                                <?php $etiketler = etiketleri_coz($haber['etiketler']); ?>
+                                <?php if ($etiketler !== []): ?>
+                                    <span class="etiket">#<?= e($etiketler[0]) ?></span>
+                                <?php endif; ?>
+                                <h3><?= e($haber['baslik']) ?></h3>
+                                <p class="ozet"><?= e(kisalt($haber['ozet'], 110)) ?></p>
+                                <div class="kart-alt">
+                                    <span><?= e(tarih_bicimle($haber['yayin_tarihi'])) ?></span>
+                                    <?php if ($haber['kaynak_adi'] !== ''): ?>
+                                        <span>&middot; <?= e($haber['kaynak_adi']) ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </a>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        </section>
+    <?php endif; ?>
 
-        .kutu {
-            width: 100%;
-            max-width: 640px;
-            text-align: center;
-        }
-
-        h1 {
-            margin: 0;
-            font-size: clamp(2.75rem, 13vw, 6.5rem);
-            font-weight: 700;
-            letter-spacing: .14em;
-            line-height: 1.05;
-            text-indent: .14em;
-        }
-
-        .alt-yazi {
-            margin: 20px 0 0;
-            font-size: clamp(1rem, 3.4vw, 1.35rem);
-            font-weight: 400;
-            color: var(--metin-soluk);
-        }
-
-        .durum {
-            display: inline-flex;
-            align-items: center;
-            gap: 9px;
-            margin-top: 36px;
-            padding: 9px 18px;
-            border: 1px solid var(--cizgi);
-            border-radius: 999px;
-            background: var(--zemin-yumusak);
-            font-size: .82rem;
-            color: var(--metin-soluk);
-        }
-
-        .nokta {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--vurgu);
-            flex: none;
-        }
-
-        .bilgi {
-            margin: 28px 0 0;
-            font-size: .78rem;
-            letter-spacing: .03em;
-            color: var(--metin-soluk);
-        }
-    </style>
-</head>
-<body>
-    <main class="kutu">
-        <h1><?= htmlspecialchars($baslik, ENT_QUOTES, 'UTF-8') ?></h1>
-        <p class="alt-yazi"><?= htmlspecialchars($altYazi, ENT_QUOTES, 'UTF-8') ?></p>
-
-        <div class="durum">
-            <span class="nokta" aria-hidden="true"></span>
-            <span>Yayında</span>
+    <?php if ($haberler !== []): ?>
+        <div class="bolum-basligi">
+            <h2>Son Haberler</h2>
+            <span class="cizgi"></span>
         </div>
 
-        <p class="bilgi">
-            PHP <?= htmlspecialchars($phpSurum, ENT_QUOTES, 'UTF-8') ?>
-            &middot; <?= htmlspecialchars($zaman, ENT_QUOTES, 'UTF-8') ?>
-        </p>
-    </main>
-</body>
-</html>
+        <section class="kart-izgara">
+            <?php foreach ($haberler as $haber): ?>
+                <?php $kartGorsel = guvenli_url($haber['gorsel_url'] ?? ''); ?>
+                <article class="kart <?= $kartGorsel === '' ? 'yazili' : '' ?>">
+                    <a href="/haber.php?h=<?= e($haber['slug']) ?>">
+                        <?php if ($kartGorsel !== ''): ?>
+                            <img class="gorsel" src="<?= e($kartGorsel) ?>" alt="" loading="lazy">
+                        <?php endif; ?>
+                        <div class="govde">
+                            <?php $etiketler = etiketleri_coz($haber['etiketler']); ?>
+                            <?php if ($etiketler !== []): ?>
+                                <span class="etiket">#<?= e($etiketler[0]) ?></span>
+                            <?php endif; ?>
+                            <h3><?= e($haber['baslik']) ?></h3>
+                            <p class="ozet"><?= e(kisalt($haber['ozet'], 120)) ?></p>
+                            <div class="kart-alt">
+                                <span><?= e(tarih_bicimle($haber['yayin_tarihi'])) ?></span>
+                                <?php if ($haber['kaynak_adi'] !== ''): ?>
+                                    <span>&middot; <?= e($haber['kaynak_adi']) ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </a>
+                </article>
+            <?php endforeach; ?>
+        </section>
+    <?php endif; ?>
+
+    <?php if ($sonSayfa > 1): ?>
+        <nav class="kart-alt" style="justify-content:center;margin:32px 0;gap:14px;">
+            <?php if ($sayfa > 1): ?>
+                <a href="/?sayfa=<?= $sayfa - 1 ?>">&larr; Önceki</a>
+            <?php endif; ?>
+            <span>Sayfa <?= $sayfa ?> / <?= $sonSayfa ?></span>
+            <?php if ($sayfa < $sonSayfa): ?>
+                <a href="/?sayfa=<?= $sayfa + 1 ?>">Sonraki &rarr;</a>
+            <?php endif; ?>
+        </nav>
+    <?php endif; ?>
+
+<?php endif; ?>
+
+<?php require __DIR__ . '/includes/sayfa_alt.php'; ?>

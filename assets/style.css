@@ -1,0 +1,399 @@
+/* Valentra - vergi haberleri portali */
+
+:root {
+    --lacivert:      #17304f;
+    --lacivert-acik: #2b4a73;
+    --altin:         #c9a86a;
+    --altin-koyu:    #a8854a;
+    --zemin:         #f6f7f9;
+    --kart:          #ffffff;
+    --metin:         #14213a;
+    --metin-soluk:   #5d6a80;
+    --cizgi:         #e2e6ec;
+    --vurgu:         #1b4f8f;
+    --golge:         0 1px 2px rgba(20, 33, 58, .05), 0 4px 16px rgba(20, 33, 58, .06);
+    --yuvarlak:      10px;
+    --genislik:      1180px;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --zemin:       #0d1522;
+        --kart:        #151f30;
+        --metin:       #eef2f8;
+        --metin-soluk: #97a3b8;
+        --cizgi:       #24314a;
+        --vurgu:       #7aa9e8;
+        --golge:       0 1px 2px rgba(0, 0, 0, .4);
+    }
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--zemin);
+    color: var(--metin);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; display: block; }
+
+.sinirli {
+    width: 100%;
+    max-width: var(--genislik);
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* --- Ust bant ------------------------------------------------------------ */
+
+.ust-bant {
+    background: var(--kart);
+    border-bottom: 1px solid var(--cizgi);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+.ust-bant .sinirli {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 64px;
+    flex-wrap: wrap;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+}
+
+.logo .marka {
+    width: 40px;
+    height: 35px;
+    flex: none;
+}
+
+.logo .yazi {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+}
+
+.logo .ad {
+    font-size: 1.32rem;
+    font-weight: 400;
+    letter-spacing: .22em;
+    text-indent: .22em;
+    color: var(--lacivert);
+}
+
+.logo .alt {
+    margin-top: 5px;
+    font-size: .55rem;
+    font-weight: 500;
+    letter-spacing: .19em;
+    text-indent: .19em;
+    color: var(--metin-soluk);
+    white-space: nowrap;
+}
+
+@media (prefers-color-scheme: dark) {
+    .logo .ad { color: #e8edf5; }
+}
+
+@media (max-width: 480px) {
+    .logo .alt { display: none; }
+}
+
+.ust-bilgi {
+    font-size: .8rem;
+    color: var(--metin-soluk);
+}
+
+/* --- Bolum basligi ------------------------------------------------------- */
+
+.bolum-basligi {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 32px 0 16px;
+}
+
+.bolum-basligi h2 {
+    margin: 0;
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    background: var(--lacivert);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 4px;
+}
+
+.bolum-basligi .cizgi {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, var(--altin), transparent);
+}
+
+/* --- Manset -------------------------------------------------------------- */
+
+.manset {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 20px;
+    margin-bottom: 28px;
+}
+
+.manset-ana {
+    position: relative;
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    overflow: hidden;
+    min-height: 340px;
+    display: flex;
+    flex-direction: column;
+}
+
+.manset-ana > a {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.manset-ana .gorsel {
+    aspect-ratio: 16 / 9;
+    background: linear-gradient(135deg, #17304f, #2b4a73);
+    object-fit: cover;
+    width: 100%;
+}
+
+.manset-ana .govde {
+    padding: 22px 24px 26px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+/* Gorseli olmayan manset: bos blok yerine lacivert tipografik panel */
+.manset-ana.yazili {
+    background: linear-gradient(150deg, #17304f 0%, #23405f 55%, #2b4a73 100%);
+    color: #fff;
+}
+
+.manset-ana.yazili .govde { justify-content: center; padding: 40px 36px 44px; }
+.manset-ana.yazili h1 { color: #fff; }
+.manset-ana.yazili .ozet { color: #c3d0e2; }
+.manset-ana.yazili .kart-alt { color: #9db0c9; }
+.manset-ana.yazili .etiket { color: var(--altin); }
+
+.manset-ana.yazili::before {
+    content: "";
+    display: block;
+    height: 3px;
+    background: linear-gradient(90deg, var(--altin), transparent 70%);
+}
+
+.manset-ana h1 {
+    margin: 0 0 10px;
+    font-size: clamp(1.5rem, 3.2vw, 2.15rem);
+    font-weight: 800;
+    line-height: 1.18;
+    letter-spacing: -.01em;
+}
+
+.manset-yan {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.manset-yan .kart { flex: 1; }
+
+.manset-yan .kart > a {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+/* --- Kartlar ------------------------------------------------------------- */
+
+.kart-izgara {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.kart {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.kart:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(16, 20, 28, .08), 0 10px 24px rgba(16, 20, 28, .1);
+}
+
+.kart .gorsel {
+    aspect-ratio: 16 / 9;
+    background: linear-gradient(135deg, #17304f, #2b4a73);
+    object-fit: cover;
+    width: 100%;
+}
+
+/* Gorseli olmayan kart: ustte ince altin cizgi */
+.kart.yazili::before {
+    content: "";
+    display: block;
+    height: 3px;
+    background: linear-gradient(90deg, var(--altin), transparent 75%);
+}
+
+.kart .govde {
+    padding: 14px 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+
+.kart h3 {
+    margin: 0;
+    font-size: 1.02rem;
+    font-weight: 700;
+    line-height: 1.32;
+}
+
+.ozet {
+    margin: 0;
+    font-size: .88rem;
+    color: var(--metin-soluk);
+}
+
+.kart-alt {
+    margin-top: auto;
+    padding-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: .74rem;
+    color: var(--metin-soluk);
+}
+
+.etiket {
+    display: inline-block;
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--altin-koyu);
+}
+
+/* --- Haber detay --------------------------------------------------------- */
+
+.detay {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    padding: clamp(22px, 4vw, 44px);
+    margin: 28px 0;
+}
+
+.detay h1 {
+    margin: 0 0 14px;
+    font-size: clamp(1.6rem, 4vw, 2.5rem);
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -.015em;
+}
+
+.detay .kunye {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    padding-bottom: 18px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--cizgi);
+    font-size: .82rem;
+    color: var(--metin-soluk);
+}
+
+.detay .spot {
+    font-size: 1.08rem;
+    color: var(--metin-soluk);
+    margin: 0 0 22px;
+}
+
+.detay .icerik p { margin: 0 0 1.05em; }
+
+.kaynak-kutusu {
+    margin-top: 28px;
+    padding: 14px 16px;
+    border: 1px solid var(--cizgi);
+    border-radius: 8px;
+    font-size: .84rem;
+    color: var(--metin-soluk);
+}
+
+.kaynak-kutusu a { color: var(--vurgu); text-decoration: underline; }
+
+/* --- Bos durum ----------------------------------------------------------- */
+
+.bos-durum {
+    background: var(--kart);
+    border: 1px dashed var(--cizgi);
+    border-radius: var(--yuvarlak);
+    padding: 56px 24px;
+    text-align: center;
+    color: var(--metin-soluk);
+    margin: 28px 0;
+}
+
+.bos-durum strong {
+    display: block;
+    color: var(--metin);
+    font-size: 1.1rem;
+    margin-bottom: 6px;
+}
+
+/* --- Alt bant ------------------------------------------------------------ */
+
+.alt-bant {
+    margin-top: 48px;
+    padding: 28px 0;
+    border-top: 1px solid var(--cizgi);
+    background: var(--kart);
+    font-size: .82rem;
+    color: var(--metin-soluk);
+}
+
+.alt-bant .sinirli {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+/* --- Duyarli ------------------------------------------------------------- */
+
+@media (max-width: 860px) {
+    .manset { grid-template-columns: 1fr; }
+}

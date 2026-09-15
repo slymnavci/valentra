@@ -1,0 +1,7 @@
+# Deploy sirasinda GitHub Secrets'tan uretilir, asla repoya girmez.
+includes/database.php
+
+# Yerel gelistirme
+includes/database.local.php
+*.log
+.DS_Store
