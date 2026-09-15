@@ -186,7 +186,13 @@ final class Yazar
 
         $sonMesaj = '';
 
-        for ($deneme = 1; $deneme <= 3; $deneme++) {
+        // Ucretsiz katmanda 503 ("yogun talep") sik gorulur; birkac
+        // saniyelik bekleme yetmez. Artan bekleme ile daha uzun israr
+        // edilir: 4, 10, 20, 35, 60 saniye.
+        $beklemeler = [4, 10, 20, 35, 60];
+        $enFazlaDeneme = count($beklemeler) + 1;
+
+        for ($deneme = 1; $deneme <= $enFazlaDeneme; $deneme++) {
             $ch = curl_init($adres);
 
             curl_setopt_array($ch, [
@@ -212,12 +218,12 @@ final class Yazar
             if (!is_string($ham)) {
                 $sonMesaj = $hata !== '' ? $hata : 'bilinmeyen ağ hatası';
 
-                if ($deneme < 3 && in_array($errno, [
+                if ($deneme < $enFazlaDeneme && in_array($errno, [
                     CURLE_COULDNT_RESOLVE_HOST,
                     CURLE_COULDNT_CONNECT,
                     CURLE_OPERATION_TIMEDOUT,
                 ], true)) {
-                    sleep($deneme * 3);
+                    sleep($beklemeler[$deneme - 1]);
                     continue;
                 }
 
@@ -234,8 +240,9 @@ final class Yazar
                 ? (string) ($veri['error']['message'] ?? ('HTTP ' . $kod))
                 : ('HTTP ' . $kod . ': ' . mb_substr($ham, 0, 300, 'UTF-8'));
 
-            if ($deneme < 3 && ($kod === 429 || $kod >= 500)) {
-                sleep($deneme * 10);
+            // 429 (kota) ve 5xx (gecici sunucu sorunu) yeniden denenir.
+            if ($deneme < $enFazlaDeneme && ($kod === 429 || $kod >= 500)) {
+                sleep($beklemeler[$deneme - 1]);
                 continue;
             }
 

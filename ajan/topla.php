@@ -161,6 +161,12 @@ foreach ($adaylar as $sira => $aday) {
     $kaynak = $aday['kaynak'];
     $no     = $sira + 1;
 
+    // Ucretsiz katman dakikalik istek sinirina takilmasin diye adaylar
+    // arasinda kisa bir ara veriliyor.
+    if ($sira > 0) {
+        sleep(4);
+    }
+
     $kisaBaslik = mb_substr($girdi['baslik'], 0, 60, 'UTF-8');
 
     try {
