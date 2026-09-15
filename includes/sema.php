@@ -128,7 +128,8 @@ function sema_kur(string $dosya): array
         return ['tamam' => false, 'calisan' => $calisan, 'mesaj' => 'Tablolar oluşturulamadı.'];
     }
 
-    $calisan += count(sema_yukselt());
+    $yukseltmeHatalari = [];
+    $calisan += count(sema_yukselt($yukseltmeHatalari));
 
     foreach ($veriIfadeleri as $ifade) {
         $sonuc = sema_ifade_calistir($ifade, $calisan);
@@ -138,7 +139,13 @@ function sema_kur(string $dosya): array
         }
     }
 
-    return ['tamam' => sema_hazir(), 'calisan' => $calisan, 'mesaj' => ''];
+    return [
+        'tamam'   => sema_hazir() && sema_guncel_mi(),
+        'calisan' => $calisan,
+        'mesaj'   => $yukseltmeHatalari === []
+            ? ''
+            : 'Bazı adımlar uygulanamadı: ' . implode(' | ', $yukseltmeHatalari),
+    ];
 }
 
 /**
@@ -173,35 +180,53 @@ function sema_ifade_calistir(string $ifade, int &$calisan): ?array
  *
  * @return list<string> Uygulanan degisikliklerin aciklamalari
  */
-function sema_yukselt(): array
+function sema_yukselt(array &$hatalar = []): array
 {
     $yapilanlar = [];
 
-    if (!sema_sutun_var('haberler', 'kategori_id')) {
-        db()->exec('ALTER TABLE haberler ADD COLUMN kategori_id INT UNSIGNED NULL AFTER one_cikan');
-        $yapilanlar[] = 'haberler.kategori_id sutunu eklendi';
-    }
-
-    if (!sema_sutun_var('haberler', 'iframe_url')) {
-        db()->exec('ALTER TABLE haberler ADD COLUMN iframe_url VARCHAR(1000) NULL AFTER gorsel_url');
-        $yapilanlar[] = 'haberler.iframe_url sutunu eklendi';
-    }
-
-    if (!sema_sutun_var('kategoriler', 'ust_id')) {
-        db()->exec('ALTER TABLE kategoriler ADD COLUMN ust_id INT UNSIGNED NULL AFTER aciklama');
-        $yapilanlar[] = 'kategoriler.ust_id sutunu eklendi';
-    }
-
-    foreach (['liste_url' => 'VARCHAR(500) NULL', 'liste_secici' => 'VARCHAR(200) NULL'] as $sutun => $tanim) {
-        if (!sema_sutun_var('kaynaklar', $sutun)) {
-            db()->exec('ALTER TABLE kaynaklar ADD COLUMN ' . $sutun . ' ' . $tanim . ' AFTER besleme_url');
-            $yapilanlar[] = 'kaynaklar.' . $sutun . ' sutunu eklendi';
+    /**
+     * Tek bir yukseltme adimini calistirir.
+     *
+     * Bir adimin basarisiz olmasi digerlerini engellememeli: ornegin
+     * indeks kurulamadi diye eksik bir sutunun eklenmemesi, sitenin hic
+     * calismamasi demek olur. Hatalar toplanip panelde raporlanir.
+     */
+    $adim = static function (string $aciklama, callable $is) use (&$yapilanlar, &$hatalar): void {
+        try {
+            if ($is() !== false) {
+                $yapilanlar[] = $aciklama;
+            }
+        } catch (PDOException $e) {
+            $hatalar[] = $aciklama . ': ' . $e->getMessage();
+            error_log('[valentra] sema adimi basarisiz — ' . $aciklama . ': ' . $e->getMessage());
         }
-    }
+    };
+
+    $sutunEkle = static function (string $tablo, string $sutun, string $tanim) use ($adim): void {
+        $adim($tablo . '.' . $sutun . ' sutunu', static function () use ($tablo, $sutun, $tanim): bool {
+            if (sema_sutun_var($tablo, $sutun)) {
+                return false;
+            }
+
+            db()->exec('ALTER TABLE ' . $tablo . ' ADD COLUMN ' . $sutun . ' ' . $tanim);
+
+            return true;
+        });
+    };
+
+    $sutunEkle('haberler', 'kategori_id', 'INT UNSIGNED NULL AFTER one_cikan');
+    $sutunEkle('haberler', 'iframe_url', 'VARCHAR(1000) NULL AFTER gorsel_url');
+    $sutunEkle('kategoriler', 'ust_id', 'INT UNSIGNED NULL AFTER aciklama');
+    $sutunEkle('kaynaklar', 'liste_url', 'VARCHAR(500) NULL AFTER besleme_url');
+    $sutunEkle('kaynaklar', 'liste_secici', 'VARCHAR(200) NULL AFTER besleme_url');
 
     // kaynaklar.besleme_url benzersiz olmali; yoksa sema her
     // calistirildiginda INSERT IGNORE kopya kayit uretir.
-    if (!sema_indeks_var('kaynaklar', 'uq_kaynak_besleme')) {
+    $adim('kaynaklar benzersizlik kisiti', static function (): bool {
+        if (sema_indeks_var('kaynaklar', 'uq_kaynak_besleme')) {
+            return false;
+        }
+
         // Kisiti ekleyebilmek icin once mevcut kopyalari temizle
         // (her besleme adresinden en eskisini birak).
         db()->exec(
@@ -210,35 +235,55 @@ function sema_yukselt(): array
                  ON digeri.besleme_url = k.besleme_url AND digeri.id < k.id'
         );
 
-        try {
-            // utf8mb4 + eski InnoDB satir bicimlerinde 500 karakterlik
-            // indeks 767 bayt sinirini asabilir. 190 karakterlik on ek
-            // 760 baytta kalir ve paylasimli hostinglerle uyumludur.
-            db()->exec('ALTER TABLE kaynaklar ADD UNIQUE KEY uq_kaynak_besleme (besleme_url(190))');
-            $yapilanlar[] = 'kaynaklar benzersizlik kisiti eklendi';
-        } catch (PDOException $e) {
-            error_log('[valentra] kaynak benzersizlik kisiti eklenemedi: ' . $e->getMessage());
-        }
-    }
+        // utf8mb4 + eski InnoDB satir bicimlerinde 500 karakterlik
+        // indeks 767 bayt sinirini asabilir. 190 karakterlik on ek
+        // 760 baytta kalir ve paylasimli hostinglerle uyumludur.
+        db()->exec('ALTER TABLE kaynaklar ADD UNIQUE KEY uq_kaynak_besleme (besleme_url(190))');
 
-    if (!sema_indeks_var('haberler', 'ix_haber_kategori')) {
+        return true;
+    });
+
+    $adim('kategori indeksi', static function (): bool {
+        if (sema_indeks_var('haberler', 'ix_haber_kategori')) {
+            return false;
+        }
+
         db()->exec('ALTER TABLE haberler ADD INDEX ix_haber_kategori (kategori_id, durum, yayin_tarihi)');
-        $yapilanlar[] = 'kategori indeksi eklendi';
-    }
 
-    if (!sema_indeks_var('haberler', 'fk_haber_kategori')) {
-        try {
-            db()->exec(
-                'ALTER TABLE haberler ADD CONSTRAINT fk_haber_kategori
-                 FOREIGN KEY (kategori_id) REFERENCES kategoriler (id) ON DELETE SET NULL'
-            );
-            $yapilanlar[] = 'kategori yabanci anahtari eklendi';
-        } catch (PDOException $e) {
-            // Yabanci anahtar kurulamazsa uygulama yine calisir.
+        return true;
+    });
+
+    $adim('kategori yabanci anahtari', static function (): bool {
+        // Yabanci anahtar STATISTICS'te degil TABLE_CONSTRAINTS'te durur.
+        // Indeks tablosuna bakmak kisiti goremeyip her calismada yeniden
+        // olusturmayi denemeye ve kalici hata mesajina yol aciyordu.
+        if (sema_kisit_var('haberler', 'fk_haber_kategori')) {
+            return false;
         }
-    }
+
+        db()->exec(
+            'ALTER TABLE haberler ADD CONSTRAINT fk_haber_kategori
+             FOREIGN KEY (kategori_id) REFERENCES kategoriler (id) ON DELETE SET NULL'
+        );
+
+        return true;
+    });
 
     return $yapilanlar;
+}
+
+/** Yabanci anahtar gibi tablo kisitlari icin. */
+function sema_kisit_var(string $tablo, string $kisit): bool
+{
+    $ifade = db()->prepare(
+        'SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+          WHERE CONSTRAINT_SCHEMA = DATABASE()
+            AND TABLE_NAME = :tablo
+            AND CONSTRAINT_NAME = :kisit'
+    );
+    $ifade->execute(['tablo' => $tablo, 'kisit' => $kisit]);
+
+    return (int) $ifade->fetchColumn() > 0;
 }
 
 function sema_sutun_var(string $tablo, string $sutun): bool
@@ -290,4 +335,51 @@ function sema_guncel_mi(): bool
     }
 
     return true;
+}
+
+/**
+ * Semanin ayrintili durumu: hangi sutun ve indeks var, hangisi yok.
+ *
+ * "Guncelleme gerekiyor" uyarisi surekli donuyorsa neyin takildigini
+ * tahmin etmek yerine panelde gormek icin.
+ *
+ * @return array{tablolar:array<string,bool>,sutunlar:array<string,bool>,indeksler:array<string,bool>}
+ */
+function sema_ayrintili_durum(): array
+{
+    $sutunlar  = [];
+    $indeksler = [];
+
+    $beklenenSutunlar = [
+        'haberler.kategori_id'   => ['haberler', 'kategori_id'],
+        'haberler.iframe_url'    => ['haberler', 'iframe_url'],
+        'kategoriler.ust_id'     => ['kategoriler', 'ust_id'],
+        'kaynaklar.liste_url'    => ['kaynaklar', 'liste_url'],
+        'kaynaklar.liste_secici' => ['kaynaklar', 'liste_secici'],
+    ];
+
+    foreach ($beklenenSutunlar as $ad => [$tablo, $sutun]) {
+        try {
+            $sutunlar[$ad] = sema_sutun_var($tablo, $sutun);
+        } catch (PDOException $e) {
+            $sutunlar[$ad] = false;
+        }
+    }
+
+    foreach ([
+        'kaynaklar.uq_kaynak_besleme' => ['kaynaklar', 'uq_kaynak_besleme'],
+        'haberler.ix_haber_kategori'  => ['haberler', 'ix_haber_kategori'],
+    ] as $ad => [$tablo, $indeks]) {
+        try {
+            $indeksler[$ad] = sema_indeks_var($tablo, $indeks);
+        } catch (PDOException $e) {
+            $indeksler[$ad] = false;
+        }
+    }
+
+    return [
+        'tablolar'  => sema_durumu(),
+        'sutunlar'  => $sutunlar,
+        'indeksler' => $indeksler,
+    ];
 }

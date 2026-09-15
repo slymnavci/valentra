@@ -13,7 +13,11 @@ namespace Valentra\Ajan;
  */
 final class Yazar
 {
-    private const MODEL = 'gemini-3.8-flash';
+    /**
+     * Varsayilan model. GEMINI_MODEL ortam degiskeniyle degistirilebilir;
+     * model adi degisirse kod duzenlemeye gerek kalmaz.
+     */
+    private const VARSAYILAN_MODEL = 'gemini-3.8-flash';
     private const API   = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
     private const YONERGE = <<<'METIN'
@@ -87,15 +91,21 @@ final class Yazar
             'guven_skoru' => ['type' => 'integer', 'description' => '0-100 arası güven'],
             'ajan_notu'   => ['type' => 'string',  'description' => 'Onaylayacak editöre tek cümlelik not'],
         ],
+        // Gemini'nin responseSchema'si OpenAPI alt kumesidir;
+        // additionalProperties desteklenmez, gonderilirse istek 400 doner.
         'required' => [
             'ilgili', 'red_nedeni', 'baslik', 'ozet', 'icerik',
             'etiketler', 'kategori', 'guven_skoru', 'ajan_notu',
         ],
-        'additionalProperties' => false,
     ];
 
-    public function __construct(private readonly string $apiKey)
+    private readonly string $model;
+
+    public function __construct(private readonly string $apiKey, string $model = '')
     {
+        $ortam = (string) (getenv('GEMINI_MODEL') ?: '');
+
+        $this->model = $model !== '' ? $model : ($ortam !== '' ? $ortam : self::VARSAYILAN_MODEL);
     }
 
     /**
@@ -120,13 +130,12 @@ final class Yazar
                 'parts' => [['text' => $istem]],
             ]],
             'generationConfig' => [
-                'maxOutputTokens' => 8000,
-                'responseFormat' => [
-                    'text' => [
-                        'mimeType' => 'application/json',
-                        'schema'   => self::SEMA,
-                    ],
-                ],
+                'maxOutputTokens'  => 8000,
+                // Gemini yapisal cikti icin bu iki alani kullanir.
+                // "responseFormat" OpenAI'ya ait bir sekildir; Gemini
+                // bilinmeyen alan olarak reddeder.
+                'responseMimeType' => 'application/json',
+                'responseSchema'   => self::SEMA,
             ],
         ];
 
@@ -168,7 +177,7 @@ final class Yazar
      */
     private function geminiIstegi(array $govde): array
     {
-        $adres = self::API . self::MODEL . ':generateContent';
+        $adres = self::API . $this->model . ':generateContent';
         $json  = json_encode($govde, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         if (!is_string($json)) {

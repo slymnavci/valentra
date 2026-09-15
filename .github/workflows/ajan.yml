@@ -53,6 +53,9 @@ jobs:
         working-directory: ajan
         env:
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          # Model adi degisirse kod duzenlemeye gerek yok: bu secret'i
+          # ekleyip istedigin model adini yazman yeterli.
+          GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
         run: |
