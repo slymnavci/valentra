@@ -117,6 +117,18 @@ CREATE TABLE IF NOT EXISTS ajan_anahtarlari (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
+-- Genel ayarlar (anahtar/deger)
+--
+-- Panelden girilen, kodda sabit tutulmamasi gereken degerler burada.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ayarlar (
+    anahtar     VARCHAR(80)  NOT NULL,
+    deger       TEXT         NOT NULL,
+    guncellendi DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (anahtar)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
 -- Ajan calisma kayitlari
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ajan_kayitlari (

@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 const VALENTRA_TABLOLAR = [
     'yoneticiler',
+    'ayarlar',
     'kategoriler',
     'kaynaklar',
     'haberler',
