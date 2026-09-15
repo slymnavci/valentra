@@ -122,7 +122,51 @@ function parmak_izi(string $kaynakUrl, string $baslik): string
 
 $adaylar = [];
 
+/*
+ * Kaynak tarama icin zaman butcesi.
+ *
+ * Kaynak sayisi 78'e cikti ve hepsi sirayla okunuyor. Cogu iki
+ * saniyede cevap veriyor ama olu ya da yavas bir adres zaman asimina
+ * kadar bekletiyor; bir avuc olu adres taramayi dakikalarca uzatabilir
+ * ve calisma GitHub'in sure sinirina dayanir. O noktada model cagrisi
+ * hic yapilamaz ve calisma tamamen bosa gider.
+ *
+ * Butce dolunca kalan kaynaklar atlanip eldeki adaylarla devam
+ * ediliyor: eksik taramayla birkac haber yazmak, hic haber yazmamaktan
+ * iyi.
+ *
+ * Baslangic noktasi her calismada kayiyor. Sabit sirada taransaydi
+ * butce hep ayni yerde dolar ve listenin sonundaki kaynaklar HIC
+ * taranmazdi; kaydirmayla her kaynak sirayla one geliyor. Kaydirma
+ * rastgele degil saate bagli: ayni calisma iki kez tetiklenirse ayni
+ * sirayi izler, davranis ongorulebilir kalir.
+ */
+$taramaBaslangic = time();
+$taramaButcesi   = 8 * 60;
+$atlanan         = 0;
+
+if ($kaynaklar !== []) {
+    // Adim listenin ucte biri. Adim 1 olsaydi butce dolan bir
+    // calismadan sonra baslangic yalnizca bir kaynak ilerler ve
+    // listenin sonu gunlerce taranmazdi; denemede 20 calisma sonunda
+    // 78 kaynagin 29'u hala hic taranmamisti. Ucte birlik adimla uc
+    // calismada tum liste bir kez doniyor.
+    $adim      = max(1, intdiv(count($kaynaklar), 3));
+    $calismaNo = (int) floor(time() / 7200);
+    $kayma     = ($calismaNo * $adim) % count($kaynaklar);
+
+    $kaynaklar = array_merge(
+        array_slice($kaynaklar, $kayma),
+        array_slice($kaynaklar, 0, $kayma)
+    );
+}
+
 foreach ($kaynaklar as $kaynak) {
+    if (time() - $taramaBaslangic > $taramaButcesi) {
+        $atlanan++;
+        continue;
+    }
+
     $beslemeUrl = (string) ($kaynak['besleme_url'] ?? '');
     $listeUrl   = (string) ($kaynak['liste_url'] ?? '');
 
@@ -173,6 +217,14 @@ foreach ($kaynaklar as $kaynak) {
 
     $zatenNotu = $zatenVar > 0 ? ", {$zatenVar} zaten var" : '';
     gunluk("  {$kaynak['ad']} ({$yontem}): " . count($girdiler) . " girdi, {$gecen} aday{$zatenNotu}");
+}
+
+if ($atlanan > 0) {
+    gunluk(
+        '  ' . $atlanan . ' kaynak zaman bütçesi dolduğu için atlandı '
+        . '(tarama ' . (time() - $taramaBaslangic) . ' sn sürdü). '
+        . 'Sıra her çalışmada kaydığı için sonraki çalışmalarda öne geçecekler.'
+    );
 }
 
 if ($adaylar === []) {

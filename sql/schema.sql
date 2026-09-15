@@ -467,6 +467,91 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) 
      NULL, 'https://www.bloomberg.com/economics', 'web', 1);
 
 -- ---------------------------------------------------------------------------
+-- Dunyanin onde gelen haber kuruluslari
+--
+-- Genel haber degil, EKONOMI/IS bolumlerinin beslemeleri aliniyor.
+-- Ana sayfa beslemesi gunde yuzlerce girdi uretir ve neredeyse tamami
+-- on elemeden dusup bosa istek olur.
+--
+-- Uc katman:
+--   1) Turkce yayin yapan yabanci kurumlar — cevirisiz kullanilabilir
+--   2) Ingilizce ekonomi/is bolumleri — ajan Turkce yaziyor
+--   3) Merkez bankalari ve uluslararasi kurumlar — veriyi ureten yer
+--
+-- On eleyici Ingilizce terimleri de taniyor, aksi halde bu
+-- basliklarin tamami modele hic ulasmadan elenirdi.
+--
+-- Adresler bu ortamdan dogrulanamadi ("Kaynaklari sina" ile kontrol
+-- edin). Calismayanlari panelden kapatin; kapali kaynak taranmaz.
+-- ---------------------------------------------------------------------------
+
+-- 1) Turkce yayin yapan yabanci kuruluslar
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) VALUES
+    ('BBC Türkçe',              'https://www.bbc.com/turkce',
+     'https://feeds.bbci.co.uk/turkce/rss.xml',
+     'https://www.bbc.com/turkce/topics/cn7pd2vlq5jt', 'rss', 1),
+    ('DW Türkçe',               'https://www.dw.com/tr',
+     'https://rss.dw.com/rdf/rss-tur-all',
+     'https://www.dw.com/tr/ekonomi/s-10011', 'rss', 1),
+    ('Euronews Türkçe',         'https://tr.euronews.com',
+     'https://tr.euronews.com/rss?level=theme&name=business',
+     'https://tr.euronews.com/business', 'rss', 1),
+    ('VOA Türkçe',              'https://www.amerikaninsesi.com',
+     'https://www.amerikaninsesi.com/api/zkvyteumqi',
+     'https://www.amerikaninsesi.com/z/1730', 'rss', 1);
+
+-- 2) Ingilizce ekonomi ve is bolumleri
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) VALUES
+    ('BBC Business',            'https://www.bbc.com/news/business',
+     'https://feeds.bbci.co.uk/news/business/rss.xml',
+     'https://www.bbc.com/business', 'rss', 1),
+    ('The Guardian Business',   'https://www.theguardian.com/business',
+     'https://www.theguardian.com/business/rss',
+     'https://www.theguardian.com/business/economics', 'rss', 1),
+    ('The New York Times Business', 'https://www.nytimes.com/section/business',
+     'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml',
+     'https://www.nytimes.com/section/business/economy', 'rss', 1),
+    ('The Economist Finans',    'https://www.economist.com',
+     'https://www.economist.com/finance-and-economics/rss.xml',
+     'https://www.economist.com/finance-and-economics', 'rss', 1),
+    ('Financial Times',         'https://www.ft.com',
+     'https://www.ft.com/rss/home',
+     'https://www.ft.com/global-economy', 'rss', 1),
+    ('CNBC Ekonomi',            'https://www.cnbc.com',
+     'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258',
+     'https://www.cnbc.com/economy/', 'rss', 1),
+    ('MarketWatch',             'https://www.marketwatch.com',
+     'https://feeds.content.dowjones.io/public/rss/mw_topstories',
+     'https://www.marketwatch.com/economy-politics', 'rss', 1),
+    ('CNN Business',            'https://edition.cnn.com/business',
+     'http://rss.cnn.com/rss/money_latest.rss',
+     'https://edition.cnn.com/business/economy', 'rss', 1),
+    ('Al Jazeera Ekonomi',      'https://www.aljazeera.com',
+     'https://www.aljazeera.com/xml/rss/all.xml',
+     'https://www.aljazeera.com/economy/', 'rss', 1),
+    ('DW Business',             'https://www.dw.com/en/business',
+     'https://rss.dw.com/rdf/rss-en-bus',
+     'https://www.dw.com/en/business/s-1431', 'rss', 1),
+    ('Associated Press İş',     'https://apnews.com',
+     NULL, 'https://apnews.com/hub/business', 'web', 1),
+    ('Nikkei Asia Ekonomi',     'https://asia.nikkei.com',
+     NULL, 'https://asia.nikkei.com/Economy', 'web', 1);
+
+-- 3) Merkez bankalari ve uluslararasi kurumlar
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) VALUES
+    ('Avrupa Merkez Bankası',   'https://www.ecb.europa.eu',
+     'https://www.ecb.europa.eu/rss/press.html',
+     'https://www.ecb.europa.eu/press/html/index.en.html', 'resmi', 1),
+    ('Federal Reserve',         'https://www.federalreserve.gov',
+     'https://www.federalreserve.gov/feeds/press_all.xml',
+     'https://www.federalreserve.gov/newsevents/pressreleases.htm', 'resmi', 1),
+    ('Dünya Bankası',           'https://www.worldbank.org',
+     NULL, 'https://www.worldbank.org/en/news/all', 'resmi', 1),
+    ('Bank for International Settlements', 'https://www.bis.org',
+     'https://www.bis.org/list/press_rlsdate/index.rss',
+     'https://www.bis.org/press/index.htm', 'resmi', 1);
+
+-- ---------------------------------------------------------------------------
 -- Ekonomi grubu
 --
 -- Site vergi odakli ama ekonomi gundemi de izleniyor; ajan vergi disi
