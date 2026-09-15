@@ -240,9 +240,18 @@ final class Yazar
                 ? (string) ($veri['error']['message'] ?? ('HTTP ' . $kod))
                 : ('HTTP ' . $kod . ': ' . mb_substr($ham, 0, 300, 'UTF-8'));
 
+            // Gunluk kota bittiyse beklemenin anlami yok: kalan adaylar
+            // da ayni duvara carpar. Cagrani bilgilendirip cikiyoruz.
+            if ($kod === 429 && $this->gunlukKotaBitti($sonMesaj)) {
+                throw new KotaBittiException($sonMesaj);
+            }
+
             // 429 (kota) ve 5xx (gecici sunucu sorunu) yeniden denenir.
             if ($deneme < $enFazlaDeneme && ($kod === 429 || $kod >= 500)) {
-                sleep($beklemeler[$deneme - 1]);
+                // Google kac saniye beklenecegini soyluyorsa ona uy;
+                // kendi tahminimizle erken denemek istegi bosa harcar.
+                $onerilen = $this->onerilenBekleme($veri, $sonMesaj);
+                sleep($onerilen ?? $beklemeler[$deneme - 1]);
                 continue;
             }
 
@@ -250,6 +259,46 @@ final class Yazar
         }
 
         throw new \RuntimeException('Gemini API hatası: ' . $sonMesaj);
+    }
+
+    /**
+     * Google'in onerdigi bekleme suresi (saniye), yoksa null.
+     *
+     * Hata govdesinde yapisal RetryInfo ya da mesaj icinde
+     * "Please retry in 40.4s" bicimi gelir.
+     *
+     * @param array<string,mixed>|null $veri
+     */
+    private function onerilenBekleme(?array $veri, string $mesaj): ?int
+    {
+        if (is_array($veri)) {
+            foreach ($veri['error']['details'] ?? [] as $ayrinti) {
+                $gecikme = $ayrinti['retryDelay'] ?? null;
+
+                if (is_string($gecikme) && preg_match('/([\d.]+)s/', $gecikme, $m) === 1) {
+                    return min(120, (int) ceil((float) $m[1]) + 2);
+                }
+            }
+        }
+
+        if (preg_match('/retry in ([\d.]+)\s*s/i', $mesaj, $m) === 1) {
+            return min(120, (int) ceil((float) $m[1]) + 2);
+        }
+
+        return null;
+    }
+
+    /** Gunluk kota tukenmesi mi, yoksa dakikalik hiz siniri mi? */
+    private function gunlukKotaBitti(string $mesaj): bool
+    {
+        // Dakikalik sinirda Google kisa bir bekleme onerir; gunluk
+        // kotada "per day" ifadesi gecer ya da bekleme onerilmez.
+        if (stripos($mesaj, 'per day') !== false || stripos($mesaj, 'PerDay') !== false) {
+            return true;
+        }
+
+        return stripos($mesaj, 'quota') !== false
+            && preg_match('/retry in ([\d.]+)\s*s/i', $mesaj) !== 1;
     }
 
     /**

@@ -26,10 +26,11 @@ require_once __DIR__ . '/src/Sayfa.php';
 require_once __DIR__ . '/src/Kazima.php';
 require_once __DIR__ . '/src/Suzgec.php';
 require_once __DIR__ . '/src/Site.php';
+require_once __DIR__ . '/src/KotaBittiException.php';
 require_once __DIR__ . '/src/Yazar.php';
 
 use Anthropic\Client;
-use Valentra\Ajan\{Besleme, Http, Kazima, Sayfa, Site, Suzgec, Yazar};
+use Valentra\Ajan\{Besleme, Http, Kazima, KotaBittiException, Sayfa, Site, Suzgec, Yazar};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
@@ -152,9 +153,10 @@ gunluk(count($adaylar) . ' aday modele gönderilecek.');
 
 // --- 4. Gemini: sınıflandır ve yaz ----------------------------------------
 
-$haberler = [];
-$elenen   = 0;
-$hatali   = 0;
+$haberler  = [];
+$elenen    = 0;
+$hatali    = 0;
+$kotaBitti = false;
 
 foreach ($adaylar as $sira => $aday) {
     $girdi  = $aday['girdi'];
@@ -179,6 +181,13 @@ foreach ($adaylar as $sira => $aday) {
             (string) ($kaynak['tur'] ?? 'rss'),
             $kategoriler,
         );
+    } catch (KotaBittiException $e) {
+        // Gunluk kota bitti: kalan adaylari denemek bosuna.
+        gunluk("  [{$no}] günlük model kotası doldu — kalan "
+            . (count($adaylar) - $sira) . " aday atlanıyor.");
+        gunluk('  ' . $e->getMessage());
+        $kotaBitti = true;
+        break;
     } catch (Throwable $e) {
         $hatali++;
         gunluk("  [{$no}] HATA — {$kisaBaslik}: " . $e->getMessage());
@@ -220,6 +229,12 @@ foreach ($adaylar as $sira => $aday) {
 
 gunluk('---');
 gunluk(count($haberler) . ' haber yazıldı, ' . $elenen . ' eleme, ' . $hatali . ' hata.');
+
+if ($kotaBitti) {
+    gunluk('Günlük model kotası dolduğu için çalışma erken bitti.');
+    gunluk('Kota yenilendiğinde ajan kaldığı yerden devam eder; aynı haber');
+    gunluk('iki kez eklenmez, kaynak adresi üzerinden kopya engeli var.');
+}
 
 if ($kuruCalisma) {
     gunluk('Kuru çalışma: gönderim yapılmadı.');
