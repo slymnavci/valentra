@@ -101,7 +101,16 @@ final class Site
     {
         $ch = curl_init(rtrim($this->taban, '/') . $yol);
 
-        $basliklar = ['Authorization: Bearer ' . $this->anahtar];
+        // Iki baslik birden gonderiliyor.
+        //
+        // Paylasimli hostinglerde Apache "Authorization" basligini PHP'ye
+        // gecirmeyebilir (AllowOverride kapaliysa .htaccess ile de
+        // asilamaz). Ozel basliklar ise her zaman gecer, bu yuzden
+        // X-Valentra-Key yedek yol olarak birlikte gonderilir.
+        $basliklar = [
+            'Authorization: Bearer ' . $this->anahtar,
+            'X-Valentra-Key: ' . $this->anahtar,
+        ];
 
         if ($govde !== null) {
             $basliklar[] = 'Content-Type: application/json';
