@@ -36,7 +36,15 @@ foreach (['kategoriler' => 'Konu grubu', 'kaynaklar' => 'Kaynak', 'haberler' => 
 
 $eksikSutunlar = [];
 
-foreach ([['haberler', 'kategori_id'], ['kategoriler', 'ust_id']] as [$tablo, $sutun]) {
+$beklenenSutunlar = [
+    ['haberler', 'kategori_id'],
+    ['haberler', 'iframe_url'],
+    ['kategoriler', 'ust_id'],
+    ['kaynaklar', 'liste_url'],
+    ['kaynaklar', 'liste_secici'],
+];
+
+foreach ($beklenenSutunlar as [$tablo, $sutun]) {
     if (in_array($tablo, array_keys(array_filter($tablolar)), true) && !sema_sutun_var($tablo, $sutun)) {
         $eksikSutunlar[] = $tablo . '.' . $sutun;
     }
