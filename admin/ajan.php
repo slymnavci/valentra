@@ -44,17 +44,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bildirim = 'GitHub anahtarı silindi.';
 
     } elseif ($islem === 'calistir' || $islem === 'calistir_kuru' || $islem === 'kaynak_testi') {
-        $sonuc = ajan_tetikle(
-            $islem === 'calistir_kuru',
-            max(1, (int) ($_POST['saat'] ?? 36)),
-            max(1, (int) ($_POST['enfazla'] ?? 25)),
-            $islem === 'kaynak_testi' ? 'kaynak-testi' : 'topla',
-        );
+        // Suren bir calisma varken yenisini gondermek ise yaramaz:
+        // GitHub ayni eszamanlilik grubunda sirada tek bir calisma
+        // tutuyor, yeni istek bekleyeni IPTAL ediyor. Dugmeye art arda
+        // basildiginda ikisi de "cancelled" olup hicbir haber gelmiyordu.
+        $suren = ajan_son_calisma();
 
-        if ($sonuc['tamam']) {
-            $bildirim = $sonuc['mesaj'];
+        if ($suren['var'] && $suren['durum'] !== 'completed') {
+            $hata = 'Zaten bir çalışma sürüyor. Bitmesini bekleyin; '
+                  . 'şimdi yeni istek göndermek sürdekini iptal eder.';
         } else {
-            $hata = $sonuc['mesaj'];
+            $sonuc = ajan_tetikle(
+                $islem === 'calistir_kuru',
+                max(1, (int) ($_POST['saat'] ?? 36)),
+                max(1, (int) ($_POST['enfazla'] ?? 25)),
+                $islem === 'kaynak_testi' ? 'kaynak-testi' : 'topla',
+            );
+
+            if ($sonuc['tamam']) {
+                $bildirim = $sonuc['mesaj'];
+            } else {
+                $hata = $sonuc['mesaj'];
+            }
         }
     }
 }
@@ -151,7 +162,7 @@ require __DIR__ . '/ust.php';
                 default                => ['rozet-reddedildi', $sonuc !== '' ? $sonuc : 'başarısız'],
             };
             ?>
-            <span class="rozet <?= $rozet ?>"><?= e($metin) ?></span>
+            <span class="rozet <?= $rozet ?>" id="calisma-rozeti"><?= e($metin) ?></span>
 
             <?php if ($sonCalisma['baslangic'] !== ''): ?>
                 <span><?= e(tarih_bicimle($sonCalisma['baslangic'])) ?></span>
@@ -164,7 +175,7 @@ require __DIR__ . '/ust.php';
             <?php endif; ?>
 
             <span style="margin-left:auto;">
-                Onay bekleyen: <strong><?= (int) $bekleyen ?></strong>
+                Onay bekleyen: <strong id="bekleyen-sayi"><?= (int) $bekleyen ?></strong>
                 <?php if ($bekleyen > 0): ?>
                     &nbsp;<a href="index.php?durum=taslak">listeye git</a>
                 <?php endif; ?>
@@ -172,9 +183,109 @@ require __DIR__ . '/ust.php';
         </div>
 
         <?php if ($durum !== 'completed'): ?>
-            <p class="ipucu" style="margin:12px 0 0;">
-                Çalışma sürüyor. Birkaç dakika sonra bu sayfayı yenileyin.
+            <p class="ipucu" id="calisma-notu" style="margin:12px 0 0;">
+                Çalışma sürüyor. Bittiğinde burada haber verilecek,
+                sayfayı yenilemenize gerek yok.
             </p>
+
+            <!--
+                Calisma bitince haber ver.
+                Onceden "birkac dakika sonra sayfayi yenileyin" deyip
+                birakiyorduk; kullanici bittigini ancak elle yenileyerek
+                ogreniyordu. Sekme arkadaysa tarayici bildirimi de
+                gonderiliyor.
+            -->
+            <div id="calisma-sonuc" style="display:none;margin-top:12px;"></div>
+
+            <script>
+            (function () {
+                var not    = document.getElementById('calisma-notu');
+                var kutu   = document.getElementById('calisma-sonuc');
+                var baslik = document.title;
+                var deneme = 0;
+
+                // Bildirim izni yalnizca calisma surerken istenir;
+                // sayfa acilir acilmaz sormak rahatsiz edici olurdu.
+                if ('Notification' in window && Notification.permission === 'default') {
+                    Notification.requestPermission();
+                }
+
+                function bildir(mesaj) {
+                    document.title = '✓ ' + baslik;
+
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification('Valentra ajanı bitti', { body: mesaj });
+                    }
+                }
+
+                function bitti(veri) {
+                    var basarili = veri.sonuc === 'success';
+                    var gonderim = veri.son_gonderim;
+
+                    var mesaj = basarili
+                        ? 'Çalışma tamamlandı.'
+                        : 'Çalışma ' + (veri.sonuc || 'başarısız') + ' ile bitti.';
+
+                    if (basarili && gonderim) {
+                        mesaj += ' ' + gonderim.eklenen + ' yeni taslak eklendi'
+                               + (gonderim.yinelenen > 0
+                                   ? ', ' + gonderim.yinelenen + ' zaten vardı.'
+                                   : '.');
+                    }
+
+                    if (not) { not.style.display = 'none'; }
+
+                    // Rozet ve sayac "calisiyor"/"0" olarak kalmasin.
+                    var rozet = document.getElementById('calisma-rozeti');
+
+                    if (rozet) {
+                        rozet.className = 'rozet ' + (basarili ? 'rozet-yayinda' : 'rozet-reddedildi');
+                        rozet.textContent = basarili ? 'başarılı' : (veri.sonuc || 'başarısız');
+                    }
+
+                    var sayac = document.getElementById('bekleyen-sayi');
+
+                    if (sayac) { sayac.textContent = veri.bekleyen; }
+
+                    kutu.className = 'uyari uyari-' + (basarili ? 'basari' : 'hata');
+                    kutu.style.display = '';
+                    kutu.textContent = mesaj + ' ';
+
+                    if (veri.bekleyen > 0) {
+                        var bag = document.createElement('a');
+                        bag.href = 'index.php?durum=taslak';
+                        bag.textContent = 'Onay bekleyen ' + veri.bekleyen + ' haberi gör';
+                        kutu.appendChild(bag);
+                    }
+
+                    bildir(mesaj);
+                }
+
+                function yokla() {
+                    fetch('ajan_durum.php', { credentials: 'same-origin' })
+                        .then(function (y) { return y.ok ? y.json() : null; })
+                        .then(function (veri) {
+                            if (!veri) { return; }
+
+                            if (!veri.calisiyor) {
+                                bitti(veri);
+                                return;
+                            }
+
+                            // Calisma uzarsa yoklama araligi aciliyor:
+                            // 10 sn ile basla, 60 sn'yi gecme.
+                            deneme++;
+                            setTimeout(yokla, Math.min(10000 + deneme * 2000, 60000));
+                        })
+                        .catch(function () {
+                            // Gecici ag hatasi yoklamayi bitirmemeli.
+                            setTimeout(yokla, 30000);
+                        });
+                }
+
+                setTimeout(yokla, 10000);
+            })();
+            </script>
         <?php endif; ?>
     </div>
 <?php endif; ?>

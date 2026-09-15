@@ -10,7 +10,7 @@ require_once __DIR__ . '/includes/bootstrap.php';
 
 $sayfa = max(1, (int) ($_GET['sayfa'] ?? 1));
 
-$adet       = 12;   // izgaradaki kart sayisi
+$adet       = 10;   // izgaradaki kart sayisi
 $mansetAdet = 5;    // kaydiraktaki haber sayisi
 
 $toplam = haber_yayinda_sayisi();
@@ -44,6 +44,10 @@ require __DIR__ . '/includes/sayfa_ust.php';
     <div class="ana-duzen">
         <div class="ana-kolon">
             <?php require __DIR__ . '/includes/kaydirak.php'; ?>
+
+            <?php /* Piyasa seridi kaydiragin hemen altinda: sayfa acilir
+                     acilmaz gorunen, surekli degisen tek veri. */ ?>
+            <?php require __DIR__ . '/includes/piyasa_serit.php'; ?>
 
             <?php if ($haberler !== []): ?>
                 <div class="bolum-basligi">

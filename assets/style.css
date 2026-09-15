@@ -636,7 +636,14 @@ a.menu-oge.aktif::after,
     width: 100%;
     height: 100%;
     object-fit: cover;
-    opacity: .5;
+    /*
+     * Eskiden .5 idi. Kaynak sitelerin paylasim gorsellerinde baslik
+     * cogu zaman resmin icine gomulu oluyor; yariya indirilmis resim
+     * bizim baslgimizin arkasinda hayalet bir yazi gibi duruyordu.
+     * Resim netlesince fotograf gibi okunuyor, metnin okunurlugunu ise
+     * asagidaki koyu gecis sagliyor.
+     */
+    opacity: .85;
 }
 
 .kaydirak-govde {
@@ -653,8 +660,14 @@ a.menu-oge.aktif::after,
 
 .kaydirak-slayt.gorselli .kaydirak-govde {
     flex: none;
-    background: linear-gradient(to top, rgba(10, 20, 36, .95), rgba(10, 20, 36, .55) 70%, transparent);
-    padding-top: 90px;
+    /* Resim netlestigi icin gecis de koyulastirildi; alt bant neredeyse
+       tam opak, ustte yumusayarak kayboluyor. */
+    background: linear-gradient(to top,
+        rgba(8, 16, 30, .97) 0%,
+        rgba(8, 16, 30, .88) 45%,
+        rgba(8, 16, 30, .45) 80%,
+        transparent 100%);
+    padding-top: 110px;
 }
 
 .kaydirak-govde .grup {
@@ -1039,4 +1052,107 @@ a.menu-oge.aktif::after,
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     }
+}
+
+/* --- Piyasa seridi -------------------------------------------------------- */
+
+.piyasa-serit {
+    background: var(--lacivert);
+    border-radius: var(--yuvarlak);
+    margin: 0 0 8px;
+    overflow: hidden;
+    /* Icerik sigmadiginda kaysin diye tasma gizleniyor. */
+}
+
+.piyasa-akis {
+    display: flex;
+    width: 100%;
+}
+
+.piyasa-grup {
+    display: flex;
+    align-items: center;
+    gap: 26px;
+    padding: 11px 18px;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    min-width: 100%;
+    justify-content: space-around;
+}
+
+.piyasa-oge {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.piyasa-oge .ad {
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    color: var(--altin);
+}
+
+.piyasa-oge .deger {
+    font-size: .98rem;
+    font-weight: 700;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+
+.piyasa-oge .degisim {
+    font-size: .76rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.piyasa-oge .degisim.arti { color: #57d38c; }
+.piyasa-oge .degisim.eksi { color: #ff8a80; }
+
+.piyasa-zaman .deger {
+    font-size: .8rem;
+    font-weight: 600;
+    color: #b9c8dd;
+}
+
+/*
+ * Dar ekranda kaydir.
+ *
+ * Genis ekranda degerler zaten sigiyor ve surekli kayan bir cubuk
+ * okumayi zorlastiriyor; kayma yalnizca sigmadigi yerde aciliyor.
+ * Ikinci grup kopyasi kesintisiz donguyu saglar.
+ */
+@media (max-width: 720px) {
+    .piyasa-grup {
+        min-width: auto;
+        justify-content: flex-start;
+        gap: 22px;
+        padding-right: 22px;
+    }
+
+    /* Iki kopya yan yana; -%50 tam bir kopya demek, dongu ziplamadan doner. */
+    .piyasa-akis {
+        width: max-content;
+        animation: piyasa-kay 26s linear infinite;
+    }
+
+    .piyasa-serit:hover .piyasa-akis,
+    .piyasa-serit:focus-within .piyasa-akis {
+        animation-play-state: paused;
+    }
+}
+
+/* Genis ekranda ikinci kopya gereksiz; deger zaten sigiyor. */
+@media (min-width: 721px) {
+    .piyasa-grup[aria-hidden="true"] { display: none; }
+}
+
+@keyframes piyasa-kay {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .piyasa-akis { animation: none; }
+    .piyasa-grup[aria-hidden="true"] { display: none; }
 }
