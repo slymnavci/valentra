@@ -3,10 +3,8 @@ declare(strict_types=1);
 
 namespace Valentra\Ajan;
 
-use Anthropic\Client;
-
 /**
- * Aday haberi Claude'a verip iki soruyu birden yanıtlatır:
+ * Aday haberi Gemini'ye verip iki soruyu birden yanıtlatır:
  * vergiyle ilgili mi, ve ilgiliyse haber metni nasıl yazılmalı.
  *
  * Telif: modele kaynak metin YALNIZCA anlaması için verilir. Çıktının
@@ -15,7 +13,8 @@ use Anthropic\Client;
  */
 final class Yazar
 {
-    private const MODEL = 'claude-opus-5';
+    private const MODEL = 'gemini-3.8-flash';
+    private const API   = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
     private const YONERGE = <<<'METIN'
         Sen Valentra adlı vergi haberleri sitesinin editör yardımcısısın.
@@ -95,13 +94,13 @@ final class Yazar
         'additionalProperties' => false,
     ];
 
-    public function __construct(private readonly Client $istemci)
+    public function __construct(private readonly string $apiKey)
     {
     }
 
     /**
      * @param array{baslik:string,ozet:string,baglanti:string} $aday
-     * @return array<string,mixed>|null  Model yanıtı; çözümlenemezse null
+     * @return array<string,mixed>|null Model yanıtı; çözümlenemezse null
      */
     public function isle(
         array $aday,
@@ -112,29 +111,43 @@ final class Yazar
     ): ?array {
         $istem = $this->istemHazirla($aday, $sayfaMetni, $kaynakAdi, $kaynakTuru, $kategoriler);
 
-        $yanit = $this->istemci->messages->create(
-            model: self::MODEL,
-            maxTokens: 8000,
-            system: [
-                ['type' => 'text', 'text' => self::YONERGE, 'cacheControl' => ['type' => 'ephemeral']],
+        $govde = [
+            'systemInstruction' => [
+                'parts' => [['text' => self::YONERGE]],
             ],
-            thinking: ['type' => 'adaptive'],
-            messages: [['role' => 'user', 'content' => $istem]],
-            outputConfig: [
-                'format' => ['type' => 'json_schema', 'schema' => self::SEMA],
+            'contents' => [[
+                'role'  => 'user',
+                'parts' => [['text' => $istem]],
+            ]],
+            'generationConfig' => [
+                'maxOutputTokens' => 8000,
+                'responseFormat' => [
+                    'text' => [
+                        'mimeType' => 'application/json',
+                        'schema'   => self::SEMA,
+                    ],
+                ],
             ],
-        );
+        ];
 
-        if ($yanit->stopReason === 'refusal') {
+        $yanit = $this->geminiIstegi($govde);
+
+        $adaylar = $yanit['candidates'] ?? [];
+        if (!is_array($adaylar) || $adaylar === []) {
             return null;
         }
 
-        foreach ($yanit->content as $blok) {
-            if ($blok->type !== 'text') {
+        $parcalar = $adaylar[0]['content']['parts'] ?? [];
+        if (!is_array($parcalar)) {
+            return null;
+        }
+
+        foreach ($parcalar as $parca) {
+            if (!is_array($parca) || !isset($parca['text']) || !is_string($parca['text'])) {
                 continue;
             }
 
-            $veri = json_decode($blok->text, true);
+            $veri = json_decode($parca['text'], true);
 
             if (is_array($veri) && array_key_exists('ilgili', $veri)) {
                 return $veri;
@@ -142,6 +155,85 @@ final class Yazar
         }
 
         return null;
+    }
+
+    /**
+     * Gemini generateContent çağrısı.
+     *
+     * Geçici 429/5xx durumlarında üç kez dener; kalıcı hatada Google'ın
+     * döndürdüğü mesajı loga taşıyarak teşhisi kolaylaştırır.
+     *
+     * @param array<string,mixed> $govde
+     * @return array<string,mixed>
+     */
+    private function geminiIstegi(array $govde): array
+    {
+        $adres = self::API . self::MODEL . ':generateContent';
+        $json  = json_encode($govde, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        if (!is_string($json)) {
+            throw new \RuntimeException('Gemini isteği JSON olarak hazırlanamadı.');
+        }
+
+        $sonMesaj = '';
+
+        for ($deneme = 1; $deneme <= 3; $deneme++) {
+            $ch = curl_init($adres);
+
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST           => true,
+                CURLOPT_POSTFIELDS     => $json,
+                CURLOPT_HTTPHEADER     => [
+                    'Content-Type: application/json',
+                    'x-goog-api-key: ' . $this->apiKey,
+                ],
+                CURLOPT_CONNECTTIMEOUT => 20,
+                CURLOPT_TIMEOUT        => 90,
+                CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
+                CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+            ]);
+
+            $ham   = curl_exec($ch);
+            $kod   = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+            $hata  = curl_error($ch);
+            $errno = curl_errno($ch);
+            curl_close($ch);
+
+            if (!is_string($ham)) {
+                $sonMesaj = $hata !== '' ? $hata : 'bilinmeyen ağ hatası';
+
+                if ($deneme < 3 && in_array($errno, [
+                    CURLE_COULDNT_RESOLVE_HOST,
+                    CURLE_COULDNT_CONNECT,
+                    CURLE_OPERATION_TIMEDOUT,
+                ], true)) {
+                    sleep($deneme * 3);
+                    continue;
+                }
+
+                throw new \RuntimeException('Gemini API erişim hatası: ' . $sonMesaj);
+            }
+
+            $veri = json_decode($ham, true);
+
+            if ($kod >= 200 && $kod < 300 && is_array($veri)) {
+                return $veri;
+            }
+
+            $sonMesaj = is_array($veri)
+                ? (string) ($veri['error']['message'] ?? ('HTTP ' . $kod))
+                : ('HTTP ' . $kod . ': ' . mb_substr($ham, 0, 300, 'UTF-8'));
+
+            if ($deneme < 3 && ($kod === 429 || $kod >= 500)) {
+                sleep($deneme * 10);
+                continue;
+            }
+
+            throw new \RuntimeException('Gemini API hatası (HTTP ' . $kod . '): ' . $sonMesaj);
+        }
+
+        throw new \RuntimeException('Gemini API hatası: ' . $sonMesaj);
     }
 
     /**
