@@ -75,20 +75,35 @@ final class Besleme
 
         if (isset($xml->channel->item)) {
             foreach ($xml->channel->item as $oge) {
-                $ogeler[] = [
-                    'baslik'   => $this->metin($oge->title),
-                    'baglanti' => $this->metin($oge->link),
-                    'ozet'     => $this->metin($oge->description),
-                    'zaman'    => $this->zaman($this->metin($oge->pubDate)),
-                    'gorsel'   => $this->gorsel($oge),
-                ];
+                $ogeler[] = $this->rssOgesi($oge);
             }
 
             return $ogeler;
         }
 
+        // RSS 1.0 / RDF: DW gibi bazı büyük yayıncılar item öğelerini
+        // channel altında değil doğrudan rdf:RDF kökünde taşır.
+        if (isset($xml->item)) {
+            foreach ($xml->item as $oge) {
+                $ogeler[] = $this->rssOgesi($oge);
+            }
+
+            return $ogeler;
+        }
+
+        $atomEntries = [];
+
         if (isset($xml->entry)) {
-            foreach ($xml->entry as $oge) {
+            $atomEntries = $xml->entry;
+        } else {
+            $atom = $xml->children('http://www.w3.org/2005/Atom');
+            if ($atom !== null && isset($atom->entry)) {
+                $atomEntries = $atom->entry;
+            }
+        }
+
+        if ($atomEntries !== []) {
+            foreach ($atomEntries as $oge) {
                 $baglanti = $this->metin($oge->link);
 
                 if ($baglanti === '' && isset($oge->link['href'])) {
@@ -112,6 +127,31 @@ final class Besleme
         }
 
         return $ogeler;
+    }
+
+    /**
+     * RSS 2.0 ve RSS 1.0/RDF ogelerini ortak sekle cevirir.
+     *
+     * @return array{baslik:string,baglanti:string,ozet:string,zaman:?int,gorsel:string}
+     */
+    private function rssOgesi(\SimpleXMLElement $oge): array
+    {
+        $tarih = $this->metin($oge->pubDate);
+
+        if ($tarih === '') {
+            $dc = $oge->children('http://purl.org/dc/elements/1.1/');
+            if ($dc !== null && isset($dc->date)) {
+                $tarih = $this->metin($dc->date);
+            }
+        }
+
+        return [
+            'baslik'   => $this->metin($oge->title),
+            'baglanti' => $this->metin($oge->link),
+            'ozet'     => $this->metin($oge->description),
+            'zaman'    => $this->zaman($tarih),
+            'gorsel'   => $this->gorsel($oge),
+        ];
     }
 
     /**
