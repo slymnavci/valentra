@@ -120,6 +120,7 @@ if (!is_file($ayarDosyasi)) {
 
         switch ($surucuKodu) {
             case 1045:
+            case 1698:
                 $baslik  = 'Kullanıcı adı veya parola hatalı';
                 $aciklama = 'Sunucuya ulaşıldı ama giriş reddedildi.';
                 $cozum   = [
@@ -161,9 +162,17 @@ if (!is_file($ayarDosyasi)) {
 
             default:
                 $baslik  = 'Bağlantı kurulamadı';
-                $aciklama = 'Sürücü hata numarası: ' . ($surucuKodu !== 0 ? $surucuKodu : 'bilinmiyor');
+                $aciklama = 'Sürücü hata numarası: '
+                          . ($surucuKodu !== 0 ? (string) $surucuKodu : 'bilinmiyor')
+                          . '. Aşağıdaki dört değeri sırayla doğrulayın.';
                 $cozum   = [
-                    'DB_HOST, DB_NAME, DB_USERNAME ve DB_PASSWORD secret değerlerini IHS panelindekilerle karşılaştırın.',
+                    'DB_HOST: paylaşımlı hostingde genellikle localhost olmalıdır.',
+                    'DB_NAME: IHS panelindeki veritabanı adıyla birebir aynı olmalı '
+                        . '(genelde kullanıcıadı_veritabani biçiminde).',
+                    'DB_USERNAME: veritabanı kullanıcısı; panel giriş kullanıcınızdan farklı olabilir.',
+                    'DB_PASSWORD: veritabanı kullanıcısının parolası; başta/sonda boşluk kalmamalı.',
+                    'Değerleri GitHub → Settings → Secrets and variables → Actions altında güncelleyip '
+                        . 'deploy işini yeniden çalıştırın.',
                 ];
         }
     }
