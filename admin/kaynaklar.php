@@ -9,6 +9,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/besleme_test.php';
+require_once __DIR__ . '/../includes/kazima.php';
 
 giris_zorunlu();
 
@@ -26,6 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ad         = trim((string) ($_POST['ad'] ?? ''));
         $siteUrl    = guvenli_url((string) ($_POST['site_url'] ?? ''));
         $beslemeUrl = guvenli_url((string) ($_POST['besleme_url'] ?? ''));
+        $listeUrl   = guvenli_url((string) ($_POST['liste_url'] ?? ''));
+        $listeSecici = trim((string) ($_POST['liste_secici'] ?? ''));
         $tur        = (string) ($_POST['tur'] ?? 'rss');
 
         if (!in_array($tur, ['rss', 'resmi', 'web'], true)) {
@@ -36,15 +39,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $hata = 'Kaynağa bir ad verin.';
         } elseif ($siteUrl === '') {
             $hata = 'Site adresi http:// veya https:// ile başlamalı.';
-        } elseif ($beslemeUrl === '') {
-            $hata = 'Besleme (RSS) adresi http:// veya https:// ile başlamalı.';
+        } elseif ($beslemeUrl === '' && $listeUrl === '') {
+            $hata = 'RSS besleme adresi ya da kazınacak duyuru sayfası adresinden '
+                  . 'en az birini girin.';
         } else {
             db()->prepare(
-                'INSERT INTO kaynaklar (ad, site_url, besleme_url, tur) VALUES (:ad, :site, :besleme, :tur)'
+                'INSERT INTO kaynaklar (ad, site_url, besleme_url, liste_url, liste_secici, tur)
+                 VALUES (:ad, :site, :besleme, :liste, :secici, :tur)'
             )->execute([
                 'ad'      => mb_substr($ad, 0, 160, 'UTF-8'),
                 'site'    => $siteUrl,
-                'besleme' => $beslemeUrl,
+                'besleme' => $beslemeUrl !== '' ? $beslemeUrl : null,
+                'liste'   => $listeUrl !== '' ? $listeUrl : null,
+                'secici'  => $listeSecici !== '' ? mb_substr($listeSecici, 0, 200, 'UTF-8') : null,
                 'tur'     => $tur,
             ]);
 
@@ -88,6 +95,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'ornek' => '',
                 ];
             }
+        }
+
+    } elseif ($islem === 'kazima_test') {
+        $id = (int) ($_POST['id'] ?? 0);
+        $ifade = db()->prepare('SELECT liste_url, liste_secici FROM kaynaklar WHERE id = :id');
+        $ifade->execute(['id' => $id]);
+        $satir = $ifade->fetch();
+
+        if ($satir !== false && (string) $satir['liste_url'] !== '') {
+            $kazinan = kazima_sayfayi_dene((string) $satir['liste_url'], (string) ($satir['liste_secici'] ?? ''));
+            $testSonuclari[$id] = $kazinan;
+        } else {
+            $testSonuclari[$id] = [
+                'tamam' => false,
+                'mesaj' => 'Bu kaynak için duyuru sayfası adresi tanımlı değil.',
+                'adet'  => 0,
+                'ornek' => '',
+            ];
         }
 
     } elseif ($islem === 'bozuklari_bul') {
@@ -173,7 +198,26 @@ require __DIR__ . '/ust.php';
 
         <div class="alan">
             <label for="besleme_url">Besleme (RSS/Atom) adresi</label>
-            <input type="url" id="besleme_url" name="besleme_url" placeholder="https://ornek.com/ekonomi/rss" required>
+            <input type="url" id="besleme_url" name="besleme_url" placeholder="https://ornek.com/ekonomi/rss">
+            <div class="ipucu">Bilmiyorsanız boş bırakın, ekledikten sonra "Besleme bul" deyin.</div>
+        </div>
+
+        <div class="alan">
+            <label for="liste_url">Duyuru sayfası adresi (RSS yoksa)</label>
+            <input type="url" id="liste_url" name="liste_url" placeholder="https://kurum.gov.tr/duyurular">
+            <div class="ipucu">
+                RSS yayınlamayan siteler için. Ajan bu sayfadaki haber bağlantılarını
+                kendisi bulur; kurumların duyuru listesi sayfası uygundur.
+            </div>
+        </div>
+
+        <div class="alan">
+            <label for="liste_secici">Kazıma seçicisi (isteğe bağlı)</label>
+            <input type="text" id="liste_secici" name="liste_secici" placeholder=".duyuru-listesi a">
+            <div class="ipucu">
+                Boş bırakın — ajan haber bağlantılarını kendi bulur. Yalnızca
+                yanlış bağlantılar geliyorsa CSS seçici girin.
+            </div>
         </div>
 
         <div class="alan">
@@ -256,6 +300,15 @@ require __DIR__ . '/ust.php';
                             <button type="submit" class="dugme">Besleme bul</button>
                         </form>
 
+                        <?php if (($kaynak['liste_url'] ?? '') !== ''): ?>
+                            <form method="post" action="kaynaklar.php">
+                                <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                                <input type="hidden" name="islem" value="kazima_test">
+                                <input type="hidden" name="id" value="<?= (int) $kaynak['id'] ?>">
+                                <button type="submit" class="dugme">Kazımayı dene</button>
+                            </form>
+                        <?php endif; ?>
+
                         <form method="post" action="kaynaklar.php">
                             <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
                             <input type="hidden" name="islem" value="durum">
@@ -276,7 +329,19 @@ require __DIR__ . '/ust.php';
                 </div>
 
                 <div class="satir-bilgi" style="margin-top:4px;font-size:.74rem;">
-                    <span><?= e($kaynak['besleme_url'] ?? '') ?></span>
+                    <?php if (($kaynak['besleme_url'] ?? '') !== ''): ?>
+                        <span>RSS: <?= e($kaynak['besleme_url']) ?></span>
+                    <?php endif; ?>
+
+                    <?php if (($kaynak['liste_url'] ?? '') !== ''): ?>
+                        <span>Kazıma: <?= e($kaynak['liste_url']) ?>
+                            <?= ($kaynak['liste_secici'] ?? '') !== ''
+                                    ? ' (' . e($kaynak['liste_secici']) . ')' : '' ?></span>
+                    <?php endif; ?>
+
+                    <?php if (($kaynak['besleme_url'] ?? '') === '' && ($kaynak['liste_url'] ?? '') === ''): ?>
+                        <span style="color:var(--kirmizi);">Adres tanımlı değil</span>
+                    <?php endif; ?>
                 </div>
 
                 <?php $test = $testSonuclari[(int) $kaynak['id']] ?? null; ?>

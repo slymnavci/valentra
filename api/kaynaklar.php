@@ -23,7 +23,7 @@ if (ajan_anahtar_dogrula() === null) {
 }
 
 $kaynaklar = db()->query(
-    'SELECT id, ad, site_url, besleme_url, tur
+    'SELECT id, ad, site_url, besleme_url, liste_url, liste_secici, tur
        FROM kaynaklar
       WHERE aktif = 1
       ORDER BY ad'
@@ -38,8 +38,10 @@ ajan_json(200, [
         'id'          => (int) $k['id'],
         'ad'          => $k['ad'],
         'site_url'    => $k['site_url'],
-        'besleme_url' => $k['besleme_url'],
-        'tur'         => $k['tur'],
+        'besleme_url'  => $k['besleme_url'],
+        'liste_url'    => $k['liste_url'],
+        'liste_secici' => $k['liste_secici'],
+        'tur'          => $k['tur'],
     ], $kaynaklar),
     'kategoriler' => $kategoriler,
 ]);

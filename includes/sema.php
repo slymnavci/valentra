@@ -187,6 +187,13 @@ function sema_yukselt(): array
         $yapilanlar[] = 'kategoriler.ust_id sutunu eklendi';
     }
 
+    foreach (['liste_url' => 'VARCHAR(500) NULL', 'liste_secici' => 'VARCHAR(200) NULL'] as $sutun => $tanim) {
+        if (!sema_sutun_var('kaynaklar', $sutun)) {
+            db()->exec('ALTER TABLE kaynaklar ADD COLUMN ' . $sutun . ' ' . $tanim . ' AFTER besleme_url');
+            $yapilanlar[] = 'kaynaklar.' . $sutun . ' sutunu eklendi';
+        }
+    }
+
     // kaynaklar.besleme_url benzersiz olmali; yoksa sema her
     // calistirildiginda INSERT IGNORE kopya kayit uretir.
     if (!sema_indeks_var('kaynaklar', 'uq_kaynak_besleme')) {

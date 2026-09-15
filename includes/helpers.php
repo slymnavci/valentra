@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/url.php';
+
 /**
  * Cikti kacislama. HTML icine basilan her dinamik deger bundan gecer.
  */
@@ -116,34 +118,6 @@ function yonlendir(string $hedef): void
 {
     header('Location: ' . $hedef);
     exit;
-}
-
-/**
- * Yalnizca http/https adreslerine izin verir.
- *
- * Ajan disaridan URL gonderdigi icin sema dogrulamasi sart:
- * htmlspecialchars "javascript:" adresini zararsiz hale getirmez,
- * href icinde tiklandiginda yine calisir.
- */
-function guvenli_url(?string $url): string
-{
-    $url = trim((string) $url);
-
-    if ($url === '') {
-        return '';
-    }
-
-    $sema = parse_url($url, PHP_URL_SCHEME);
-
-    if (!is_string($sema) || !in_array(strtolower($sema), ['http', 'https'], true)) {
-        return '';
-    }
-
-    if (parse_url($url, PHP_URL_HOST) === null) {
-        return '';
-    }
-
-    return $url;
 }
 
 /**

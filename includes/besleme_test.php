@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/url.php';
+require_once __DIR__ . '/kazima.php';
+
 /**
  * Bir RSS/Atom beslemesini deneyip sonucu raporlar.
  *
@@ -127,38 +130,6 @@ function besleme_baglanti_hatasi(int $hataNo, string $hata): string
 }
 
 /**
- * Göreli adresi mutlak adrese çevirir.
- */
-function besleme_url_birlestir(string $taban, string $goreli): string
-{
-    if (preg_match('#^https?://#i', $goreli) === 1) {
-        return $goreli;
-    }
-
-    $parca = parse_url($taban);
-
-    if (!isset($parca['scheme'], $parca['host'])) {
-        return '';
-    }
-
-    $kok = $parca['scheme'] . '://' . $parca['host']
-         . (isset($parca['port']) ? ':' . $parca['port'] : '');
-
-    if (str_starts_with($goreli, '//')) {
-        return $parca['scheme'] . ':' . $goreli;
-    }
-
-    if (str_starts_with($goreli, '/')) {
-        return $kok . $goreli;
-    }
-
-    $yol = $parca['path'] ?? '/';
-    $dizin = substr($yol, 0, (int) strrpos($yol, '/') + 1);
-
-    return $kok . $dizin . $goreli;
-}
-
-/**
  * Sitenin RSS/Atom beslemesini bulur.
  *
  * Önce sayfanın <head> bölümündeki ilanına bakar — siteler beslemelerini
@@ -253,5 +224,67 @@ function besleme_kesfet(string $siteUrl, int $enFazlaDeneme = 8): array
         'mesaj'   => $denenen . ' adres denendi, çalışan besleme bulunamadı. '
                    . 'Site RSS yayınlamıyor olabilir.',
         'denenen' => $denenen,
+    ];
+}
+
+/**
+ * Bir duyuru sayfasını kazıyıp sonucu panelde gösterilecek biçimde döner.
+ *
+ * besleme_dene() ile aynı biçimi kullanır, böylece panel iki test türünü
+ * aynı şekilde gösterebilir.
+ *
+ * @return array{tamam:bool,mesaj:string,adet:int,ornek:string}
+ */
+function kazima_sayfayi_dene(string $listeUrl, string $secici = '', int $zamanAsimi = 15): array
+{
+    $listeUrl = guvenli_url($listeUrl);
+
+    if ($listeUrl === '') {
+        return ['tamam' => false, 'mesaj' => 'Adres http:// veya https:// ile başlamalı.', 'adet' => 0, 'ornek' => ''];
+    }
+
+    $ch = curl_init($listeUrl);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_MAXREDIRS      => 4,
+        CURLOPT_TIMEOUT        => $zamanAsimi,
+        CURLOPT_CONNECTTIMEOUT => 8,
+        CURLOPT_USERAGENT      => 'ValentraBot/1.0 (+https://valentra.com.tr)',
+        CURLOPT_ENCODING       => '',
+    ]);
+
+    $html   = curl_exec($ch);
+    $kod    = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    $hata   = curl_error($ch);
+    $hataNo = curl_errno($ch);
+    curl_close($ch);
+
+    if (!is_string($html)) {
+        return ['tamam' => false, 'mesaj' => besleme_baglanti_hatasi($hataNo, $hata), 'adet' => 0, 'ornek' => ''];
+    }
+
+    if ($kod < 200 || $kod >= 300) {
+        return ['tamam' => false, 'mesaj' => 'Sunucu HTTP ' . $kod . ' döndü.', 'adet' => 0, 'ornek' => ''];
+    }
+
+    $haberler = kazima_haberleri_bul($html, $listeUrl, $secici);
+
+    if ($haberler === []) {
+        return [
+            'tamam' => false,
+            'mesaj' => 'Sayfa okundu ama haber bağlantısı bulunamadı. Adres duyuru '
+                     . 'listesi sayfası olmayabilir; ya da bağlantılar JavaScript ile '
+                     . 'yükleniyor olabilir. CSS seçici girmeyi deneyin.',
+            'adet'  => 0,
+            'ornek' => '',
+        ];
+    }
+
+    return [
+        'tamam' => true,
+        'mesaj' => count($haberler) . ' haber bağlantısı bulundu.',
+        'adet'  => count($haberler),
+        'ornek' => mb_substr($haberler[0]['baslik'], 0, 110, 'UTF-8'),
     ];
 }

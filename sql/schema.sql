@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS kaynaklar (
     ad            VARCHAR(160)  NOT NULL,
     site_url      VARCHAR(500)  NOT NULL,
     besleme_url   VARCHAR(500)  NULL,
+    liste_url     VARCHAR(500)  NULL,
+    liste_secici  VARCHAR(200)  NULL,
     tur           ENUM('rss','resmi','web') NOT NULL DEFAULT 'rss',
     aktif         TINYINT(1)    NOT NULL DEFAULT 1,
     son_tarama    DATETIME      NULL,

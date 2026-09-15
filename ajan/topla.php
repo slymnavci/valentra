@@ -23,12 +23,13 @@ require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/src/Http.php';
 require_once __DIR__ . '/src/Besleme.php';
 require_once __DIR__ . '/src/Sayfa.php';
+require_once __DIR__ . '/src/Kazima.php';
 require_once __DIR__ . '/src/Suzgec.php';
 require_once __DIR__ . '/src/Site.php';
 require_once __DIR__ . '/src/Yazar.php';
 
 use Anthropic\Client;
-use Valentra\Ajan\{Besleme, Http, Sayfa, Site, Suzgec, Yazar};
+use Valentra\Ajan\{Besleme, Http, Kazima, Sayfa, Site, Suzgec, Yazar};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
@@ -66,6 +67,7 @@ $site    = new Site($siteUrl, $ajanKey);
 $http    = new Http();
 $besleme = new Besleme($http);
 $sayfa   = new Sayfa($http);
+$kazima  = new Kazima($http);
 $suzgec  = new Suzgec();
 $yazar   = new Yazar(new Client(apiKey: $apiKey));
 
@@ -94,15 +96,28 @@ $adaylar = [];
 
 foreach ($kaynaklar as $kaynak) {
     $beslemeUrl = (string) ($kaynak['besleme_url'] ?? '');
+    $listeUrl   = (string) ($kaynak['liste_url'] ?? '');
 
-    if ($beslemeUrl === '') {
-        continue;
+    $girdiler = [];
+    $yontem   = '';
+
+    // Once RSS: varsa ve haber veriyorsa en guvenilir yol.
+    if ($beslemeUrl !== '') {
+        $girdiler = $besleme->oku($beslemeUrl, $saat);
+        $yontem   = 'besleme';
     }
 
-    $girdiler = $besleme->oku($beslemeUrl, $saat);
+    // Besleme yoksa ya da bos dondüyse duyuru sayfasini kaziyoruz.
+    if ($girdiler === [] && $listeUrl !== '') {
+        $girdiler = $kazima->oku($listeUrl, (string) ($kaynak['liste_secici'] ?? ''));
+        $yontem   = 'kazıma';
+    }
 
     if ($girdiler === []) {
-        gunluk("  {$kaynak['ad']}: besleme okunamadı veya yeni girdi yok");
+        $neden = $beslemeUrl === '' && $listeUrl === ''
+            ? 'adres tanımlı değil'
+            : 'okunamadı veya yeni girdi yok';
+        gunluk("  {$kaynak['ad']}: {$neden}");
         continue;
     }
 
@@ -121,7 +136,7 @@ foreach ($kaynaklar as $kaynak) {
         $gecen++;
     }
 
-    gunluk("  {$kaynak['ad']}: " . count($girdiler) . " girdi, {$gecen} aday");
+    gunluk("  {$kaynak['ad']} ({$yontem}): " . count($girdiler) . " girdi, {$gecen} aday");
 }
 
 if ($adaylar === []) {
