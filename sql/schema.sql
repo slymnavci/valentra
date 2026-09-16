@@ -818,9 +818,21 @@ UPDATE pratik_bilgiler SET
                    'gelir-vergisi-tarifesi', 'kurumlar-vergisi-orani',
                    'yeniden-degerleme-orani', 'gecikme-zammi');
 
+-- ISMMMO sayfasi RAKAM TASIMIYOR.
+--
+-- Uc ayri calismada da ayni sonuc cikti: sayfa bir fihrist, yalnizca
+-- konu basliklarini listeliyor. Ajan dogru sekilde alt sayfaya indi
+-- ("2026 Yilinda Uygulanacak Vergi Tutarlari, Hadler ve Cezalar") ama
+-- o da baslik listesiydi; ikinci adimda da rakam cikmadi. Alti bilginin
+-- altisi bu yuzden hic toplanamadi.
+--
+-- Ayni bilgiler Alomaliye derlemesinde duruyor ve o sayfa okunabildigi
+-- kanitlandi: asgari ucret, SGK taban/tavan, gelir vergisi tarifesi,
+-- yeniden degerleme orani, gecikme zammi ve kidem tazminati tavani
+-- oradan geldi. Kaynak ise yarayan sayfaya cevriliyor.
 UPDATE pratik_bilgiler SET
-    kaynak_url = 'https://ismmmo.org.tr/Mevzuat/Pratik-Bilgiler-Vergi-Uygulamalari---15715',
-    kaynak_adi = 'İSMMMO — Pratik Bilgiler'
+    kaynak_url = 'https://www.alomaliye.com/2025/12/23/2026-pratik-bilgiler/',
+    kaynak_adi = 'Alomaliye — 2026 Pratik Bilgiler'
  WHERE anahtar IN ('kdv-oranlari', 'damga-vergisi-oranlari',
                    'fatura-duzenleme-siniri', 'amortisman-siniri',
                    'beyanname-damga-vergisi', 'harcirah-tutarlari');
