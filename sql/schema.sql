@@ -721,3 +721,63 @@ INSERT IGNORE INTO pratik_bilgiler (anahtar, baslik, aciklama, grup, sira, kayna
      'Aylık ve yıllık tüketici fiyat endeksi değişimi', 'ekonomi', 20,
      'https://data.tuik.gov.tr/Bulten/Index?p=Tuketici-Fiyat-Endeksi', 'TÜİK',
      'En son açıklanan aylık ve yıllık TÜFE değişim oranları ile ait olduğu ay.');
+
+-- ---------------------------------------------------------------------------
+-- Pratik bilgi kaynak adreslerini duzelt
+--
+-- Ilk tohumda adreslerin cogu kurumun ANA SAYFASIYDI (gib.gov.tr/).
+-- Iki sorun vardi:
+--
+--   1. Deger ana sayfada durmuyor. "Fatura duzenleme siniri" GIB ana
+--      sayfasinda yazmiyor; model dogru calissa bile bulamazdi.
+--   2. Ilk calismada 15 sayfanin 13'u hic okunamadi. Turk kamu
+--      siteleri veri merkezi IP'lerini engelliyor ve ajan GitHub'da
+--      calisiyor. Bu, sayfalar SITE uzerinden getirilerek cozuldu
+--      (api/getir.php); site Turkiye'de barindigi icin ayni adreslere
+--      ulasiyor.
+--
+-- Adresler iki katmanli: mumkun oldugunca resmi kaynak, resmi kaynakta
+-- derli toplu bir sayfa yoksa bu degerleri duzenli yayimlayan mesleki
+-- siteler. Mesleki site kullanildiginda kaynak adi da oyle yaziliyor;
+-- okuyucu degeri nereden aldigimizi gormeli.
+--
+-- Hicbiri bu gelistirme ortamindan dogrulanamadi (dis cikis kapali).
+-- Calisma gunlugu hangi sayfanin okunamadigini tek tek yaziyor.
+-- ---------------------------------------------------------------------------
+
+UPDATE pratik_bilgiler SET
+    kaynak_url = 'https://www.csgb.gov.tr/asgari-ucret/',
+    kaynak_adi = 'Çalışma ve Sosyal Güvenlik Bakanlığı'
+ WHERE anahtar = 'asgari-ucret';
+
+UPDATE pratik_bilgiler SET
+    kaynak_url = 'https://www.muhasebetr.com/pratikbilgiler/',
+    kaynak_adi = 'MuhasebeTR — Pratik Bilgiler'
+ WHERE anahtar IN ('sgk-taban-tavan', 'kidem-tazminati-tavani');
+
+UPDATE pratik_bilgiler SET
+    kaynak_url = 'https://www.gib.gov.tr/yardim-ve-kaynaklar/yararli-bilgiler',
+    kaynak_adi = 'Gelir İdaresi Başkanlığı'
+ WHERE anahtar IN ('gelir-vergisi-tarifesi', 'kurumlar-vergisi-orani',
+                   'kdv-oranlari', 'yeniden-degerleme-orani',
+                   'gecikme-zammi', 'damga-vergisi-oranlari',
+                   'fatura-duzenleme-siniri', 'amortisman-siniri',
+                   'beyanname-damga-vergisi', 'harcirah-tutarlari');
+
+UPDATE pratik_bilgiler SET
+    kaynak_url = 'https://www.tcmb.gov.tr/wps/wcm/connect/TR/TCMB+TR/Main+Menu/Temel+Faaliyetler/Para+Politikasi/Merkez+Bankasi+Faiz+Oranlari/1+Hafta+Repo',
+    kaynak_adi = 'TCMB'
+ WHERE anahtar = 'politika-faizi';
+
+UPDATE pratik_bilgiler SET
+    kaynak_url = 'https://data.tuik.gov.tr/Bulten/Index?p=Tuketici-Fiyat-Endeksi-Agustos-2026',
+    kaynak_adi = 'TÜİK'
+ WHERE anahtar = 'enflasyon-orani';
+
+-- Yedek kaynak: GIB sayfasi okunamazsa ya da deger bulunamazsa, ayni
+-- degerleri yayimlayan mesleki siteye dusulebilsin diye arama ipucuna
+-- not dusuluyor. (Yedek adres alani yok; bu bilinçli — iki adres iki
+-- ayri dogruluk sorumlulugu demek olurdu.)
+UPDATE pratik_bilgiler
+   SET arama_ipucu = CONCAT(arama_ipucu, ' Sayfada birden fazla yıl varsa EN GÜNCEL yılı al.')
+ WHERE arama_ipucu NOT LIKE '%EN GÜNCEL%';

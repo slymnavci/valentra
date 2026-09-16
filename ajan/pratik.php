@@ -81,16 +81,42 @@ gunluk(count($bilgiler) . ' bilgi toplanacak.');
 $adaylar = [];
 
 foreach ($bilgiler as $bilgi) {
-    $url   = (string) ($bilgi['kaynak_url'] ?? '');
-    $metin = $url !== '' ? $sayfa->metin($url, 8000) : '';
+    $url = (string) ($bilgi['kaynak_url'] ?? '');
+
+    if ($url === '') {
+        gunluk('  ' . $bilgi['baslik'] . ': kaynak adresi tanımlı değil');
+        continue;
+    }
+
+    /*
+     * Once SITE uzerinden dene.
+     *
+     * Turk kamu siteleri veri merkezi IP'lerini engelliyor; buradan
+     * dogrudan indirmek GIB, TUIK, HMB ve CSGB icin calismiyor
+     * (ilk calismada 15 sayfanin 13'u bu yuzden okunamadi). Site
+     * Turkiye'de barindigi icin ayni adreslere ulasabiliyor.
+     *
+     * Site yolu duserse dogrudan indirmeye geri donuluyor; yabanci
+     * kaynaklarda dogrudan indirmek zaten calisiyor.
+     */
+    $metin  = (string) ($site->sayfaGetir($url) ?? '');
+    $yontem = 'site';
+
+    if (trim($metin) === '') {
+        $metin  = $sayfa->metin($url, 8000);
+        $yontem = 'doğrudan';
+    }
 
     if (trim($metin) === '') {
         gunluk('  ' . $bilgi['baslik'] . ': kaynak sayfası okunamadı (' . $url . ')');
         continue;
     }
 
-    $adaylar[] = ['bilgi' => $bilgi, 'sayfaMetni' => $metin];
-    gunluk('  ' . $bilgi['baslik'] . ': sayfa okundu (' . mb_strlen($metin) . ' karakter)');
+    $adaylar[] = ['bilgi' => $bilgi, 'sayfaMetni' => mb_substr($metin, 0, 8000, 'UTF-8')];
+    gunluk(
+        '  ' . $bilgi['baslik'] . ': sayfa okundu (' . $yontem . ', '
+        . mb_strlen($metin) . ' karakter)'
+    );
 }
 
 if ($adaylar === []) {

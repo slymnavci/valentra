@@ -76,6 +76,37 @@ final class Site
     }
 
     /**
+     * Bir dış sayfayı SİTE sunucusu üzerinden okur.
+     *
+     * Turk kamu siteleri veri merkezi IP'lerini engelliyor; ajan
+     * GitHub'da calistigi icin GIB, TUIK, HMB ve CSGB sayfalarinin
+     * hicbirine ulasamiyor. Site Turkiye'de barindiriliyor ve ayni
+     * adreslere ulasabiliyor (panel testinde GIB "HTTP 404" dondurdu,
+     * yani baglanti kuruldu). Bu yuzden sayfayi siteden istiyoruz.
+     *
+     * Basarisizlikta null doner; cagiran taraf dogrudan indirmeye
+     * dusebilir.
+     */
+    public function sayfaGetir(string $url): ?string
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/getir.php?url=' . rawurlencode($url));
+
+        if ($kod !== 200) {
+            return null;
+        }
+
+        $veri = json_decode($govde, true);
+
+        if (!is_array($veri) || !isset($veri['metin'])) {
+            return null;
+        }
+
+        $metin = trim((string) $veri['metin']);
+
+        return $metin !== '' ? $metin : null;
+    }
+
+    /**
      * Toplanacak pratik bilgilerin listesi.
      *
      * @return list<array<string,mixed>>
