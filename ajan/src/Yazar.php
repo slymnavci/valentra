@@ -11,7 +11,7 @@ namespace Valentra\Ajan;
  * özgün olması, kaynaktan cümle kopyalanmaması ve kaynağa atıf verilmesi
  * sistem yönergesinde açıkça şart koşulur.
  */
-final class Yazar
+final class Yazar implements SemaliIstemci
 {
     /**
      * Varsayilan model. GEMINI_MODEL ortam degiskeniyle degistirilebilir;

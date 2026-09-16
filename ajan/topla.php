@@ -27,6 +27,7 @@ require_once __DIR__ . '/src/Kazima.php';
 require_once __DIR__ . '/src/Suzgec.php';
 require_once __DIR__ . '/src/Site.php';
 require_once __DIR__ . '/src/KotaBittiException.php';
+require_once __DIR__ . '/src/SemaliIstemci.php';
 require_once __DIR__ . '/src/Yazar.php';
 
 use Valentra\Ajan\{Besleme, Http, Kazima, KotaBittiException, Sayfa, Site, Suzgec, Yazar};

@@ -22,6 +22,7 @@ require_once __DIR__ . '/src/Http.php';
 require_once __DIR__ . '/src/Sayfa.php';
 require_once __DIR__ . '/src/Site.php';
 require_once __DIR__ . '/src/KotaBittiException.php';
+require_once __DIR__ . '/src/SemaliIstemci.php';
 require_once __DIR__ . '/src/Yazar.php';
 require_once __DIR__ . '/src/DegerOkuyucu.php';
 

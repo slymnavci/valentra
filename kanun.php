@@ -4,19 +4,24 @@ declare(strict_types=1);
 /**
  * Kanun metni sayfası.
  *
- * Metin bizim veritabanimizda tutulmuyor; mevzuat.gov.tr'deki resmi
- * sayfa cerceve icinde gosteriliyor. Boylece okuyucu siteden cikmiyor
- * ama gordugu metin her zaman resmi ve guncel oluyor.
+ * Metin sunucu tarafinda resmi kaynaktan cekilip burada gosteriliyor.
+ * Kopyasi tutulmuyor; kisa sureli onbellek disinda her seferinde
+ * kaynaktan aliniyor, yani gosterilen metin yururlukteki hali.
  *
- * Cerceve engellenebilir: bircok kurum sitesi X-Frame-Options ya da
- * CSP frame-ancestors ile baska sitelerde gosterilmeyi kapatir. Bunu
- * sunucu tarafindan onceden bilmek mumkun degil, o yuzden sayfa iki
- * duruma da hazir: cerceve bos kalirsa JavaScript bunu fark edip
- * "resmi kaynakta ac" baglantisini one cikariyor.
+ * Once cerceve (iframe) denendi ama olmadi: mevzuat.gov.tr sayfanin
+ * baska bir site icinde gosterilmesine izin vermiyor ve kutu bombos
+ * kaliyordu. Ustelik engellenen bir cerceve tarayicida yine "load"
+ * olayini tetikledigi icin bunu JavaScript ile fark etmek de
+ * guvenilir degil — ilk denemede uyari hic gorunmedi.
+ *
+ * Erisim yine de garanti degil (kaynak veri merkezi IP'lerini
+ * engelliyor). Metin alinamazsa sayfa duzgunce resmi kaynak
+ * baglantisina dusuyor.
  */
 
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/kanunlar.php';
+require_once __DIR__ . '/includes/kanun_metni.php';
 
 $anahtar = trim((string) ($_GET['k' ] ?? ''));
 $kanun   = $anahtar !== '' ? kanun_bul($anahtar) : null;
@@ -57,53 +62,25 @@ require __DIR__ . '/includes/sayfa_ust.php';
     </a>
 </div>
 
-<div class="kanun-uyari" id="kanunUyari" hidden>
-    <strong>Metin burada gösterilemiyor.</strong>
-    mevzuat.gov.tr bu sayfanın başka bir site içinde gösterilmesine izin
-    vermiyor. Metni okumak için
-    <a href="<?= e($adres) ?>" target="_blank" rel="noopener">resmî kaynakta açın</a>.
-</div>
+<?php $metin = kanun_metni_getir($kanun); ?>
 
-<div class="kanun-cerceve">
-    <iframe id="kanunCerceve"
-            src="<?= e($adres) ?>"
-            title="<?= e($kanun['ad']) ?> — resmî metin"
-            loading="lazy"
-            referrerpolicy="no-referrer"></iframe>
-</div>
+<?php if ($metin['tamam']): ?>
+    <article class="kanun-metin"><?= $metin['govde'] ?></article>
 
-<p class="ipucu kanun-kaynak">
-    Metin <strong>mevzuat.gov.tr</strong> üzerindeki resmî yayından
-    gösterilmektedir. Valentra metnin bir kopyasını tutmaz; gördüğünüz
-    hâli her zaman yürürlükteki hâlidir.
-</p>
-
-<script>
-(function () {
-    var cerceve = document.getElementById('kanunCerceve');
-    var uyari   = document.getElementById('kanunUyari');
-
-    if (!cerceve || !uyari) { return; }
-
-    /*
-     * Cerceve engellendiginde tarayici "load" olayini yine tetikler ama
-     * icerik bos kalir; engellendigini dogrudan ogrenmenin standart bir
-     * yolu yok (icerige erismek ayni kaynak kurali yuzunden mumkun
-     * degil). Bu yuzden yuklenip yuklenmedigi zamanla olculuyor:
-     * makul bir sure icinde load gelmediyse uyari gosteriliyor.
-     */
-    var yuklendi = false;
-
-    cerceve.addEventListener('load', function () {
-        yuklendi = true;
-    });
-
-    setTimeout(function () {
-        if (!yuklendi) {
-            uyari.hidden = false;
-        }
-    }, 6000);
-})();
-</script>
+    <p class="ipucu kanun-kaynak">
+        Metin <strong>mevzuat.gov.tr</strong> üzerindeki resmî yayından
+        alınmıştır. Valentra metnin kalıcı bir kopyasını tutmaz.
+        Kesin hüküm için
+        <a href="<?= e($adres) ?>" target="_blank" rel="noopener">resmî kaynağa</a>
+        bakınız.
+    </p>
+<?php else: ?>
+    <div class="kanun-uyari">
+        <strong>Metin şu anda buraya getirilemedi.</strong>
+        <?= e($metin['neden']) ?>
+        Kanunun tam ve resmî metnini
+        <a href="<?= e($adres) ?>" target="_blank" rel="noopener">mevzuat.gov.tr'de açabilirsiniz</a>.
+    </div>
+<?php endif; ?>
 
 <?php require __DIR__ . '/includes/sayfa_alt.php'; ?>

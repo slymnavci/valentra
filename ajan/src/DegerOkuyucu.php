@@ -73,7 +73,7 @@ final class DegerOkuyucu
                 'items' => [
                     'type' => 'object',
                     'properties' => [
-                        'sira'    => ['type' => 'integer', 'description' => 'Istekteki sira numarasi'],
+                        'sira'    => ['type' => 'integer', 'description' => 'Istekteki SIRA numarasi (1 den baslar)'],
                         'bulundu' => ['type' => 'boolean', 'description' => 'Deger sayfada bulundu mu'],
                         'deger'   => ['type' => 'string', 'description' => 'Bulunan deger; bulunmadiysa bos'],
                         'donem'   => ['type' => 'string', 'description' => 'Gecerlilik donemi; bilinmiyorsa bos'],
@@ -87,7 +87,7 @@ final class DegerOkuyucu
         'required' => ['sonuclar'],
     ];
 
-    public function __construct(private readonly Yazar $yazar)
+    public function __construct(private readonly SemaliIstemci $yazar)
     {
     }
 
@@ -119,7 +119,17 @@ final class DegerOkuyucu
         foreach ($adaylar as $sira => $aday) {
             $bilgi = $aday['bilgi'];
 
-            $satirlar[] = '--- SIRA ' . $sira . ' ---';
+            /*
+             * Numaralandirma 1'den baslamali.
+             *
+             * Yazar::semaliIstek yaniti dizi indisine cevirirken 1
+             * cikariyor (haber istemi 1'den numaralandirdigi icin).
+             * Burada 0'dan baslatinca tum sonuclar bir kayiyordu:
+             * calismada SGK'ya ait not TCMB Politika Faizi'ne
+             * iliskilendirildi. Bu ozellikte en tehlikeli hata turu —
+             * deger dogru okunsa bile yanlis basliga baglanir.
+             */
+            $satirlar[] = '--- SIRA ' . ($sira + 1) . ' ---';
             $satirlar[] = 'BİLGİ: ' . (string) $bilgi['baslik'];
             $satirlar[] = 'NE ARANACAK: ' . (string) ($bilgi['arama_ipucu'] ?? '');
             $satirlar[] = 'KAYNAK: ' . (string) ($bilgi['kaynak_adi'] ?? '')
