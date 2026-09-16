@@ -143,3 +143,32 @@ function kanun_adresi(array $kanun): string
     return 'https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=' . (int) $kanun['no']
          . '&MevzuatTur=1&MevzuatTertip=' . (int) $kanun['tertip'];
 }
+
+/**
+ * Kanun metninin durabileceği adresleri sırayla verir.
+ *
+ * mevzuat.gov.tr'nin "/mevzuat?MevzuatNo=..." adresi bir JavaScript
+ * uygulamasi: sunucudan gelen HTML bos bir kabuk, metni tarayicida
+ * sonradan dolduruyor. Bu yuzden sayfayi curl ile indirmek ise
+ * yaramiyor — indirme BASARILI olsa bile icinde kanun metni yok.
+ * Ilk denemede tam olarak bu oldu ve sebep "ayiklanamadi" diye
+ * gorunuyordu; asil sebep sayfanin bos gelmesiydi.
+ *
+ * Asil metin ayni sitede duragan dosya olarak duruyor ve adresi
+ * kanunun kendi numaralarindan uretilebiliyor:
+ *   MevzuatMetin/{tur}.{tertip}.{no}.pdf
+ * Tur ve tertip zaten elimizde oldugu icin tahmine gerek yok.
+ *
+ * @return array{pdf:string,doc:string,sayfa:string}
+ */
+function kanun_metin_adresleri(array $kanun): array
+{
+    $kok = 'https://www.mevzuat.gov.tr/MevzuatMetin/1.'
+         . (int) $kanun['tertip'] . '.' . (int) $kanun['no'];
+
+    return [
+        'pdf'   => $kok . '.pdf',
+        'doc'   => $kok . '.doc',
+        'sayfa' => kanun_adresi($kanun),
+    ];
+}

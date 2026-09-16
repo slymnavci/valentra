@@ -142,3 +142,52 @@ function http_hata_acikla(int $hataNo, string $hata): string
         default => $hata !== '' ? $hata : 'Bilinmeyen bağlantı hatası (curl ' . $hataNo . ').',
     };
 }
+
+/**
+ * Adresin ilk birkaç baytını indirir.
+ *
+ * Buyuk bir dosyanin (ornegin bir kanun PDF'inin) orada olup olmadigini
+ * anlamak icin tamamini indirmek gereksiz: sunucudan yalnizca bas kismi
+ * istenip dosya imzasina bakmak yetiyor. Sunucu parcali indirmeyi
+ * desteklemezse curl baglantiyi ilk parcadan sonra keser, sonuc yine
+ * dogru olur.
+ *
+ * HEAD istegi kullanilmadi: bazi sunucular HEAD'e 405 donuyor ya da
+ * govde olmadigi icin dosya imzasini dogrulama sansi kalmiyor.
+ *
+ * @return array{tamam:bool,govde:string,kod:int,neden:string}
+ */
+function http_bas_getir(string $url, int $bayt = 1024, int $zamanAsimi = 15): array
+{
+    $ch = curl_init($url);
+    curl_setopt_array($ch, http_ortak_secenekler($zamanAsimi));
+    curl_setopt($ch, CURLOPT_RANGE, '0-' . max(0, $bayt - 1));
+    // Sikistirilmis aktarim parcali istekle birlikte imzayi bozabilir.
+    curl_setopt($ch, CURLOPT_ENCODING, 'identity');
+
+    $govde  = curl_exec($ch);
+    $kod    = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    $hata   = curl_error($ch);
+    $hataNo = curl_errno($ch);
+    curl_close($ch);
+
+    if (!is_string($govde) || $govde === '') {
+        return [
+            'tamam' => false,
+            'govde' => '',
+            'kod'   => $kod,
+            'neden' => $hataNo !== 0
+                ? http_hata_acikla($hataNo, $hata)
+                : 'Sunucu HTTP ' . $kod . ' döndü.',
+        ];
+    }
+
+    // 206 parcali yanit, 200 ise sunucu parcali istegi yok sayip
+    // dosyanin tamamini gondermeye baslamis demektir; ikisi de olur.
+    if ($kod !== 200 && $kod !== 206) {
+        return ['tamam' => false, 'govde' => '', 'kod' => $kod,
+                'neden' => 'Sunucu HTTP ' . $kod . ' döndü.'];
+    }
+
+    return ['tamam' => true, 'govde' => $govde, 'kod' => $kod, 'neden' => ''];
+}

@@ -1438,3 +1438,20 @@ a.menu-oge.aktif::after,
     opacity: .85;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+
+/* Kanun metni PDF olarak geldiginde sayfanin icinde acilir.
+   Yukseklik ekrana gore: kisa bir kutuda kanun okumak zor. */
+.kanun-pdf {
+    width: 100%;
+    height: calc(100vh - 220px);
+    min-height: 480px;
+    border: 1px solid var(--cizgi);
+    border-radius: 10px;
+    background: #fff;
+}
+
+.kanun-tani-bag {
+    margin-left: 8px;
+    font-size: 13px;
+    opacity: .75;
+}
