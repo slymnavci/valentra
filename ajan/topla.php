@@ -29,7 +29,6 @@ require_once __DIR__ . '/src/Site.php';
 require_once __DIR__ . '/src/KotaBittiException.php';
 require_once __DIR__ . '/src/Yazar.php';
 
-use Anthropic\Client;
 use Valentra\Ajan\{Besleme, Http, Kazima, KotaBittiException, Sayfa, Site, Suzgec, Yazar};
 
 date_default_timezone_set('Europe/Istanbul');
@@ -146,19 +145,43 @@ $taramaButcesi   = 8 * 60;
 $atlanan         = 0;
 
 if ($kaynaklar !== []) {
-    // Adim listenin ucte biri. Adim 1 olsaydi butce dolan bir
-    // calismadan sonra baslangic yalnizca bir kaynak ilerler ve
-    // listenin sonu gunlerce taranmazdi; denemede 20 calisma sonunda
-    // 78 kaynagin 29'u hala hic taranmamisti. Ucte birlik adimla uc
-    // calismada tum liste bir kez doniyor.
-    $adim      = max(1, intdiv(count($kaynaklar), 3));
-    $calismaNo = (int) floor(time() / 7200);
-    $kayma     = ($calismaNo * $adim) % count($kaynaklar);
+    // Vergi, TMS/TFRS ve denetim kaynaklari sitenin ana omurgasi.
+    // Kaynak sayisi buyudugunde genel ekonomi siteleri bunlari zaman
+    // butcesinin disina itemesin diye once bu cekirdek grup taranir.
+    $oncelikliAdlar = [
+        'Resmî Gazete', 'Gelir İdaresi Başkanlığı', 'KGK', 'TÜRMOB',
+        'OECD Vergi', 'Avrupa Komisyonu Vergi', 'IFRS Foundation',
+        'IAS Plus', 'EFRAG', 'Deloitte Türkiye', 'PwC Türkiye',
+        'KPMG Türkiye', 'BDO Türkiye', 'EY Türkiye',
+        'Grant Thornton Türkiye', 'Tax Foundation', 'Accountancy Age',
+        'ICAEW', 'IFAC', 'Avrupa Merkez Bankası', 'Federal Reserve',
+    ];
 
-    $kaynaklar = array_merge(
-        array_slice($kaynaklar, $kayma),
-        array_slice($kaynaklar, 0, $kayma)
-    );
+    $oncelikli = [];
+    $digerleri = [];
+
+    foreach ($kaynaklar as $kaynak) {
+        if (in_array((string) $kaynak['ad'], $oncelikliAdlar, true)) {
+            $oncelikli[] = $kaynak;
+        } else {
+            $digerleri[] = $kaynak;
+        }
+    }
+
+    // Diger kaynaklarda baslangic her calismada kayar; boylece listenin
+    // sonunda kalan yabanci ekonomi kaynaklari da duzenli olarak taranir.
+    if ($digerleri !== []) {
+        $adim      = max(1, intdiv(count($digerleri), 3));
+        $calismaNo = (int) floor(time() / 7200);
+        $kayma     = ($calismaNo * $adim) % count($digerleri);
+
+        $digerleri = array_merge(
+            array_slice($digerleri, $kayma),
+            array_slice($digerleri, 0, $kayma)
+        );
+    }
+
+    $kaynaklar = array_merge($oncelikli, $digerleri);
 }
 
 foreach ($kaynaklar as $kaynak) {

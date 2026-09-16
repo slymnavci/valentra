@@ -6,10 +6,17 @@ on:
       - main
   workflow_dispatch:
 
+# Ayni anda birden fazla FTP mirror calisirsa farkli commitlerin dosyalari
+# sunucuda birbirine karisabilir. Yeni commit geldiginde eski deploy iptal
+# edilir; yalnizca en guncel main surumu IHS'ye yuklenir.
+concurrency:
+  group: valentra-deploy
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 12
 
     steps:
       - name: Repository kodlarini al

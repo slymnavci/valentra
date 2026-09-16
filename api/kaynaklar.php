@@ -30,7 +30,31 @@ $kaynaklar = db()->query(
 )->fetchAll();
 
 $kategoriler = db()->query(
-    'SELECT ad, slug, aciklama FROM kategoriler WHERE aktif = 1 ORDER BY sira, ad'
+    "SELECT k.ad, k.slug, k.aciklama
+       FROM kategoriler k
+      WHERE (k.aktif = 1 OR k.slug IN ('tms-tfrs','genel','ekonomi'))
+        AND NOT EXISTS (
+            SELECT 1
+              FROM kategoriler c
+             WHERE c.ust_id = k.id
+               AND c.aktif = 1
+        )
+      ORDER BY
+        CASE k.slug
+            WHEN 'kurumlar-vergisi' THEN 10
+            WHEN 'gelir-vergisi' THEN 20
+            WHEN 'kdv' THEN 30
+            WHEN 'vergi-usul-kanunu' THEN 40
+            WHEN 'otv-ve-diger' THEN 50
+            WHEN 'e-belge' THEN 60
+            WHEN 'tesvik-yapilandirma' THEN 70
+            WHEN 'denetim' THEN 80
+            WHEN 'tms-tfrs' THEN 90
+            WHEN 'ekonomi' THEN 100
+            WHEN 'genel' THEN 110
+            ELSE 500
+        END,
+        k.sira, k.ad"
 )->fetchAll();
 
 /*

@@ -58,6 +58,10 @@ final class Yazar
              kopyalamazsın, yeniden ifade edersin. Özgün bir metin yaz.
            - Türkçe, sade ve kurumsal bir dille yaz. Tabloid üslup,
              abartı, ünlem ve tıklama tuzağı başlık kullanma.
+           - ÇIKTININ TAMAMI TÜRKÇE olmalı: başlık, özet, haber metni,
+             etiketler, red nedeni ve ajan notu. Yalnızca kurum adları,
+             kişi adları ve standart kodları (OECD, IASB, IFRS 18 gibi)
+             özgün biçimini koruyabilir.
            - KAYNAK YABANCI DİLDE OLABİLİR. Bu durumda da haberi
              TÜRKÇE yazarsın; cümle cümle çeviri yapma, içeriği anlayıp
              Türk okura kendi cümlelerinle aktar. Mesleki terimleri
@@ -93,9 +97,20 @@ final class Yazar
         ata. Yanıtta grubun slug değerini TAM olarak yaz. Haber birden çok
         grubu ilgilendiriyorsa ağırlıklı olanı seç.
 
-        Vergi mevzuatı haberleri ilgili vergi grubuna gider. Ekonomi
-        gündemi haberleri "ekonomi" grubuna gider. Hiçbiri uymuyorsa
-        "genel" kullan.
+        Kategori eşlemesi KESİNDİR:
+        - IFRS, IAS, IASB, IFRIC, ISSB, TMS, TFRS, BOBİ FRS, KÜMİ FRS,
+          finansal raporlama standardı, muhasebe standardı ve bu
+          standartlardaki değişiklikler -> "tms-tfrs".
+        - Bağımsız denetim, denetim standardı, güvence standardı ve denetçi
+          düzenlemeleri -> "denetim".
+        - Makroekonomi, enflasyon, merkez bankası, faiz, büyüme, istihdam,
+          bütçe ve dış ticaret verileri -> "ekonomi".
+        - Vergi mevzuatı -> ilgili vergi alt grubuna.
+        - Site kapsamına giren fakat yukarıdaki gruplardan hiçbirine
+          oturmayan mali, muhasebesel veya düzenleyici haber -> "genel".
+
+        "vergi-kanunlari" ve "muhasebe-denetim" yalnızca menü üst
+        başlıklarıdır; kategori olarak ASLA seçme.
 
         AJAN NOTU: Haberi onaylayacak editöre tek cümlelik not. Neyi
         doğrulaması gerektiğini söyle; her şey netse bunu belirt.

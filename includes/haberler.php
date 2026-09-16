@@ -339,14 +339,15 @@ function kategori_listesi(bool $sadeceAktif = true): array
 function kategori_menusu(): array
 {
     $satirlar = db()->query(
-        'SELECT k.id, k.ad, k.slug, k.ust_id, k.sira,
+        "SELECT k.id, k.ad, k.slug, k.ust_id, k.sira,
                 COUNT(h.id) AS adet
            FROM kategoriler k
            LEFT JOIN haberler h
-             ON h.kategori_id = k.id AND h.durum = ' . db()->quote(HABER_YAYINDA) . '
+             ON h.kategori_id = k.id AND h.durum = " . db()->quote(HABER_YAYINDA) . "
           WHERE k.aktif = 1
+             OR k.slug IN ('vergi-kanunlari','muhasebe-denetim','ekonomi','tms-tfrs','genel')
           GROUP BY k.id, k.ad, k.slug, k.ust_id, k.sira
-          ORDER BY k.sira, k.ad'
+          ORDER BY k.sira, k.ad"
     )->fetchAll();
 
     $altlar = [];
@@ -370,20 +371,53 @@ function kategori_menusu(): array
 
         $cocuklar = $altlar[(int) $satir['id']] ?? [];
 
+        $gorunum = [
+            'vergi-kanunlari'   => ['ad' => 'Vergi Kanunları',     'sira' => 10],
+            'muhasebe-denetim'  => ['ad' => 'Muhasebe ve Denetim', 'sira' => 20],
+            'ekonomi'            => ['ad' => 'Ekonomik Gündem',     'sira' => 30],
+            'tms-tfrs'           => ['ad' => 'TMS/TFRS',            'sira' => 40],
+            'genel'              => ['ad' => 'Diğer',               'sira' => 50],
+        ];
+
+        $slug = (string) $satir['slug'];
+        $ad   = $gorunum[$slug]['ad'] ?? (string) $satir['ad'];
+
         $menu[] = [
-            'ad'     => $satir['ad'],
-            'slug'   => $satir['slug'],
+            'ad'     => $ad,
+            'slug'   => $slug,
             'adet'   => (int) $satir['adet'] + array_sum(array_column($cocuklar, 'adet')),
             'altlar' => $cocuklar,
+            '_sira'  => $gorunum[$slug]['sira'] ?? (100 + (int) $satir['sira']),
         ];
     }
+
+    usort($menu, static fn (array $a, array $b): int => $a['_sira'] <=> $b['_sira']);
+
+    foreach ($menu as &$oge) {
+        unset($oge['_sira']);
+    }
+    unset($oge);
 
     return $menu;
 }
 
 function kategori_slug_bul(string $slug): ?array
 {
-    $ifade = db()->prepare('SELECT * FROM kategoriler WHERE slug = :slug AND aktif = 1 LIMIT 1');
+    $takmaAdlar = [
+        'diger' => 'genel',
+        'diğer' => 'genel',
+        'tms' => 'tms-tfrs',
+        'tfrs' => 'tms-tfrs',
+    ];
+
+    $slug = $takmaAdlar[$slug] ?? $slug;
+
+    $ifade = db()->prepare(
+        "SELECT * FROM kategoriler
+          WHERE slug = :slug
+            AND (aktif = 1 OR slug IN ('ekonomi','tms-tfrs','genel'))
+          LIMIT 1"
+    );
     $ifade->execute(['slug' => $slug]);
     $satir = $ifade->fetch();
 

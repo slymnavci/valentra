@@ -201,10 +201,10 @@ UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHER
 UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'vergi-kanunlari') AS t), sira = 60 WHERE slug = 'e-belge';
 UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'vergi-kanunlari') AS t), sira = 70 WHERE slug = 'tesvik-yapilandirma';
 
-UPDATE kategoriler SET ust_id = NULL, sira = 40 WHERE slug = 'tms-tfrs';
-UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'muhasebe-denetim') AS t), sira = 20 WHERE slug = 'denetim';
+UPDATE kategoriler SET ad = 'TMS/TFRS', aktif = 1, ust_id = NULL, sira = 40 WHERE slug = 'tms-tfrs';
+UPDATE kategoriler SET aktif = 1, ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'muhasebe-denetim') AS t), sira = 20 WHERE slug = 'denetim';
 
-UPDATE kategoriler SET ust_id = NULL, sira = 40 WHERE slug = 'genel';
+UPDATE kategoriler SET ad = 'Diğer', aktif = 1, ust_id = NULL, sira = 50 WHERE slug = 'genel';
 
 -- ---------------------------------------------------------------------------
 -- Eski kurulumlarin menu yapisini tasima
@@ -238,7 +238,7 @@ UPDATE kategoriler
 -- Menu sirasi.
 UPDATE kategoriler SET ust_id = NULL, sira = 10 WHERE slug = 'vergi-kanunlari';
 UPDATE kategoriler SET ust_id = NULL, sira = 20 WHERE slug = 'muhasebe-denetim';
-UPDATE kategoriler SET ust_id = NULL, sira = 30 WHERE slug = 'ekonomi';
+UPDATE kategoriler SET ad = 'Ekonomik Gündem', aktif = 1, ust_id = NULL, sira = 30 WHERE slug = 'ekonomi';
 
 -- "Genel" -> "Diger", en sonda.
 UPDATE kategoriler
@@ -437,11 +437,15 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) 
 INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) VALUES
     -- Uluslararasi kurumlar: vergi gundeminin kaynagi
     ('OECD Vergi',              'https://www.oecd.org',
-     NULL, 'https://www.oecd.org/en/topics/policy-issues/tax.html', 'resmi', 1),
+     NULL, 'https://www.oecd.org/en/topics/tax-policy.html', 'resmi', 1),
     ('Avrupa Komisyonu Vergi',  'https://taxation-customs.ec.europa.eu',
      NULL, 'https://taxation-customs.ec.europa.eu/news_en', 'resmi', 1),
     ('IFRS Foundation',         'https://www.ifrs.org',
      NULL, 'https://www.ifrs.org/news-and-events/news/', 'resmi', 1),
+    ('IAS Plus',                 'https://www.iasplus.com',
+     NULL, 'https://www.iasplus.com/en/news', 'web', 1),
+    ('EFRAG',                    'https://www.efrag.org',
+     NULL, 'https://www.efrag.org/en/financial-reporting/news', 'resmi', 1),
     ('IMF',                     'https://www.imf.org',
      NULL, 'https://www.imf.org/en/News', 'resmi', 1),
     ('IRS',                     'https://www.irs.gov',
@@ -563,6 +567,23 @@ INSERT IGNORE INTO kategoriler (ad, slug, aciklama, sira) VALUES
 UPDATE kategoriler SET aciklama = 'Piyasalar, enflasyon, faiz ve makroekonomik gelişmeler',
        ust_id = NULL, sira = 35
  WHERE slug = 'ekonomi';
+
+
+-- Temel menu ve yabanci kaynak adreslerini eski kurulumlarda da duzelt.
+UPDATE kategoriler SET ad = 'TMS/TFRS', aktif = 1, ust_id = NULL, sira = 40
+ WHERE slug = 'tms-tfrs';
+UPDATE kategoriler SET ad = 'Diğer', aktif = 1, ust_id = NULL, sira = 50
+ WHERE slug = 'genel';
+UPDATE kategoriler SET ad = 'Ekonomik Gündem', aktif = 1, ust_id = NULL, sira = 30
+ WHERE slug = 'ekonomi';
+
+UPDATE kaynaklar
+   SET liste_url = 'https://www.oecd.org/en/topics/tax-policy.html', aktif = 1
+ WHERE ad = 'OECD Vergi';
+
+UPDATE kaynaklar
+   SET liste_url = 'https://www.ifrs.org/news-and-events/news/', aktif = 1
+ WHERE ad = 'IFRS Foundation';
 
 -- ---------------------------------------------------------------------------
 -- Pratik bilgiler
