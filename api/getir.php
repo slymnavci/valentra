@@ -29,6 +29,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/ajan_yetki.php';
 require_once __DIR__ . '/../includes/url.php';
+require_once __DIR__ . '/../includes/http_ortak.php';
 
 $anahtarId = ajan_anahtar_dogrula($neden);
 
@@ -83,36 +84,17 @@ if (!$izinli) {
     ]);
 }
 
-$ch = curl_init($url);
+$indirme = http_getir($url, 25);
 
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_MAXREDIRS      => 4,
-    CURLOPT_TIMEOUT        => 20,
-    CURLOPT_CONNECTTIMEOUT => 8,
-    CURLOPT_ENCODING       => '',
-    CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                            . 'AppleWebKit/537.36 (KHTML, like Gecko) '
-                            . 'Chrome/128.0 Safari/537.36',
-    CURLOPT_HTTPHEADER     => [
-        'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language: tr-TR,tr;q=0.9',
-    ],
-]);
-
-$ham  = curl_exec($ch);
-$kod  = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-$hata = curl_error($ch);
-curl_close($ch);
-
-if (!is_string($ham)) {
-    ajan_json(502, ['hata' => 'Sayfaya ulaşılamadı: ' . $hata, 'kod' => 0]);
+if (!$indirme['tamam']) {
+    ajan_json(502, [
+        'hata' => $indirme['neden'],
+        'kod'  => $indirme['kod'],
+    ]);
 }
 
-if ($kod < 200 || $kod >= 300) {
-    ajan_json(502, ['hata' => 'Sunucu HTTP ' . $kod . ' döndü.', 'kod' => $kod]);
-}
+$ham = $indirme['govde'];
+$kod = $indirme['kod'];
 
 /*
  * Duz metne indirgeme.

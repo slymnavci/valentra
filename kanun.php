@@ -22,6 +22,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/kanunlar.php';
 require_once __DIR__ . '/includes/kanun_metni.php';
+require_once __DIR__ . '/includes/auth.php';
 
 $anahtar = trim((string) ($_GET['k' ] ?? ''));
 $kanun   = $anahtar !== '' ? kanun_bul($anahtar) : null;
@@ -77,9 +78,25 @@ require __DIR__ . '/includes/sayfa_ust.php';
 <?php else: ?>
     <div class="kanun-uyari">
         <strong>Metin şu anda buraya getirilemedi.</strong>
-        <?= e($metin['neden']) ?>
         Kanunun tam ve resmî metnini
         <a href="<?= e($adres) ?>" target="_blank" rel="noopener">mevzuat.gov.tr'de açabilirsiniz</a>.
+
+        <?php
+        /*
+         * Sebebi yalnizca giris yapmis yoneticiye goster.
+         *
+         * Ziyaretcinin "SSL sertifikasi dogrulanamadi" gibi bir
+         * ayrintiya ihtiyaci yok; ama bu bilgi olmadan sorunu
+         * uzaktan cozmek korlemesine oluyor. Ilk denemede tam bu
+         * yuzden "olmadi"dan oteye gidemedik.
+         */
+        oturum_baslat();
+        ?>
+        <?php if (oturum_acik()): ?>
+            <span class="kanun-tani">
+                Yönetici notu: <?= e($metin['neden']) ?>
+            </span>
+        <?php endif; ?>
     </div>
 <?php endif; ?>
 

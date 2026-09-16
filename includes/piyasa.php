@@ -22,6 +22,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/ayarlar.php';
+require_once __DIR__ . '/http_ortak.php';
 
 const PIYASA_ONBELLEK_ANAHTAR = 'piyasa_onbellek';
 const PIYASA_ONBELLEK_SURE    = 120;
@@ -372,29 +373,17 @@ function piyasa_sayiya_cevir(string $ham): ?float
     return is_numeric($temiz) ? (float) $temiz : null;
 }
 
-/** Kısa zaman aşımıyla indirir; sayfa yüklemesini bekletmemeli. */
+/**
+ * Kısa zaman aşımıyla indirir; sayfa yüklemesini bekletmemeli.
+ *
+ * Ortak ayarlari kullaniyor: guncel kok sertifika listesi ve tarayici
+ * gibi tanitan basliklar. Paylasimli hostingin eski sertifika listesi
+ * yuzunden bazi kaynaklar dogrulanamiyordu.
+ */
 function piyasa_indir(string $url): ?string
 {
-    $ch = curl_init($url);
+    // Bu istek ziyaretcinin sayfasini bekletiyor; kisa tutuluyor.
+    $sonuc = http_getir($url, 8);
 
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_MAXREDIRS      => 3,
-        // Kisa tutuldu: bu istek ziyaretcinin sayfasini bekletiyor.
-        CURLOPT_TIMEOUT        => 8,
-        CURLOPT_CONNECTTIMEOUT => 4,
-        CURLOPT_ENCODING       => '',
-        CURLOPT_USERAGENT      => 'Mozilla/5.0 (compatible; ValentraBot/1.0; +https://valentra.com.tr)',
-    ]);
-
-    $govde = curl_exec($ch);
-    $kod   = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-    curl_close($ch);
-
-    if (!is_string($govde) || $kod < 200 || $kod >= 300) {
-        return null;
-    }
-
-    return $govde;
+    return $sonuc['tamam'] ? $sonuc['govde'] : null;
 }

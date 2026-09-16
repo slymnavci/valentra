@@ -1429,3 +1429,12 @@ a.menu-oge.aktif::after,
     font-size: .72rem;
     color: var(--metin-soluk);
 }
+
+/* Kanun sayfasindaki yonetici tanisi: ziyaretciye gorunmez. */
+.kanun-tani {
+    display: block;
+    margin-top: 8px;
+    font-size: .82rem;
+    opacity: .85;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}

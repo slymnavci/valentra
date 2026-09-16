@@ -24,6 +24,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/ayarlar.php';
 require_once __DIR__ . '/url.php';
+require_once __DIR__ . '/http_ortak.php';
 
 /** Onbellek suresi: kanun metinleri nadiren degisir. */
 const KANUN_ONBELLEK_SURE = 6 * 3600;
@@ -42,18 +43,18 @@ function kanun_metni_getir(array $kanun): array
         return ['tamam' => true, 'govde' => $onbellek, 'neden' => '', 'onbellek' => true];
     }
 
-    $ham = kanun_indir(kanun_adresi($kanun));
+    $indirme = kanun_indir(kanun_adresi($kanun));
 
-    if ($ham === null) {
+    if (!$indirme['tamam']) {
         return [
             'tamam'    => false,
             'govde'    => '',
-            'neden'    => 'Resmî kaynağa şu anda ulaşılamadı.',
+            'neden'    => $indirme['neden'],
             'onbellek' => false,
         ];
     }
 
-    $govde = kanun_govdeyi_ayikla($ham);
+    $govde = kanun_govdeyi_ayikla($indirme['govde']);
 
     if ($govde === '') {
         return [
@@ -93,36 +94,24 @@ function kanun_onbellekten(string $anahtar): ?string
     return (string) $veri['govde'];
 }
 
-/** Kısa zaman aşımıyla indirir; ziyaretçinin sayfasını bekletmemeli. */
-function kanun_indir(string $url): ?string
+/**
+ * Kısa zaman aşımıyla indirir; ziyaretçinin sayfasını bekletmemeli.
+ *
+ * @return array{tamam:bool,govde:string,kod:int,neden:string}
+ */
+function kanun_indir(string $url): array
 {
-    $ch = curl_init($url);
+    // 12 saniye kisa geldi: mevzuat.gov.tr agir bir sayfa ve ilk
+    // istekte yanit gecikebiliyor. Onbellek oldugu icin bu bedel
+    // ziyaretcinin yalnizca ilk acilisinda odeniyor.
+    $sonuc = http_getir($url, 25);
 
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_MAXREDIRS      => 4,
-        CURLOPT_TIMEOUT        => 12,
-        CURLOPT_CONNECTTIMEOUT => 6,
-        CURLOPT_ENCODING       => '',
-        CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                                . 'AppleWebKit/537.36 (KHTML, like Gecko) '
-                                . 'Chrome/128.0 Safari/537.36',
-        CURLOPT_HTTPHEADER     => [
-            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language: tr-TR,tr;q=0.9',
-        ],
-    ]);
-
-    $govde = curl_exec($ch);
-    $kod   = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-    curl_close($ch);
-
-    if (!is_string($govde) || $kod < 200 || $kod >= 300) {
-        return null;
-    }
-
-    return $govde;
+    return [
+        'tamam' => $sonuc['tamam'],
+        'govde' => $sonuc['govde'],
+        'kod'   => $sonuc['kod'],
+        'neden' => $sonuc['neden'],
+    ];
 }
 
 /**
