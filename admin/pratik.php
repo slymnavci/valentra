@@ -36,6 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             (string) ($_POST['donem'] ?? '')
         );
         $bildirim = 'Değer elle güncellendi.';
+    } elseif ($islem === 'kaynak' && $id > 0) {
+        pratik_kaynak_yaz(
+            $id,
+            (string) ($_POST['kaynak_url'] ?? ''),
+            (string) ($_POST['kaynak_adi'] ?? '')
+        );
+        $bildirim = 'Kaynak adresi güncellendi.';
     } elseif ($islem === 'tumunu_onayla') {
         $adet = 0;
 
@@ -187,6 +194,37 @@ foreach ($satirlar as $satir):
                     <input type="text" id="donem-<?= (int) $satir['id'] ?>" name="donem"
                            value="<?= e((string) ($satir['donem'] ?? '')) ?>"
                            placeholder="2026 yılı">
+                </div>
+
+                <button type="submit" class="dugme">Kaydet</button>
+            </form>
+        </details>
+
+        <details class="pratik-elle">
+            <summary>Kaynak adresini değiştir</summary>
+
+            <p class="ipucu" style="margin:12px 0 0;">
+                Ajan değeri bu adresten okur. Bazı adresler yıla bağlıdır
+                (örnek: <code>.../2026-pratik-bilgiler/</code>); yıl dönünce
+                buradan güncelleyin.
+            </p>
+
+            <form method="post">
+                <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                <input type="hidden" name="islem" value="kaynak">
+                <input type="hidden" name="id" value="<?= (int) $satir['id'] ?>">
+
+                <div class="alan">
+                    <label for="kurl-<?= (int) $satir['id'] ?>">Kaynak adresi</label>
+                    <input type="text" id="kurl-<?= (int) $satir['id'] ?>" name="kaynak_url"
+                           value="<?= e((string) ($satir['kaynak_url'] ?? '')) ?>"
+                           placeholder="https://...">
+                </div>
+
+                <div class="alan">
+                    <label for="kad-<?= (int) $satir['id'] ?>">Kaynak adı</label>
+                    <input type="text" id="kad-<?= (int) $satir['id'] ?>" name="kaynak_adi"
+                           value="<?= e((string) ($satir['kaynak_adi'] ?? '')) ?>">
                 </div>
 
                 <button type="submit" class="dugme">Kaydet</button>

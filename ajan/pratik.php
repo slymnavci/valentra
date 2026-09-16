@@ -78,6 +78,41 @@ gunluk(count($bilgiler) . ' bilgi toplanacak.');
 
 // --- 2. Kaynak sayfalarini oku --------------------------------------------
 
+/*
+ * Ayni sayfa BIR KEZ indiriliyor.
+ *
+ * Pratik bilgilerin cogu Alomaliye ve ISMMMO'nun derli toplu
+ * sayfalarindan geliyor; on bes satirin on biri iki adrese bakiyor.
+ * Satir basina indirmek ayni sayfayi on bir kez cekmek olurdu — hem
+ * bosuna hem de kaynak siteyi yoran bir davranis.
+ */
+$sayfaOnbellek = [];
+
+$sayfaOku = static function (string $url) use (&$sayfaOnbellek, $site, $sayfa): string {
+    if (array_key_exists($url, $sayfaOnbellek)) {
+        return $sayfaOnbellek[$url];
+    }
+
+    /*
+     * Once SITE uzerinden.
+     *
+     * Turk kamu ve meslek siteleri veri merkezi IP'lerini
+     * engelleyebiliyor; ajan GitHub'da calistigi icin ilk calismada
+     * on bes sayfanin on ucu okunamadi. Site Turkiye'de barindigi icin
+     * ayni adreslere ulasabiliyor. Site yolu duserse dogrudan
+     * indirmeye donuluyor.
+     */
+    $metin = (string) ($site->sayfaGetir($url) ?? '');
+
+    if (trim($metin) === '') {
+        $metin = $sayfa->metin($url, 20000);
+    }
+
+    $sayfaOnbellek[$url] = $metin;
+
+    return $metin;
+};
+
 $adaylar = [];
 
 foreach ($bilgiler as $bilgi) {
@@ -88,35 +123,22 @@ foreach ($bilgiler as $bilgi) {
         continue;
     }
 
-    /*
-     * Once SITE uzerinden dene.
-     *
-     * Turk kamu siteleri veri merkezi IP'lerini engelliyor; buradan
-     * dogrudan indirmek GIB, TUIK, HMB ve CSGB icin calismiyor
-     * (ilk calismada 15 sayfanin 13'u bu yuzden okunamadi). Site
-     * Turkiye'de barindigi icin ayni adreslere ulasabiliyor.
-     *
-     * Site yolu duserse dogrudan indirmeye geri donuluyor; yabanci
-     * kaynaklarda dogrudan indirmek zaten calisiyor.
-     */
-    $metin  = (string) ($site->sayfaGetir($url) ?? '');
-    $yontem = 'site';
-
-    if (trim($metin) === '') {
-        $metin  = $sayfa->metin($url, 8000);
-        $yontem = 'doğrudan';
-    }
+    $yeniIndirme = !array_key_exists($url, $sayfaOnbellek);
+    $metin       = $sayfaOku($url);
 
     if (trim($metin) === '') {
         gunluk('  ' . $bilgi['baslik'] . ': kaynak sayfası okunamadı (' . $url . ')');
         continue;
     }
 
-    $adaylar[] = ['bilgi' => $bilgi, 'sayfaMetni' => mb_substr($metin, 0, 8000, 'UTF-8')];
-    gunluk(
-        '  ' . $bilgi['baslik'] . ': sayfa okundu (' . $yontem . ', '
-        . mb_strlen($metin) . ' karakter)'
-    );
+    $adaylar[] = ['bilgi' => $bilgi, 'sayfaMetni' => mb_substr($metin, 0, 12000, 'UTF-8')];
+
+    gunluk(sprintf(
+        '  %s: %s (%d karakter)',
+        $bilgi['baslik'],
+        $yeniIndirme ? 'sayfa okundu' : 'aynı sayfadan',
+        mb_strlen($metin)
+    ));
 }
 
 if ($adaylar === []) {
@@ -124,14 +146,41 @@ if ($adaylar === []) {
     exit(0);
 }
 
+gunluk(count($sayfaOnbellek) . ' ayrı sayfa indirildi, ' . count($adaylar) . ' bilgi işlenecek.');
+
 // --- 3. Degerleri okut ------------------------------------------------------
 
-$gruplar   = array_chunk($adaylar, $grupBoyu);
+/*
+ * Gruplama sayfaya gore, sayiya gore degil.
+ *
+ * On bes bilginin on biri iki sayfadan geliyor. Sayiya gore
+ * gruplansaydi ayni sayfa metni her aday icin istege yeniden
+ * kopyalanirdi; yedi aday paylasan bir sayfa modele yedi kez giderdi.
+ * Sayfaya gore gruplayinca metin bir kez gidiyor ve model o sayfadaki
+ * butun degerleri birlikte ariyor — hem ucuz hem daha isabetli.
+ *
+ * Cok kalabalik bir sayfa istegi sisirmesin diye grup boyutu yine de
+ * siniriliyor.
+ */
+$sayfayaGore = [];
+
+foreach ($adaylar as $aday) {
+    $sayfayaGore[(string) $aday['bilgi']['kaynak_url']][] = $aday;
+}
+
+$gruplar = [];
+
+foreach ($sayfayaGore as $ayniSayfa) {
+    foreach (array_chunk($ayniSayfa, max($grupBoyu, 8)) as $parca) {
+        $gruplar[] = $parca;
+    }
+}
+
 $sonuclar  = [];
 $bulunmadi = 0;
 $hatali    = 0;
 
-gunluk(count($gruplar) . ' grup halinde işlenecek (grup başına en fazla ' . $grupBoyu . ').');
+gunluk(count($gruplar) . ' grup halinde işlenecek (sayfa başına bir istek).');
 
 foreach ($gruplar as $grupNo => $grup) {
     if ($grupNo > 0) {

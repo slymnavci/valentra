@@ -114,7 +114,26 @@ final class DegerOkuyucu
     /** @param list<array{bilgi:array<string,mixed>,sayfaMetni:string}> $adaylar */
     private function istemHazirla(array $adaylar): string
     {
-        $satirlar = ['Aşağıdaki bilgileri kendi sayfalarından oku.', ''];
+        /*
+         * Ayni sayfayi paylasan adaylarda metin BIR KEZ yaziliyor.
+         *
+         * Pratik bilgilerin cogu Alomaliye ve ISMMMO'nun tek
+         * sayfalarindan geliyor. Metni her aday icin tekrarlamak yedi
+         * aday paylasan bir sayfada istegi yedi katina cikarirdi;
+         * hem pahali hem de modelin dikkatini dagitir.
+         */
+        $ortakMetin = $this->ortakSayfaMetni($adaylar);
+
+        $satirlar = ['Aşağıdaki bilgileri kaynak sayfasından oku.', ''];
+
+        if ($ortakMetin !== null) {
+            $satirlar[] = 'Aşağıdaki bilgilerin HEPSİ aynı sayfadan okunacak.';
+            $satirlar[] = 'SAYFA METNİ:';
+            $satirlar[] = $ortakMetin;
+            $satirlar[] = '';
+            $satirlar[] = 'Bu sayfadan aranacak bilgiler:';
+            $satirlar[] = '';
+        }
 
         foreach ($adaylar as $sira => $aday) {
             $bilgi = $aday['bilgi'];
@@ -145,11 +164,37 @@ final class DegerOkuyucu
                             . 'sayfada doğrulamadan tekrar yazma): ' . $mevcut;
             }
 
-            $satirlar[] = 'SAYFA METNİ:';
-            $satirlar[] = mb_substr($aday['sayfaMetni'], 0, 6000, 'UTF-8');
+            if ($ortakMetin === null) {
+                $satirlar[] = 'SAYFA METNİ:';
+                $satirlar[] = mb_substr($aday['sayfaMetni'], 0, 6000, 'UTF-8');
+            }
+
             $satirlar[] = '';
         }
 
         return implode("\n", $satirlar);
+    }
+
+    /**
+     * Gruptaki adaylar aynı sayfayı mı paylaşıyor?
+     *
+     * @param list<array{bilgi:array<string,mixed>,sayfaMetni:string}> $adaylar
+     * @return string|null Ortak metin, yoksa null
+     */
+    private function ortakSayfaMetni(array $adaylar): ?string
+    {
+        if (count($adaylar) < 2) {
+            return null;
+        }
+
+        $ilk = $adaylar[0]['sayfaMetni'];
+
+        foreach ($adaylar as $aday) {
+            if ($aday['sayfaMetni'] !== $ilk) {
+                return null;
+            }
+        }
+
+        return mb_substr($ilk, 0, 14000, 'UTF-8');
     }
 }

@@ -150,6 +150,24 @@ function pratik_elle_yaz(int $id, string $deger, string $donem): void
     ]);
 }
 
+/**
+ * Kaynak adresini günceller.
+ *
+ * Bazi kaynak adresleri yila bagli (Alomaliye'nin "2026-pratik-bilgiler"
+ * sayfasi gibi). Yil donunce adres 404 verir ve deger toplanamaz;
+ * yoneticinin bunu kod degisikligi beklemeden duzeltebilmesi gerekir.
+ */
+function pratik_kaynak_yaz(int $id, string $url, string $ad): void
+{
+    db()->prepare(
+        'UPDATE pratik_bilgiler SET kaynak_url = :url, kaynak_adi = :ad WHERE id = :id'
+    )->execute([
+        'url' => guvenli_url($url) ?: null,
+        'ad'  => trim($ad) !== '' ? trim($ad) : null,
+        'id'  => $id,
+    ]);
+}
+
 /** Grup adlarının okunur karşılığı. */
 function pratik_grup_adi(string $grup): string
 {

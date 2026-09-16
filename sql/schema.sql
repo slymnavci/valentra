@@ -781,3 +781,35 @@ UPDATE pratik_bilgiler SET
 UPDATE pratik_bilgiler
    SET arama_ipucu = CONCAT(arama_ipucu, ' Sayfada birden fazla yıl varsa EN GÜNCEL yılı al.')
  WHERE arama_ipucu NOT LIKE '%EN GÜNCEL%';
+
+-- ---------------------------------------------------------------------------
+-- Pratik bilgi kaynaklarini derli toplu sayfalara cek
+--
+-- Onceki adresler kurum kurum dagilmisti ve cogu ulasilamiyordu.
+-- Alomaliye ve ISMMMO bu degerlerin TAMAMINI tek sayfada, yil yil
+-- duzenli yayimliyor. Meslek camiasinin yillardir kullandigi
+-- derlemeler; resmi kaynak degiller ama degerin yanina kaynak adi
+-- yazildigi icin okuyucu neye baktigini goruyor.
+--
+-- Tek sayfada toplanmanin ikinci faydasi: ajan ayni sayfayi her satir
+-- icin yeniden indirmiyor, bir kez indirip icinden tum degerleri
+-- okuyor.
+--
+-- DIKKAT: Alomaliye adresi yila bagli (".../2026-pratik-bilgiler/").
+-- Yil donunce panelden "Kaynak adresi" alanindan guncellenmeli;
+-- gunluk sayfa okunamadiginda bunu acikca yaziyor.
+-- ---------------------------------------------------------------------------
+
+UPDATE pratik_bilgiler SET
+    kaynak_url = 'https://www.alomaliye.com/2025/12/23/2026-pratik-bilgiler/',
+    kaynak_adi = 'Alomaliye — 2026 Pratik Bilgiler'
+ WHERE anahtar IN ('asgari-ucret', 'sgk-taban-tavan', 'kidem-tazminati-tavani',
+                   'gelir-vergisi-tarifesi', 'kurumlar-vergisi-orani',
+                   'yeniden-degerleme-orani', 'gecikme-zammi');
+
+UPDATE pratik_bilgiler SET
+    kaynak_url = 'https://ismmmo.org.tr/Mevzuat/Pratik-Bilgiler-Vergi-Uygulamalari---15715',
+    kaynak_adi = 'İSMMMO — Pratik Bilgiler'
+ WHERE anahtar IN ('kdv-oranlari', 'damga-vergisi-oranlari',
+                   'fatura-duzenleme-siniri', 'amortisman-siniri',
+                   'beyanname-damga-vergisi', 'harcirah-tutarlari');
