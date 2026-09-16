@@ -769,8 +769,15 @@ UPDATE pratik_bilgiler SET
     kaynak_adi = 'TCMB'
  WHERE anahtar = 'politika-faizi';
 
+-- TUIK adresi AYA BAGLI OLMAMALI.
+--
+-- Once "...?p=Tuketici-Fiyat-Endeksi-Agustos-2026" yaziliydi ve
+-- calismada sayfa okunamadi: her ay yeni bir adres uretiliyor, gecen
+-- ayin adresi olmuyor. Bulten listesine baglanip ajanin oradaki
+-- "Tuketici Fiyat Endeksi" baglantisini izlemesi daha saglam; adres
+-- ay donunce kendiliginden dogru kaliyor.
 UPDATE pratik_bilgiler SET
-    kaynak_url = 'https://data.tuik.gov.tr/Bulten/Index?p=Tuketici-Fiyat-Endeksi-Agustos-2026',
+    kaynak_url = 'https://data.tuik.gov.tr/Bulten/Index',
     kaynak_adi = 'TÜİK'
  WHERE anahtar = 'enflasyon-orani';
 

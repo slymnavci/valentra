@@ -35,6 +35,17 @@ $secenekler = getopt('', ['kuru', 'grup::']);
 $kuru       = isset($secenekler['kuru']);
 $grupBoyu   = max(1, (int) ($secenekler['grup'] ?? 3));
 
+/*
+ * Kirpma sinirlari.
+ *
+ * Eski sinir 20.000 karakterdi ve pratik bilgi derlemeleri bundan cok
+ * daha uzun: Alomaliye sayfasi tam 20.000'de kesilmisti, yani aranan
+ * tablolarin cogu metne hic girmemisti. Yedi bilginin altisi "sayfada
+ * yok" diye dondu — oysa sayfadaydilar.
+ */
+const SAYFA_SINIRI = 200000;
+const MODEL_SINIRI = 120000;
+
 function gunluk(string $mesaj): void
 {
     echo '[' . date('H:i:s') . '] ' . $mesaj . PHP_EOL;
@@ -88,29 +99,32 @@ gunluk(count($bilgiler) . ' bilgi toplanacak.');
  */
 $sayfaOnbellek = [];
 
-$sayfaOku = static function (string $url) use (&$sayfaOnbellek, $site, $sayfa): string {
+/**
+ * Sayfayı bir kez indirir; metnini ve bağlantılarını döndürür.
+ *
+ * Once SITE uzerinden deneniyor. Turk kamu ve meslek siteleri veri
+ * merkezi IP'lerini engelleyebiliyor; ajan GitHub'da calistigi icin
+ * ilk calismada on bes sayfanin on ucu okunamadi. Site Turkiye'de
+ * barindigi icin ayni adreslere ulasabiliyor. Site yolu duserse
+ * dogrudan indirmeye donuluyor.
+ *
+ * @return array{metin:string,baglar:list<array{yazi:string,url:string}>}
+ */
+$sayfaOku = static function (string $url) use (&$sayfaOnbellek, $site, $sayfa): array {
     if (array_key_exists($url, $sayfaOnbellek)) {
         return $sayfaOnbellek[$url];
     }
 
-    /*
-     * Once SITE uzerinden.
-     *
-     * Turk kamu ve meslek siteleri veri merkezi IP'lerini
-     * engelleyebiliyor; ajan GitHub'da calistigi icin ilk calismada
-     * on bes sayfanin on ucu okunamadi. Site Turkiye'de barindigi icin
-     * ayni adreslere ulasabiliyor. Site yolu duserse dogrudan
-     * indirmeye donuluyor.
-     */
-    $metin = (string) ($site->sayfaGetir($url) ?? '');
+    $sonuc = $site->sayfaAyrinti($url);
 
-    if (trim($metin) === '') {
-        $metin = $sayfa->metin($url, 20000);
+    if ($sonuc === null) {
+        // Dogrudan indirmede baglanti listesi yok; yalnizca metin.
+        $sonuc = ['metin' => $sayfa->metin($url, SAYFA_SINIRI), 'baglar' => []];
     }
 
-    $sayfaOnbellek[$url] = $metin;
+    $sayfaOnbellek[$url] = $sonuc;
 
-    return $metin;
+    return $sonuc;
 };
 
 $adaylar = [];
@@ -124,14 +138,19 @@ foreach ($bilgiler as $bilgi) {
     }
 
     $yeniIndirme = !array_key_exists($url, $sayfaOnbellek);
-    $metin       = $sayfaOku($url);
+    $sayfaVeri   = $sayfaOku($url);
+    $metin       = $sayfaVeri['metin'];
 
     if (trim($metin) === '') {
         gunluk('  ' . $bilgi['baslik'] . ': kaynak sayfası okunamadı (' . $url . ')');
         continue;
     }
 
-    $adaylar[] = ['bilgi' => $bilgi, 'sayfaMetni' => mb_substr($metin, 0, 12000, 'UTF-8')];
+    $adaylar[] = [
+        'bilgi'      => $bilgi,
+        'url'        => $url,
+        'sayfaMetni' => mb_substr($metin, 0, MODEL_SINIRI, 'UTF-8'),
+    ];
 
     gunluk(sprintf(
         '  %s: %s (%d karakter)',
@@ -150,107 +169,77 @@ gunluk(count($sayfaOnbellek) . ' ayrı sayfa indirildi, ' . count($adaylar) . ' 
 
 // --- 3. Degerleri okut ------------------------------------------------------
 
-/*
- * Gruplama sayfaya gore, sayiya gore degil.
- *
- * On bes bilginin on biri iki sayfadan geliyor. Sayiya gore
- * gruplansaydi ayni sayfa metni her aday icin istege yeniden
- * kopyalanirdi; yedi aday paylasan bir sayfa modele yedi kez giderdi.
- * Sayfaya gore gruplayinca metin bir kez gidiyor ve model o sayfadaki
- * butun degerleri birlikte ariyor — hem ucuz hem daha isabetli.
- *
- * Cok kalabalik bir sayfa istegi sisirmesin diye grup boyutu yine de
- * siniriliyor.
- */
-$sayfayaGore = [];
-
-foreach ($adaylar as $aday) {
-    $sayfayaGore[(string) $aday['bilgi']['kaynak_url']][] = $aday;
-}
-
-$gruplar = [];
-
-foreach ($sayfayaGore as $ayniSayfa) {
-    foreach (array_chunk($ayniSayfa, max($grupBoyu, 8)) as $parca) {
-        $gruplar[] = $parca;
-    }
-}
-
 $sonuclar  = [];
-$bulunmadi = 0;
 $hatali    = 0;
 
-gunluk(count($gruplar) . ' grup halinde işlenecek (sayfa başına bir istek).');
+$kalan = degerleriOku($okuyucu, $adaylar, $grupBoyu, $sonuclar, $hatali);
 
-foreach ($gruplar as $grupNo => $grup) {
-    if ($grupNo > 0) {
-        sleep(4);
-    }
+// --- 3b. Fihrist sayfalarindan alt sayfaya in -------------------------------
 
-    $no = $grupNo + 1;
+/*
+ * Bazi derlemeler yalnizca baslik listesi.
+ *
+ * Ilk calismada ISMMMO sayfasindan alti bilginin altisi da
+ * "sayfada yalnizca baslik var, rakam yok" diye dondu — sayfa gercekten
+ * bir fihristti, rakamlar alt sayfalardaydi. Bulunamayanlar icin o
+ * sayfadaki basliga en cok benzeyen baglanti izleniyor ve deger orada
+ * araniyor.
+ *
+ * Yalnizca BIR adim iniliyor: her bulunamayan icin sinirsiz gezinmek
+ * calisma suresini ve model maliyetini ongorulemez hale getirirdi.
+ */
+$kalanSon = $kalan;
 
-    try {
-        $cikti = $okuyucu->oku($grup);
-    } catch (KotaBittiException $e) {
-        gunluk("  [grup {$no}] günlük model kotası doldu, çalışma erken bitiyor.");
-        break;
-    } catch (Throwable $e) {
-        $hatali += count($grup);
-        gunluk("  [grup {$no}] HATA: " . $e->getMessage());
-        continue;
-    }
+if ($kalan !== []) {
+    gunluk('---');
+    gunluk(count($kalan) . ' bilgi için alt sayfa aranıyor.');
 
-    foreach ($grup as $sira => $aday) {
-        $bilgi  = $aday['bilgi'];
-        $sonuc  = $cikti[$sira] ?? null;
-        $baslik = (string) $bilgi['baslik'];
+    $altAdaylar = [];
+    $kalanSon   = [];
 
-        if ($sonuc === null) {
-            $hatali++;
-            gunluk("  yanıtta yok — {$baslik}");
+    foreach ($kalan as $aday) {
+        $baglar = $sayfaOnbellek[$aday['url']]['baglar'] ?? [];
+        $hedef  = $baglar === [] ? '' : enYakinBag($aday['bilgi'], $baglar);
+
+        if ($hedef === '' || $hedef === $aday['url']) {
+            $kalanSon[] = $aday;
             continue;
         }
 
-        if (empty($sonuc['bulundu']) || trim((string) ($sonuc['deger'] ?? '')) === '') {
-            $bulunmadi++;
-            $neden = trim((string) ($sonuc['not'] ?? 'belirtilmedi'));
-            gunluk("  bulunamadı — {$baslik} ({$neden})");
+        $altVeri = $sayfaOku($hedef);
+
+        if (trim($altVeri['metin']) === '') {
+            $kalanSon[] = $aday;
+            gunluk('  ' . $aday['bilgi']['baslik'] . ': alt sayfa okunamadı (' . $hedef . ')');
             continue;
         }
 
-        $guven = (int) ($sonuc['guven'] ?? 0);
+        gunluk(sprintf(
+            '  %s: alt sayfa (%d karakter) %s',
+            $aday['bilgi']['baslik'],
+            mb_strlen($altVeri['metin']),
+            $hedef
+        ));
 
-        /*
-         * Dusuk guvenli degeri hic gondermiyoruz.
-         *
-         * Haberde dusuk guven "editor baksin" demek; burada rakam
-         * dogrudan hesaplamada kullaniliyor ve model kendi de emin
-         * degilse o rakami onaya koymak, onaylayani yanlisa
-         * yaklastirmaktan baska ise yaramaz.
-         */
-        if ($guven < 60) {
-            $bulunmadi++;
-            gunluk("  düşük güven (%{$guven}), gönderilmedi — {$baslik}");
-            continue;
-        }
-
-        $sonuclar[] = [
-            'anahtar' => (string) $bilgi['anahtar'],
-            'deger'   => trim((string) $sonuc['deger']),
-            'donem'   => trim((string) ($sonuc['donem'] ?? '')),
-            'not'     => trim((string) ($sonuc['not'] ?? '')),
-            'guven'   => $guven,
+        $altAdaylar[] = [
+            'bilgi'      => $aday['bilgi'],
+            'url'        => $hedef,
+            'sayfaMetni' => mb_substr($altVeri['metin'], 0, MODEL_SINIRI, 'UTF-8'),
         ];
+    }
 
-        gunluk("  okundu (%{$guven}) — {$baslik}: "
-            . mb_substr(trim((string) $sonuc['deger']), 0, 60));
+    if ($altAdaylar !== []) {
+        $kalanSon = array_merge(
+            $kalanSon,
+            degerleriOku($okuyucu, $altAdaylar, $grupBoyu, $sonuclar, $hatali)
+        );
     }
 }
 
 // --- 4. Siteye gonder -------------------------------------------------------
 
 gunluk('---');
-gunluk(count($sonuclar) . ' değer okundu, ' . $bulunmadi . ' bulunamadı, ' . $hatali . ' hata.');
+gunluk(count($sonuclar) . ' değer okundu, ' . count($kalanSon) . ' bulunamadı, ' . $hatali . ' hata.');
 
 $kullanim = $yazar->kullanim();
 
@@ -294,3 +283,181 @@ gunluk(
     . ($yanit['degismedi'] ?? 0) . ' değişmemiş.'
 );
 gunluk('Hiçbir değer onaysız yayımlanmadı.');
+
+/**
+ * Aday değerleri modele okutur; okunanları $sonuclar'a yazar.
+ *
+ * Gruplama SAYFAYA gore, sayiya gore degil. On bes bilginin on biri
+ * iki sayfadan geliyor; sayiya gore gruplansaydi ayni sayfa metni her
+ * aday icin istege yeniden kopyalanirdi. Sayfaya gore gruplayinca
+ * metin bir kez gidiyor ve model o sayfadaki butun degerleri birlikte
+ * ariyor — hem ucuz hem daha isabetli.
+ *
+ * @param list<array{bilgi:array,url:string,sayfaMetni:string}> $adaylar
+ * @param list<array<string,mixed>>                             $sonuclar
+ * @return list<array{bilgi:array,url:string,sayfaMetni:string}> okunamayanlar
+ */
+function degerleriOku(
+    DegerOkuyucu $okuyucu,
+    array $adaylar,
+    int $grupBoyu,
+    array &$sonuclar,
+    int &$hatali
+): array {
+    $sayfayaGore = [];
+
+    foreach ($adaylar as $aday) {
+        $sayfayaGore[$aday['url']][] = $aday;
+    }
+
+    $gruplar = [];
+
+    foreach ($sayfayaGore as $ayniSayfa) {
+        foreach (array_chunk($ayniSayfa, max($grupBoyu, 8)) as $parca) {
+            $gruplar[] = $parca;
+        }
+    }
+
+    gunluk(count($gruplar) . ' grup halinde işlenecek (sayfa başına bir istek).');
+
+    $kalan = [];
+
+    foreach ($gruplar as $grupNo => $grup) {
+        if ($grupNo > 0) {
+            sleep(4);
+        }
+
+        $no = $grupNo + 1;
+
+        try {
+            $cikti = $okuyucu->oku($grup);
+        } catch (KotaBittiException $e) {
+            gunluk("  [grup {$no}] günlük model kotası doldu, çalışma erken bitiyor.");
+            break;
+        } catch (Throwable $e) {
+            $hatali += count($grup);
+            gunluk("  [grup {$no}] HATA: " . $e->getMessage());
+            continue;
+        }
+
+        foreach ($grup as $sira => $aday) {
+            $bilgi  = $aday['bilgi'];
+            $sonuc  = $cikti[$sira] ?? null;
+            $baslik = (string) $bilgi['baslik'];
+
+            if ($sonuc === null) {
+                $hatali++;
+                gunluk("  yanıtta yok — {$baslik}");
+                continue;
+            }
+
+            if (empty($sonuc['bulundu']) || trim((string) ($sonuc['deger'] ?? '')) === '') {
+                $kalan[] = $aday;
+                $neden   = trim((string) ($sonuc['not'] ?? 'belirtilmedi'));
+                gunluk("  bulunamadı — {$baslik} ({$neden})");
+                continue;
+            }
+
+            $guven = (int) ($sonuc['guven'] ?? 0);
+
+            /*
+             * Dusuk guvenli degeri hic gondermiyoruz.
+             *
+             * Haberde dusuk guven "editor baksin" demek; burada rakam
+             * dogrudan hesaplamada kullaniliyor ve model kendi de emin
+             * degilse o rakami onaya koymak, onaylayani yanlisa
+             * yaklastirmaktan baska ise yaramaz.
+             */
+            if ($guven < 60) {
+                $kalan[] = $aday;
+                gunluk("  düşük güven (%{$guven}), gönderilmedi — {$baslik}");
+                continue;
+            }
+
+            $sonuclar[] = [
+                'anahtar' => (string) $bilgi['anahtar'],
+                'deger'   => trim((string) $sonuc['deger']),
+                'donem'   => trim((string) ($sonuc['donem'] ?? '')),
+                'not'     => trim((string) ($sonuc['not'] ?? '')),
+                'guven'   => $guven,
+            ];
+
+            gunluk("  okundu (%{$guven}) — {$baslik}: "
+                . mb_substr(trim((string) $sonuc['deger']), 0, 60));
+        }
+    }
+
+    return $kalan;
+}
+
+/**
+ * Aranan bilgiye en çok benzeyen bağlantının adresini döndürür.
+ *
+ * Olcut ortak kelime sayisi. Yalnizca BASLIK yetmiyor: "Enflasyon
+ * (TÜFE)" ile "Tüketici Fiyat Endeksi, Ağustos 2026" baglantisinin
+ * tek ortak kelimesi bile yok. Bu yuzden basligin yani sira aciklama
+ * ve arama ipucu da eslestirmeye giriyor — ipucunda zaten sayfada
+ * gecen ifade yaziyor.
+ *
+ * Turkce katlama (I/İ/ı -> i) yapiliyor, yoksa "İndirimli" ile
+ * "indirimli" bulusmaz.
+ *
+ * Hic yeterli ortaklik yoksa bos donuyor: yanlis sayfaya inip oradaki
+ * alakasiz bir rakami getirmek, hic getirmemekten kotu.
+ *
+ * @param array<string,mixed>                 $bilgi
+ * @param list<array{yazi:string,url:string}> $baglar
+ */
+function enYakinBag(array $bilgi, array $baglar): string
+{
+    $kelimeler = array_values(array_unique(array_merge(
+        pratikKelimeler((string) ($bilgi['baslik'] ?? '')),
+        pratikKelimeler((string) ($bilgi['aciklama'] ?? '')),
+        pratikKelimeler((string) ($bilgi['arama_ipucu'] ?? ''))
+    )));
+
+    if ($kelimeler === []) {
+        return '';
+    }
+
+    $enIyi     = '';
+    $enIyiPuan = 0;
+
+    foreach ($baglar as $bag) {
+        $ortak = count(array_intersect($kelimeler, pratikKelimeler($bag['yazi'])));
+
+        if ($ortak > $enIyiPuan) {
+            $enIyiPuan = $ortak;
+            $enIyi     = $bag['url'];
+        }
+    }
+
+    /*
+     * En az iki ortak kelime.
+     *
+     * Tek kelimelik denk gelme ("vergi", "oran", "tutar") neredeyse
+     * her sayfada olur ve yanlis sayfaya inmeye yeter.
+     */
+    return $enIyiPuan >= 2 ? $enIyi : '';
+}
+
+/**
+ * Metni karşılaştırmaya uygun kelimelere ayırır.
+ *
+ * @return list<string>
+ */
+function pratikKelimeler(string $metin): array
+{
+    $metin = str_replace(['İ', 'I', 'ı'], 'i', $metin);
+    $metin = mb_strtolower($metin, 'UTF-8');
+    $metin = str_replace("\xCC\x87", '', $metin);
+
+    $kelimeler = preg_split('/[^\p{L}\p{N}]+/u', $metin, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+    return array_values(array_unique(array_filter(
+        $kelimeler,
+        // Uc harf de sayiliyor: "KDV", "SGK", "OTV" gibi kisaltmalar
+        // tam da eslesmeyi tasiyan kelimeler.
+        static fn (string $k): bool => mb_strlen($k, 'UTF-8') >= 3
+    )));
+}

@@ -35,7 +35,12 @@ function pratik_yayindakiler(): array
 function pratik_toplanacaklar(): array
 {
     return db()->query(
-        'SELECT id, anahtar, baslik, kaynak_url, kaynak_adi, arama_ipucu, deger, donem
+        // aciklama da gonderiliyor: ajan fihrist sayfalarinda dogru
+        // alt baglantiyi ararken baslik tek basina yetmiyor
+        // ("Enflasyon (TÜFE)" ile "Tüketici Fiyat Endeksi" baglantisinin
+        // ortak kelimesi yok).
+        'SELECT id, anahtar, baslik, aciklama, kaynak_url, kaynak_adi,
+                arama_ipucu, deger, donem
            FROM pratik_bilgiler
           WHERE aktif = 1 AND kaynak_url IS NOT NULL AND kaynak_url <> ""
           ORDER BY grup, sira'

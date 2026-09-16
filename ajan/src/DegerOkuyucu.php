@@ -87,6 +87,20 @@ final class DegerOkuyucu
         'required' => ['sonuclar'],
     ];
 
+    /*
+     * Isteme giren sayfa metninin sinirlari.
+     *
+     * Onceki degerler (ortak 14.000, tek 6.000 karakter) cok dardi.
+     * Pratik bilgi derlemeleri bunlarin kat kat ustunde ve aranan
+     * tablolar sayfanin asagisinda kaliyor: ilk calismada Alomaliye
+     * sayfasindan yedi bilginin altisi "sayfada yok" diye dondu,
+     * oysa metne hic girmemislerdi.
+     *
+     * Giris tokeni ucuz, yanlis "bulunamadi" pahali.
+     */
+    private const ORTAK_SAYFA_SINIRI = 120000;
+    private const TEK_SAYFA_SINIRI   = 60000;
+
     public function __construct(private readonly SemaliIstemci $yazar)
     {
     }
@@ -166,7 +180,7 @@ final class DegerOkuyucu
 
             if ($ortakMetin === null) {
                 $satirlar[] = 'SAYFA METNİ:';
-                $satirlar[] = mb_substr($aday['sayfaMetni'], 0, 6000, 'UTF-8');
+                $satirlar[] = mb_substr($aday['sayfaMetni'], 0, self::TEK_SAYFA_SINIRI, 'UTF-8');
             }
 
             $satirlar[] = '';
@@ -195,6 +209,6 @@ final class DegerOkuyucu
             }
         }
 
-        return mb_substr($ilk, 0, 14000, 'UTF-8');
+        return mb_substr($ilk, 0, self::ORTAK_SAYFA_SINIRI, 'UTF-8');
     }
 }

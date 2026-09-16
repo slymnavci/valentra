@@ -89,6 +89,22 @@ final class Site
      */
     public function sayfaGetir(string $url): ?string
     {
+        $sonuc = $this->sayfaAyrinti($url);
+
+        return $sonuc === null ? null : $sonuc['metin'];
+    }
+
+    /**
+     * Sayfanın metnini ve içindeki bağlantıları birlikte döndürür.
+     *
+     * Baglantilar fihrist sayfalari icin gerekli: bazi derlemeler
+     * yalnizca baslik listesi tasiyor, aranan rakam alt sayfada
+     * duruyor. Baglantilar olmadan oraya inmenin yolu yok.
+     *
+     * @return array{metin:string,baglar:list<array{yazi:string,url:string}>}|null
+     */
+    public function sayfaAyrinti(string $url): ?array
+    {
         [$kod, $govde] = $this->istek('GET', '/api/getir.php?url=' . rawurlencode($url));
 
         if ($kod !== 200) {
@@ -103,7 +119,19 @@ final class Site
 
         $metin = trim((string) $veri['metin']);
 
-        return $metin !== '' ? $metin : null;
+        if ($metin === '') {
+            return null;
+        }
+
+        $baglar = [];
+
+        foreach ((array) ($veri['baglar'] ?? []) as $bag) {
+            if (is_array($bag) && isset($bag['yazi'], $bag['url'])) {
+                $baglar[] = ['yazi' => (string) $bag['yazi'], 'url' => (string) $bag['url']];
+            }
+        }
+
+        return ['metin' => $metin, 'baglar' => $baglar];
     }
 
     /**
