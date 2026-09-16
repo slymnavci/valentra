@@ -16,7 +16,12 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    # Yukleme adimi kendi icinde uc kez deneniyor ve her deneme en
+    # fazla bes dakika suruyor; beklemelerle birlikte en kotu durum
+    # ~17 dakika. 12 dakika yetmiyordu: bir deploy tam bu yuzden
+    # "cancelled" ile kesildi ve sertifika duzeltmesi sunucuya hic
+    # gitmedi.
+    timeout-minutes: 22
 
     steps:
       - name: Repository kodlarini al
@@ -93,8 +98,15 @@ jobs:
           # basarisiz yukleme artan beklemeyle tekrar deneniyor.
           # Yukleme "mirror" oldugu icin tekrar denemek zararsiz:
           # ayni dosyalar yeniden yazilir, yarim kalan yukleme tamamlanir.
+          # Her deneme "timeout" ile sinirlaniyor.
+          #
+          # lftp'nin kendi net:timeout ayari baglantiyi kesiyor ama yavas
+          # ilerleyen bir aktarimi durdurmuyor; takilan tek bir deneme
+          # butun sure butcesini yiyebiliyor. Bu gerceklesti: deneme
+          # bitmedigi icin is 12 dakikada kesildi ve hicbir dosya
+          # gitmedi.
           yukle() {
-            lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER" <<EOF
+            timeout 300 lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER" <<EOF
           set cmd:fail-exit yes
           set net:timeout 20
           set net:max-retries 2
@@ -117,7 +129,8 @@ jobs:
           EOF
           }
 
-          BEKLEME="30 60 120"
+          # Uc deneme yeter; dorduncusu sure butcesine sigmiyor.
+          BEKLEME="20 45"
           DENEME=1
 
           for bekle in $BEKLEME ""; do
