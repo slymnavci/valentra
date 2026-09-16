@@ -119,6 +119,24 @@ function kanun_listesi(): array
     ];
 }
 
+/** Kısa ada göre kanunu bulur. */
+function kanun_bul(string $anahtar): ?array
+{
+    foreach (kanun_listesi() as $kanun) {
+        if (kanun_anahtari($kanun) === $anahtar) {
+            return $kanun;
+        }
+    }
+
+    return null;
+}
+
+/** Adres icin kullanilan sade anahtar (kanun numarasi). */
+function kanun_anahtari(array $kanun): string
+{
+    return (string) (int) $kanun['no'];
+}
+
 /** Kanunun mevzuat.gov.tr adresini üretir. */
 function kanun_adresi(array $kanun): string
 {

@@ -63,7 +63,7 @@ function ajan_tetikle(bool $kuru = false, int $saat = 36, int $enFazla = 25, str
         'inputs' => [
             // Bilinmeyen bir mod GitHub'dan 422 dondurur; bilinen
             // degerlerle sinirlayip anlasilir hata veriyoruz.
-            'mod'     => in_array($mod, ['kaynak-testi', 'kanun-testi'], true)
+            'mod'     => in_array($mod, ['kaynak-testi', 'kanun-testi', 'pratik-bilgiler'], true)
                 ? $mod
                 : 'topla',
             'kuru'    => $kuru ? 'true' : 'false',
@@ -105,6 +105,15 @@ function ajan_tetikle(bool $kuru = false, int $saat = 36, int $enFazla = 25, str
                 'mesaj' => 'Kaynak testi başladı. Sonucu GitHub kayıtlarında '
                          . 'göreceksiniz: hangi kaynak okunuyor, hangisi '
                          . 'neden okunmuyor. Siteye hiçbir şey yazılmaz.',
+            ];
+        }
+
+        if ($mod === 'pratik-bilgiler') {
+            return [
+                'tamam' => true,
+                'mesaj' => 'Pratik bilgiler toplanıyor. Değerler onayınıza '
+                         . 'düşecek; onaylamadığınız hiçbir değer sitede '
+                         . 'görünmez.',
             ];
         }
 

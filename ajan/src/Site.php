@@ -76,6 +76,61 @@ final class Site
     }
 
     /**
+     * Toplanacak pratik bilgilerin listesi.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function pratikBilgiler(): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/pratik.php');
+
+        if ($kod !== 200) {
+            throw new \RuntimeException(
+                'Bilgi listesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde)
+            );
+        }
+
+        $veri = json_decode($govde, true);
+
+        if (!is_array($veri)) {
+            throw new \RuntimeException('Bilgi listesi yanıtı çözümlenemedi.');
+        }
+
+        return $veri['bilgiler'] ?? [];
+    }
+
+    /**
+     * Okunan değerleri ADAY olarak gönderir.
+     *
+     * Yayindaki degeri degistirmez; onay panelde veriliyor.
+     *
+     * @param list<array<string,mixed>> $bilgiler
+     * @return array<string,mixed>
+     */
+    public function pratikGonder(array $bilgiler): array
+    {
+        if ($bilgiler === []) {
+            return ['aday' => 0, 'degismedi' => 0, 'hatalar' => []];
+        }
+
+        [$kod, $govde] = $this->istek(
+            'POST',
+            '/api/pratik.php',
+            json_encode(['bilgiler' => $bilgiler], JSON_UNESCAPED_UNICODE)
+        );
+
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException(
+                'Gönderim başarısız (HTTP ' . $kod . '): ' . $this->hatayiOku($govde)
+            );
+        }
+
+        return $veri;
+    }
+
+    /**
      * Sunucunun JSON hata yanıtını okunur hâle getirir.
      *
      * Uç, sorunun ne olduğunu ve nasıl çözüleceğini "detay" alanında

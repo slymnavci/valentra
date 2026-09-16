@@ -17,6 +17,10 @@ on:
     # tariyor, haber kaybolmaz. Sitede zaten olan haberler modele
     # sorulmadigi icin ustuste binen pencere para harcamiyor.
     - cron: '20 2,4,6,8,10,12,14,16,18,20 * * *'
+    # Pratik bilgiler: pazartesi sabahi haftada bir. Asgari ucret,
+    # oranlar ve hadler yilda birkac kez degisiyor; daha sik kontrol
+    # etmek model cagrisini bosa harcar.
+    - cron: '40 4 * * 1'
   workflow_dispatch:
     inputs:
       mod:
@@ -25,6 +29,7 @@ on:
         default: 'topla'
         options:
           - topla
+          - pratik-bilgiler
           - kaynak-testi
           - kanun-testi
       kuru:
@@ -90,8 +95,21 @@ jobs:
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
         run: php kaynak_dene.php --saat=${{ inputs.saat || '36' }}
 
+      # Pratik bilgiler nadiren (yilda birkac kez) degisiyor; haber
+      # toplamayla ayni siklikta kosmasi anlamsiz olurdu. Haftada bir
+      # zamanlanmis, ayrica panelden elle calistirilabiliyor.
+      - name: Pratik bilgileri topla
+        if: inputs.mod == 'pratik-bilgiler' || github.event.schedule == '40 4 * * 1'
+        working-directory: ajan
+        env:
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: php pratik.php
+
       - name: Ajani calistir
-        if: inputs.mod == 'topla' || inputs.mod == ''
+        if: (inputs.mod == 'topla' || inputs.mod == '') && github.event.schedule != '40 4 * * 1'
         working-directory: ajan
         env:
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}

@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bildirim = 'GitHub anahtarı silindi.';
 
     } elseif ($islem === 'calistir' || $islem === 'calistir_kuru' || $islem === 'kaynak_testi'
-               || $islem === 'kanun_testi') {
+               || $islem === 'kanun_testi' || $islem === 'pratik_topla') {
         // Suren bir calisma varken yenisini gondermek ise yaramaz:
         // GitHub ayni eszamanlilik grubunda sirada tek bir calisma
         // tutuyor, yeni istek bekleyeni IPTAL ediyor. Dugmeye art arda
@@ -62,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 match ($islem) {
                     'kaynak_testi' => 'kaynak-testi',
                     'kanun_testi'  => 'kanun-testi',
+                    'pratik_topla' => 'pratik-bilgiler',
                     default        => 'topla',
                 },
             );
@@ -137,6 +138,9 @@ require __DIR__ . '/ust.php';
 
                 <button type="submit" name="islem" value="kanun_testi"
                         class="dugme">Kanun bağlantılarını sına</button>
+
+                <button type="submit" name="islem" value="pratik_topla"
+                        class="dugme">Pratik bilgileri topla</button>
             </div>
 
             <p class="ipucu" style="margin:14px 0 0;">

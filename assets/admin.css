@@ -327,3 +327,90 @@ code.anahtar {
     .toplama-cubugu form { width: 100%; }
     .toplama-cubugu .dugme { text-align: center; }
 }
+
+/* --- Pratik bilgiler onay ekrani ------------------------------------------ */
+
+.pratik-satir.bekliyor {
+    border-left: 3px solid var(--sari);
+}
+
+.pratik-ust {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.pratik-ust h3 { margin: 0 0 4px; font-size: 1.02rem; }
+.pratik-ust .ipucu { margin: 0; }
+
+.pratik-kaynak {
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--vurgu);
+    white-space: nowrap;
+}
+
+/* Yayindaki ve aday deger yan yana: neyin neye donusecegi gorulmeli. */
+.pratik-degerler {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+}
+
+.pratik-kutu {
+    background: var(--zemin);
+    border: 1px solid var(--cizgi);
+    border-radius: 8px;
+    padding: 12px 14px;
+}
+
+.pratik-kutu.aday {
+    background: #fffaf0;
+    border-color: #e8d4a8;
+}
+
+.etiketcik {
+    display: inline-block;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--metin-soluk);
+    margin-bottom: 8px;
+}
+
+.pratik-kutu .pratik-deger {
+    margin: 0 0 6px;
+    font-family: inherit;
+    font-size: .98rem;
+    font-weight: 700;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.pratik-dugmeler {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.pratik-dugmeler form { margin: 0; }
+
+.pratik-elle {
+    margin-top: 14px;
+    border-top: 1px solid var(--cizgi);
+    padding-top: 12px;
+}
+
+.pratik-elle summary {
+    cursor: pointer;
+    font-size: .84rem;
+    font-weight: 600;
+    color: var(--metin-soluk);
+}
+
+.pratik-elle form { margin-top: 12px; max-width: 520px; }

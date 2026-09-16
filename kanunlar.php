@@ -38,13 +38,15 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <section class="kanun-listesi">
             <?php foreach ($kanunlar as $kanun): ?>
                 <article class="kanun">
-                    <a href="<?= e(kanun_adresi($kanun)) ?>" target="_blank" rel="noopener">
+                    <?php /* Site icinde acilir; o sayfada resmi kaynaga
+                             giden bag da duruyor. */ ?>
+                    <a href="/kanun.php?k=<?= e(kanun_anahtari($kanun)) ?>">
                         <div class="kanun-ust">
                             <h3><?= e($kanun['ad']) ?></h3>
                             <span class="kanun-no"><?= (int) $kanun['no'] ?> sayılı</span>
                         </div>
                         <p><?= e($kanun['aciklama']) ?></p>
-                        <span class="kanun-bag">Resmî metni aç &nearr;</span>
+                        <span class="kanun-bag">Metni oku &rarr;</span>
                     </a>
                 </article>
             <?php endforeach; ?>

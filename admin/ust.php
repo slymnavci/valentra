@@ -34,6 +34,7 @@
             <nav>
                 <a href="/" target="_blank" rel="noopener">Siteyi gör</a>
                 <a href="ajan.php">Ajan</a>
+                <a href="pratik.php">Pratik bilgiler</a>
                 <a href="kaynaklar.php">Kaynaklar</a>
                 <a href="veritabani.php">Veritabanı</a>
                 <a href="anahtarlar.php">Ajan anahtarları</a>

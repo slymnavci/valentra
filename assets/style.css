@@ -1224,3 +1224,161 @@ a.menu-oge.aktif::after,
     font-weight: 700;
     color: var(--vurgu);
 }
+
+/* --- Kanun metni sayfasi -------------------------------------------------- */
+
+.kanun-basligi {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin: 24px 0 16px;
+}
+
+.kanun-basligi .geri {
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--metin-soluk);
+}
+
+.kanun-basligi .geri:hover { color: var(--vurgu); }
+
+.kanun-basligi h1 {
+    margin: 6px 0 4px;
+    font-size: clamp(1.35rem, 2.6vw, 1.9rem);
+    line-height: 1.2;
+}
+
+.kanun-basligi p {
+    margin: 0;
+    font-size: .88rem;
+    color: var(--metin-soluk);
+}
+
+.kanun-basligi .dis-bag {
+    background: var(--lacivert);
+    color: #fff;
+    font-size: .82rem;
+    font-weight: 700;
+    padding: 9px 16px;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.kanun-basligi .dis-bag:hover { background: var(--lacivert-acik); }
+
+.kanun-uyari {
+    background: #fdf0ef;
+    border: 1px solid #f3c9c5;
+    color: #8c2f27;
+    border-radius: var(--yuvarlak);
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    font-size: .9rem;
+}
+
+.kanun-uyari a { text-decoration: underline; }
+
+@media (prefers-color-scheme: dark) {
+    .kanun-uyari { background: #2d1a18; border-color: #5a2a25; color: #f3b5ae; }
+}
+
+/*
+ * Cerceve yuksekligi: kanun metinleri uzun, kucuk bir kutuda okumak
+ * isken celiskili. Ekran yuksekliginin buyuk kismi veriliyor ama
+ * sayfanin ust bandi ve basligi icin yer birakiliyor.
+ */
+.kanun-cerceve {
+    background: #fff;
+    border: 1px solid var(--cizgi);
+    border-radius: var(--yuvarlak);
+    overflow: hidden;
+    box-shadow: var(--golge);
+}
+
+.kanun-cerceve iframe {
+    display: block;
+    width: 100%;
+    height: calc(100vh - 230px);
+    min-height: 480px;
+    border: 0;
+}
+
+.kanun-kaynak { margin: 12px 0 34px; }
+
+@media (max-width: 700px) {
+    .kanun-cerceve iframe { height: calc(100vh - 180px); }
+}
+
+/* --- Pratik bilgiler ------------------------------------------------------ */
+
+.pratik-izgara {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.pratik-kart {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    border-top: 3px solid var(--altin);
+    padding: 16px 18px 14px;
+    display: flex;
+    flex-direction: column;
+}
+
+.pratik-kart h3 {
+    margin: 0 0 10px;
+    font-size: .98rem;
+    line-height: 1.3;
+}
+
+/*
+ * Deger <pre> icinde: kimi bilgi tek satir (asgari ucret), kimi tablo
+ * (gelir vergisi tarifesi). Satir sonlari korunmali ama uzun satir da
+ * tasmamali.
+ */
+.pratik-deger {
+    margin: 0 0 10px;
+    font-family: inherit;
+    font-size: 1.02rem;
+    font-weight: 700;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--lacivert);
+}
+
+@media (prefers-color-scheme: dark) {
+    .pratik-deger { color: var(--metin); }
+}
+
+.pratik-alt {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid var(--cizgi);
+    font-size: .76rem;
+}
+
+.pratik-alt .donem {
+    font-weight: 700;
+    color: var(--altin-koyu);
+}
+
+.pratik-alt a { color: var(--metin-soluk); }
+.pratik-alt a:hover { color: var(--vurgu); }
+
+.pratik-tarih {
+    display: block;
+    margin-top: 6px;
+    font-size: .72rem;
+    color: var(--metin-soluk);
+}

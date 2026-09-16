@@ -361,25 +361,53 @@ final class Yazar
             return [];
         }
 
-        $istem = $this->topluIstemHazirla($adaylar, $kategoriler);
+        return $this->semaliIstek(
+            self::YONERGE,
+            $this->topluIstemHazirla($adaylar, $kategoriler),
+            self::TOPLU_SEMA,
+            24000,
+            count($adaylar),
+            'ilgili'
+        );
+    }
 
+    /**
+     * Şema kısıtlı bir istek atar ve "sonuclar" dizisini sıraya göre döndürür.
+     *
+     * Haber yazimi ile pratik bilgi okuma ayni istek/yanit dokusunu
+     * kullaniyor ama yonergeleri ve semalari tamamen farkli. Ortak olan
+     * kismi burada topluyoruz; kopyalanmis bir istek kurulumu iki yerde
+     * ayri ayri bozulurdu.
+     *
+     * @param array<string,mixed> $sema
+     * @param int    $adayAdedi Sira numarasi denetimi icin
+     * @param string $zorunluAlan Sonucta bulunmasi gereken alan ('' ise denetim yok)
+     * @return array<int,array<string,mixed>> 0 tabanli sira => sonuc
+     */
+    public function semaliIstek(
+        string $yonerge,
+        string $istem,
+        array $sema,
+        int $enFazlaToken,
+        int $adayAdedi = 0,
+        string $zorunluAlan = ''
+    ): array {
         $govde = [
             'systemInstruction' => [
-                'parts' => [['text' => self::YONERGE]],
+                'parts' => [['text' => $yonerge]],
             ],
             'contents' => [[
                 'role'  => 'user',
                 'parts' => [['text' => $istem]],
             ]],
             'generationConfig' => [
-                // Grup basina daha fazla cikti gerekiyor.
-                'maxOutputTokens'  => 24000,
+                'maxOutputTokens'  => $enFazlaToken,
                 'responseMimeType' => 'application/json',
-                'responseSchema'   => self::TOPLU_SEMA,
+                'responseSchema'   => $sema,
             ],
         ];
 
-        $yanit   = $this->geminiIstegi($govde);
+        $yanit    = $this->geminiIstegi($govde);
         $parcalar = $yanit['candidates'][0]['content']['parts'] ?? [];
 
         if (!is_array($parcalar)) {
@@ -400,16 +428,26 @@ final class Yazar
             $sonuclar = [];
 
             foreach ($veri['sonuclar'] as $sonuc) {
-                if (!is_array($sonuc) || !array_key_exists('ilgili', $sonuc)) {
+                if (!is_array($sonuc)) {
+                    continue;
+                }
+
+                if ($zorunluAlan !== '' && !array_key_exists($zorunluAlan, $sonuc)) {
                     continue;
                 }
 
                 // Sira numarasi 1'den baslar; dizi indisine cevriliyor.
                 $sira = (int) ($sonuc['sira'] ?? 0) - 1;
 
-                if ($sira >= 0 && $sira < count($adaylar)) {
-                    $sonuclar[$sira] = $sonuc;
+                if ($sira < 0) {
+                    continue;
                 }
+
+                if ($adayAdedi > 0 && $sira >= $adayAdedi) {
+                    continue;
+                }
+
+                $sonuclar[$sira] = $sonuc;
             }
 
             return $sonuclar;

@@ -563,3 +563,140 @@ INSERT IGNORE INTO kategoriler (ad, slug, aciklama, sira) VALUES
 UPDATE kategoriler SET aciklama = 'Piyasalar, enflasyon, faiz ve makroekonomik gelişmeler',
        ust_id = NULL, sira = 35
  WHERE slug = 'ekonomi';
+
+-- ---------------------------------------------------------------------------
+-- Pratik bilgiler
+--
+-- Asgari ucret, gelir vergisi tarifesi, KDV oranlari, SGK taban/tavan
+-- gibi gunluk iste kullanilan degerler.
+--
+-- Bu tablodaki bir hata haberdeki hatadan daha tehlikeli: haber
+-- okunup gecilir, buradaki rakam DOGRUDAN hesaplamada kullanilir.
+-- O yuzden akis haberlerdekinden daha siki:
+--
+--   - Her satirin resmi bir kaynak adresi var ve ajan degeri yalnizca
+--     o adresten okuyor; genel arama yapmiyor.
+--   - Cekilen deger TASLAK olarak geliyor, onaysiz yayimlanmiyor.
+--   - Onaylanan deger yaninda kaynagi, gecerlilik donemi ve son
+--     guncelleme tarihi gorunuyor; okuyucu neye baktigini biliyor.
+--   - Eski deger silinmiyor: yeni deger onaylanana kadar yayindaki
+--     deger yerinde kaliyor, sayfa bosalmiyor.
+--
+-- "deger" metin: kimi bilgi tek sayi (asgari ucret), kimi tabloya
+-- benziyor (gelir vergisi tarifesi, KDV oranlari). Sayisal tipe
+-- zorlamak tarifeleri disarida birakirdi.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS pratik_bilgiler (
+    id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    anahtar      VARCHAR(80)  NOT NULL,
+    baslik       VARCHAR(200) NOT NULL,
+    aciklama     VARCHAR(500) NULL,
+    grup         VARCHAR(80)  NOT NULL DEFAULT 'genel',
+    sira         INT          NOT NULL DEFAULT 100,
+
+    -- Ajanin degeri okuyacagi resmi sayfa.
+    kaynak_url   VARCHAR(500) NULL,
+    kaynak_adi   VARCHAR(160) NULL,
+    -- Sayfada neye bakilacagini modele anlatan kisa yonerge.
+    arama_ipucu  VARCHAR(500) NULL,
+
+    -- Yayindaki (onaylanmis) deger.
+    deger        TEXT         NULL,
+    donem        VARCHAR(120) NULL,
+    onay_tarihi  DATETIME     NULL,
+
+    -- Ajanin getirdigi, onay bekleyen deger.
+    aday_deger   TEXT         NULL,
+    aday_donem   VARCHAR(120) NULL,
+    aday_notu    VARCHAR(500) NULL,
+    aday_guven   TINYINT UNSIGNED NULL,
+    aday_tarihi  DATETIME     NULL,
+
+    aktif        TINYINT(1)   NOT NULL DEFAULT 1,
+    guncellendi  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_pratik_anahtar (anahtar),
+    KEY ix_pratik_sira (aktif, grup, sira)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Toplanacak bilgiler ve resmi kaynaklari.
+--
+-- Deger alani BOS birakiliyor; rakamlari ajan getirip onaya sunacak.
+-- Buraya elle rakam yazmak, dogrulanmamis bir sayiyi yayimlamak
+-- demek olurdu.
+INSERT IGNORE INTO pratik_bilgiler (anahtar, baslik, aciklama, grup, sira, kaynak_url, kaynak_adi, arama_ipucu) VALUES
+    ('asgari-ucret', 'Asgari Ücret',
+     'Brüt ve net asgari ücret ile işverene maliyeti', 'ucret-sgk', 10,
+     'https://www.csgb.gov.tr/asgari-ucret/', 'Çalışma ve Sosyal Güvenlik Bakanlığı',
+     'Yürürlükteki brüt asgari ücret, net asgari ücret ve işverene toplam maliyeti. Aylık tutarları al.'),
+
+    ('sgk-taban-tavan', 'SGK Prime Esas Kazanç Taban ve Tavanı',
+     'Sigorta primine esas günlük ve aylık kazanç sınırları', 'ucret-sgk', 20,
+     'https://www.sgk.gov.tr/', 'SGK',
+     'Prime esas kazancın günlük ve aylık alt sınırı ile üst sınırı (tavan).'),
+
+    ('kidem-tazminati-tavani', 'Kıdem Tazminatı Tavanı',
+     'Bir yıllık hizmet için ödenecek en yüksek kıdem tazminatı', 'ucret-sgk', 30,
+     'https://www.hmb.gov.tr/', 'Hazine ve Maliye Bakanlığı',
+     'Yürürlükteki kıdem tazminatı tavanı ve geçerli olduğu dönem.'),
+
+    ('gelir-vergisi-tarifesi', 'Gelir Vergisi Tarifesi',
+     'Yıllık gelir vergisi dilimleri ve oranları', 'vergi-oranlari', 10,
+     'https://www.gib.gov.tr/', 'Gelir İdaresi Başkanlığı',
+     'Cari yıl gelir vergisi tarifesi: dilim tutarları ve her dilimin oranı. Ücret dışı gelirler için olanı al.'),
+
+    ('kurumlar-vergisi-orani', 'Kurumlar Vergisi Oranı',
+     'Genel oran ve varsa indirimli oranlar', 'vergi-oranlari', 20,
+     'https://www.gib.gov.tr/', 'Gelir İdaresi Başkanlığı',
+     'Genel kurumlar vergisi oranı, varsa ihracat ve üretim kazançlarına uygulanan indirimli oranlar.'),
+
+    ('kdv-oranlari', 'KDV Oranları',
+     'Genel oran ve indirimli oran listeleri', 'vergi-oranlari', 30,
+     'https://www.gib.gov.tr/', 'Gelir İdaresi Başkanlığı',
+     'Yürürlükteki KDV oranları: genel oran ve indirimli oranlar.'),
+
+    ('yeniden-degerleme-orani', 'Yeniden Değerleme Oranı',
+     'VUK mükerrer 298 kapsamında ilan edilen oran', 'vergi-oranlari', 40,
+     'https://www.gib.gov.tr/', 'Gelir İdaresi Başkanlığı',
+     'Cari yıl için ilan edilen yeniden değerleme oranı ve dayandığı tebliğ.'),
+
+    ('gecikme-zammi', 'Gecikme Zammı ve Gecikme Faizi Oranı',
+     'Amme alacaklarında aylık gecikme zammı oranı', 'vergi-oranlari', 50,
+     'https://www.gib.gov.tr/', 'Gelir İdaresi Başkanlığı',
+     'Yürürlükteki aylık gecikme zammı oranı ve gecikme faizi oranı.'),
+
+    ('damga-vergisi-oranlari', 'Damga Vergisi Oranları',
+     'Sık kullanılan kâğıtlarda nispet ve azami tutar', 'vergi-oranlari', 60,
+     'https://www.gib.gov.tr/', 'Gelir İdaresi Başkanlığı',
+     'Sözleşmelerde uygulanan damga vergisi nispeti ve cari yıl azami tutarı.'),
+
+    ('fatura-duzenleme-siniri', 'Fatura Düzenleme Sınırı',
+     'VUK 232 kapsamında fatura düzenleme alt sınırı', 'hadler', 10,
+     'https://www.gib.gov.tr/', 'Gelir İdaresi Başkanlığı',
+     'Cari yıl için fatura düzenleme zorunluluğu sınırı (VUK 232).'),
+
+    ('amortisman-siniri', 'Doğrudan Gider Yazılabilecek Sabit Kıymet Sınırı',
+     'VUK 313 kapsamında amortisman ayırma alt sınırı', 'hadler', 20,
+     'https://www.gib.gov.tr/', 'Gelir İdaresi Başkanlığı',
+     'Cari yıl için doğrudan gider yazılabilecek demirbaş sınırı (VUK 313).'),
+
+    ('beyanname-damga-vergisi', 'Beyanname Damga Vergisi Tutarları',
+     'Yıllık, muhtasar ve KDV beyannamelerinde damga vergisi', 'hadler', 30,
+     'https://www.gib.gov.tr/', 'Gelir İdaresi Başkanlığı',
+     'Cari yıl beyanname damga vergisi tutarları (yıllık gelir, kurumlar, muhtasar, KDV).'),
+
+    ('harcirah-tutarlari', 'Harcırah (Yurt İçi Gündelik) Tutarları',
+     'Gelir vergisinden istisna yurt içi harcırah', 'hadler', 40,
+     'https://www.gib.gov.tr/', 'Gelir İdaresi Başkanlığı',
+     'Cari yıl gelir vergisinden istisna yurt içi gündelik tutarları.'),
+
+    ('politika-faizi', 'TCMB Politika Faizi',
+     'Merkez Bankası bir hafta vadeli repo ihale faiz oranı', 'ekonomi', 10,
+     'https://www.tcmb.gov.tr/', 'TCMB',
+     'Yürürlükteki politika faizi (bir hafta vadeli repo) ve son değişiklik tarihi.'),
+
+    ('enflasyon-orani', 'Enflasyon (TÜFE)',
+     'Aylık ve yıllık tüketici fiyat endeksi değişimi', 'ekonomi', 20,
+     'https://data.tuik.gov.tr/Bulten/Index?p=Tuketici-Fiyat-Endeksi', 'TÜİK',
+     'En son açıklanan aylık ve yıllık TÜFE değişim oranları ile ait olduğu ay.');
