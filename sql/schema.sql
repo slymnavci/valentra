@@ -769,16 +769,20 @@ UPDATE pratik_bilgiler SET
     kaynak_adi = 'TCMB'
  WHERE anahtar = 'politika-faizi';
 
--- TUIK adresi AYA BAGLI OLMAMALI.
+-- Enflasyon icin TUIK adresi ISE YARAMADI.
 --
--- Once "...?p=Tuketici-Fiyat-Endeksi-Agustos-2026" yaziliydi ve
--- calismada sayfa okunamadi: her ay yeni bir adres uretiliyor, gecen
--- ayin adresi olmuyor. Bulten listesine baglanip ajanin oradaki
--- "Tuketici Fiyat Endeksi" baglantisini izlemesi daha saglam; adres
--- ay donunce kendiliginden dogru kaliyor.
+-- Once aya bagli bir bulten adresi yaziliydi ("...-Agustos-2026") ve
+-- her ay kiriliyordu. Bulten listesine ("/Bulten/Index") baglandi,
+-- bu da okunamadi: sayfa ne site sunucusundan ne de ajandan metin
+-- dondurdu. Adres tahmin etmeyi surdurmek yerine okunabildigi
+-- kanitlanmis derleme sayfasina baglaniyor; ajan oradaki TUFE
+-- baglantisini izleyebiliyor.
+--
+-- Deger yine onaysiz yayimlanmiyor: sayfada yoksa "bulunamadi" diyor,
+-- uydurma bir rakam gecmiyor.
 UPDATE pratik_bilgiler SET
-    kaynak_url = 'https://data.tuik.gov.tr/Bulten/Index',
-    kaynak_adi = 'TÜİK'
+    kaynak_url = 'https://www.alomaliye.com/2025/12/23/2026-pratik-bilgiler/',
+    kaynak_adi = 'Alomaliye — 2026 Pratik Bilgiler'
  WHERE anahtar = 'enflasyon-orani';
 
 -- Yedek kaynak: GIB sayfasi okunamazsa ya da deger bulunamazsa, ayni

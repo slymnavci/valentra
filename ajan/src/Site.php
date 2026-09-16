@@ -101,7 +101,7 @@ final class Site
      * yalnizca baslik listesi tasiyor, aranan rakam alt sayfada
      * duruyor. Baglantilar olmadan oraya inmenin yolu yok.
      *
-     * @return array{metin:string,baglar:list<array{yazi:string,url:string}>}|null
+     * @return array{metin:string,baglar:list<array{no:int,yazi:string,url:string}>}|null
      */
     public function sayfaAyrinti(string $url): ?array
     {
@@ -127,7 +127,13 @@ final class Site
 
         foreach ((array) ($veri['baglar'] ?? []) as $bag) {
             if (is_array($bag) && isset($bag['yazi'], $bag['url'])) {
-                $baglar[] = ['yazi' => (string) $bag['yazi'], 'url' => (string) $bag['url']];
+                $baglar[] = [
+                    // Numara metindeki [BAG:n] isaretiyle ayni; model
+                    // izlenecek baglantiyi bu numarayla soyluyor.
+                    'no'   => (int) ($bag['no'] ?? 0),
+                    'yazi' => (string) $bag['yazi'],
+                    'url'  => (string) $bag['url'],
+                ];
             }
         }
 

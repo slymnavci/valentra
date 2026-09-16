@@ -61,6 +61,17 @@ final class DegerOkuyucu
     8. NOT alanına, onaylayacak mali müşavire tek cümlelik bir not yaz:
        değeri sayfanın neresinde bulduğun ve dikkat etmesi gereken bir
        şey varsa o.
+
+    9. Sayfa metninde yer yer [BAG:12] biçiminde işaretler görürsün;
+       bunlar o noktadaki bir bağlantıyı gösterir. Aradığın değer
+       sayfada YOKSA ama hemen yanındaki bir bağlantı ("Tıklayınız",
+       konu başlığı vb.) değere götürüyor gibiyse, BAGLANTI alanına o
+       işaretin numarasını yaz. Sayfa bir fihristse ve aradığın
+       başlığın bağlantısı varsa da numarasını ver.
+
+       BAGLANTI yalnızca bir öneri; onu verirken yine "bulundu" false
+       olmalı. Emin değilsen 0 yaz — yanlış sayfaya gitmek, hiç
+       gitmemekten kötü.
     METIN;
 
     /** @var array<string,mixed> */
@@ -79,6 +90,7 @@ final class DegerOkuyucu
                         'donem'   => ['type' => 'string', 'description' => 'Gecerlilik donemi; bilinmiyorsa bos'],
                         'guven'   => ['type' => 'integer', 'description' => '0-100 arasi guven'],
                         'not'     => ['type' => 'string', 'description' => 'Onaylayana tek cumlelik not'],
+                        'baglanti' => ['type' => 'integer', 'description' => 'Deger sayfada yoksa izlenmesi onerilen [BAG:n] numarasi; yoksa 0'],
                     ],
                     'required' => ['sira', 'bulundu', 'deger', 'guven', 'not'],
                 ],

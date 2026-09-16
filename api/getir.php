@@ -134,6 +134,66 @@ $temiz = (string) preg_replace(
     $ham
 );
 
+/*
+ * Baglantilar metnin ICINE isaretle yaziliyor.
+ *
+ * Derleme sayfalarinin bir kismi degeri kendi tasimiyor; "Kidem
+ * Tazminati Tavani ... Tiklayiniz" deyip baska sayfaya gonderiyor.
+ * Baglantilari ayri bir liste olarak vermek yetmedi: "Tiklayiniz"
+ * yazisinin kendisi hangi bilgiye ait oldugunu soylemiyor, listede
+ * hangisinin izlenecegi anlasilmiyordu.
+ *
+ * Metnin icinde, tam durdugu yerde bir isaret olarak gectiginde ise
+ * baglam korunuyor: "Kidem Tazminati Tavani ... Tiklayiniz [BAG:12]".
+ * Ajan boylece hangi baglantiyi izleyecegini sorabiliyor.
+ */
+$baglar  = [];
+$gorulen = [];
+$sayfaKimligi = strtok($url, '#');
+
+$temiz = (string) preg_replace_callback(
+    '#<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>#is',
+    static function (array $eslesme) use (&$baglar, &$gorulen, $url, $sunucu, $sayfaKimligi): string {
+        $yazi = trim((string) preg_replace('/\s+/u', ' ', strip_tags($eslesme[2])));
+
+        $hedef = guvenli_url(besleme_url_birlestir($url, html_entity_decode(
+            trim($eslesme[1]),
+            ENT_QUOTES | ENT_HTML5,
+            'UTF-8'
+        )));
+
+        if ($hedef === '' || !sunucu_esit($sunucu, $hedef)) {
+            return $yazi;
+        }
+
+        /*
+         * Ayni sayfaya giden capa baglantilari atiliyor.
+         *
+         * Calismada ajan "#kidem-tazminati-tavani" capasini izleyip
+         * ayni sayfayi bir kez daha modele gonderdi; bir istek bosa
+         * gitti ve sonuc degismedi.
+         */
+        if (strtok($hedef, '#') === $sayfaKimligi) {
+            return $yazi;
+        }
+
+        if (isset($gorulen[$hedef])) {
+            return $yazi . ' [BAG:' . $gorulen[$hedef] . ']';
+        }
+
+        if (count($baglar) >= 400) {
+            return $yazi;
+        }
+
+        $no              = count($baglar) + 1;
+        $gorulen[$hedef] = $no;
+        $baglar[]        = ['no' => $no, 'yazi' => $yazi, 'url' => $hedef];
+
+        return $yazi . ' [BAG:' . $no . ']';
+    },
+    $temiz
+) ?: $temiz;
+
 $temiz = (string) preg_replace('#</(p|div|li|tr|h[1-6]|br)\s*/?>#i', "\n", $temiz);
 $metin = html_entity_decode(strip_tags($temiz), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
@@ -144,50 +204,6 @@ foreach (preg_split('/\R/u', $metin) ?: [] as $satir) {
 
     if ($satir !== '') {
         $satirlar[] = $satir;
-    }
-}
-
-/*
- * Sayfadaki baglantilar da doniyor.
- *
- * Derleme sayfalarinin bir kismi fihrist: yalnizca baslik listesi
- * tasiyor, rakamlar alt sayfalarda. Ajan boyle bir sayfaya dustugunde
- * aradigi basliga giden baglantiyi bulup oraya inebilsin diye
- * baglantilar da gonderiliyor. Yalnizca ayni sitedekiler ve makul
- * bir sayida.
- */
-$baglar  = [];
-$gorulen = [];
-
-if (preg_match_all('#<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>#is', $ham, $eslesmeler, PREG_SET_ORDER)) {
-    foreach ($eslesmeler as $eslesme) {
-        $hedef = guvenli_url(besleme_url_birlestir($url, html_entity_decode(
-            trim($eslesme[1]),
-            ENT_QUOTES | ENT_HTML5,
-            'UTF-8'
-        )));
-
-        if ($hedef === '' || !sunucu_esit($sunucu, $hedef) || isset($gorulen[$hedef])) {
-            continue;
-        }
-
-        $yazi = trim((string) preg_replace(
-            '/\s+/u',
-            ' ',
-            html_entity_decode(strip_tags($eslesme[2]), ENT_QUOTES | ENT_HTML5, 'UTF-8')
-        ));
-
-        // Yazisi olmayan baglanti (logo, ikon) eslestirmede ise yaramaz.
-        if ($yazi === '' || mb_strlen($yazi, 'UTF-8') > 160) {
-            continue;
-        }
-
-        $gorulen[$hedef] = true;
-        $baglar[]        = ['yazi' => $yazi, 'url' => $hedef];
-
-        if (count($baglar) >= 400) {
-            break;
-        }
     }
 }
 

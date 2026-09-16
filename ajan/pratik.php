@@ -108,7 +108,7 @@ $sayfaOnbellek = [];
  * barindigi icin ayni adreslere ulasabiliyor. Site yolu duserse
  * dogrudan indirmeye donuluyor.
  *
- * @return array{metin:string,baglar:list<array{yazi:string,url:string}>}
+ * @return array{metin:string,baglar:list<array{no:int,yazi:string,url:string}>}
  */
 $sayfaOku = static function (string $url) use (&$sayfaOnbellek, $site, $sayfa): array {
     if (array_key_exists($url, $sayfaOnbellek)) {
@@ -199,7 +199,24 @@ if ($kalan !== []) {
 
     foreach ($kalan as $aday) {
         $baglar = $sayfaOnbellek[$aday['url']]['baglar'] ?? [];
-        $hedef  = $baglar === [] ? '' : enYakinBag($aday['bilgi'], $baglar);
+
+        /*
+         * Once MODELIN onerisi.
+         *
+         * Sayfa metninde baglantilar [BAG:n] isaretiyle tam durduklari
+         * yerde geciyor, yani model baglami goruyor. Kelime benzerligi
+         * bunu goremiyordu: "Kidem Tazminati Tavani ... Tiklayiniz"
+         * satirinda izlenecek baglantinin yazisi "Tiklayiniz" ve
+         * basliga hic benzemiyor. Calismada tam bu yuzden ayni sayfanin
+         * capasina gidildi ve bir istek bosa harcandi.
+         *
+         * Model bir sey onermezse kelime benzerligine dusuluyor.
+         */
+        $hedef = bagAdresi($baglar, (int) ($aday['onerilenBag'] ?? 0));
+
+        if ($hedef === '' && $baglar !== []) {
+            $hedef = enYakinBag($aday['bilgi'], $baglar);
+        }
 
         if ($hedef === '' || $hedef === $aday['url']) {
             $kalanSon[] = $aday;
@@ -352,8 +369,10 @@ function degerleriOku(
             }
 
             if (empty($sonuc['bulundu']) || trim((string) ($sonuc['deger'] ?? '')) === '') {
-                $kalan[] = $aday;
-                $neden   = trim((string) ($sonuc['not'] ?? 'belirtilmedi'));
+                // Model bir baglanti onerdiyse ikinci turda o izlenecek.
+                $aday['onerilenBag'] = (int) ($sonuc['baglanti'] ?? 0);
+                $kalan[]             = $aday;
+                $neden               = trim((string) ($sonuc['not'] ?? 'belirtilmedi'));
                 gunluk("  bulunamadı — {$baslik} ({$neden})");
                 continue;
             }
@@ -388,6 +407,26 @@ function degerleriOku(
     }
 
     return $kalan;
+}
+
+/**
+ * [BAG:n] numarasına karşılık gelen adresi döndürür.
+ *
+ * @param list<array{no?:int,yazi:string,url:string}> $baglar
+ */
+function bagAdresi(array $baglar, int $no): string
+{
+    if ($no <= 0) {
+        return '';
+    }
+
+    foreach ($baglar as $bag) {
+        if ((int) ($bag['no'] ?? 0) === $no) {
+            return $bag['url'];
+        }
+    }
+
+    return '';
 }
 
 /**
