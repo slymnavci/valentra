@@ -169,36 +169,40 @@ gunluk(count($sayfaOnbellek) . ' ayrı sayfa indirildi, ' . count($adaylar) . ' 
 
 // --- 3. Degerleri okut ------------------------------------------------------
 
-$sonuclar  = [];
-$hatali    = 0;
+$sonuclar = [];
+$hatali   = 0;
 
 $kalan = degerleriOku($okuyucu, $adaylar, $grupBoyu, $sonuclar, $hatali);
 
-// --- 3b. Fihrist sayfalarindan alt sayfaya in -------------------------------
+// --- 3b. Bulunamayanlar icin baglantilari izle ------------------------------
 
 /*
- * Bazi derlemeler yalnizca baslik listesi.
+ * Derlemeler zincir halinde: fihrist -> ara sayfa -> deger.
  *
- * Ilk calismada ISMMMO sayfasindan alti bilginin altisi da
- * "sayfada yalnizca baslik var, rakam yok" diye dondu — sayfa gercekten
- * bir fihristti, rakamlar alt sayfalardaydi. Bulunamayanlar icin o
- * sayfadaki basliga en cok benzeyen baglanti izleniyor ve deger orada
- * araniyor.
+ * Bir adim inmek yetmedi. ISMMMO fihristi "2026 Yilinda Uygulanacak
+ * Vergi Tutarlari, Hadler ve Cezalar" sayfasina goturdu ama o da
+ * yalnizca baslik listesiydi. Kidem tazminatinda ise inilen sayfa
+ * 2026 I. donemi veriyordu ve II. donemi acikladigi baglanti bir
+ * asagidaydi. Iki ornekte de deger BIR adim daha otedeydi.
  *
- * Yalnizca BIR adim iniliyor: her bulunamayan icin sinirsiz gezinmek
- * calisma suresini ve model maliyetini ongorulemez hale getirirdi.
+ * Bu yuzden inis bir dongu. Sinir var: her adim model istegi demek ve
+ * sinirsiz gezinmek sureyi de maliyeti de ongorulemez yapardi.
+ * Ziyaret edilen adresler aday basina tutuluyor, boylece sayfalar
+ * birbirine baglandiginda ayni yere donup durmuyor.
  */
-$kalanSon = $kalan;
+const EN_FAZLA_ADIM = 2;
 
-if ($kalan !== []) {
+$vazgecilen = [];
+
+for ($adim = 1; $adim <= EN_FAZLA_ADIM && $kalan !== []; $adim++) {
     gunluk('---');
-    gunluk(count($kalan) . ' bilgi için alt sayfa aranıyor.');
+    gunluk(count($kalan) . " bilgi için alt sayfa aranıyor (adım {$adim}).");
 
     $altAdaylar = [];
-    $kalanSon   = [];
 
     foreach ($kalan as $aday) {
-        $baglar = $sayfaOnbellek[$aday['url']]['baglar'] ?? [];
+        $baglar  = $sayfaOnbellek[$aday['url']]['baglar'] ?? [];
+        $gezilen = $aday['gezilen'] ?? [$aday['url']];
 
         /*
          * Once MODELIN onerisi.
@@ -207,10 +211,7 @@ if ($kalan !== []) {
          * yerde geciyor, yani model baglami goruyor. Kelime benzerligi
          * bunu goremiyordu: "Kidem Tazminati Tavani ... Tiklayiniz"
          * satirinda izlenecek baglantinin yazisi "Tiklayiniz" ve
-         * basliga hic benzemiyor. Calismada tam bu yuzden ayni sayfanin
-         * capasina gidildi ve bir istek bosa harcandi.
-         *
-         * Model bir sey onermezse kelime benzerligine dusuluyor.
+         * basliga hic benzemiyor.
          */
         $hedef = bagAdresi($baglar, (int) ($aday['onerilenBag'] ?? 0));
 
@@ -218,15 +219,15 @@ if ($kalan !== []) {
             $hedef = enYakinBag($aday['bilgi'], $baglar);
         }
 
-        if ($hedef === '' || $hedef === $aday['url']) {
-            $kalanSon[] = $aday;
+        if ($hedef === '' || in_array($hedef, $gezilen, true)) {
+            $vazgecilen[] = $aday;
             continue;
         }
 
         $altVeri = $sayfaOku($hedef);
 
         if (trim($altVeri['metin']) === '') {
-            $kalanSon[] = $aday;
+            $vazgecilen[] = $aday;
             gunluk('  ' . $aday['bilgi']['baslik'] . ': alt sayfa okunamadı (' . $hedef . ')');
             continue;
         }
@@ -242,16 +243,16 @@ if ($kalan !== []) {
             'bilgi'      => $aday['bilgi'],
             'url'        => $hedef,
             'sayfaMetni' => mb_substr($altVeri['metin'], 0, MODEL_SINIRI, 'UTF-8'),
+            'gezilen'    => array_merge($gezilen, [$hedef]),
         ];
     }
 
-    if ($altAdaylar !== []) {
-        $kalanSon = array_merge(
-            $kalanSon,
-            degerleriOku($okuyucu, $altAdaylar, $grupBoyu, $sonuclar, $hatali)
-        );
-    }
+    $kalan = $altAdaylar === []
+        ? []
+        : degerleriOku($okuyucu, $altAdaylar, $grupBoyu, $sonuclar, $hatali);
 }
+
+$kalanSon = array_merge($vazgecilen, $kalan);
 
 // --- 4. Siteye gonder -------------------------------------------------------
 
