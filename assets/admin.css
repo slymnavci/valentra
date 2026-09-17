@@ -414,3 +414,122 @@ code.anahtar {
 }
 
 .pratik-elle form { margin-top: 12px; max-width: 520px; }
+
+/* --- Ziyaretci istatistikleri -------------------------------------------- */
+
+/* Panelin baska yerlerinde de "ipucu" kullaniliyordu ama kural yalnizca
+   .alan icinde tanimliydi; disarida kalanlar govde metniyle ayni
+   gorunuyordu. Genel kural burada. */
+.ipucu { font-size: .82rem; color: var(--metin-soluk); }
+
+.sayfa-basligi h1 { margin: 0 0 4px; font-size: 1.5rem; }
+.sayfa-basligi .ipucu { margin: 0; max-width: 70ch; }
+
+.olcum-izgara {
+    display: grid;
+    /* Kartlar dar ekranda alt alta, genis ekranda yan yana; sabit
+       sutun sayisi vermek telefonda sayilari okunmaz yapardi. */
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.olcum {
+    background: var(--kart);
+    border: 1px solid var(--cizgi);
+    border-radius: 10px;
+    box-shadow: var(--golge);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.olcum-vurgu { border-color: var(--altin); background: #fffaf1; }
+
+.olcum-sayi { font-size: 1.9rem; font-weight: 700; line-height: 1.1; }
+.olcum-ad   { font-weight: 600; font-size: .85rem; }
+.olcum-alt  { font-size: .76rem; color: var(--metin-soluk); }
+
+/* Cubuk grafik: kutuphane yok, sutunlar flex ile ciziliyor. */
+.cubuk-grafik {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 190px;
+    margin: 18px 0 10px;
+}
+
+.cubuk-sutun {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    height: 100%;
+    min-width: 0;
+}
+
+.cubuk {
+    width: 100%;
+    background: var(--lacivert);
+    border-radius: 4px 4px 0 0;
+    transition: background .15s;
+}
+
+.cubuk-sutun:hover .cubuk { background: var(--altin-koyu); }
+
+.cubuk-deger {
+    font-size: .7rem;
+    color: var(--metin-soluk);
+    margin-bottom: 3px;
+}
+
+.cubuk-ad {
+    font-size: .68rem;
+    color: var(--metin-soluk);
+    text-align: center;
+    margin-top: 6px;
+    line-height: 1.25;
+}
+
+.istatistik-ikili {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    gap: 18px;
+    margin-top: 18px;
+}
+
+.liste-tablo {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .86rem;
+}
+
+.liste-tablo th {
+    text-align: left;
+    font-size: .74rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--metin-soluk);
+    border-bottom: 1px solid var(--cizgi);
+    padding: 0 8px 7px 0;
+}
+
+.liste-tablo td {
+    padding: 8px 8px 8px 0;
+    border-bottom: 1px solid var(--cizgi);
+    vertical-align: top;
+}
+
+.liste-tablo tr:last-child td { border-bottom: 0; }
+.liste-tablo .sag { text-align: right; white-space: nowrap; }
+
+/* Uzun adresler tabloyu yatayda tasiyordu; sutun genisligini
+   kaydirma cubugu cikarmadan koruyor. */
+.liste-tablo .kirp {
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

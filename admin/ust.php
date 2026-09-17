@@ -33,6 +33,7 @@
             <a class="logo" href="index.php" style="color:#fff;display:flex;align-items:center;gap:10px;"><img src="/assets/logo.svg" alt="" width="30" height="26" style="background:#fff;border-radius:4px;padding:2px;">VALENTRA</a>
             <nav>
                 <a href="/" target="_blank" rel="noopener">Siteyi gör</a>
+                <a href="istatistik.php">Ziyaretçiler</a>
                 <a href="ajan.php">Ajan</a>
                 <a href="pratik.php">Pratik bilgiler</a>
                 <a href="kaynaklar.php">Kaynaklar</a>

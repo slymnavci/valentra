@@ -586,6 +586,39 @@ UPDATE kaynaklar
  WHERE ad = 'IFRS Foundation';
 
 -- ---------------------------------------------------------------------------
+-- Ziyaretler
+--
+-- Kendi sayacimiz. Ucuncu taraf bir olcumleyici (Analytics vb.)
+-- ziyaretcinin verisini disari gonderirdi; bir YMM sitesinde bunu
+-- varsayilan yapmak dogru degil. Ustelik reklam engelleyiciler o
+-- betikleri siklikla bloke ediyor ve sayilar eksik cikiyor.
+--
+-- HAM IP SAKLANMIYOR. "ziyaretci" alani, IP + tarayici kimliginin
+-- veritabaninda duran rastgele bir tuzla hashlenmis ve 16 karaktere
+-- kisaltilmis halidir; geri cevrilemez, yalnizca "ayni tarayici mi"
+-- karsilastirmasina yarar.
+--
+-- BIGINT kullaniliyor: bu tablo diger her seyden hizli buyur ve
+-- INT'in siniri (~2,1 milyar) uzun vadede gercek bir tavandir.
+-- Kayitlar 180 gun sonra kendiliginden siliniyor (bkz. includes/ziyaret.php).
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ziyaretler (
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    zaman       DATETIME        NOT NULL,
+    ziyaretci   CHAR(16)        NOT NULL,
+    yol         VARCHAR(255)    NOT NULL,
+    haber_id    INT UNSIGNED    NULL,
+    baslik      VARCHAR(255)    NOT NULL DEFAULT '',
+    yonlendiren VARCHAR(255)    NOT NULL DEFAULT '',
+    PRIMARY KEY (id),
+    -- Butun raporlar once tarihe gore suzuyor; bu indeks olmadan
+    -- tablo buyudukce panel yavaslar.
+    KEY ix_ziyaret_zaman (zaman),
+    KEY ix_ziyaret_haber (haber_id, zaman),
+    KEY ix_ziyaret_kisi (ziyaretci, zaman)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
 -- Pratik bilgiler
 --
 -- Asgari ucret, gelir vergisi tarifesi, KDV oranlari, SGK taban/tavan

@@ -30,6 +30,10 @@ $sayfaBasligi  = $haber['baslik'] . ' — Valentra';
 $sayfaAciklama = $haber['ozet'];
 $aktifKategori = (string) ($haber['kategori_slug'] ?? '');
 
+// Panelde "hangi haberler okundu" listesini besler; sayfa_ust.php
+// bu degiskeni gorurse ziyareti habere bagliyor.
+$ziyaretHaberId = (int) $haber['id'];
+
 // Arama motoruna bunun bir haber oldugunu acikca soyle; yayim tarihi
 // ve gorsel de semaya giriyor.
 require_once __DIR__ . '/includes/seo.php';

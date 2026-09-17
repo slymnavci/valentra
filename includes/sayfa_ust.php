@@ -8,6 +8,23 @@ $sayfaAciklama = $sayfaAciklama ?? 'Vergi mevzuatı, tebliğler ve ekonomi günd
 $aktifKategori = $aktifKategori ?? '';
 
 require_once __DIR__ . '/seo.php';
+require_once __DIR__ . '/ziyaret.php';
+
+/*
+ * Ziyaret kaydi.
+ *
+ * Buraya konuldu cunku herkese acik her sayfa bu dosyayi cagiriyor;
+ * tek tek sayfalara eklemek er ya da gec bir sayfanin unutulmasi
+ * demekti. $ziyaretHaberId'yi haber sayfasi dolduruyor, boylece
+ * "hangi haber okundu" sorusu cevaplanabiliyor.
+ *
+ * Yonetici oturumu acikken ve bot imzasi tasiyan isteklerde
+ * sayilmiyor (bkz. ziyaret_sayilmali).
+ */
+ziyaret_kaydet(
+    isset($ziyaretHaberId) ? (int) $ziyaretHaberId : null,
+    $sayfaBasligi
+);
 
 $menu = kategori_menusu();
 
