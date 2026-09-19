@@ -80,41 +80,68 @@ function ayar(string $ad): string
 if ($kanunModu) {
     require_once __DIR__ . '/../includes/kanunlar.php';
 
-    $http    = new Http();
+    $http     = new Http();
     $kanunlar = kanun_listesi();
-    $kirik   = 0;
+    $kirik    = 0;
 
-    yaz(count($kanunlar) . ' kanun bağlantısı sınanacak.');
+    yaz(count($kanunlar) . ' kanun için metin adresleri sınanacak.');
     yaz();
 
     foreach ($kanunlar as $kanun) {
-        $adres = kanun_adresi($kanun);
-        $yanit = $http->dene($adres);
-        $iyi   = $yanit['kod'] >= 200 && $yanit['kod'] < 300 && $yanit['boyut'] > 2000;
+        yaz(mb_substr($kanun['ad'], 0, 60));
 
-        if (!$iyi) {
+        /*
+         * Her aday ayri ayri deneniyor.
+         *
+         * Onceki surum yalnizca uygulamanin kendi sayfasini deniyordu;
+         * o sayfa erisilebilir oldugunda bile icinde kanun metni yok
+         * (metni tarayici sonradan dolduruyor), yani "OK" satiri
+         * metnin geldigi anlamina gelmiyordu. Belirleyici olan duragan
+         * dosyalar, bu yuzden hepsi sinaniyor.
+         */
+        $tutan = '';
+
+        foreach (kanun_metin_adaylari($kanun) as $aday) {
+            $yanit = $http->dene($aday['url'], 4096);
+            $iyi   = $yanit['kod'] >= 200 && $yanit['kod'] < 300;
+
+            if ($iyi && $aday['tur'] === 'pdf') {
+                $iyi = str_starts_with((string) $yanit['govde'], '%PDF');
+            }
+
+            if ($iyi && $aday['tur'] !== 'pdf') {
+                $iyi = $yanit['boyut'] > 2000;
+            }
+
+            if ($iyi && $tutan === '') {
+                $tutan = $aday['ad'];
+            }
+
+            yaz(sprintf(
+                '  %-3s %s HTTP %d, %d bayt%s',
+                $iyi ? 'OK' : 'X',
+                dolgu($aday['ad'], 20),
+                $yanit['kod'],
+                $yanit['boyut'],
+                $yanit['hata'] !== '' ? ' (' . $yanit['hata'] . ')' : ''
+            ));
+            yaz('      ' . $aday['url']);
+        }
+
+        if ($tutan === '') {
             $kirik++;
+            yaz('      Hiçbir adres tutmadı. Tertip numarası yanlış olabilir;');
+            yaz('      mevzuat.gov.tr\'de kanunu arayıp adresteki MevzuatTertip');
+            yaz('      değerine bakın. Tüm kanunlarda aynı sonuç çıkıyorsa sorun');
+            yaz('      adreslerde değil, bu ortamdan kaynağa çıkış olmamasındadır.');
         }
 
-        yaz(sprintf(
-            '  %-3s %-52s HTTP %d, %d bayt',
-            $iyi ? 'OK' : 'X',
-            mb_substr($kanun['ad'], 0, 52),
-            $yanit['kod'],
-            $yanit['boyut']
-        ));
-
-        if (!$iyi) {
-            yaz('      ' . $adres);
-            yaz('      Tertip numarası yanlış olabilir; mevzuat.gov.tr\'de');
-            yaz('      kanunu arayıp adresteki MevzuatTertip değerine bakın.');
-        }
+        yaz();
     }
 
-    yaz();
     yaz($kirik === 0
-        ? 'Tüm kanun bağlantıları çalışıyor.'
-        : $kirik . ' bağlantı kırık; includes/kanunlar.php içinde düzeltin.');
+        ? 'Tüm kanunlarda en az bir adres çalışıyor.'
+        : $kirik . ' kanunda hiçbir adres tutmadı.');
 
     exit($kirik === 0 ? 0 : 1);
 }

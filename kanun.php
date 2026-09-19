@@ -16,7 +16,8 @@ declare(strict_types=1);
  *
  * Erisim yine de garanti degil (kaynak veri merkezi IP'lerini
  * engelliyor). Metin alinamazsa sayfa duzgunce resmi kaynak
- * baglantisina dusuyor.
+ * baglantisina dusuyor; sebebi panelde /admin/kanunlar.php
+ * sayfasinda butun kanunlar icin topluca gorulebiliyor.
  */
 
 require_once __DIR__ . '/includes/bootstrap.php';
@@ -82,13 +83,20 @@ $metin = kanun_gosterim($kanun, !$tani);
         <ul>
         <?php foreach ($metin['denemeler'] as $deneme): ?>
             <li>
-                <?= e($deneme['ad']) ?> — HTTP <?= (int) $deneme['kod'] ?> —
+                <?= e($deneme['ad']) ?> —
+                <?= $deneme['kod'] > 0 ? 'HTTP ' . (int) $deneme['kod'] . ' — ' : '' ?>
                 <?= e($deneme['sonuc']) ?>
                 <br><small><?= e($deneme['url']) ?></small>
+                <?php if ($deneme['ayrinti'] !== ''): ?>
+                    <br><small><?= e($deneme['ayrinti']) ?></small>
+                <?php endif; ?>
             </li>
         <?php endforeach; ?>
         </ul>
         Seçilen yol: <strong><?= e($metin['tur']) ?></strong>
+        <?php if ($metin['url'] !== ''): ?>
+            <br><small><?= e($metin['url']) ?></small>
+        <?php endif; ?>
     </div>
 <?php endif; ?>
 

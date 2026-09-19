@@ -533,3 +533,14 @@ code.anahtar {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+/* Kanun metni tanisi: her adayin sonucu alt alta, adresler sutunu
+   tasirmadan. */
+.tani-liste {
+    margin: 0;
+    padding-left: 18px;
+    font-size: .82rem;
+}
+
+.tani-liste li { margin-bottom: 6px; }
+.tani-liste small { color: var(--metin-soluk); word-break: break-all; }
