@@ -57,9 +57,17 @@ if ($adres === null) {
  * olabilir ve o HTML'i PDF diye gondermek tarayicida bozuk dosya
  * uyarisi cikarirdi. Basliklar ancak imza dogrulandiktan SONRA
  * gonderiliyor; boylece hata durumunda 502 donebiliyoruz.
+ *
+ * Aktarim ORTASINDA kopmaya karsi: basliklar gittikten sonra 502
+ * donemeyiz, yani yarim kalmis bir PDF "basarili" gorunur ve alti saat
+ * boyunca tarayici onbelleginde kalabilir. Bunu kaynagin bildirdigi
+ * Content-Length'i aynen gecirerek onluyoruz — govde kisa kalirsa
+ * tarayici yaniti eksik sayip atar. Uzunluk bilinmiyorsa tamligi
+ * dogrulayamayiz, o yuzden o yanit onbellege hic verilmiyor.
  */
-$basladi = false;
-$ilk     = '';
+$basladi   = false;
+$ilk       = '';
+$uzunluk   = null;
 
 // Sunucunun kendi tamponu araya girmesin; PDF akarak gitsin.
 while (ob_get_level() > 0) {
@@ -71,8 +79,25 @@ curl_setopt_array($ch, http_ortak_secenekler(40, 8, kanun_referer($kanun)));
 curl_setopt($ch, CURLOPT_ENCODING, 'identity');
 curl_setopt(
     $ch,
+    CURLOPT_HEADERFUNCTION,
+    static function ($islem, string $baslik) use (&$uzunluk): int {
+        /*
+         * Yonlendirme varsa her adimin kendi basliklari gelir; yeni bir
+         * yanit basladiginda onceki adimin uzunlugu gecersizdir.
+         */
+        if (stripos($baslik, 'HTTP/') === 0) {
+            $uzunluk = null;
+        } elseif (preg_match('/^Content-Length:\s*(\d+)/i', $baslik, $es) === 1) {
+            $uzunluk = (int) $es[1];
+        }
+
+        return strlen($baslik);
+    }
+);
+curl_setopt(
+    $ch,
     CURLOPT_WRITEFUNCTION,
-    static function ($islem, string $parca) use (&$basladi, &$ilk, $kanun): int {
+    static function ($islem, string $parca) use (&$basladi, &$ilk, &$uzunluk, $kanun): int {
         if ($basladi) {
             echo $parca;
 
@@ -93,8 +118,15 @@ curl_setopt(
 
         header('Content-Type: application/pdf');
         header('Content-Disposition: inline; filename="' . (int) $kanun['no'] . '.pdf"');
-        // Kaynak sayfayi her acilista yormamak icin tarayici onbellegi.
-        header('Cache-Control: public, max-age=21600');
+
+        if ($uzunluk !== null) {
+            header('Content-Length: ' . $uzunluk);
+            // Kaynak sayfayi her acilista yormamak icin tarayici onbellegi.
+            header('Cache-Control: public, max-age=21600');
+        } else {
+            // Tamligi dogrulayamayacagimiz yaniti onbellege vermeyiz.
+            header('Cache-Control: no-store');
+        }
 
         $basladi = true;
         echo $ilk;
@@ -104,10 +136,19 @@ curl_setopt(
 );
 
 curl_exec($ch);
+$hataNo = curl_errno($ch);
 curl_close($ch);
 
+/*
+ * Aktarim basladiktan sonraki hatada yapabilecegimiz tek sey govdeyi
+ * orada birakmak: bildirilen Content-Length tutmayacagi icin tarayici
+ * yarim dosyayi kabul etmez. Baslamadiysa acik bir 502 donuyoruz.
+ */
 if (!$basladi) {
     http_response_code(502);
     header('Content-Type: text/plain; charset=utf-8');
     echo 'Resmî metin şu anda alınamadı.';
+} elseif ($hataNo !== 0) {
+    error_log('kanun-pdf: aktarim yarida kesildi (' . (int) $kanun['no']
+            . ', curl ' . $hataNo . ')');
 }

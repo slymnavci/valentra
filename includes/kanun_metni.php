@@ -164,7 +164,7 @@ function kanun_gosterim(array $kanun, bool $onbellekKullan = true): array
 
         // Sunucuya hic ulasilamadiysa oradaki diger adaylari es gec.
         if ($sonuc === null && isset($yanit) && !$yanit['tamam']
-            && http_baglanti_hatasi_mi((int) $yanit['hata_no'])) {
+            && http_baglanti_hatasi_mi((int) $yanit['hata_no'], (bool) $yanit['baglandi'])) {
             $olu[$sunucu] = mb_strtolower(mb_substr($yanit['neden'], 0, 1), 'UTF-8')
                           . mb_substr($yanit['neden'], 1);
         }
@@ -296,7 +296,8 @@ function kanun_pdf_adresi(array $kanun): ?string
             return $aday['url'];
         }
 
-        if (!$yanit['tamam'] && http_baglanti_hatasi_mi((int) $yanit['hata_no'])) {
+        if (!$yanit['tamam']
+            && http_baglanti_hatasi_mi((int) $yanit['hata_no'], (bool) $yanit['baglandi'])) {
             $olu[$sunucu] = true;
         }
     }

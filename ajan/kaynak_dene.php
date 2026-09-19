@@ -80,7 +80,23 @@ function ayar(string $ad): string
 if ($kanunModu) {
     require_once __DIR__ . '/../includes/kanunlar.php';
 
-    $http     = new Http();
+    /*
+     * Site tarafiyla AYNI istemci ve AYNI kabul olcutu kullaniliyor.
+     *
+     * Ajanin kendi Http sinifi burada ise yaramiyordu: indirmeyi
+     * ilerleme geri cagrisiyla kesiyor, kesilince de curl_exec false
+     * donduruyor ve elde hic govde kalmiyor. Yani birkac kilobayttan
+     * buyuk her PDF — normal olanlar dahil — imza kontrolune takilip
+     * "kirik" gorunurdu.
+     *
+     * Olcutun de ayni olmasi sart: "2000 bayttan buyuk" demek, metni
+     * tarayicida dolan bos uygulama kabugunu ya da okunamayan ikili
+     * bir Word belgesini saglam saymak olurdu. Tani, sayfanin
+     * gosterebilecegi seyi sinamali; o yuzden metin gercekten
+     * ayiklanabiliyor mu diye bakiliyor.
+     */
+    require_once __DIR__ . '/../includes/kanun_metni.php';
+
     $kanunlar = kanun_listesi();
     $kirik    = 0;
 
@@ -90,27 +106,26 @@ if ($kanunModu) {
     foreach ($kanunlar as $kanun) {
         yaz(mb_substr($kanun['ad'], 0, 60));
 
-        /*
-         * Her aday ayri ayri deneniyor.
-         *
-         * Onceki surum yalnizca uygulamanin kendi sayfasini deniyordu;
-         * o sayfa erisilebilir oldugunda bile icinde kanun metni yok
-         * (metni tarayici sonradan dolduruyor), yani "OK" satiri
-         * metnin geldigi anlamina gelmiyordu. Belirleyici olan duragan
-         * dosyalar, bu yuzden hepsi sinaniyor.
-         */
-        $tutan = '';
+        $referer = kanun_referer($kanun);
+        $tutan   = '';
 
         foreach (kanun_metin_adaylari($kanun) as $aday) {
-            $yanit = $http->dene($aday['url'], 4096);
-            $iyi   = $yanit['kod'] >= 200 && $yanit['kod'] < 300;
+            if ($aday['tur'] === 'pdf') {
+                $yanit = http_bas_getir($aday['url'], 1024, 12, $referer);
+                $iyi   = $yanit['tamam'] && str_starts_with($yanit['govde'], '%PDF');
+                $not   = $yanit['tamam'] && !$iyi ? 'PDF değil' : $yanit['neden'];
+            } else {
+                $yanit = http_getir($aday['url'], 25, $referer);
+                $metin = '';
 
-            if ($iyi && $aday['tur'] === 'pdf') {
-                $iyi = str_starts_with((string) $yanit['govde'], '%PDF');
-            }
+                if ($yanit['tamam']) {
+                    $metin = $aday['tur'] === 'doc'
+                        ? kanun_word_html_ayikla($yanit['govde'])
+                        : kanun_govdeyi_ayikla($yanit['govde']);
+                }
 
-            if ($iyi && $aday['tur'] !== 'pdf') {
-                $iyi = $yanit['boyut'] > 2000;
+                $iyi = $metin !== '';
+                $not = $yanit['tamam'] && !$iyi ? 'metin ayıklanamadı' : $yanit['neden'];
             }
 
             if ($iyi && $tutan === '') {
@@ -123,7 +138,7 @@ if ($kanunModu) {
                 dolgu($aday['ad'], 20),
                 $yanit['kod'],
                 $yanit['boyut'],
-                $yanit['hata'] !== '' ? ' (' . $yanit['hata'] . ')' : ''
+                $not !== '' ? ' (' . $not . ')' : ''
             ));
             yaz('      ' . $aday['url']);
         }

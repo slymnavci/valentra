@@ -100,33 +100,55 @@ function http_ortak_secenekler(int $zamanAsimi = 20, int $baglantiAsimi = 8, str
  * zaman asimina yakinsa yavaslik var, son adres farkliysa yonlendirme
  * baska yere gitmis demektir.
  *
+ * "baglandi" ayri tutuluyor: zaman asimi, baglanti HIC kurulamadigi icin
+ * mi yoksa kurulduktan sonra aktarim uzadigi icin mi olustu — ikisi
+ * bambaska seyler ve asagidaki karar buna dayaniyor.
+ *
  * @param resource|CurlHandle $ch
- * @return array{kod:int,tur:string,sure:float,son_url:string}
+ * @return array{kod:int,tur:string,sure:float,son_url:string,baglandi:bool}
  */
 function http_ayrinti($ch): array
 {
     return [
-        'kod'     => (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE),
-        'tur'     => strtok((string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE), ';') ?: '',
-        'sure'    => round((float) curl_getinfo($ch, CURLINFO_TOTAL_TIME), 1),
-        'son_url' => (string) curl_getinfo($ch, CURLINFO_EFFECTIVE_URL),
+        'kod'      => (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE),
+        'tur'      => strtok((string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE), ';') ?: '',
+        'sure'     => round((float) curl_getinfo($ch, CURLINFO_TOTAL_TIME), 1),
+        'son_url'  => (string) curl_getinfo($ch, CURLINFO_EFFECTIVE_URL),
+        'baglandi' => ((float) curl_getinfo($ch, CURLINFO_CONNECT_TIME)) > 0.0,
     ];
 }
 
 /**
- * Hata kaynağa değil bağlantıya mı ait?
+ * Hata tek bir adrese değil, sunucunun tamamına mı ait?
  *
- * Alan adi cozulemiyor ya da sunucuya hic ulasilamiyorsa AYNI sunucudaki
- * baska adresleri denemenin anlami yok; her biri ayni sureyi harcayip
- * ayni sekilde dusecek. Bu ayrimi yapmadigimizda tek bir sayfa acilisi
- * bes ayri zaman asimini arka arkaya bekliyordu.
+ * Sunucuya hic ulasilamiyorsa AYNI sunucudaki baska adresleri denemenin
+ * anlami yok; her biri ayni sureyi harcayip ayni sekilde dusecek. Bu
+ * ayrimi yapmadigimizda tek bir sayfa acilisi bes ayri zaman asimini
+ * arka arkaya bekliyordu.
+ *
+ * Olcut BAGLANTININ KURULUP KURULMADIGI. Baglanti kurulduktan sonra
+ * olusan hatalar (aktarim ortasinda kopma, uzayan bir PDF uretimi)
+ * istenen adrese ozel olabilir; onlar yuzunden sunucunun tamamini
+ * elemek, tam da bu degisiklikle eklenen yedek adresleri bosa
+ * cikarirdi.
+ *
+ * Kapali bir guvenlik duvari paketi cogu zaman sessizce dusurur, yani
+ * "baglanti kurulamadi" degil "sure doldu" goruluruz; bu yuzden zaman
+ * asimi yalnizca hic baglanilamadiysa sunucu capinda sayiliyor.
+ *
+ *   5  vekil sunucu cozumlenemedi
+ *   6  alan adi cozumlenemedi
+ *   7  baglanti kurulamadi
+ *   28 sure doldu (yalnizca baglanti hic kurulmadiysa)
+ *   35/51/60/77 TLS el sikismasi ya da sertifika dogrulamasi
  */
-function http_baglanti_hatasi_mi(int $hataNo): bool
+function http_baglanti_hatasi_mi(int $hataNo, bool $baglandi = true): bool
 {
-    // 5/6 ad cozumleme, 7 baglanti, 28 sure, 35/51/60/77 sertifika,
-    // 52/55/56 aktarim ortasinda kopma — hepsi yolun kendisine degil
-    // sunucuya ulasamamaya isaret eder.
-    return in_array($hataNo, [5, 6, 7, 28, 35, 51, 52, 55, 56, 60, 77], true);
+    if ($hataNo === 28) {
+        return !$baglandi;
+    }
+
+    return in_array($hataNo, [5, 6, 7, 35, 51, 60, 77], true);
 }
 
 /**
