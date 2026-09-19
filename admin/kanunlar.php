@@ -22,6 +22,55 @@ giris_zorunlu();
 
 $panelBasligi = 'Kanun metinleri';
 $kanunlar     = kanun_listesi();
+$bildirim     = '';
+$hata         = '';
+
+/*
+ * Yedek kaynak kaydi.
+ *
+ * mevzuat.gov.tr'ye erisim sunucudan sunucuya degisiyor; kapandiginda
+ * metni gosterebilmek icin baska bir adres gerekiyor. Hangi kaynagin
+ * acik oldugu ancak sunucunun kendisinden denenerek anlasildigi icin
+ * adres kodda sabit degil, buradan giriliyor ve butun resmi adaylardan
+ * once deneniyor.
+ */
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_dogrula($_POST['csrf'] ?? null);
+
+    if ((string) ($_POST['islem'] ?? '') === 'ca_guncelle') {
+        $sonuc    = ca_paketi_guncelle();
+        $bildirim = $sonuc['tamam'] ? $sonuc['mesaj'] : '';
+        $hata     = $sonuc['tamam'] ? '' : $sonuc['mesaj'];
+
+        // Kararlar eski listeye gore verilmisti; yeniden denensin.
+        if ($sonuc['tamam']) {
+            foreach ($kanunlar as $k) {
+                ayar_sil('kanun_gosterim_' . (int) $k['no']);
+            }
+        }
+    }
+
+    $no  = (int) ($_POST['no'] ?? 0);
+    $url = trim((string) ($_POST['yedek'] ?? ''));
+
+    if ((string) ($_POST['islem'] ?? '') === 'ca_guncelle') {
+        // Yukarida islendi.
+    } elseif (kanun_bul((string) $no) === null) {
+        $hata = 'Kanun bulunamadı.';
+    } elseif ($url !== '' && guvenli_url($url) === '') {
+        $hata = 'Adres http:// veya https:// ile başlamalı.';
+    } else {
+        kanun_yedek_yaz($no, $url);
+
+        // Karar onbellegi eski adrese gore verilmisti; temizlenmezse
+        // yeni kaynak alti saat boyunca denenmezdi.
+        ayar_sil('kanun_gosterim_' . $no);
+
+        $bildirim = $url === ''
+            ? 'Yedek kaynak kaldırıldı.'
+            : 'Yedek kaynak kaydedildi. Sınayarak çalıştığını görebilirsiniz.';
+    }
+}
 
 $secilen = trim((string) ($_GET['k'] ?? ''));
 $tumu    = isset($_GET['tumu']);
@@ -54,13 +103,21 @@ foreach ($kanunlar as $kanun) {
     }
 
     // Onbellegi atla: tani her zaman kaynaga gitsin.
-    $sonuclar[] = ['kanun' => $kanun, 'sonuc' => kanun_gosterim($kanun, false)];
+    $sonuclar[] = ['kanun' => $kanun, 'sonuc' => kanun_gosterim_guvenli($kanun, false)];
 }
 
 require __DIR__ . '/ust.php';
 ?>
 
 <h1>Kanun metinleri</h1>
+
+<?php if ($bildirim !== ''): ?>
+    <div class="uyari"><?= e($bildirim) ?></div>
+<?php endif; ?>
+
+<?php if ($hata !== ''): ?>
+    <div class="uyari uyari-hata"><?= e($hata) ?></div>
+<?php endif; ?>
 
 <p class="ipucu">
     Kanun sayfaları metni <strong>mevzuat.gov.tr</strong>'den anlık olarak
@@ -69,11 +126,38 @@ require __DIR__ . '/ust.php';
 </p>
 
 <p class="ipucu">
-    <strong>Kök sertifika listesi.</strong>
-    <?= e(ca_paketi_durumu()) ?>
-    Liste sunucuda yoksa deploy onu taşımamış demektir; o durumda
-    sertifika hataları liste depoda dursa bile devam eder.
+    <strong>Yedek kaynak.</strong> Resmî adresler çalışmıyorsa satırdaki
+    kutuya başka bir adres girebilirsiniz — kanun metnini yayımlayan
+    herhangi bir sayfa ya da doğrudan bir PDF/DOC dosyası olur. Girilen
+    adres bütün resmî adaylardan <em>önce</em> denenir. Uzantısı
+    <code>.pdf</code> ise tarayıcının görüntüleyicisinde açılır, değilse
+    sayfadan metin ayıklanır. Kaydettikten sonra <strong>Sına</strong>
+    ile çalıştığını görün.
 </p>
+
+<div class="kutu" style="margin-bottom:18px;">
+    <h2 style="margin-top:0;font-size:1.02rem;">Kök sertifika listesi</h2>
+
+    <p class="ipucu"><?= e(ca_paketi_durumu()) ?></p>
+
+    <p class="ipucu">
+        “Güvenlik sertifikası doğrulanamadı” hatasının en sık sebebi bu
+        listenin eski olması. Depoyla gelen liste 2024 sürümü ve içinde
+        Türk kök sertifikası yok; <code>.gov.tr</code> siteleri devlet
+        sertifika otoritelerini kullandığı için bu liste onları
+        doğrulayamıyor. Aşağıdaki düğme listeyi kaynağından indirip
+        sunucuya yazar — indirme mevcut listeyle doğrulanarak yapılır,
+        güvenlik doğrulaması hiçbir aşamada kapatılmaz.
+    </p>
+
+    <form method="post">
+        <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+        <input type="hidden" name="islem" value="ca_guncelle">
+        <button class="dugme dugme-ana" type="submit">
+            Listeyi kaynağından güncelle
+        </button>
+    </form>
+</div>
 
 <p>
     <a class="dugme dugme-ana" href="?tumu=1">Tümünü sına</a>
@@ -132,8 +216,17 @@ require __DIR__ . '/ust.php';
             </td>
             <td class="sag">
                 <a class="dugme" href="?k=<?= e(kanun_anahtari($kanun)) ?>">Sına</a>
-                <a class="dugme" href="/kanun.php?k=<?= e(kanun_anahtari($kanun)) ?>"
+                <a class="dugme" href="<?= e(kanun_yolu(kanun_anahtari($kanun))) ?>"
                    target="_blank" rel="noopener">Sayfayı aç</a>
+
+                <form method="post" style="margin-top:8px;">
+                    <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                    <input type="hidden" name="no" value="<?= (int) $kanun['no'] ?>">
+                    <input type="url" name="yedek" placeholder="Yedek kaynak adresi"
+                           style="width:230px;"
+                           value="<?= e(kanun_yedek_oku((int) $kanun['no'])) ?>">
+                    <button class="dugme" type="submit">Kaydet</button>
+                </form>
             </td>
         </tr>
     <?php endforeach; ?>

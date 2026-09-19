@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/seo.php';
+require_once __DIR__ . '/includes/pratik.php';
 
 header('Content-Type: application/xml; charset=utf-8');
 
@@ -53,6 +54,32 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         <changefreq>monthly</changefreq>
         <priority>0.6</priority>
     </url>
+
+    <url>
+        <loc><?= e($taban . pratik_yolu()) ?></loc>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <?php
+    /*
+     * Her pratik bilginin kendi sayfasi haritaya giriyor.
+     *
+     * "Kidem tazminati tavani" gibi aramalarin dogrudan cevabi bu
+     * sayfalar; tek tek indekslenmeleri ana sayfadan cok daha degerli.
+     */
+    foreach (pratik_yayindakiler() as $satirlar): ?>
+        <?php foreach ($satirlar as $bilgi): ?>
+            <url>
+                <loc><?= e($taban . pratik_bilgi_yolu((string) $bilgi['anahtar'])) ?></loc>
+                <?php if (!empty($bilgi['onay_tarihi'])): ?>
+                    <lastmod><?= e($zaman((string) $bilgi['onay_tarihi'])) ?></lastmod>
+                <?php endif; ?>
+                <changefreq>weekly</changefreq>
+                <priority>0.7</priority>
+            </url>
+        <?php endforeach; ?>
+    <?php endforeach; ?>
 
     <?php foreach ($kategoriler as $kategori): ?>
         <url>

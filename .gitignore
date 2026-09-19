@@ -9,3 +9,6 @@ includes/database.local.php
 # Ajan bagimliliklari (GitHub Actions'ta kurulur)
 ajan/vendor/
 ajan/composer.lock
+
+# Sunucuda guncellenen kok sertifika listesi; depoya girmez.
+includes/sertifika/ca-bundle-guncel.crt

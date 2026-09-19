@@ -74,7 +74,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
  * cikis var, yani denemeyi ancak sitenin kendi sunucusu yapabiliyor.
  */
 $tani  = isset($_GET['tani']);
-$metin = kanun_gosterim($kanun, !$tani);
+$metin = kanun_gosterim_guvenli($kanun, !$tani);
 ?>
 
 <?php if ($tani): ?>

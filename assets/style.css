@@ -1553,3 +1553,150 @@ a.menu-oge.aktif::after,
     font-size: 13px;
     opacity: .75;
 }
+
+/* --- Pratik bilgiler: liste ve detay ------------------------------------- */
+
+/*
+ * Giris sayfasi liste, kart degil.
+ *
+ * Degerlerin bir kismi tek rakam ("12.000 TL"), bir kismi onlarca
+ * satirlik tarife. Kart duzeninde uzun olanlar sayfayi kilometrelerce
+ * uzatiyor, kisa olanlar aralarinda kayboluyordu. Listede hepsi ayni
+ * yuksekligi kapliyor ve goz basliklar arasinda hizlica geziyor;
+ * degerin tamami kendi sayfasinda.
+ */
+.pratik-liste {
+    list-style: none;
+    margin: 0 0 26px;
+    padding: 0;
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    overflow: hidden;
+}
+
+.pratik-liste li + li { border-top: 1px solid var(--cizgi); }
+
+.pratik-liste a {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 18px;
+    transition: background .12s ease;
+}
+
+.pratik-liste a:hover { background: var(--zemin); }
+
+.pratik-liste-ad {
+    font-weight: 600;
+    color: var(--metin);
+    min-width: 0;
+}
+
+.pratik-liste a:hover .pratik-liste-ad { color: var(--vurgu); }
+
+.pratik-liste-ad small {
+    display: block;
+    font-weight: 400;
+    font-size: .76rem;
+    color: var(--metin-soluk);
+    margin-top: 2px;
+}
+
+.pratik-liste-deger {
+    color: var(--metin-soluk);
+    font-size: .88rem;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 560px) {
+    .pratik-liste a { flex-direction: column; gap: 4px; }
+    .pratik-liste-deger { text-align: left; white-space: normal; }
+}
+
+.pratik-detay {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    border-top: 3px solid var(--altin);
+    padding: 26px 28px 24px;
+    margin: 18px 0 0;
+}
+
+.pratik-detay .geri {
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--metin-soluk);
+}
+
+.pratik-detay .geri:hover { color: var(--vurgu); }
+
+.pratik-detay h1 {
+    margin: 8px 0 6px;
+    font-size: clamp(1.3rem, 2.4vw, 1.8rem);
+    line-height: 1.25;
+}
+
+.pratik-detay-aciklama {
+    margin: 0 0 18px;
+    color: var(--metin-soluk);
+    font-size: .92rem;
+}
+
+/* Degerin kendisi sayfanin ana konusu: buyuk ve okunakli. */
+.pratik-deger-kutu {
+    background: var(--zemin);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+}
+
+.pratik-deger-baslik {
+    margin: 16px 0 8px;
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--metin-soluk);
+}
+
+.pratik-deger-baslik:first-child { margin-top: 0; }
+
+.pratik-deger-satir {
+    margin: 0 0 6px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--metin);
+}
+
+/* Tek satirlik degerler (bir rakam) daha buyuk dursun. */
+.pratik-deger-satir:only-child { font-size: 1.5rem; }
+
+.pratik-kunye {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 22px;
+    margin: 0 0 16px;
+}
+
+.pratik-kunye dt {
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--metin-soluk);
+    margin-bottom: 3px;
+}
+
+.pratik-kunye dd {
+    margin: 0;
+    font-size: .9rem;
+    color: var(--metin);
+}
+
+.pratik-kunye a { color: var(--vurgu); }

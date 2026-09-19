@@ -49,6 +49,9 @@
     RewriteCond %{THE_REQUEST} \s/kanunlar\.php[\s?] [NC]
     RewriteRule ^ /kanunlar? [R=301,L]
 
+    RewriteCond %{THE_REQUEST} \s/pratik-bilgi\.php\?p=([^\s&]+) [NC]
+    RewriteRule ^ /pratik/%1? [R=301,L]
+
     RewriteCond %{THE_REQUEST} \s/pratik-bilgiler\.php[\s?] [NC]
     RewriteRule ^ /pratik-bilgiler? [R=301,L]
 
@@ -81,4 +84,8 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^pratik-bilgiler/?$ pratik-bilgiler.php [L,QSA]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^pratik/([^/]+)/?$ pratik-bilgi.php?p=$1 [L,QSA]
 </IfModule>

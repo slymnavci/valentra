@@ -95,3 +95,11 @@ function pratik_yolu(): string
 {
     return temiz_adres_acik() ? '/pratik-bilgiler' : '/pratik-bilgiler.php';
 }
+
+/** Tek bir pratik bilginin kendi sayfası. */
+function pratik_bilgi_yolu(string $anahtar): string
+{
+    return temiz_adres_acik()
+        ? '/pratik/' . rawurlencode($anahtar)
+        : '/pratik-bilgi.php?p=' . rawurlencode($anahtar);
+}

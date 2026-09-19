@@ -24,9 +24,80 @@ declare(strict_types=1);
  */
 function ca_paketi(): ?string
 {
-    $yol = __DIR__ . '/sertifika/ca-bundle.crt';
+    foreach (ca_paketi_yollari() as $yol) {
+        if (is_readable($yol)) {
+            return $yol;
+        }
+    }
 
-    return is_readable($yol) ? $yol : null;
+    return null;
+}
+
+/**
+ * Kök sertifika listesinin aranacağı yerler, öncelik sırasıyla.
+ *
+ * Sunucuda guncellenen liste depodakinden ONCE geliyor. Sebebi su:
+ * depodaki liste deploy ile sabitleniyor ve bir CA eksik kaldiginda
+ * duzeltmek yeni bir deploy gerektiriyor; oysa sunucu disariya
+ * cikabiliyor ve listeyi kendisi tazeleyebiliyor. Guncel dosya depoda
+ * yok, deploy onu silmiyor (mirror uzaktaki fazla dosyalari
+ * kaldirmiyor), yani bir kez indirildiginde kaliyor.
+ *
+ * @return list<string>
+ */
+function ca_paketi_yollari(): array
+{
+    return [
+        __DIR__ . '/sertifika/ca-bundle-guncel.crt',
+        __DIR__ . '/sertifika/ca-bundle.crt',
+    ];
+}
+
+/**
+ * Kök sertifika listesini kaynağından indirip sunucuya yazar.
+ *
+ * Depodaki liste 2024 surumu ve icinde TEK BIR Turk kok sertifikasi
+ * yok; mevzuat.gov.tr gibi .gov.tr siteleri devlet CA'lari kullandigi
+ * icin bu liste onlari dogrulayamiyor. Listeyi tazelemek bu sinifin
+ * hatalarinin bir kismini dogrudan cozuyor.
+ *
+ * Indirme mevcut listeyle DOGRULANARAK yapiliyor: curl.se yaygin bir
+ * CA kullaniyor ve o zaten listede. Dogrulamayi kapatip kok sertifika
+ * listesi indirmek, guvenmek icin indirdigimiz seyi guvensiz yoldan
+ * almak olurdu.
+ *
+ * Gelen icerik bicim olarak da sinaniyor: sertifika sayisi ve boyut
+ * beklenen araligin disindaysa yazilmiyor. Boylece araya giren bir
+ * hata sayfasi listenin yerine gecemiyor.
+ *
+ * @return array{tamam:bool,mesaj:string}
+ */
+function ca_paketi_guncelle(): array
+{
+    $kaynak = 'https://curl.se/ca/cacert.pem';
+    $yanit  = http_getir($kaynak, 40);
+
+    if (!$yanit['tamam']) {
+        return ['tamam' => false, 'mesaj' => 'İndirilemedi: ' . $yanit['neden']];
+    }
+
+    $govde = $yanit['govde'];
+    $adet  = substr_count($govde, 'BEGIN CERTIFICATE');
+
+    if ($adet < 100 || strlen($govde) < 100000) {
+        return ['tamam' => false, 'mesaj' => 'Gelen dosya kök sertifika listesine '
+                                           . 'benzemiyor (' . $adet . ' sertifika, '
+                                           . strlen($govde) . ' bayt).'];
+    }
+
+    $hedef = __DIR__ . '/sertifika/ca-bundle-guncel.crt';
+
+    if (@file_put_contents($hedef, $govde) === false) {
+        return ['tamam' => false, 'mesaj' => 'Dosya yazılamadı; '
+                                           . 'includes/sertifika klasörü yazılabilir olmalı.'];
+    }
+
+    return ['tamam' => true, 'mesaj' => 'Liste güncellendi: ' . $adet . ' sertifika.'];
 }
 
 /**
@@ -142,21 +213,23 @@ function http_ayrinti($ch): array
  */
 function ca_paketi_durumu(): string
 {
-    $yol = __DIR__ . '/sertifika/ca-bundle.crt';
+    $yol = ca_paketi();
 
-    if (!is_file($yol)) {
-        return 'Kök sertifika listesi sunucuda YOK (' . $yol
-             . '); sistemin kendi listesi kullanılıyor.';
+    if ($yol === null) {
+        return 'Kök sertifika listesi sunucuda YOK; sistemin kendi listesi '
+             . 'kullanılıyor ve paylaşımlı hostinglerde o liste çoğu zaman eski.';
     }
 
-    if (!is_readable($yol)) {
-        return 'Kök sertifika listesi var ama okunamıyor (izinler).';
-    }
+    $govde = (string) @file_get_contents($yol);
+    $adet  = substr_count($govde, 'BEGIN CERTIFICATE');
+    $turk  = preg_match('/TUBITAK|Kamu SM|E-Tugra|TURKTRUST|E-Guven/i', $govde) === 1;
 
-    $adet = substr_count((string) file_get_contents($yol), 'BEGIN CERTIFICATE');
-
-    return 'Kök sertifika listesi kullanılıyor: ' . $adet . ' sertifika, '
-         . number_format(filesize($yol) / 1024, 0) . ' KB.';
+    return 'Kök sertifika listesi: ' . basename($yol) . ', ' . $adet
+         . ' sertifika, ' . number_format(strlen($govde) / 1024, 0) . ' KB. '
+         . ($turk
+             ? 'Türk kök sertifikası içeriyor.'
+             : 'Türk kök sertifikası İÇERMİYOR — .gov.tr siteleri bu yüzden '
+             . 'doğrulanamıyor olabilir.');
 }
 
 /**

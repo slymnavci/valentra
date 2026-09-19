@@ -184,3 +184,115 @@ function pratik_grup_adi(string $grup): string
         default          => 'Diğer',
     };
 }
+
+/**
+ * Yayındaki tek bir bilgiyi anahtarıyla getirir.
+ *
+ * Yalnizca onaylanmis ve degeri olan kayit doner; onay beklemekte olan
+ * bir deger kendi adresinden de gorunmemeli.
+ *
+ * @return array<string,mixed>|null
+ */
+function pratik_bul(string $anahtar): ?array
+{
+    $anahtar = trim($anahtar);
+
+    if ($anahtar === '') {
+        return null;
+    }
+
+    $ifade = db()->prepare(
+        'SELECT * FROM pratik_bilgiler
+          WHERE anahtar = :a AND aktif = 1 AND deger IS NOT NULL AND deger <> ""
+          LIMIT 1'
+    );
+    $ifade->execute(['a' => $anahtar]);
+    $satir = $ifade->fetch();
+
+    return $satir === false ? null : $satir;
+}
+
+/**
+ * Aynı gruptaki diğer bilgiler.
+ *
+ * Detay sayfasinin altinda duruyor: okuyucu bir hadde bakmaya geldiyse
+ * komsu hadler de isine yarar ve sayfa cikmaz sokak olmaz.
+ *
+ * @return list<array<string,mixed>>
+ */
+function pratik_grup_komsulari(string $grup, string $haricAnahtar): array
+{
+    $ifade = db()->prepare(
+        'SELECT anahtar, baslik, deger, donem
+           FROM pratik_bilgiler
+          WHERE grup = :g AND anahtar <> :a
+            AND aktif = 1 AND deger IS NOT NULL AND deger <> ""
+          ORDER BY sira, baslik'
+    );
+    $ifade->execute(['g' => $grup, 'a' => $haricAnahtar]);
+
+    return $ifade->fetchAll();
+}
+
+/**
+ * Listede gösterilecek tek satırlık özet.
+ *
+ * Bazi degerler tek bir rakam ("12.000 TL"), bazilari onlarca satirlik
+ * tarife (harcirah, gelir vergisi dilimleri). Liste sayfasinda ikisi de
+ * tek satira sigmali; uzun olan kirpilip detaya birakiliyor. Onceki
+ * halinde butun tarife kartin icine dokuluyor ve sayfa okunmaz
+ * oluyordu.
+ */
+function pratik_ozet(string $deger): string
+{
+    $satirlar = preg_split('/\R/u', trim($deger)) ?: [];
+    $ilk      = '';
+
+    foreach ($satirlar as $satir) {
+        $satir = trim($satir);
+
+        // Basligimsi satirlar ("01/01 - 30/06 Dönemi:") tek basina
+        // hicbir sey anlatmaz; ilk gercek degeri ariyoruz.
+        if ($satir !== '' && !str_ends_with($satir, ':')) {
+            $ilk = $satir;
+            break;
+        }
+    }
+
+    if ($ilk === '') {
+        $ilk = trim((string) ($satirlar[0] ?? ''));
+    }
+
+    $cokSatir = count(array_filter($satirlar, static fn ($s) => trim((string) $s) !== '')) > 1;
+
+    return kisalt($ilk, 70) . ($cokSatir ? ' …' : '');
+}
+
+/**
+ * Çok satırlı bir değeri bölümlere ayırır.
+ *
+ * Harcirah ve vergi tarifeleri "01/01 - 30/06 Dönemi:" gibi baslik
+ * satirlariyla geliyor. Bunlari baslik olarak isaretlemek, degerin
+ * tamamini tek blok halinde basmaktan cok daha okunabilir.
+ *
+ * @return list<array{tur:string,metin:string}>
+ */
+function pratik_deger_bolumleri(string $deger): array
+{
+    $bolumler = [];
+
+    foreach (preg_split('/\R/u', trim($deger)) ?: [] as $satir) {
+        $satir = trim($satir);
+
+        if ($satir === '') {
+            continue;
+        }
+
+        $bolumler[] = [
+            'tur'   => str_ends_with($satir, ':') ? 'baslik' : 'satir',
+            'metin' => $satir,
+        ];
+    }
+
+    return $bolumler;
+}
