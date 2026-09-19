@@ -17,6 +17,7 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/kanunlar.php';
 require_once __DIR__ . '/../includes/kanun_metni.php';
+require_once __DIR__ . '/../includes/sertifika_onar.php';
 
 giris_zorunlu();
 
@@ -37,8 +38,13 @@ $hata         = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_dogrula($_POST['csrf'] ?? null);
 
-    if ((string) ($_POST['islem'] ?? '') === 'ca_guncelle') {
-        $sonuc    = ca_paketi_guncelle();
+    $islem = (string) ($_POST['islem'] ?? '');
+
+    if ($islem === 'ca_guncelle' || $islem === 'zincir_onar') {
+        $sonuc = $islem === 'ca_guncelle'
+            ? ca_paketi_guncelle()
+            : sertifika_zinciri_onar(kanun_metin_adaylari($kanunlar[0])[0]['url']);
+
         $bildirim = $sonuc['tamam'] ? $sonuc['mesaj'] : '';
         $hata     = $sonuc['tamam'] ? '' : $sonuc['mesaj'];
 
@@ -53,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $no  = (int) ($_POST['no'] ?? 0);
     $url = trim((string) ($_POST['yedek'] ?? ''));
 
-    if ((string) ($_POST['islem'] ?? '') === 'ca_guncelle') {
+    if ($islem === 'ca_guncelle' || $islem === 'zincir_onar') {
         // Yukarida islendi.
     } elseif (kanun_bul((string) $no) === null) {
         $hata = 'Kanun bulunamadı.';
@@ -141,22 +147,43 @@ require __DIR__ . '/ust.php';
     <p class="ipucu"><?= e(ca_paketi_durumu()) ?></p>
 
     <p class="ipucu">
-        “Güvenlik sertifikası doğrulanamadı” hatasının en sık sebebi bu
-        listenin eski olması. Depoyla gelen liste 2024 sürümü ve içinde
-        Türk kök sertifikası yok; <code>.gov.tr</code> siteleri devlet
-        sertifika otoritelerini kullandığı için bu liste onları
-        doğrulayamıyor. Aşağıdaki düğme listeyi kaynağından indirip
-        sunucuya yazar — indirme mevcut listeyle doğrulanarak yapılır,
-        güvenlik doğrulaması hiçbir aşamada kapatılmaz.
+        <strong>mevzuat.gov.tr'deki sorun bu listede değil.</strong>
+        Tanı şunu gösterdi: sunucu TLS el sıkışmasında yalnızca kendi
+        sertifikasını gönderiyor, onu imzalayan <em>ara</em> sertifikayı
+        göndermiyor (<code>*.tccb.gov.tr ← GeoTrust TLS RSA CA G1</code>,
+        curl 60). Ara sertifikayı imzalayan kök — DigiCert Global Root G2 —
+        listemizde zaten var; eksik olan zincirin ortası. Tarayıcılar bu
+        boşluğu sertifikanın içindeki adresten indirip kendileri kapatır,
+        curl kapatmaz.
     </p>
 
-    <form method="post">
+    <p class="ipucu">
+        Aşağıdaki düğme aynı işi yapar: eksik ara sertifikayı indirir,
+        <strong>imzasının güvendiğimiz bir kök tarafından atıldığını
+        doğrular</strong> ve ancak öyle listeye ekler. Doğrulama geçmezse
+        hiçbir şey yazılmaz — güvenlik doğrulaması hiçbir aşamada
+        kapatılmıyor.
+    </p>
+
+    <form method="post" style="display:inline;">
         <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
-        <input type="hidden" name="islem" value="ca_guncelle">
+        <input type="hidden" name="islem" value="zincir_onar">
         <button class="dugme dugme-ana" type="submit">
-            Listeyi kaynağından güncelle
+            Eksik ara sertifikayı indir ve doğrula
         </button>
     </form>
+
+    <form method="post" style="display:inline;">
+        <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+        <input type="hidden" name="islem" value="ca_guncelle">
+        <button class="dugme" type="submit">Kök listesini tazele</button>
+    </form>
+
+    <p class="ipucu" style="margin-bottom:0;">
+        Kök listesini tazelemek ayrı bir iştir: başka kaynaklarda görülen
+        sertifika hatalarını giderir, mevzuat.gov.tr'deki eksik halkayı
+        gidermez.
+    </p>
 </div>
 
 <p>

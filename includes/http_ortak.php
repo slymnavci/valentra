@@ -222,14 +222,16 @@ function ca_paketi_durumu(): string
 
     $govde = (string) @file_get_contents($yol);
     $adet  = substr_count($govde, 'BEGIN CERTIFICATE');
-    $turk  = preg_match('/TUBITAK|Kamu SM|E-Tugra|TURKTRUST|E-Guven/i', $govde) === 1;
+
+    /*
+     * Onarilmis dosya kullaniliyorsa bunu soylemek onemli: eksik ara
+     * sertifikalar oraya eklenir ve depodaki temel liste degismez.
+     */
+    $onarik = basename($yol) === 'ca-bundle-guncel.crt';
 
     return 'Kök sertifika listesi: ' . basename($yol) . ', ' . $adet
-         . ' sertifika, ' . number_format(strlen($govde) / 1024, 0) . ' KB. '
-         . ($turk
-             ? 'Türk kök sertifikası içeriyor.'
-             : 'Türk kök sertifikası İÇERMİYOR — .gov.tr siteleri bu yüzden '
-             . 'doğrulanamıyor olabilir.');
+         . ' sertifika, ' . number_format(strlen($govde) / 1024, 0) . ' KB'
+         . ($onarik ? ' (sunucuda tamamlanmış liste).' : ' (depoyla gelen liste).');
 }
 
 /**
