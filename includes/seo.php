@@ -47,7 +47,7 @@ function seo_haber_semasi(array $haber): string
         'inLanguage'       => 'tr-TR',
         'mainEntityOfPage' => [
             '@type' => 'WebPage',
-            '@id'   => site_adresi() . '/haber.php?h=' . rawurlencode((string) $haber['slug']),
+            '@id'   => site_adresi() . haber_yolu((string) $haber['slug']),
         ],
         'publisher' => [
             '@type' => 'Organization',

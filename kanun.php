@@ -37,7 +37,7 @@ if ($kanun === null) {
     ?>
     <div class="bos-durum">
         <strong>Kanun bulunamadı.</strong>
-        <a href="/kanunlar.php">Kanun listesine dön</a>
+        <a href="<?= e(kanunlar_yolu()) ?>">Kanun listesine dön</a>
     </div>
     <?php
     require __DIR__ . '/includes/sayfa_alt.php';
@@ -54,7 +54,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
 <div class="kanun-basligi">
     <div>
-        <a class="geri" href="/kanunlar.php">&larr; Kanunlar</a>
+        <a class="geri" href="<?= e(kanunlar_yolu()) ?>">&larr; Kanunlar</a>
         <h1><?= e($kanun['ad']) ?></h1>
         <p><?= (int) $kanun['no'] ?> sayılı Kanun &middot; <?= e($kanun['aciklama']) ?></p>
     </div>
@@ -166,7 +166,7 @@ $metin = kanun_gosterim($kanun, !$tani);
         <p class="kanun-duser-not">
             Valentra kanun metinlerinin kopyasını tutmaz; her zaman
             yürürlükteki resmî metne bağlanır.
-            <a href="/kanun.php?k=<?= e(kanun_anahtari($kanun)) ?>&amp;tani=1">
+            <a href="<?= e(kanun_yolu(kanun_anahtari($kanun), true)) ?>">
                 Neden getirilemedi?
             </a>
         </p>
@@ -205,7 +205,7 @@ $metin = kanun_gosterim($kanun, !$tani);
         <?php foreach (kanun_listesi() as $diger): ?>
             <?php if (kanun_anahtari($diger) === kanun_anahtari($kanun)) { continue; } ?>
             <article class="kanun">
-                <a href="/kanun.php?k=<?= e(kanun_anahtari($diger)) ?>">
+                <a href="<?= e(kanun_yolu(kanun_anahtari($diger))) ?>">
                     <div class="kanun-ust">
                         <h3><?= e($diger['ad']) ?></h3>
                         <span class="kanun-no"><?= (int) $diger['no'] ?> sayılı</span>

@@ -49,14 +49,14 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
     </url>
 
     <url>
-        <loc><?= e($taban) ?>/kanunlar.php</loc>
+        <loc><?= e($taban . kanunlar_yolu()) ?></loc>
         <changefreq>monthly</changefreq>
         <priority>0.6</priority>
     </url>
 
     <?php foreach ($kategoriler as $kategori): ?>
         <url>
-            <loc><?= e($taban) ?>/kategori.php?k=<?= e(rawurlencode((string) $kategori['slug'])) ?></loc>
+            <loc><?= e($taban . kategori_yolu((string) $kategori['slug'])) ?></loc>
             <lastmod><?= e($zaman($kategori['son'])) ?></lastmod>
             <changefreq>daily</changefreq>
             <priority>0.7</priority>
@@ -65,7 +65,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
 
     <?php foreach ($haberler as $haber): ?>
         <url>
-            <loc><?= e($taban) ?>/haber.php?h=<?= e(rawurlencode((string) $haber['slug'])) ?></loc>
+            <loc><?= e($taban . haber_yolu((string) $haber['slug'])) ?></loc>
             <lastmod><?= e($zaman($haber['guncellendi'] ?: $haber['yayin_tarihi'])) ?></lastmod>
             <changefreq>weekly</changefreq>
             <priority>0.8</priority>

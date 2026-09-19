@@ -11,7 +11,7 @@ if (($izgaraHaberleri ?? []) === []) {
     <?php foreach ($izgaraHaberleri as $haber): ?>
         <?php $kartGorsel = guvenli_url($haber['gorsel_url'] ?? ''); ?>
         <article class="kart <?= $kartGorsel === '' ? 'yazili' : '' ?>">
-            <a href="/haber.php?h=<?= e($haber['slug']) ?>">
+            <a href="<?= e(haber_yolu((string) $haber['slug'])) ?>">
                 <?php if ($kartGorsel !== ''): ?>
                     <img class="gorsel" src="<?= e($kartGorsel) ?>" alt="" loading="lazy">
                 <?php endif; ?>
