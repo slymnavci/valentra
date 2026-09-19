@@ -68,6 +68,13 @@ require __DIR__ . '/ust.php';
     Her kanun için adresler sırayla denenir ve ilk tutan kullanılır.
 </p>
 
+<p class="ipucu">
+    <strong>Kök sertifika listesi.</strong>
+    <?= e(ca_paketi_durumu()) ?>
+    Liste sunucuda yoksa deploy onu taşımamış demektir; o durumda
+    sertifika hataları liste depoda dursa bile devam eder.
+</p>
+
 <p>
     <a class="dugme dugme-ana" href="?tumu=1">Tümünü sına</a>
     <?php if ($tumu || $secilen !== ''): ?>

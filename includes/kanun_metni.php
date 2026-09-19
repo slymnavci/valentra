@@ -102,6 +102,9 @@ function kanun_gosterim(array $kanun, bool $onbellekKullan = true): array
     /** @var array<string,string> Ulasilamayan sunucular ve sebepleri. */
     $olu = [];
 
+    /** @var array<string,list<string>> Sunucu basina sertifika zinciri. */
+    $zincirler = [];
+
     foreach (kanun_metin_adaylari($kanun) as $aday) {
         $sunucu = kanun_sunucu($aday['url']);
 
@@ -160,6 +163,26 @@ function kanun_gosterim(array $kanun, bool $onbellekKullan = true): array
                     $sonuc = ['tur' => 'html', 'govde' => $govde, 'url' => $aday['url'], 'neden' => ''];
                 }
             }
+        }
+
+        /*
+         * Tani kipinde sertifika hatasinin SEBEBINI de goster.
+         *
+         * Zinciri okumak ayri bir istek gerektirdigi ve dogrulamayi
+         * kapattigi icin yalnizca tani kipinde, yani onbellek atlanmis
+         * bir istekte yapiliyor; ziyaretcinin gordugu normal sayfa
+         * bunu hic calistirmiyor.
+         */
+        if (!$onbellekKullan && isset($yanit) && !$yanit['tamam']
+            && (int) $yanit['dogrulama'] !== 0 && !isset($zincirler[$sunucu])) {
+            $zincirler[$sunucu] = http_sertifika_zinciri($aday['url']);
+        }
+
+        if (!$onbellekKullan && isset($yanit) && ($zincirler[$sunucu] ?? []) !== []) {
+            $son = array_key_last($denemeler);
+
+            $denemeler[$son]['ayrinti'] .= ' · zincir: '
+                . implode(' | ', $zincirler[$sunucu]);
         }
 
         // Sunucuya hic ulasilamadiysa oradaki diger adaylari es gec.
@@ -240,6 +263,12 @@ function kanun_ayrinti(array $yanit): string
 
     if ((int) ($yanit['hata_no'] ?? 0) !== 0) {
         $parcalar[] = 'curl ' . (int) $yanit['hata_no'];
+    }
+
+    $dogrulama = http_dogrulama_acikla((int) ($yanit['dogrulama'] ?? 0));
+
+    if ($dogrulama !== '') {
+        $parcalar[] = $dogrulama;
     }
 
     $sonUrl = (string) ($yanit['son_url'] ?? '');

@@ -124,12 +124,52 @@ $metin = kanun_gosterim($kanun, !$tani);
         bakınız.
     </p>
 <?php else: ?>
-    <div class="kanun-uyari">
-        <strong>Metin şu anda buraya getirilemedi.</strong>
-        Kanunun tam ve resmî metnini
-        <a href="<?= e($adres) ?>" target="_blank" rel="noopener">mevzuat.gov.tr'de açabilirsiniz</a>.
-        <a class="kanun-tani-bag"
-           href="/kanun.php?k=<?= e(kanun_anahtari($kanun)) ?>&amp;tani=1">Neden?</a>
+    <?php
+    /*
+     * Metin gelmedi — ama bu ziyaretci icin cikmaz sokak degil.
+     *
+     * Erisemeyen taraf SUNUCUMUZ; ziyaretcinin kendi tarayicisi
+     * mevzuat.gov.tr'ye gayet erisiyor. O yuzden burada bir hata
+     * seridi degil, calisan iki yol sunuluyor: resmi sayfa ve resmi
+     * PDF'in dogrudan adresi. Onceki halinde sayfanin geri kalani
+     * bombostu ve kirik gorunuyordu; alta kanun listesi konarak
+     * ziyaretci en azindan aradigi baska bir kanuna gecebiliyor.
+     */
+    $pdfAdresi = kanun_pdf_adaylari($kanun)[0]['url'] ?? $adres;
+    ?>
+
+    <section class="kanun-duser">
+        <svg class="kanun-duser-simge" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <path d="M14 2v6h6"/>
+        </svg>
+
+        <h2>Metin şu anda buraya getirilemiyor</h2>
+
+        <p>
+            <?= e($kanun['ad']) ?> metnini resmî kaynaktan çekemedik.
+            Kaynağa erişemeyen taraf bu site; kendi tarayıcınızdan
+            aşağıdaki bağlantılar çalışır.
+        </p>
+
+        <div class="kanun-duser-yollar">
+            <a class="dugme-birincil" href="<?= e($adres) ?>"
+               target="_blank" rel="noopener">
+                mevzuat.gov.tr'de aç &nearr;
+            </a>
+            <a class="dugme-ikincil" href="<?= e($pdfAdresi) ?>"
+               target="_blank" rel="noopener">
+                Resmî PDF'i aç &nearr;
+            </a>
+        </div>
+
+        <p class="kanun-duser-not">
+            Valentra kanun metinlerinin kopyasını tutmaz; her zaman
+            yürürlükteki resmî metne bağlanır.
+            <a href="/kanun.php?k=<?= e(kanun_anahtari($kanun)) ?>&amp;tani=1">
+                Neden getirilemedi?
+            </a>
+        </p>
 
         <?php
         /*
@@ -137,17 +177,45 @@ $metin = kanun_gosterim($kanun, !$tani);
          *
          * Ziyaretcinin "SSL sertifikasi dogrulanamadi" gibi bir
          * ayrintiya ihtiyaci yok; ama bu bilgi olmadan sorunu
-         * uzaktan cozmek korlemesine oluyor. Ilk denemede tam bu
-         * yuzden "olmadi"dan oteye gidemedik.
+         * uzaktan cozmek korlemesine oluyor. Acilir bir blokta
+         * duruyor ki sayfa bozuk gorunmesin.
          */
         oturum_baslat();
         ?>
         <?php if (oturum_acik()): ?>
-            <span class="kanun-tani">
-                Yönetici notu: <?= e($metin['neden']) ?>
-            </span>
+            <details class="kanun-tani">
+                <summary>Yönetici notu</summary>
+                <p><?= e($metin['neden']) ?></p>
+                <p><?= e(ca_paketi_durumu()) ?></p>
+                <p>
+                    <a href="/admin/kanunlar.php?k=<?= e(kanun_anahtari($kanun)) ?>">
+                        Panelde ayrıntılı tanı
+                    </a>
+                </p>
+            </details>
         <?php endif; ?>
+    </section>
+
+    <div class="bolum-basligi" style="margin-top:34px;">
+        <h2>Diğer kanunlar</h2>
+        <span class="cizgi"></span>
     </div>
+
+    <section class="kanun-listesi">
+        <?php foreach (kanun_listesi() as $diger): ?>
+            <?php if (kanun_anahtari($diger) === kanun_anahtari($kanun)) { continue; } ?>
+            <article class="kanun">
+                <a href="/kanun.php?k=<?= e(kanun_anahtari($diger)) ?>">
+                    <div class="kanun-ust">
+                        <h3><?= e($diger['ad']) ?></h3>
+                        <span class="kanun-no"><?= (int) $diger['no'] ?> sayılı</span>
+                    </div>
+                    <p><?= e($diger['aciklama']) ?></p>
+                    <span class="kanun-bag">Metni oku &rarr;</span>
+                </a>
+            </article>
+        <?php endforeach; ?>
+    </section>
 <?php endif; ?>
 
 <?php require __DIR__ . '/includes/sayfa_alt.php'; ?>

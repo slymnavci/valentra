@@ -77,6 +77,17 @@ function http_ortak_secenekler(int $zamanAsimi = 20, int $baglantiAsimi = 8, str
          * bir sey yok.
          */
         CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+
+        /*
+         * Sunucunun gonderdigi sertifika zinciri kayda alinsin.
+         *
+         * "Guvenlik sertifikasi dogrulanamadi" tek basina hicbir sey
+         * soylemiyor: kok listemiz sunucuya hic gitmemis de olabilir,
+         * kaynak ara sertifikayi eksik gonderiyor da olabilir, kok
+         * gercekten taninmiyor da olabilir. Ucu de bambaska islere
+         * bakar. Zinciri kaydetmenin maliyeti yok.
+         */
+        CURLOPT_CERTINFO       => true,
     ];
 
     if ($referer !== '') {
@@ -105,17 +116,70 @@ function http_ortak_secenekler(int $zamanAsimi = 20, int $baglantiAsimi = 8, str
  * bambaska seyler ve asagidaki karar buna dayaniyor.
  *
  * @param resource|CurlHandle $ch
- * @return array{kod:int,tur:string,sure:float,son_url:string,baglandi:bool}
+ * @return array{kod:int,tur:string,sure:float,son_url:string,baglandi:bool,
+ *               dogrulama:int,ca:string}
  */
 function http_ayrinti($ch): array
 {
     return [
-        'kod'      => (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE),
-        'tur'      => strtok((string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE), ';') ?: '',
-        'sure'     => round((float) curl_getinfo($ch, CURLINFO_TOTAL_TIME), 1),
-        'son_url'  => (string) curl_getinfo($ch, CURLINFO_EFFECTIVE_URL),
-        'baglandi' => ((float) curl_getinfo($ch, CURLINFO_CONNECT_TIME)) > 0.0,
+        'kod'       => (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE),
+        'tur'       => strtok((string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE), ';') ?: '',
+        'sure'      => round((float) curl_getinfo($ch, CURLINFO_TOTAL_TIME), 1),
+        'son_url'   => (string) curl_getinfo($ch, CURLINFO_EFFECTIVE_URL),
+        'baglandi'  => ((float) curl_getinfo($ch, CURLINFO_CONNECT_TIME)) > 0.0,
+        'dogrulama' => (int) curl_getinfo($ch, CURLINFO_SSL_VERIFYRESULT),
+        'ca'        => (string) (ca_paketi() ?? ''),
     ];
+}
+
+/**
+ * Kök sertifika listesinin durumu, tek cümlede.
+ *
+ * Ilk sorulacak soru bu: liste sunucuda var mi? Yoksa curl sistemin
+ * kendi listesini kullanir ve paylasimli hostinglerde o liste cogu
+ * zaman eskidir — yani dosya deploy sirasinda gitmediyse sertifika
+ * hatalari, biz listeyi repoya koymus olsak bile aynen devam eder.
+ */
+function ca_paketi_durumu(): string
+{
+    $yol = __DIR__ . '/sertifika/ca-bundle.crt';
+
+    if (!is_file($yol)) {
+        return 'Kök sertifika listesi sunucuda YOK (' . $yol
+             . '); sistemin kendi listesi kullanılıyor.';
+    }
+
+    if (!is_readable($yol)) {
+        return 'Kök sertifika listesi var ama okunamıyor (izinler).';
+    }
+
+    $adet = substr_count((string) file_get_contents($yol), 'BEGIN CERTIFICATE');
+
+    return 'Kök sertifika listesi kullanılıyor: ' . $adet . ' sertifika, '
+         . number_format(filesize($yol) / 1024, 0) . ' KB.';
+}
+
+/**
+ * OpenSSL doğrulama sonucunu açıklar.
+ *
+ * Sayilar OpenSSL'in X509 dogrulama kodlari. Hangi isin yapilmasi
+ * gerektigini ayiran sey bu kod: 20/21 kaynagin ara sertifikayi eksik
+ * gonderdigine, 2/24 kokun listemizde olmadigina, 10 ise sertifikanin
+ * suresinin dolduguna isaret eder.
+ */
+function http_dogrulama_acikla(int $kod): string
+{
+    return match ($kod) {
+        0  => '',
+        2  => 'zincirdeki üst sertifika bulunamadı',
+        10 => 'sertifikanın süresi dolmuş',
+        18 => 'sertifika kendinden imzalı',
+        19 => 'zincirde kendinden imzalı sertifika var',
+        20 => 'ara sertifikanın kökü bulunamadı (kök listede yok)',
+        21 => 'ilk sertifika doğrulanamadı (kaynak ara sertifikayı göndermiyor)',
+        24 => 'kök sertifika geçersiz',
+        default => 'OpenSSL doğrulama kodu ' . $kod,
+    };
 }
 
 /**
@@ -289,4 +353,72 @@ function http_bas_getir(string $url, int $bayt = 1024, int $zamanAsimi = 15, str
     }
 
     return ['tamam' => true, 'govde' => $tampon, 'neden' => ''] + $temel;
+}
+
+/**
+ * Sunucunun sunduğu sertifika zincirini YALNIZCA tanı için okur.
+ *
+ * Bu fonksiyon dogrulamayi kapatir. Bunun tek sebebi sorunun sebebini
+ * gorebilmek: dogrulama basarisiz oldugunda curl zinciri vermez, yani
+ * "hangi kurum imzalamis, ara sertifika gelmis mi" sorusunu ancak
+ * dogrulamadan baglanarak cevaplayabiliyoruz.
+ *
+ * Donen govde KULLANILMAZ ve kullanilmamalidir: burada okunan hicbir
+ * sey siteye yazilmaz, ziyaretciye gosterilmez, onbellege girmez.
+ * Yalnizca sertifikanin kim tarafindan verildigi bilgisi doner. Icerik
+ * cekmek icin her zaman http_getir / http_bas_getir kullanilir; onlar
+ * dogrulamayi acik tutar.
+ *
+ * @return list<string> Zincirdeki her sertifika icin "konu ← veren".
+ */
+function http_sertifika_zinciri(string $url, int $zamanAsimi = 10): array
+{
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => $zamanAsimi,
+        CURLOPT_CONNECTTIMEOUT => 8,
+        CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
+        CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CERTINFO       => true,
+        CURLOPT_NOBODY         => true,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => 0,
+    ]);
+
+    curl_exec($ch);
+    $zincir = curl_getinfo($ch, CURLINFO_CERTINFO);
+    curl_close($ch);
+
+    if (!is_array($zincir) || $zincir === []) {
+        return [];
+    }
+
+    $satirlar = [];
+
+    foreach ($zincir as $sertifika) {
+        $konu  = (string) ($sertifika['Subject'] ?? '');
+        $veren = (string) ($sertifika['Issuer'] ?? '');
+
+        $satirlar[] = http_ad_kisalt($konu) . ' ← ' . http_ad_kisalt($veren);
+    }
+
+    return $satirlar;
+}
+
+/**
+ * X.509 ad dizisinden yalnızca okunabilir kısmı alır.
+ *
+ * Ham ad "C=TR, O=..., CN=..." seklinde uzun; tanida isimize yarayan
+ * CN (ya da yoksa O) alani.
+ */
+function http_ad_kisalt(string $ad): string
+{
+    foreach (['CN', 'O'] as $alan) {
+        if (preg_match('/(?:^|,)\s*' . $alan . '\s*=\s*([^,]+)/', $ad, $es) === 1) {
+            return trim($es[1]);
+        }
+    }
+
+    return $ad === '' ? '?' : $ad;
 }
