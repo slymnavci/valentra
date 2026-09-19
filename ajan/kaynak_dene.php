@@ -80,41 +80,83 @@ function ayar(string $ad): string
 if ($kanunModu) {
     require_once __DIR__ . '/../includes/kanunlar.php';
 
-    $http    = new Http();
-    $kanunlar = kanun_listesi();
-    $kirik   = 0;
+    /*
+     * Site tarafiyla AYNI istemci ve AYNI kabul olcutu kullaniliyor.
+     *
+     * Ajanin kendi Http sinifi burada ise yaramiyordu: indirmeyi
+     * ilerleme geri cagrisiyla kesiyor, kesilince de curl_exec false
+     * donduruyor ve elde hic govde kalmiyor. Yani birkac kilobayttan
+     * buyuk her PDF — normal olanlar dahil — imza kontrolune takilip
+     * "kirik" gorunurdu.
+     *
+     * Olcutun de ayni olmasi sart: "2000 bayttan buyuk" demek, metni
+     * tarayicida dolan bos uygulama kabugunu ya da okunamayan ikili
+     * bir Word belgesini saglam saymak olurdu. Tani, sayfanin
+     * gosterebilecegi seyi sinamali; o yuzden metin gercekten
+     * ayiklanabiliyor mu diye bakiliyor.
+     */
+    require_once __DIR__ . '/../includes/kanun_metni.php';
 
-    yaz(count($kanunlar) . ' kanun bağlantısı sınanacak.');
+    $kanunlar = kanun_listesi();
+    $kirik    = 0;
+
+    yaz(count($kanunlar) . ' kanun için metin adresleri sınanacak.');
     yaz();
 
     foreach ($kanunlar as $kanun) {
-        $adres = kanun_adresi($kanun);
-        $yanit = $http->dene($adres);
-        $iyi   = $yanit['kod'] >= 200 && $yanit['kod'] < 300 && $yanit['boyut'] > 2000;
+        yaz(mb_substr($kanun['ad'], 0, 60));
 
-        if (!$iyi) {
+        $referer = kanun_referer($kanun);
+        $tutan   = '';
+
+        foreach (kanun_metin_adaylari($kanun) as $aday) {
+            if ($aday['tur'] === 'pdf') {
+                $yanit = http_bas_getir($aday['url'], 1024, 12, $referer);
+                $iyi   = $yanit['tamam'] && str_starts_with($yanit['govde'], '%PDF');
+                $not   = $yanit['tamam'] && !$iyi ? 'PDF değil' : $yanit['neden'];
+            } else {
+                $yanit = http_getir($aday['url'], 25, $referer);
+                $metin = '';
+
+                if ($yanit['tamam']) {
+                    $metin = $aday['tur'] === 'doc'
+                        ? kanun_word_html_ayikla($yanit['govde'])
+                        : kanun_govdeyi_ayikla($yanit['govde']);
+                }
+
+                $iyi = $metin !== '';
+                $not = $yanit['tamam'] && !$iyi ? 'metin ayıklanamadı' : $yanit['neden'];
+            }
+
+            if ($iyi && $tutan === '') {
+                $tutan = $aday['ad'];
+            }
+
+            yaz(sprintf(
+                '  %-3s %s HTTP %d, %d bayt%s',
+                $iyi ? 'OK' : 'X',
+                dolgu($aday['ad'], 20),
+                $yanit['kod'],
+                $yanit['boyut'],
+                $not !== '' ? ' (' . $not . ')' : ''
+            ));
+            yaz('      ' . $aday['url']);
+        }
+
+        if ($tutan === '') {
             $kirik++;
+            yaz('      Hiçbir adres tutmadı. Tertip numarası yanlış olabilir;');
+            yaz('      mevzuat.gov.tr\'de kanunu arayıp adresteki MevzuatTertip');
+            yaz('      değerine bakın. Tüm kanunlarda aynı sonuç çıkıyorsa sorun');
+            yaz('      adreslerde değil, bu ortamdan kaynağa çıkış olmamasındadır.');
         }
 
-        yaz(sprintf(
-            '  %-3s %-52s HTTP %d, %d bayt',
-            $iyi ? 'OK' : 'X',
-            mb_substr($kanun['ad'], 0, 52),
-            $yanit['kod'],
-            $yanit['boyut']
-        ));
-
-        if (!$iyi) {
-            yaz('      ' . $adres);
-            yaz('      Tertip numarası yanlış olabilir; mevzuat.gov.tr\'de');
-            yaz('      kanunu arayıp adresteki MevzuatTertip değerine bakın.');
-        }
+        yaz();
     }
 
-    yaz();
     yaz($kirik === 0
-        ? 'Tüm kanun bağlantıları çalışıyor.'
-        : $kirik . ' bağlantı kırık; includes/kanunlar.php içinde düzeltin.');
+        ? 'Tüm kanunlarda en az bir adres çalışıyor.'
+        : $kirik . ' kanunda hiçbir adres tutmadı.');
 
     exit($kirik === 0 ? 0 : 1);
 }

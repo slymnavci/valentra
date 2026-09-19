@@ -24,9 +24,13 @@ declare(strict_types=1);
  *
  * Erisim yine de garanti degil: mevzuat.gov.tr veri merkezi IP'lerini
  * engelliyor olabilir (GitHub uzerinden yapilan kontrol 12 adresin
- * 12'sine de HTTP 0 dondurdu; bu ortamdan da cikis kapali). Site
- * Turkiye'de barindigi icin oradan erisim mumkun. Hangi yolun
- * tuttugunu gormek icin: /kanun.php?k=213&tani=1
+ * 12'sine de HTTP 0 dondurdu; gelistirme ortamindan da cikis kapali).
+ * Site Turkiye'de barindigi icin oradan erisim mumkun — ama bunu ancak
+ * sunucunun kendisi soyleyebilir.
+ *
+ * Neyin nerede takildigini gormenin iki yolu var:
+ *   /kanun.php?k=213&tani=1   tek kanun icin, herkese acik
+ *   /admin/kanunlar.php       butun kanunlar, panelden
  */
 
 require_once __DIR__ . '/ayarlar.php';
@@ -37,22 +41,46 @@ require_once __DIR__ . '/http_ortak.php';
 const KANUN_ONBELLEK_SURE = 6 * 3600;
 
 /**
+ * Başarısızlığın önbellekte kalma süresi.
+ *
+ * Basarisizlik da onbellege giriyor, ama kisa sureligine. Aksi halde
+ * kaynak erisime kapaliyken sayfayi acan HER ziyaretci bes ayri
+ * istegin zaman asimini bastan bekliyor; sayfa dakikalarca acilmiyor
+ * ve sunucu bosuna yoruluyor. Kisa sure, kaynak geri geldiginde
+ * sayfanin da kendiliginden duzelmesini sagliyor.
+ */
+const KANUN_HATA_ONBELLEK_SURE = 600;
+
+/**
+ * Tüm denemelere ayrılan toplam süre.
+ *
+ * Ziyaretci bir sayfanin acilmasini sonsuza kadar beklemez. Butce
+ * dolunca kalan adaylar denenmeden "denenmedi" diye isaretlenir ve
+ * sayfa resmi kaynak baglantisina duser.
+ */
+const KANUN_SURE_BUTCESI = 25;
+
+/**
  * Kanunun sayfada nasıl gösterileceğini belirler.
  *
- * Uc yol sirayla deneniyor ve ilk tutan kullaniliyor:
- *   1) PDF  - resmi metnin duragan hali; tarayicinin kendi
- *             goruntuleyicisinde, kendi sayfamizin icinde acilir.
- *   2) DOC  - bazi kanunlarda Word-HTML olarak duruyor; ayiklanip
- *             metin olarak basilir.
- *   3) Sayfa- JavaScript uygulamasi oldugu icin genelde bos gelir,
- *             yine de son sans olarak deneniyor.
+ * Adaylar (bkz. kanun_metin_adaylari) sirayla deneniyor, ilk tutan
+ * kullaniliyor:
+ *   pdf   - resmi metnin duragan hali; tarayicinin kendi
+ *           goruntuleyicisinde, kendi sayfamizin icinde acilir.
+ *   doc   - bazi kanunlarda Word-HTML olarak duruyor; ayiklanip
+ *           metin olarak basilir.
+ *   sayfa - JavaScript uygulamasi oldugu icin genelde bos gelir,
+ *           yine de son sans olarak deneniyor.
  *
- * Sonuc (hangi yolun tuttugu ve varsa metin) onbellege yaziliyor;
+ * Ayni sunucuya baglanilamadiysa o sunucudaki diger adaylar
+ * denenmiyor: hepsi ayni sekilde ve ayni sureyi harcayarak duserdi.
+ *
+ * Sonuc (hangi adayin tuttugu ve varsa metin) onbellege yaziliyor;
  * PDF'in kendisi onbellege KONMUYOR, o her istekte kaynaktan
  * aktariliyor.
  *
- * @return array{tur:string,govde:string,neden:string,onbellek:bool,
- *               denemeler:list<array{ad:string,url:string,kod:int,sonuc:string}>}
+ * @return array{tur:string,govde:string,url:string,neden:string,onbellek:bool,
+ *               denemeler:list<array{ad:string,url:string,kod:int,sonuc:string,ayrinti:string}>}
  */
 function kanun_gosterim(array $kanun, bool $onbellekKullan = true): array
 {
@@ -66,87 +94,244 @@ function kanun_gosterim(array $kanun, bool $onbellekKullan = true): array
         }
     }
 
-    $adresler  = kanun_metin_adresleri($kanun);
+    $referer   = kanun_referer($kanun);
+    $baslangic = microtime(true);
     $denemeler = [];
     $sonuc     = null;
 
-    // 1) PDF: yalnizca bas kismi indirilip dosya imzasina bakiliyor.
-    $pdf = http_bas_getir($adresler['pdf'], 1024, 15);
+    /** @var array<string,string> Ulasilamayan sunucular ve sebepleri. */
+    $olu = [];
 
-    if (!$pdf['tamam']) {
-        $denemeler[] = ['ad' => 'PDF', 'url' => $adresler['pdf'],
-                        'kod' => $pdf['kod'], 'sonuc' => $pdf['neden']];
-    } elseif (!str_starts_with($pdf['govde'], '%PDF')) {
-        $denemeler[] = ['ad' => 'PDF', 'url' => $adresler['pdf'],
-                        'kod' => $pdf['kod'], 'sonuc' => 'Yanıt PDF değil.'];
-    } else {
-        $denemeler[] = ['ad' => 'PDF', 'url' => $adresler['pdf'],
-                        'kod' => $pdf['kod'], 'sonuc' => 'Tamam'];
-        $sonuc = ['tur' => 'pdf', 'govde' => '', 'neden' => ''];
-    }
+    /** @var array<string,list<string>> Sunucu basina sertifika zinciri. */
+    $zincirler = [];
 
-    // 2) DOC: Word-HTML ise ayikla.
-    if ($sonuc === null) {
-        $doc = http_getir($adresler['doc'], 25);
+    foreach (kanun_metin_adaylari($kanun) as $aday) {
+        $sunucu = kanun_sunucu($aday['url']);
 
-        if (!$doc['tamam']) {
-            $denemeler[] = ['ad' => 'DOC', 'url' => $adresler['doc'],
-                            'kod' => $doc['kod'], 'sonuc' => $doc['neden']];
-        } else {
-            $govde = kanun_word_html_ayikla($doc['govde']);
+        if ($sonuc !== null) {
+            break;
+        }
 
-            $denemeler[] = ['ad' => 'DOC', 'url' => $adresler['doc'],
-                            'kod' => $doc['kod'],
-                            'sonuc' => $govde === ''
-                                ? 'Dosya alındı (' . strlen($doc['govde'])
-                                  . ' bayt) ama metin ayıklanamadı.'
-                                : 'Tamam'];
+        if (isset($olu[$sunucu])) {
+            $denemeler[] = kanun_deneme($aday, 0, 'Denenmedi; ' . $olu[$sunucu], '');
+            continue;
+        }
 
-            if ($govde !== '') {
-                $sonuc = ['tur' => 'html', 'govde' => $govde, 'neden' => ''];
+        if (microtime(true) - $baslangic > KANUN_SURE_BUTCESI) {
+            $denemeler[] = kanun_deneme($aday, 0, 'Denenmedi; süre bütçesi doldu.', '');
+            continue;
+        }
+
+        if ($aday['tur'] === 'pdf') {
+            // Yalnizca bas kismi indirilip dosya imzasina bakiliyor.
+            $yanit = http_bas_getir($aday['url'], 1024, 12, $referer);
+
+            if (!$yanit['tamam']) {
+                $denemeler[] = kanun_deneme($aday, $yanit['kod'], $yanit['neden'], kanun_ayrinti($yanit));
+            } elseif (!str_starts_with($yanit['govde'], '%PDF')) {
+                $denemeler[] = kanun_deneme(
+                    $aday,
+                    $yanit['kod'],
+                    'Yanıt PDF değil; kaynak büyük ihtimalle hata sayfası döndürdü.',
+                    kanun_ayrinti($yanit)
+                );
+            } else {
+                $denemeler[] = kanun_deneme($aday, $yanit['kod'], 'Tamam', kanun_ayrinti($yanit));
+                $sonuc = ['tur' => 'pdf', 'govde' => '', 'url' => $aday['url'], 'neden' => ''];
             }
+        } else {
+            $yanit = http_getir($aday['url'], 25, $referer);
+
+            if (!$yanit['tamam']) {
+                $denemeler[] = kanun_deneme($aday, $yanit['kod'], $yanit['neden'], kanun_ayrinti($yanit));
+            } else {
+                $govde = $aday['tur'] === 'doc'
+                    ? kanun_word_html_ayikla($yanit['govde'])
+                    : kanun_govdeyi_ayikla($yanit['govde']);
+
+                if ($govde === '') {
+                    $denemeler[] = kanun_deneme(
+                        $aday,
+                        $yanit['kod'],
+                        $aday['tur'] === 'doc'
+                            ? 'Dosya alındı ama metin ayıklanamadı (ikili Word belgesi olabilir).'
+                            : 'Sayfa alındı ama metin yok; JavaScript ile doluyor.',
+                        kanun_ayrinti($yanit)
+                    );
+                } else {
+                    $denemeler[] = kanun_deneme($aday, $yanit['kod'], 'Tamam', kanun_ayrinti($yanit));
+                    $sonuc = ['tur' => 'html', 'govde' => $govde, 'url' => $aday['url'], 'neden' => ''];
+                }
+            }
+        }
+
+        /*
+         * Tani kipinde sertifika hatasinin SEBEBINI de goster.
+         *
+         * Zinciri okumak ayri bir istek gerektirdigi ve dogrulamayi
+         * kapattigi icin yalnizca tani kipinde, yani onbellek atlanmis
+         * bir istekte yapiliyor; ziyaretcinin gordugu normal sayfa
+         * bunu hic calistirmiyor.
+         */
+        if (!$onbellekKullan && isset($yanit) && !$yanit['tamam']
+            && (int) $yanit['dogrulama'] !== 0 && !isset($zincirler[$sunucu])) {
+            $zincirler[$sunucu] = http_sertifika_zinciri($aday['url']);
+        }
+
+        if (!$onbellekKullan && isset($yanit) && ($zincirler[$sunucu] ?? []) !== []) {
+            $son = array_key_last($denemeler);
+
+            $denemeler[$son]['ayrinti'] .= ' · zincir: '
+                . implode(' | ', $zincirler[$sunucu]);
+        }
+
+        // Sunucuya hic ulasilamadiysa oradaki diger adaylari es gec.
+        if ($sonuc === null && isset($yanit) && !$yanit['tamam']
+            && http_baglanti_hatasi_mi((int) $yanit['hata_no'], (bool) $yanit['baglandi'])) {
+            $olu[$sunucu] = mb_strtolower(mb_substr($yanit['neden'], 0, 1), 'UTF-8')
+                          . mb_substr($yanit['neden'], 1);
         }
     }
 
-    // 3) Son care: uygulamanin kendi sayfasi.
     if ($sonuc === null) {
-        $sayfa = http_getir($adresler['sayfa'], 25);
-
-        if (!$sayfa['tamam']) {
-            $denemeler[] = ['ad' => 'Sayfa', 'url' => $adresler['sayfa'],
-                            'kod' => $sayfa['kod'], 'sonuc' => $sayfa['neden']];
-        } else {
-            $govde = kanun_govdeyi_ayikla($sayfa['govde']);
-
-            $denemeler[] = ['ad' => 'Sayfa', 'url' => $adresler['sayfa'],
-                            'kod' => $sayfa['kod'],
-                            'sonuc' => $govde === ''
-                                ? 'Sayfa alındı (' . strlen($sayfa['govde'])
-                                  . ' bayt) ama metin yok; JavaScript ile doluyor.'
-                                : 'Tamam'];
-
-            if ($govde !== '') {
-                $sonuc = ['tur' => 'html', 'govde' => $govde, 'neden' => ''];
-            }
-        }
-    }
-
-    if ($sonuc === null) {
-        return [
-            'tur'       => 'yok',
-            'govde'     => '',
-            'neden'     => kanun_neden_ozetle($denemeler),
-            'onbellek'  => false,
-            'denemeler' => $denemeler,
+        $basarisiz = [
+            'tur'   => 'yok',
+            'govde' => '',
+            'url'   => '',
+            'neden' => kanun_neden_ozetle($denemeler),
         ];
+
+        kanun_onbellege($anahtar, $basarisiz);
+
+        return $basarisiz + ['onbellek' => false, 'denemeler' => $denemeler];
     }
 
+    kanun_onbellege($anahtar, $sonuc);
+
+    return $sonuc + ['onbellek' => false, 'denemeler' => $denemeler];
+}
+
+/**
+ * Adresin sunucu kimliği.
+ *
+ * "Ayni sunucuya ulasilamiyorsa oradaki diger adresleri deneme"
+ * kuralinin anahtari. Port da dahil: ayni makinedeki farkli bir port
+ * farkli bir servistir ve biri kapaliyken digeri acik olabilir.
+ */
+function kanun_sunucu(string $url): string
+{
+    $parcalar = parse_url($url);
+    $sunucu   = (string) ($parcalar['host'] ?? '');
+
+    return isset($parcalar['port'])
+        ? $sunucu . ':' . (int) $parcalar['port']
+        : $sunucu;
+}
+
+/**
+ * Tanı ekranında gösterilen tek deneme satırı.
+ *
+ * @param array{ad:string,tur:string,url:string} $aday
+ * @return array{ad:string,url:string,kod:int,sonuc:string,ayrinti:string}
+ */
+function kanun_deneme(array $aday, int $kod, string $sonuc, string $ayrinti): array
+{
+    return ['ad' => $aday['ad'], 'url' => $aday['url'],
+            'kod' => $kod, 'sonuc' => $sonuc, 'ayrinti' => $ayrinti];
+}
+
+/**
+ * Bir yanıtın ölçülen ayrıntılarını tek satıra yazar.
+ *
+ * "HTTP 200 ama olmadi" durumlarini birbirinden ayiran sey bu: gelen
+ * icerik turu text/html ise kaynak hata sayfasi dondurmus, sure
+ * zaman asimina yakinsa yavaslik var, son adres farkliysa istek
+ * baska yere yonlenmis demektir.
+ *
+ * @param array{tur?:string,boyut?:int,sure?:float,son_url?:string,hata_no?:int} $yanit
+ */
+function kanun_ayrinti(array $yanit): string
+{
+    $parcalar = [];
+
+    if (($yanit['tur'] ?? '') !== '') {
+        $parcalar[] = (string) $yanit['tur'];
+    }
+
+    $parcalar[] = (int) ($yanit['boyut'] ?? 0) . ' bayt';
+    $parcalar[] = number_format((float) ($yanit['sure'] ?? 0), 1) . ' sn';
+
+    if ((int) ($yanit['hata_no'] ?? 0) !== 0) {
+        $parcalar[] = 'curl ' . (int) $yanit['hata_no'];
+    }
+
+    $dogrulama = http_dogrulama_acikla((int) ($yanit['dogrulama'] ?? 0));
+
+    if ($dogrulama !== '') {
+        $parcalar[] = $dogrulama;
+    }
+
+    $sonUrl = (string) ($yanit['son_url'] ?? '');
+
+    if ($sonUrl !== '') {
+        $parcalar[] = 'son adres: ' . $sonUrl;
+    }
+
+    return implode(' · ', $parcalar);
+}
+
+/**
+ * Kararı önbelleğe yazar.
+ *
+ * @param array{tur:string,govde:string,url:string,neden:string} $sonuc
+ */
+function kanun_onbellege(string $anahtar, array $sonuc): void
+{
     ayar_yaz($anahtar, json_encode(
         ['zaman' => time()] + $sonuc,
         JSON_UNESCAPED_UNICODE
     ));
+}
 
-    return $sonuc + ['onbellek' => false, 'denemeler' => $denemeler];
+/**
+ * Önbellekteki PDF adresini ya da çalışan ilk adayı verir.
+ *
+ * PDF'i aktaran uc (api/kanun-pdf.php) bunu kullanir: sayfa zaten hangi
+ * adayin tuttugunu bulmus durumda, ayni aramayi bir daha yapmanin
+ * anlami yok. Onbellek yoksa (ornegin PDF dogrudan adres cubuguna
+ * yazildiysa) adaylar yeniden deneniyor.
+ */
+function kanun_pdf_adresi(array $kanun): ?string
+{
+    $onbellek = kanun_onbellekten('kanun_gosterim_' . (int) $kanun['no']);
+
+    if ($onbellek !== null && $onbellek['tur'] === 'pdf' && $onbellek['url'] !== '') {
+        return $onbellek['url'];
+    }
+
+    $referer = kanun_referer($kanun);
+    $olu     = [];
+
+    foreach (kanun_pdf_adaylari($kanun) as $aday) {
+        $sunucu = kanun_sunucu($aday['url']);
+
+        if (isset($olu[$sunucu])) {
+            continue;
+        }
+
+        $yanit = http_bas_getir($aday['url'], 1024, 12, $referer);
+
+        if ($yanit['tamam'] && str_starts_with($yanit['govde'], '%PDF')) {
+            return $aday['url'];
+        }
+
+        if (!$yanit['tamam']
+            && http_baglanti_hatasi_mi((int) $yanit['hata_no'], (bool) $yanit['baglandi'])) {
+            $olu[$sunucu] = true;
+        }
+    }
+
+    return null;
 }
 
 /**
@@ -193,11 +378,15 @@ function kanun_word_html_ayikla(string $govde): string
 /**
  * Önbellekteki kararı döndürür.
  *
- * Yalnizca "hangi yol tuttu" ve varsa metin saklaniyor. PDF yolunda
- * dosyanin kendisi saklanmiyor: kanun metninin kalici kopyasini
- * tutmamak bilincli bir tercih (bkz. dosya basi).
+ * Yalnizca "hangi aday tuttu", tuttuysa adresi ve varsa metin
+ * saklaniyor. PDF yolunda dosyanin kendisi saklanmiyor: kanun metninin
+ * kalici kopyasini tutmamak bilincli bir tercih (bkz. dosya basi).
  *
- * @return array{tur:string,govde:string,neden:string}|null
+ * Basarisizlik da saklaniyor ama cok daha kisa sure icin; boylece
+ * kaynak kapaliyken her ziyaretci bastan bes zaman asimi beklemiyor,
+ * kaynak acilinca da sayfa kendiliginden duzeliyor.
+ *
+ * @return array{tur:string,govde:string,url:string,neden:string}|null
  */
 function kanun_onbellekten(string $anahtar): ?array
 {
@@ -213,14 +402,18 @@ function kanun_onbellekten(string $anahtar): ?array
         return null;
     }
 
-    if (time() - (int) $veri['zaman'] > KANUN_ONBELLEK_SURE) {
+    $tur   = (string) $veri['tur'];
+    $omur  = $tur === 'yok' ? KANUN_HATA_ONBELLEK_SURE : KANUN_ONBELLEK_SURE;
+
+    if (time() - (int) $veri['zaman'] > $omur) {
         return null;
     }
 
     return [
-        'tur'   => (string) $veri['tur'],
+        'tur'   => $tur,
         'govde' => (string) ($veri['govde'] ?? ''),
-        'neden' => '',
+        'url'   => (string) ($veri['url'] ?? ''),
+        'neden' => (string) ($veri['neden'] ?? ''),
     ];
 }
 

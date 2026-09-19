@@ -1430,13 +1430,111 @@ a.menu-oge.aktif::after,
     color: var(--metin-soluk);
 }
 
-/* Kanun sayfasindaki yonetici tanisi: ziyaretciye gorunmez. */
+/*
+ * Metin getirilemediginde gosterilen panel.
+ *
+ * Bilerek hata rengi kullanilmiyor. Ziyaretci acisindan burada bozulan
+ * bir sey yok: aradigi metin duruyor, yalnizca baska bir adreste. Kirmizi
+ * bir serit sayfayi arizali gosteriyordu; bu panel ise calisan iki yolu
+ * one cikariyor.
+ */
+.kanun-duser {
+    background: var(--kart);
+    border: 1px solid var(--cizgi);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    border-top: 3px solid var(--altin);
+    padding: 40px 28px 34px;
+    margin: 18px 0 8px;
+    text-align: center;
+}
+
+.kanun-duser-simge {
+    width: 40px;
+    height: 40px;
+    fill: none;
+    stroke: var(--altin-koyu);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    margin-bottom: 12px;
+}
+
+.kanun-duser h2 {
+    margin: 0 0 8px;
+    font-size: 1.22rem;
+}
+
+.kanun-duser > p {
+    margin: 0 auto 20px;
+    max-width: 56ch;
+    font-size: .92rem;
+    line-height: 1.6;
+    color: var(--metin-soluk);
+}
+
+.kanun-duser-yollar {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.kanun-duser-yollar a {
+    font-size: .86rem;
+    font-weight: 700;
+    padding: 11px 20px;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.dugme-birincil {
+    background: var(--lacivert);
+    color: #fff;
+}
+
+.dugme-birincil:hover { background: var(--lacivert-acik); }
+
+.dugme-ikincil {
+    border: 1px solid var(--cizgi);
+    color: var(--metin);
+}
+
+.dugme-ikincil:hover { border-color: var(--lacivert); color: var(--vurgu); }
+
+.kanun-duser-not {
+    margin: 20px auto 0;
+    max-width: 56ch;
+    font-size: .8rem;
+    color: var(--metin-soluk);
+}
+
+.kanun-duser-not a { color: var(--vurgu); text-decoration: underline; }
+
+/* Kanun sayfasindaki yonetici tanisi: ziyaretciye gorunmez.
+   Acilir blok: kapaliyken sayfayi bozmuyor, acilinca ayrintiyi veriyor. */
 .kanun-tani {
-    display: block;
-    margin-top: 8px;
-    font-size: .82rem;
-    opacity: .85;
+    margin: 22px auto 0;
+    max-width: 70ch;
+    text-align: left;
+    font-size: .8rem;
+    border: 1px dashed var(--cizgi);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--metin-soluk);
+}
+
+.kanun-tani summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--metin);
+}
+
+.kanun-tani p {
+    margin: 8px 0 0;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    line-height: 1.55;
+    word-break: break-word;
 }
 
 /* Kanun metni PDF olarak geldiginde sayfanin icinde acilir.
