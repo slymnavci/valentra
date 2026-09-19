@@ -437,3 +437,77 @@ function ziyaret_online_sayfalar(int $adet = 10): array
         return [];
     }
 }
+
+/**
+ * Aralıktaki ziyaretçiler, her biri için gezinti özeti.
+ *
+ * "Hangi ziyaretci nereye girmis" sorusunun ust yarisi. Alt yarisi
+ * ziyaret_gezinti(): bir kisiye tiklayinca gezdigi butun sayfalar.
+ *
+ * Kimlik yerine takma ad kullaniliyor — ham IP zaten saklanmiyor
+ * (bkz. dosya basi). Analiz icin gereken sey "ayni kisi mi" bilgisi ve
+ * bunu takma ad da veriyor: bir ziyaretcinin kac sayfa gezdigini,
+ * nereden gelip nerede biraktigini eksiksiz gosteriyor.
+ *
+ * Son sayfa MAX(id) ile bulunuyor; zamanla ayni siradadir ve ayni
+ * saniyeye denk gelen iki kayitta hangisinin sonuncu oldugunu
+ * MAX(zaman)'in aksine dogru soyler.
+ *
+ * @return list<array<string,mixed>>
+ */
+function ziyaret_ziyaretciler(int $gun = 7, int $adet = 50): array
+{
+    try {
+        return db()->query(
+            'SELECT o.ziyaretci, o.ilk, o.son, o.sayfa, o.yonlendiren,
+                    s.yol AS son_yol, s.baslik AS son_baslik
+               FROM (SELECT ziyaretci,
+                            MIN(zaman) AS ilk,
+                            MAX(zaman) AS son,
+                            COUNT(*)   AS sayfa,
+                            MAX(id)    AS son_id,
+                            -- Ziyaretcinin nereden geldigi ilk istekte
+                            -- belli olur; sonraki sayfalarda yonlendiren
+                            -- bos kalir, o yuzden dolu olan aliniyor.
+                            MAX(CASE WHEN yonlendiren <> "" THEN yonlendiren END) AS yonlendiren
+                       FROM ziyaretler
+                      WHERE zaman >= (CURDATE() - INTERVAL ' . max(0, $gun - 1) . ' DAY)
+                      GROUP BY ziyaretci) o
+               JOIN ziyaretler s ON s.id = o.son_id
+              ORDER BY o.son DESC
+              LIMIT ' . max(1, min(200, $adet))
+        )->fetchAll();
+    } catch (Throwable $e) {
+        return [];
+    }
+}
+
+/**
+ * Bir ziyaretçinin gezdiği sayfalar, sırasıyla.
+ *
+ * Imza dogrulanmadan sorguya girmiyor: 16 haneli onaltilik disinda bir
+ * sey gelirse bos donuyor. Deger yine de hazir ifadeyle gonderiliyor.
+ *
+ * @return list<array<string,mixed>>
+ */
+function ziyaret_gezinti(string $imza, int $adet = 300): array
+{
+    if (preg_match('/^[0-9a-f]{16}$/', $imza) !== 1) {
+        return [];
+    }
+
+    try {
+        $ifade = db()->prepare(
+            'SELECT zaman, yol, baslik, haber_id, yonlendiren
+               FROM ziyaretler
+              WHERE ziyaretci = :z
+              ORDER BY id
+              LIMIT ' . max(1, min(1000, $adet))
+        );
+        $ifade->execute(['z' => $imza]);
+
+        return $ifade->fetchAll();
+    } catch (Throwable $e) {
+        return [];
+    }
+}

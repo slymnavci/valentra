@@ -40,7 +40,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
                 <article class="kanun">
                     <?php /* Site icinde acilir; o sayfada resmi kaynaga
                              giden bag da duruyor. */ ?>
-                    <a href="/kanun.php?k=<?= e(kanun_anahtari($kanun)) ?>">
+                    <a href="<?= e(kanun_yolu(kanun_anahtari($kanun))) ?>">
                         <div class="kanun-ust">
                             <h3><?= e($kanun['ad']) ?></h3>
                             <span class="kanun-no"><?= (int) $kanun['no'] ?> sayılı</span>

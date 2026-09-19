@@ -38,6 +38,7 @@
                 <a href="pratik.php">Pratik bilgiler</a>
                 <a href="kaynaklar.php">Kaynaklar</a>
                 <a href="kanunlar.php">Kanun metinleri</a>
+                <a href="seo.php">Arama motoru</a>
                 <a href="veritabani.php">Veritabanı</a>
                 <a href="anahtarlar.php">Ajan anahtarları</a>
                 <a href="cikis.php"><?= e(aktif_yonetici_ad()) ?> — Çıkış</a>

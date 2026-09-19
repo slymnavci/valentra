@@ -33,6 +33,18 @@ $sayfalar   = ziyaret_populer_sayfalar($aralik, 10);
 $kaynaklar  = ziyaret_yonlendirenler($aralik, 10);
 $online     = ziyaret_online_sayfalar(10);
 
+/*
+ * Tek bir ziyaretcinin gezintisi.
+ *
+ * "Hangi ziyaretci nereye girmis" sorusunun cevabi burada. Kimlik
+ * yerine takma ad kullaniliyor; ham IP zaten hicbir yerde saklanmiyor
+ * (bkz. includes/ziyaret.php basi). Analiz icin gereken "ayni kisi mi"
+ * bilgisini takma ad da veriyor.
+ */
+$kisi     = trim((string) ($_GET['kisi'] ?? ''));
+$gezinti  = $kisi !== '' ? ziyaret_gezinti($kisi) : [];
+$kisiler  = ziyaret_ziyaretciler($aralik, 100);
+
 /** Grafikte en yuksek sutun; hepsi buna gore olceklenir. */
 $enYuksek = max(1, max(array_column($gunluk, 'goruntulenme')));
 
@@ -250,6 +262,111 @@ require __DIR__ . '/ust.php';
             </p>
         <?php endif; ?>
     </div>
+</div>
+
+<?php if ($kisi !== ''): ?>
+    <!-- Tek ziyaretcinin gezintisi -->
+    <div class="kutu" style="margin-top:22px;">
+        <h2 style="margin-top:0;">
+            Ziyaretçi <code><?= e($kisi) ?></code> nereye girdi
+        </h2>
+
+        <?php if ($gezinti === []): ?>
+            <p class="ipucu">
+                Bu takma kimlikle kayıt bulunamadı. Kayıtlar
+                <?= (int) ZIYARET_SAKLAMA_GUN ?> gün sonra silinir.
+            </p>
+        <?php else: ?>
+            <table class="liste-tablo">
+                <thead>
+                    <tr>
+                        <th>Zaman</th>
+                        <th>Sayfa</th>
+                        <th>Adres</th>
+                        <th>Nereden</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($gezinti as $adim): ?>
+                    <tr>
+                        <td><?= e(date('d.m.Y H:i:s', strtotime((string) $adim['zaman']))) ?></td>
+                        <td>
+                            <?= e(((string) $adim['baslik']) !== ''
+                                ? (string) $adim['baslik']
+                                : '—') ?>
+                        </td>
+                        <td class="kirp"><?= e((string) $adim['yol']) ?></td>
+                        <td>
+                            <?= e(((string) $adim['yonlendiren']) !== ''
+                                ? (string) $adim['yonlendiren']
+                                : '(doğrudan)') ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <p class="ipucu" style="margin-bottom:0;">
+                <?= count($gezinti) ?> sayfa görüntülemesi.
+                <a href="istatistik.php?gun=<?= (int) $aralik ?>">Listeye dön</a>
+            </p>
+        <?php endif; ?>
+    </div>
+<?php endif; ?>
+
+<!-- Ziyaretciler -->
+<div class="kutu" style="margin-top:22px;">
+    <h2 style="margin-top:0;">Ziyaretçiler</h2>
+
+    <p class="ipucu">
+        Her satır bir ziyaretçi. Takma kimliğe tıklayınca o ziyaretçinin
+        gezdiği bütün sayfalar sırasıyla açılır.
+        <strong>IP adresi saklanmıyor:</strong> kayıt anında IP, tarayıcı
+        kimliği ve gizli bir tuzla birlikte geri çevrilemez biçimde
+        özetleniyor. Bu yüzden listede IP göremezsiniz; “aynı kişi mi,
+        nereye girdi, ne kadar kaldı” sorularının hepsi yine yanıtlanıyor.
+    </p>
+
+    <?php if ($kisiler === []): ?>
+        <p class="ipucu">Bu aralıkta kayıt yok.</p>
+    <?php else: ?>
+        <table class="liste-tablo">
+            <thead>
+                <tr>
+                    <th>Takma kimlik</th>
+                    <th class="sag">Sayfa</th>
+                    <th>İlk</th>
+                    <th>Son</th>
+                    <th>Son baktığı</th>
+                    <th>Nereden</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($kisiler as $satir): ?>
+                <tr>
+                    <td>
+                        <a href="?gun=<?= (int) $aralik ?>&amp;kisi=<?= e((string) $satir['ziyaretci']) ?>">
+                            <code><?= e((string) $satir['ziyaretci']) ?></code>
+                        </a>
+                    </td>
+                    <td class="sag"><strong><?= number_format((int) $satir['sayfa']) ?></strong></td>
+                    <td><?= e(date('d.m H:i', strtotime((string) $satir['ilk']))) ?></td>
+                    <td><?= e(date('d.m H:i', strtotime((string) $satir['son']))) ?></td>
+                    <td class="kirp">
+                        <?= e(((string) $satir['son_baslik']) !== ''
+                            ? (string) $satir['son_baslik']
+                            : (string) $satir['son_yol']) ?>
+                    </td>
+                    <td>
+                        <?= e(((string) ($satir['yonlendiren'] ?? '')) !== ''
+                            ? (string) $satir['yonlendiren']
+                            : '(doğrudan)') ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
 </div>
 
 <?php require __DIR__ . '/alt.php'; ?>

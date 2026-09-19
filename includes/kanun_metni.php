@@ -105,7 +105,7 @@ function kanun_gosterim(array $kanun, bool $onbellekKullan = true): array
     /** @var array<string,list<string>> Sunucu basina sertifika zinciri. */
     $zincirler = [];
 
-    foreach (kanun_metin_adaylari($kanun) as $aday) {
+    foreach (kanun_tum_adaylar($kanun) as $aday) {
         $sunucu = kanun_sunucu($aday['url']);
 
         if ($sonuc !== null) {
@@ -173,8 +173,11 @@ function kanun_gosterim(array $kanun, bool $onbellekKullan = true): array
          * bir istekte yapiliyor; ziyaretcinin gordugu normal sayfa
          * bunu hic calistirmiyor.
          */
-        if (!$onbellekKullan && isset($yanit) && !$yanit['tamam']
-            && (int) $yanit['dogrulama'] !== 0 && !isset($zincirler[$sunucu])) {
+        $sertifikaHatasi = isset($yanit) && !$yanit['tamam']
+            && ((int) $yanit['dogrulama'] !== 0
+                || in_array((int) $yanit['hata_no'], [35, 51, 60, 77], true));
+
+        if (!$onbellekKullan && $sertifikaHatasi && !isset($zincirler[$sunucu])) {
             $zincirler[$sunucu] = http_sertifika_zinciri($aday['url']);
         }
 
@@ -226,6 +229,106 @@ function kanun_sunucu(string $url): string
     return isset($parcalar['port'])
         ? $sunucu . ':' . (int) $parcalar['port']
         : $sunucu;
+}
+
+/**
+ * Yönetici tarafından girilen yedek kaynak adresi.
+ *
+ * Neden gerekli: mevzuat.gov.tr'ye erisim sunucudan sunucuya degisiyor
+ * ve bizim elimizde olmayan sebeplerle kapanabiliyor. Boyle bir durumda
+ * kanun metnini gosterebilmek icin baska bir adresin denenebilmesi
+ * lazim — ve o adresin kodda sabit olmasi ise yaramaz, cunku hangi
+ * kaynagin acik oldugu ancak sunucunun kendisinden denenerek anlasiliyor.
+ * Panelden girilen adres butun adaylardan ONCE deneniyor.
+ *
+ * Adres kendi listemizden degil yoneticiden geliyor, o yuzden sema
+ * dogrulamasindan geciriliyor (yalnizca http/https).
+ */
+function kanun_yedek_oku(int $no): string
+{
+    return guvenli_url(ayar_oku('kanun_yedek_' . $no));
+}
+
+/** Yedek kaynağı kaydeder; boş adres kaydı siler. */
+function kanun_yedek_yaz(int $no, string $url): void
+{
+    $url = guvenli_url($url);
+
+    if ($url === '') {
+        ayar_sil('kanun_yedek_' . $no);
+
+        return;
+    }
+
+    ayar_yaz('kanun_yedek_' . $no, $url);
+}
+
+/**
+ * Denenecek adayların tamamı: önce yedek, sonra resmî adresler.
+ *
+ * Yedegin turu uzantisindan anlasiliyor. Bilinmiyorsa "sayfa" kabul
+ * ediliyor; o yol metni HTML icinden ayikliyor, yani bir kanun metni
+ * sayfasi veriliyorsa calisir.
+ *
+ * @return list<array{ad:string,tur:string,url:string}>
+ */
+function kanun_tum_adaylar(array $kanun): array
+{
+    $adaylar = kanun_metin_adaylari($kanun);
+    $yedek   = kanun_yedek_oku((int) $kanun['no']);
+
+    if ($yedek === '') {
+        return $adaylar;
+    }
+
+    $yol = strtolower((string) parse_url($yedek, PHP_URL_PATH));
+
+    $tur = match (true) {
+        str_ends_with($yol, '.pdf') => 'pdf',
+        str_ends_with($yol, '.doc'), str_ends_with($yol, '.docx') => 'doc',
+        default => 'sayfa',
+    };
+
+    array_unshift($adaylar, ['ad' => 'Yedek kaynak', 'tur' => $tur, 'url' => $yedek]);
+
+    return $adaylar;
+}
+
+/**
+ * kanun_gosterim()'in hiçbir koşulda istisna fırlatmayan hâli.
+ *
+ * Sayfa sablonu bu sarmalayici uzerinden cagiriyor. Sebebi canlida
+ * yasandi: metin getirme yolunda olusan bir istisna sayfanin ustu
+ * basildiktan SONRA firliyordu, yani ziyaretci once menuyu sonra
+ * "Bir hata olustu" kutusunu goruyordu. Oysa bu sayfanin metin
+ * gelmediginde ne gosterecegi zaten belli — resmi kaynak baglantilari.
+ *
+ * Bir kanun metnini getirememek sayfayi dusurmeyi hak eden bir durum
+ * degil. Sebep gunluge yaziliyor ve yoneticiye gosteriliyor;
+ * ziyaretci calisan yollari goruyor.
+ *
+ * @return array{tur:string,govde:string,url:string,neden:string,onbellek:bool,
+ *               denemeler:list<array{ad:string,url:string,kod:int,sonuc:string,ayrinti:string}>}
+ */
+function kanun_gosterim_guvenli(array $kanun, bool $onbellekKullan = true): array
+{
+    try {
+        return kanun_gosterim($kanun, $onbellekKullan);
+    } catch (Throwable $e) {
+        error_log('[valentra] kanun metni alinamadi (' . (int) $kanun['no'] . '): '
+                . get_class($e) . ': ' . $e->getMessage()
+                . ' @ ' . $e->getFile() . ':' . $e->getLine());
+
+        return [
+            'tur'       => 'yok',
+            'govde'     => '',
+            'url'       => '',
+            'neden'     => 'Beklenmeyen hata: ' . $e->getMessage()
+                         . ' (' . basename($e->getFile()) . ':' . $e->getLine() . ')',
+            'onbellek'  => false,
+            'denemeler' => [],
+        ];
+    }
 }
 
 /**
@@ -283,14 +386,42 @@ function kanun_ayrinti(array $yanit): string
 /**
  * Kararı önbelleğe yazar.
  *
+ * Onbellek bir HIZLANDIRMA; basarisiz olmasi sayfayi dusurmemeli.
+ * Ilk surumde oyle degildi ve kanun sayfasi canlida 500 verdi: yazma
+ * sirasinda olusan her hata dogrudan ziyaretciye gidiyordu.
+ *
+ * Iki tuzak vardi:
+ *   - json_encode gecersiz UTF-8'de false doner. Kaynaktan gelen metin
+ *     her zaman temiz UTF-8 degil; false'u ayar_yaz'a vermek katı tip
+ *     denetiminde TypeError firlatir.
+ *   - Metin ayarlar tablosundaki TEXT sutununa sigmayabilir (VUK gibi
+ *     bir kanun 64 KB'i asar). Sigmayan yazma veritabani hatasi verir.
+ *     Metin cok buyukse yalnizca KARAR saklaniyor; bir sonraki istek
+ *     kaynaktan yeniden okur, yani dogruluk bozulmaz, sadece onbellek
+ *     kazanci kalmaz.
+ *
  * @param array{tur:string,govde:string,url:string,neden:string} $sonuc
  */
 function kanun_onbellege(string $anahtar, array $sonuc): void
 {
-    ayar_yaz($anahtar, json_encode(
-        ['zaman' => time()] + $sonuc,
-        JSON_UNESCAPED_UNICODE
-    ));
+    // TEXT sutununun siniri 65.535 BAYT; guvenli tarafta kaliyoruz.
+    if (strlen($sonuc['govde']) > 50000) {
+        $sonuc['govde'] = '';
+        $sonuc['tur']   = 'yok';
+        $sonuc['neden'] = 'Metin önbelleğe sığmayacak kadar uzun.';
+    }
+
+    $json = json_encode(['zaman' => time()] + $sonuc, JSON_UNESCAPED_UNICODE);
+
+    if (!is_string($json)) {
+        return;
+    }
+
+    try {
+        ayar_yaz($anahtar, $json);
+    } catch (Throwable $e) {
+        error_log('[valentra] kanun onbellegi yazilamadi: ' . $e->getMessage());
+    }
 }
 
 /**
@@ -312,7 +443,12 @@ function kanun_pdf_adresi(array $kanun): ?string
     $referer = kanun_referer($kanun);
     $olu     = [];
 
-    foreach (kanun_pdf_adaylari($kanun) as $aday) {
+    $pdfAdaylari = array_values(array_filter(
+        kanun_tum_adaylar($kanun),
+        static fn (array $a): bool => $a['tur'] === 'pdf'
+    ));
+
+    foreach ($pdfAdaylari as $aday) {
         $sunucu = kanun_sunucu($aday['url']);
 
         if (isset($olu[$sunucu])) {
