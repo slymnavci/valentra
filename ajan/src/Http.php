@@ -31,12 +31,41 @@ final class Http implements Indirici
     ) {
     }
 
-    /** Başarısızlıkta null döner; çağıran tarafta akış durmaz. */
-    public function indir(string $url, int $enFazlaBayt = 2_000_000): ?string
+    /**
+     * Siteyle birlikte gönderilen kök sertifika listesinin yolu.
+     *
+     * Kaynak testinde Resmi Gazete "SSL certificate problem: unable to
+     * get local issuer certificate" verdi. Sunucunun sertifikasi
+     * gecerli; eksik olan ARA sertifika ve calisma ortaminin kok
+     * listesi bunu tamamlayamiyor. Depoda bu is icin hazirlanmis
+     * guncel bir liste zaten var ve site tarafi onu kullaniyordu
+     * (includes/http_ortak.php); ajan tarafi geride kalmisti.
+     *
+     * Dogrulamayi KAPATMAK degil: VERIFYPEER => false siteyi araya
+     * giren birinin sahte sertifikasina acik birakirdi.
+     *
+     * Dosya yoksa null doner ve sistemin kendi listesi kullanilir.
+     */
+    private function caPaketi(): ?string
     {
-        $ch = curl_init($url);
+        $yol = \dirname(__DIR__, 2) . '/includes/sertifika/ca-bundle.crt';
 
-        curl_setopt_array($ch, [
+        return is_readable($yol) ? $yol : null;
+    }
+
+    /**
+     * Her iki curl çağrısının ortak seçenekleri.
+     *
+     * Ayni ayarlar indir() ve dene() icinde birebir tekrarlaniyordu;
+     * birinde yapilan duzeltme digerine gecmiyordu. Tarayici kimligi
+     * ve kok sertifika listesi gibi ayarlarin tek bir yerde durmasi
+     * sart, yoksa tani araci ajandan farkli davranir.
+     *
+     * @return array<int,mixed>
+     */
+    private function ortakSecenekler(int $enFazlaBayt): array
+    {
+        $secenekler = [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_MAXREDIRS      => 4,
@@ -55,7 +84,23 @@ final class Http implements Indirici
             CURLOPT_PROGRESSFUNCTION => static function ($ch, $inecek, $inen) use ($enFazlaBayt): int {
                 return $inen > $enFazlaBayt ? 1 : 0;
             },
-        ]);
+        ];
+
+        $ca = $this->caPaketi();
+
+        if ($ca !== null) {
+            $secenekler[CURLOPT_CAINFO] = $ca;
+        }
+
+        return $secenekler;
+    }
+
+    /** Başarısızlıkta null döner; çağıran tarafta akış durmaz. */
+    public function indir(string $url, int $enFazlaBayt = 2_000_000): ?string
+    {
+        $ch = curl_init($url);
+
+        curl_setopt_array($ch, $this->ortakSecenekler($enFazlaBayt));
 
         $govde = curl_exec($ch);
         $kod   = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
@@ -81,25 +126,7 @@ final class Http implements Indirici
     {
         $ch = curl_init($url);
 
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS      => 4,
-            CURLOPT_TIMEOUT        => $this->zamanAsimi,
-            CURLOPT_CONNECTTIMEOUT => 7,
-            CURLOPT_USERAGENT      => $this->kullaniciAjani,
-            CURLOPT_HTTPHEADER     => [
-                'Accept: application/rss+xml, application/atom+xml, application/xml, text/xml, text/html;q=0.9, */*;q=0.8',
-                'Accept-Language: tr-TR,tr;q=0.9,en;q=0.8',
-            ],
-            CURLOPT_ENCODING       => '',
-            CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
-            CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
-            CURLOPT_NOPROGRESS     => false,
-            CURLOPT_PROGRESSFUNCTION => static function ($ch, $inecek, $inen) use ($enFazlaBayt): int {
-                return $inen > $enFazlaBayt ? 1 : 0;
-            },
-        ]);
+        curl_setopt_array($ch, $this->ortakSecenekler($enFazlaBayt));
 
         $govde = curl_exec($ch);
 

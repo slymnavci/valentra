@@ -29,10 +29,7 @@ final class Besleme
             return [];
         }
 
-        $onceki = libxml_use_internal_errors(true);
-        $xml = simplexml_load_string($ham);
-        libxml_clear_errors();
-        libxml_use_internal_errors($onceki);
+        $xml = $this->xmlCozumle($ham);
 
         if ($xml === false) {
             return [];
@@ -62,6 +59,72 @@ final class Besleme
         }
 
         return $sonuc;
+    }
+
+    /**
+     * Beslemeyi çözümler; katı ayrıştırma düşerse kurtarmayı dener.
+     *
+     * NEDEN GEREKLI: kaynak testinde Milliyet, Muhasebe News, VOA ve
+     * Patronlar Dunyasi "HTTP 200, gecerli XML" donduruyor ama
+     * ayristirma sifir girdi veriyordu. Govdenin ilk satiri duzgun bir
+     * <?xml ... ?><rss> basligi; sorun asagida, tek bir bozuk yerde.
+     * libxml varsayilan olarak KATI: belgenin herhangi bir yerindeki
+     * tek bir kacisi yapilmamis "&" ya da gecersiz denetim karakteri
+     * butun belgeyi cope atiyor ve sessizce sifir haber donuyor.
+     *
+     * Iki asamali cozum:
+     *   1. Once katı ayristirma. Saglam besleme hicbir bedel odemiyor.
+     *   2. Dusarse govde temizlenip LIBXML_RECOVER ile yeniden
+     *      deneniyor; libxml bozuk kismi atlayip geri kalanini veriyor.
+     *
+     * Kurtarma "her seyi kabul et" demek degil: kok oge yine RSS ya da
+     * Atom olmak zorunda, aksi halde girdi toplayici zaten bos doner.
+     *
+     * @return \SimpleXMLElement|false
+     */
+    private function xmlCozumle(string $ham)
+    {
+        $onceki = libxml_use_internal_errors(true);
+
+        $xml = simplexml_load_string($ham, 'SimpleXMLElement', LIBXML_NOCDATA);
+
+        if ($xml === false) {
+            $xml = simplexml_load_string(
+                $this->xmlTemizle($ham),
+                'SimpleXMLElement',
+                LIBXML_NOCDATA | LIBXML_RECOVER | LIBXML_NOWARNING | LIBXML_NOERROR
+            );
+        }
+
+        libxml_clear_errors();
+        libxml_use_internal_errors($onceki);
+
+        return $xml;
+    }
+
+    /**
+     * Gövdeyi ayrıştırılabilir hâle getirir.
+     *
+     * Uc yaygin bozukluk gideriliyor:
+     *   - BOM ve <?xml öncesi bosluk: libxml bunu "content before
+     *     document element" diye reddediyor
+     *   - XML'de yasak denetim karakterleri (bazi yonetim panelleri
+     *     metne 0x0C gibi baytlar birakiyor)
+     *   - kacisi yapilmamis "&": "Ar-Ge & inovasyon" gibi basliklarda
+     *     cok sik; varlik referansi olmayan & işareti &amp;'e cevriliyor
+     */
+    private function xmlTemizle(string $ham): string
+    {
+        // BOM ve bildirim oncesi bosluk.
+        $ham = preg_replace('/^[\x{FEFF}\s]+(?=<)/u', '', $ham) ?? $ham;
+
+        // XML 1.0'da yasak denetim karakterleri (tab, LF, CR haric).
+        $ham = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', $ham) ?? $ham;
+
+        // Varlik referansi olmayan & isareti.
+        $ham = preg_replace('/&(?!(?:[a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#x[0-9a-fA-F]+);)/', '&amp;', $ham) ?? $ham;
+
+        return $ham;
     }
 
     /**

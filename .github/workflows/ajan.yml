@@ -126,7 +126,20 @@ jobs:
           # kaynaktan gelen menu sayfalariydi ve o calismada hic haber
           # yazilmadi. Kaynak basina tavanla birlikte kontenjan artik
           # daha cok kaynaga dagiliyor.
-          BAYRAKLAR="--saat=${{ inputs.saat || '6' }} --enfazla=${{ inputs.enfazla || '40' }}"
+          # Geriye bakis 6 saatten 30 saate cikti.
+          #
+          # Kaynak testi dar pencerenin ne kadar pahaliya mal oldugunu
+          # gosterdi: MuhasebeTR beslemesinde 19, NTV'de 20 girdi var
+          # ama 48 saatlik pencerede bile sifiri gosteriyorlar; 6 saatte
+          # kaynaklarin cogu bos donuyor. Kaynaklar gun icinde duzensiz
+          # yayin yapiyor ve iki saatlik araliklarla kosan bir ajan dar
+          # pencereyle haberi kaciriyor.
+          #
+          # Genis pencere artik bedava: kopya denetimi dort katmanli ve
+          # daha once gelen haber modele hic sorulmuyor. Onceden bu
+          # pencereyi genisletmek ayni haberi tekrar tekrar yazdirmak
+          # demekti; simdi degil.
+          BAYRAKLAR="--saat=${{ inputs.saat || '30' }} --enfazla=${{ inputs.enfazla || '40' }}"
 
           if [ "${{ inputs.kuru }}" = "true" ]; then
             BAYRAKLAR="$BAYRAKLAR --kuru"
