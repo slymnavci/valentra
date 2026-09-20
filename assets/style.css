@@ -57,8 +57,20 @@ img { max-width: 100%; display: block; }
 .ust-bant {
     background: var(--kart);
     border-bottom: 1px solid var(--cizgi);
-    position: sticky;
-    top: 0;
+
+    /*
+     * YAPISKAN DEGIL.
+     *
+     * Once hem bu bant hem menu bandi "sticky; top: 0" idi. Iki yapiskan
+     * seride ayni yere capalanamaz: sayfa kaydirilinca ikisi ust uste
+     * biniyor ve z-index'i yuksek olan menu, logo bandini ortuyordu.
+     * Ekranda yarim kesilmis bir ust bolum goruntusu bundan cikiyordu.
+     *
+     * Cozum yalnizca MENUYU yapiskan birakmak. Gezinme zaten menude;
+     * logo serisinin ekranda kalmasi gerekmiyor ve boylece her ekranda
+     * 64 piksel dusey alan haberlere kaliyor.
+     */
+    position: relative;
     z-index: 20;
 }
 
@@ -442,6 +454,8 @@ img { max-width: 100%; display: block; }
 
 .menu-bant {
     background: var(--lacivert);
+
+    /* Sayfadaki TEK yapiskan serit; bkz. .ust-bant aciklamasi. */
     position: sticky;
     top: 0;
     z-index: 30;
@@ -621,7 +635,19 @@ a.menu-oge.aktif::after,
 .kaydirak-slayt > a {
     display: flex;
     flex-direction: column;
-    min-height: 330px;
+
+    /*
+     * Yukseklik EKRANA gore.
+     *
+     * Sabit 330px yuksekligin uzerine gorselli slaytta 110px ust dolgu
+     * ve baslik gelince kutu 450 pikseli asiyordu; menu ve sayfa
+     * numaralariyla birlikte kaydirak bir ekrana sigmiyor, ziyaretci
+     * ilk haberi gormek icin kaydirmak zorunda kaliyordu.
+     *
+     * clamp: kisa ekranda 300 pikselin altina inmez, buyuk ekranda
+     * 520 pikseli asmaz, arada ekran yuksekliginin yarisini alir.
+     */
+    height: clamp(300px, 52vh, 520px);
     background: linear-gradient(150deg, #17304f 0%, #23405f 55%, #2b4a73 100%);
     color: #fff;
 }
@@ -669,7 +695,9 @@ a.menu-oge.aktif::after,
         rgba(8, 16, 30, .88) 45%,
         rgba(8, 16, 30, .45) 80%,
         transparent 100%);
-    padding-top: 110px;
+    /* Yukseklik ekrana baglandigi icin ust dolgu da orantili:
+       sabit 110px kisa ekranda metni asagi itip kirpiyordu. */
+    padding-top: clamp(50px, 12vh, 110px);
 }
 
 .kaydirak-govde .grup {
@@ -778,7 +806,10 @@ a.menu-oge.aktif::after,
 
 @media (max-width: 640px) {
     .kaydirak-govde { padding: 26px 22px 28px; }
-    .kaydirak-slayt > a { min-height: 320px; }
+
+    /* Telefonda ekranin yarisindan fazlasini tek habere vermek,
+       altindaki listeyi tamamen gorunmez yapiyor. */
+    .kaydirak-slayt > a { height: clamp(280px, 46vh, 380px); }
     .kaydirak-ok { display: none; }
 }
 
