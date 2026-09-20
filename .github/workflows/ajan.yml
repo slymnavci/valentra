@@ -123,6 +123,7 @@ jobs:
       # uretiyor, kayitlarda aranacak olan bu.
       - name: Ag tanisi
         if: inputs.mod == 'ag-tanisi'
+        working-directory: ajan
         env:
           VALENTRA_SITE_URL: ${{ secrets.VALENTRA_SITE_URL }}
         run: php ag_tani.php
