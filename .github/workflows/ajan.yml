@@ -2,21 +2,29 @@ name: Vergi haberleri ajani
 
 on:
   schedule:
-    # Gunde 10 kez, Turkiye saatiyle 05:20'den 23:20'ye kadar iki saat
-    # arayla. Cron UTC calisir, Turkiye UTC+3: 02:20 UTC = 05:20 TR.
+    # Gunde 5 kez, Turkiye saatiyle 05:20 / 09:20 / 13:20 / 17:20 /
+    # 21:20. Cron UTC calisir, Turkiye UTC+3: 02:20 UTC = 05:20 TR.
     #
-    # Gece 01:20-03:20 arasi atlandi: o saatlerde yeni haber cikmiyor,
-    # bos calisma GitHub dakikasi harciyor. Sabah 05:20 ise Resmi
-    # Gazete'nin erken yayinini yakalamak icin duruyor.
+    # ONCEDEN GUNDE 10'DU. Iki sebeple yariya indirildi:
+    #
+    # 1. IHS 443'te araliklarla baglanti kabul etmiyor ve her calisma
+    #    siteye onlarca istek atiyor. Olcum: 20:07 dustu, 20:11
+    #    calisti, 20:17 calisti, 20:26 dustu. Sunucu ayakta (ayni
+    #    dakikalarda FTP calisiyor), yani hiz sinirlamasi olasi. Istek
+    #    hacmini yariya indirmek bunu sinama imkani da veriyor.
+    #
+    # 2. Geriye bakis penceresi 30 saate cikti. Dort saatlik aralikta
+    #    pencereler fazlasiyla ustuste biniyor; bir calisma kacsa bile
+    #    yedi calisma daha ayni araligi tariyor. Ustuste binme bedava:
+    #    sitede zaten olan haber modele hic sorulmuyor.
+    #
+    # Gece 01:20-03:20 arasi atlandi: o saatlerde yeni haber cikmiyor.
+    # Sabah 05:20 ise Resmi Gazete'nin erken yayinini yakalamak icin
+    # duruyor.
     #
     # Dakika 20: saat basi GitHub'da yogun ve zamanlanmis isler
     # gecikebiliyor.
-    #
-    # Geriye bakis 6 saat: aralik iki saat oldugu icin 36 saat gereksiz
-    # genis. Bir calisma kacsa bile sonraki uc calisma ayni pencereyi
-    # tariyor, haber kaybolmaz. Sitede zaten olan haberler modele
-    # sorulmadigi icin ustuste binen pencere para harcamiyor.
-    - cron: '20 2,4,6,8,10,12,14,16,18,20 * * *'
+    - cron: '20 2,6,10,14,18 * * *'
     # Pratik bilgiler: pazartesi sabahi haftada bir. Asgari ucret,
     # oranlar ve hadler yilda birkac kez degisiyor; daha sik kontrol
     # etmek model cagrisini bosa harcar.
