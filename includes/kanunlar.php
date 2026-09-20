@@ -29,6 +29,7 @@ function kanun_listesi(): array
             'kisa'     => 'VUK',
             'no'       => 213,
             'tertip'   => 4,
+            'rg'       => '1961-01-10',
             'aciklama' => 'Vergilendirmenin usul kuralları: defter ve belge düzeni, '
                         . 'değerleme, amortisman, ceza hükümleri, süreler.',
         ],
@@ -36,7 +37,8 @@ function kanun_listesi(): array
             'ad'       => 'Gelir Vergisi Kanunu',
             'kisa'     => 'GVK',
             'no'       => 193,
-            'tertip'   => 3,
+            'tertip'   => 4,
+            'rg'       => '1961-01-06',
             'aciklama' => 'Gerçek kişilerin gelirlerinin vergilendirilmesi: ticari '
                         . 'kazanç, serbest meslek, kira, ücret, menkul sermaye iradı.',
         ],
@@ -45,6 +47,7 @@ function kanun_listesi(): array
             'kisa'     => 'KVK',
             'no'       => 5520,
             'tertip'   => 5,
+            'rg'       => '2006-06-21',
             'aciklama' => 'Şirketlerin kazançlarının vergilendirilmesi: istisnalar, '
                         . 'indirimler, transfer fiyatlandırması, örtülü sermaye.',
         ],
@@ -53,6 +56,7 @@ function kanun_listesi(): array
             'kisa'     => 'KDVK',
             'no'       => 3065,
             'tertip'   => 5,
+            'rg'       => '1984-11-02',
             'aciklama' => 'KDV\'nin konusu, oranları, istisnaları, indirim ve '
                         . 'iade mekanizması.',
         ],
@@ -61,6 +65,7 @@ function kanun_listesi(): array
             'kisa'     => 'ÖTVK',
             'no'       => 4760,
             'tertip'   => 5,
+            'rg'       => '2002-06-12',
             'aciklama' => 'Listelerde sayılan mallarda alınan özel tüketim vergisi.',
         ],
         [
@@ -68,6 +73,7 @@ function kanun_listesi(): array
             'kisa'     => 'DVK',
             'no'       => 488,
             'tertip'   => 5,
+            'rg'       => '1964-07-11',
             'aciklama' => 'Kâğıtlar üzerinden alınan damga vergisi: nispetler, '
                         . 'istisnalar, sorumluluk.',
         ],
@@ -76,6 +82,7 @@ function kanun_listesi(): array
             'kisa'     => 'Harçlar K.',
             'no'       => 492,
             'tertip'   => 5,
+            'rg'       => '1964-07-17',
             'aciklama' => 'Yargı, noter, tapu, pasaport ve diğer işlemlerde '
                         . 'alınan harçlar.',
         ],
@@ -84,6 +91,7 @@ function kanun_listesi(): array
             'kisa'     => '6183',
             'no'       => 6183,
             'tertip'   => 3,
+            'rg'       => '1953-07-28',
             'aciklama' => 'Kamu alacaklarının takip ve tahsili: ödeme emri, haciz, '
                         . 'tecil ve taksitlendirme, gecikme zammı.',
         ],
@@ -92,6 +100,7 @@ function kanun_listesi(): array
             'kisa'     => 'EVK',
             'no'       => 1319,
             'tertip'   => 5,
+            'rg'       => '1970-08-11',
             'aciklama' => 'Bina ve arazi üzerinden alınan emlak vergisi.',
         ],
         [
@@ -99,6 +108,7 @@ function kanun_listesi(): array
             'kisa'     => 'MTVK',
             'no'       => 197,
             'tertip'   => 5,
+            'rg'       => '1963-02-23',
             'aciklama' => 'Motorlu taşıtlardan alınan yıllık vergi ve tarifeleri.',
         ],
         [
@@ -106,6 +116,7 @@ function kanun_listesi(): array
             'kisa'     => 'VİVK',
             'no'       => 7338,
             'tertip'   => 3,
+            'rg'       => '1959-06-15',
             'aciklama' => 'Miras ve ivazsız intikaller üzerinden alınan vergi.',
         ],
         [
@@ -113,10 +124,47 @@ function kanun_listesi(): array
             'kisa'     => 'BSMV',
             'no'       => 6802,
             'tertip'   => 3,
+            'rg'       => '1956-07-23',
             'aciklama' => 'Banka ve sigorta muameleleri vergisi ile özel '
                         . 'iletişim vergisi.',
         ],
     ];
+}
+
+/**
+ * Yayım tarihine göre olması gereken Düstur tertibi.
+ *
+ * NEDEN VAR: tertip elle giriliyordu ve yanlis bir deger sessizce
+ * BASKA BIR KANUNU aciyor. Gelir Vergisi Kanunu'nda tam bu oldu —
+ * tertip 3 yazilmisti ve sayfa, 193 numarayi 3. tertipte tasiyan
+ * 1922 tarihli "Bolu hapisanesinde mahpus Bakkal Hasan bin
+ * Mustafa'nin bakiyei muddeti cezaiyesinin affina dair kanun"u
+ * gosterdi. Kanun numaralari tertipler arasinda tekrar ediyor; adres
+ * gecerli, dosya gecerli, PDF imzasi gecerli — yalnizca KANUN yanlis.
+ * Bir YMM sitesinde bulunabilecek en sinsi hata turu.
+ *
+ * Tertip sinirlari Dustur'un yayim donemleridir:
+ *   3. Tertip  ...            – 26.05.1960
+ *   4. Tertip  27.05.1960     – 24.10.1961
+ *   5. Tertip  25.10.1961     – ...
+ *
+ * Bu fonksiyon tertibi URETMEK icin degil DENETLEMEK icin: elle
+ * girilen deger tarihle celisirse test bunu yakaliyor
+ * (ajan/kanun_denetle.php). Uretmiyoruz cunku sinir tarihlerine
+ * korlemesine guvenmek, duzeltmeye calistigimiz hatanin aynisini
+ * baska bicimde yapmak olurdu.
+ */
+function kanun_tertip_beklenen(string $rgTarihi): int
+{
+    if ($rgTarihi < '1960-05-27') {
+        return 3;
+    }
+
+    if ($rgTarihi < '1961-10-25') {
+        return 4;
+    }
+
+    return 5;
 }
 
 /** Kısa ada göre kanunu bulur. */
