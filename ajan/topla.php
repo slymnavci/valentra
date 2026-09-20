@@ -25,6 +25,7 @@ require_once __DIR__ . '/src/Indirici.php';
 require_once __DIR__ . '/src/Http.php';
 require_once __DIR__ . '/src/Getirici.php';
 require_once __DIR__ . '/src/Depo.php';
+require_once __DIR__ . '/src/TohumYapilandirma.php';
 require_once __DIR__ . '/src/Besleme.php';
 require_once __DIR__ . '/src/Sayfa.php';
 require_once __DIR__ . '/src/Kazima.php';
@@ -34,7 +35,7 @@ require_once __DIR__ . '/src/KotaBittiException.php';
 require_once __DIR__ . '/src/SemaliIstemci.php';
 require_once __DIR__ . '/src/Yazar.php';
 
-use Valentra\Ajan\{Besleme, Depo, Getirici, Http, Kazima, KotaBittiException, Sayfa, Site, Suzgec, Yazar};
+use Valentra\Ajan\{Besleme, Depo, Getirici, Http, Kazima, KotaBittiException, Sayfa, Site, Suzgec, TohumYapilandirma, Yazar};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
@@ -108,8 +109,8 @@ $yazar   = new Yazar($apiKey);
  */
 $depo = new Depo(__DIR__ . '/onbellek');
 
-$yapilandirma   = null;
-$onbellekteyiz  = false;
+$yapilandirma  = null;
+$yapilandirmaKaynagi = 'site';
 
 try {
     $yapilandirma = $site->yapilandirma();
@@ -117,21 +118,77 @@ try {
 } catch (Throwable $e) {
     gunluk('Siteden yapılandırma alınamadı: ' . $e->getMessage());
 
+    // 2. yol: son basarili calismadan kalan kopya.
     $yedek = $depo->oku('yapilandirma', 7);
 
-    if (!is_array($yedek) || ($yedek['kaynaklar'] ?? []) === []) {
-        fwrite(STDERR, "Önbellekte kullanılabilir yapılandırma da yok; çalışma durdu.\n");
-        exit(1);
+    if (is_array($yedek) && ($yedek['kaynaklar'] ?? []) !== []) {
+        $yapilandirma        = $yedek;
+        $yapilandirmaKaynagi = 'önbellek';
+
+        gunluk(sprintf(
+            'Önbellekteki yapılandırmayla devam ediliyor (%s gün önce alınmış).',
+            $depo->yas('yapilandirma') ?? '?'
+        ));
+    } else {
+        /*
+         * 3. yol — SON CARE: depodaki tohum listesi.
+         *
+         * Onbellek de bossa (ilk calisma ya da suresi dolmus) ajan
+         * eskiden tamamen duruyordu. Oysa kaynak listesi zaten
+         * depoda: veritabani sql/schema.sql'den tohumlaniyor. Siteye
+         * hic ulasilamasa bile buradan okuyup tarama yapilabilir.
+         *
+         * Bu liste panelden yapilan degisiklikleri icermez, bu yuzden
+         * en sonda; site ve onbellek her zaman oncelikli.
+         */
+        $tohum = (new TohumYapilandirma(dirname(__DIR__) . '/sql/schema.sql'))->oku();
+
+        if ($tohum === null) {
+            fwrite(STDERR, "Yapılandırma hiçbir yoldan alınamadı; çalışma durdu.\n");
+            exit(1);
+        }
+
+        $yapilandirma        = $tohum;
+        $yapilandirmaKaynagi = 'depo tohumu';
+
+        gunluk(count($tohum['kaynaklar']) . ' kaynak depodaki tohum listesinden okundu. '
+            . 'Panelden yapılan kaynak değişiklikleri bu listede yoktur.');
     }
+}
 
-    $yapilandirma  = $yedek;
-    $onbellekteyiz = true;
+if ($yapilandirmaKaynagi !== 'site') {
+    gunluk('Siteye ulaşılamıyor: haberler yazılacak, siteye erişilebilen '
+        . 'ilk çalışmada gönderilecek.');
 
-    gunluk(sprintf(
-        'Önbellekteki yapılandırmayla devam ediliyor (%s gün önce alınmış). '
-        . 'Haberler yazılacak ve siteye ulaşılabildiğinde gönderilecek.',
-        $depo->yas('yapilandirma') ?? '?'
-    ));
+    /*
+     * Bekleyen haberler "bilinen" sayilir.
+     *
+     * Siteye ulasilamadigi icin sitede hangi haberlerin oldugunu
+     * bilmiyoruz. Ama onceki cevrimdisi calismalarda yazip depoda
+     * biriktirdiklerimizi biliyoruz; onlari yeniden modele sormak
+     * dogrudan para kaybi olurdu. Veri acisindan zaten tehlike yok —
+     * gonderimde site tarafindaki kopya engeli calisiyor — mesele
+     * bosa giden model cagrisi.
+     */
+    $bekleyenler = $depo->oku('bekleyen_haberler', 7);
+
+    if (is_array($bekleyenler) && $bekleyenler !== []) {
+        foreach ($bekleyenler as $eski) {
+            $url    = (string) ($eski['kaynak_url'] ?? '');
+            $baslik = (string) ($eski['baslik'] ?? '');
+
+            if ($url !== '') {
+                $yapilandirma['bilinen_url'][] = url_parmak($url);
+            }
+
+            if ($baslik !== '') {
+                $yapilandirma['bilinen_baslik'][] = baslik_parmak($baslik);
+                $yapilandirma['son_basliklar'][]  = $baslik;
+            }
+        }
+
+        gunluk(count($bekleyenler) . ' bekleyen haber "zaten var" listesine eklendi.');
+    }
 }
 
 $kaynaklar   = $yapilandirma['kaynaklar'];
