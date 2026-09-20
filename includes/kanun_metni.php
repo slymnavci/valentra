@@ -36,6 +36,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/ayarlar.php';
 require_once __DIR__ . '/url.php';
 require_once __DIR__ . '/http_ortak.php';
+require_once __DIR__ . '/kanun_dosya.php';
 
 /** Onbellek suresi: kanun metinleri nadiren degisir. */
 const KANUN_ONBELLEK_SURE = 6 * 3600;
@@ -126,13 +127,27 @@ function kanun_gosterim(array $kanun, bool $onbellekKullan = true): array
             // Yalnizca bas kismi indirilip dosya imzasina bakiliyor.
             $yanit = http_bas_getir($aday['url'], 1024, 12, $referer);
 
+            /*
+             * Icerik turu de kontrol ediliyor.
+             *
+             * PDF diye istenen adresin text/html dondurmesi, kaynagin
+             * dosya yerine bir sayfa (cogu zaman hata sayfasi) verdigi
+             * anlamina gelir. Imza kontrolu bunu zaten yakaliyor ama
+             * sebebi soylemiyordu; tani ekraninda "PDF degil" ile
+             * "HTML geldi" ayri seylerdir.
+             */
+            $html = str_contains((string) $yanit['tur'], 'html');
+
             if (!$yanit['tamam']) {
                 $denemeler[] = kanun_deneme($aday, $yanit['kod'], $yanit['neden'], kanun_ayrinti($yanit));
             } elseif (!str_starts_with($yanit['govde'], '%PDF')) {
                 $denemeler[] = kanun_deneme(
                     $aday,
                     $yanit['kod'],
-                    'Yanıt PDF değil; kaynak büyük ihtimalle hata sayfası döndürdü.',
+                    $html
+                        ? 'PDF beklenirken HTML sayfası geldi; adres dosyaya değil sayfaya gidiyor.'
+                        : 'Yanıt PDF imzası taşımıyor (ilk baytlar: '
+                          . kanun_bayt_ozeti($yanit['govde']) . ').',
                     kanun_ayrinti($yanit)
                 );
             } else {
@@ -144,6 +159,15 @@ function kanun_gosterim(array $kanun, bool $onbellekKullan = true): array
 
             if (!$yanit['tamam']) {
                 $denemeler[] = kanun_deneme($aday, $yanit['kod'], $yanit['neden'], kanun_ayrinti($yanit));
+            } elseif (kanun_hata_sayfasi_mi($yanit['govde'])) {
+                // 200 donduren hata sayfasi. Uzunluk kontrolunden
+                // gecerdi; icerigiyle taniniyor.
+                $denemeler[] = kanun_deneme(
+                    $aday,
+                    $yanit['kod'],
+                    'Kaynak HTTP 200 döndürdü ama gelen şey bir hata/uyarı sayfası.',
+                    kanun_ayrinti($yanit)
+                );
             } else {
                 $govde = $aday['tur'] === 'doc'
                     ? kanun_word_html_ayikla($yanit['govde'])
@@ -155,7 +179,24 @@ function kanun_gosterim(array $kanun, bool $onbellekKullan = true): array
                         $yanit['kod'],
                         $aday['tur'] === 'doc'
                             ? 'Dosya alındı ama metin ayıklanamadı (ikili Word belgesi olabilir).'
-                            : 'Sayfa alındı ama metin yok; JavaScript ile doluyor.',
+                            : 'Sayfa alındı ama metin yok; JavaScript ile doluyor olabilir.',
+                        kanun_ayrinti($yanit)
+                    );
+                } elseif (!kanun_metni_ilgili_mi($govde, $kanun)) {
+                    /*
+                     * Metin var ama BU kanunun metni degil.
+                     *
+                     * Fihrist sayfalari, arama sonuclari ve baska bir
+                     * kanunun metni bu kontrole takiliyor. Olmasaydi
+                     * ziyaretcinin onune yanlis kanun konurdu — bir YMM
+                     * sitesinde bos sayfadan cok daha kotu.
+                     */
+                    $denemeler[] = kanun_deneme(
+                        $aday,
+                        $yanit['kod'],
+                        'Sayfadan metin çıktı (' . mb_strlen($govde, 'UTF-8')
+                        . ' karakter) ama ' . (int) $kanun['no']
+                        . ' sayılı kanunun metni değil; fihrist ya da başka bir sayfa.',
                         kanun_ayrinti($yanit)
                     );
                 } else {
@@ -196,6 +237,30 @@ function kanun_gosterim(array $kanun, bool $onbellekKullan = true): array
         }
     }
 
+    /*
+     * Son care: panelden yuklenmis PDF.
+     *
+     * Bilerek EN SONDA. Resmi kaynaklardan biri calisiyorsa metnin
+     * guncel hali gosterilmeli; yuklenen dosya bir kopyadir ve eskir.
+     * Kaynak yeniden erisilebilir hale geldiginde sayfa kendiliginden
+     * resmi metne donuyor, cunku bu dal yalnizca digerleri dustugunde
+     * calisiyor.
+     */
+    if ($sonuc === null && kanun_dosya_var_mi((int) $kanun['no'])) {
+        $bilgi = kanun_dosya_bilgisi((int) $kanun['no']);
+
+        $denemeler[] = [
+            'ad'      => 'Yüklenen PDF',
+            'url'     => 'includes/kanun_pdf/' . (int) $kanun['no'] . '.pdf',
+            'kod'     => 0,
+            'sonuc'   => 'Tamam (panelden yüklenmiş kopya)',
+            'ayrinti' => number_format($bilgi['boyut'] / 1024 / 1024, 1) . ' MB · yüklenme: '
+                       . $bilgi['tarih'],
+        ];
+
+        $sonuc = ['tur' => 'yerel', 'govde' => '', 'url' => '', 'neden' => ''];
+    }
+
     if ($sonuc === null) {
         $basarisiz = [
             'tur'   => 'yok',
@@ -212,6 +277,120 @@ function kanun_gosterim(array $kanun, bool $onbellekKullan = true): array
     kanun_onbellege($anahtar, $sonuc);
 
     return $sonuc + ['onbellek' => false, 'denemeler' => $denemeler];
+}
+
+/**
+ * Gelen yanıtın ilk baytlarını okunabilir biçimde gösterir.
+ *
+ * "PDF degil" demek yetmiyor; ne geldigini gormek gerekiyor. Basilabilir
+ * olmayan baytlar noktaya cevriliyor ki tani satiri bozulmasin.
+ */
+function kanun_bayt_ozeti(string $govde, int $adet = 24): string
+{
+    $bas = substr($govde, 0, $adet);
+
+    return (string) preg_replace('/[^\x20-\x7E]/', '.', $bas);
+}
+
+/**
+ * Gelen metin gerçekten BU kanunun metni mi?
+ *
+ * Bir adresin HTTP 200 dondurmesi ve icinden metin ayiklanabilmesi,
+ * o metnin aradigimiz kanun oldugu anlamina gelmiyor. Yedek kaynak
+ * olarak girilen adresler (ornegin GIB'in mevzuat sayfalari) cogu
+ * zaman bir fihrist, bir arama sonucu ya da "sayfa bulunamadi"
+ * uyarisi donduruyor; bunlarin hepsi 500 karakterden uzun ve hepsi
+ * ayiklanabiliyor. Kontrol olmadan bu sayfalar "tamam" sayilip
+ * ziyaretcinin onune kanun metni diye konurdu.
+ *
+ * Iki isarete bakiliyor ve IKISI DE aranmiyor — biri yeterli:
+ *   - kanunun numarasi (213, 193 gibi) metinde geciyor mu
+ *   - kanunun adi (bosluk ve buyuk/kucuk harf farklari es gecilerek)
+ *     metinde geciyor mu
+ *
+ * Ayrica metnin kanun metnine benzemesi bekleniyor: "MADDE" ya da
+ * "Madde" gecmeyen bir sayfa kanun metni degildir.
+ */
+function kanun_metni_ilgili_mi(string $metin, array $kanun): bool
+{
+    $duz = kanun_karsilastirmaya_hazirla($metin);
+
+    if ($duz === '') {
+        return false;
+    }
+
+    // Kanun metninin en belirgin isareti madde basliklari.
+    if (!str_contains($duz, 'madde')) {
+        return false;
+    }
+
+    $no = (string) (int) $kanun['no'];
+
+    if (str_contains($duz, $no)) {
+        return true;
+    }
+
+    $ad = kanun_karsilastirmaya_hazirla((string) $kanun['ad']);
+
+    return $ad !== '' && str_contains($duz, $ad);
+}
+
+/**
+ * Metni karşılaştırmaya elverişli hâle getirir.
+ *
+ * Turkce harfler sadelestiriliyor cunku kaynaklar ayni kanunu farkli
+ * yaziyor: "VERGİ USUL KANUNU", "Vergi Usul Kanunu", bazen noktasiz
+ * "i" ile. Ard arda bosluklar tek bosluğa indiriliyor ki
+ * "VERGI  USUL" ile "VERGI USUL" ayni sayilsin.
+ */
+function kanun_karsilastirmaya_hazirla(string $metin): string
+{
+    /*
+     * Sadelestirme kucuk harfe cevirmeden ONCE yapiliyor.
+     *
+     * Sebebi Turkce'ye ozgu bir tuzak: mb_strtolower('İ') sonucu sade
+     * bir "i" degil, "i" + birlesen nokta (U+0307). Once kucuk harfe
+     * cevirip sonra harf eslemesi yapan bir kod bu noktayi goremiyor
+     * ve "VERGİ USUL KANUNU" ile "Vergi Usul Kanunu" eslesmiyordu.
+     * Once esleme yapilinca buyuk harfli 'İ' dogrudan 'i' oluyor.
+     */
+    $metin = strtr($metin, [
+        'ı' => 'i', 'İ' => 'i', 'ş' => 's', 'Ş' => 's',
+        'ğ' => 'g', 'Ğ' => 'g', 'ü' => 'u', 'Ü' => 'u',
+        'ö' => 'o', 'Ö' => 'o', 'ç' => 'c', 'Ç' => 'c',
+        'â' => 'a', 'Â' => 'a', 'î' => 'i', 'Î' => 'i',
+        'û' => 'u', 'Û' => 'u',
+    ]);
+
+    $metin = mb_strtolower($metin, 'UTF-8');
+
+    // Geriye kalan birlesen isaretler (baska kaynaklardan gelebilir)
+    // temizleniyor ki gorunuste ayni iki metin ayni sayilsin.
+    $metin = (string) preg_replace('/\p{Mn}/u', '', $metin);
+
+    return trim((string) preg_replace('/\s+/u', ' ', $metin));
+}
+
+/**
+ * Yanıt bir hata ya da yönlendirme sayfası mı?
+ *
+ * Bazi sunucular bulunamayan adres icin 404 yerine 200 ile kendi hata
+ * sayfasini donduruyor. Bu sayfalar kisa olmadiklari icin uzunluk
+ * kontrolunden geciyor; iceriklerinden tanimak gerekiyor.
+ */
+function kanun_hata_sayfasi_mi(string $html): bool
+{
+    $bas = kanun_karsilastirmaya_hazirla(mb_substr($html, 0, 4000, 'UTF-8'));
+
+    foreach (['sayfa bulunamadi', 'bulunamadi', 'not found', '404',
+              'erisim engellendi', 'access denied', 'forbidden',
+              'bir hata olustu', 'hata olustu', 'gecersiz istek'] as $imza) {
+        if (str_contains($bas, $imza)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -365,7 +544,20 @@ function kanun_ayrinti(array $yanit): string
     $parcalar[] = number_format((float) ($yanit['sure'] ?? 0), 1) . ' sn';
 
     if ((int) ($yanit['hata_no'] ?? 0) !== 0) {
+        /*
+         * Hem numara hem ham mesaj yaziliyor. Cevrilmis cumle "ne
+         * oldu"yu, ham mesaj "tam olarak neresi"ni soyluyor; sertifika
+         * hatalarinda aradaki fark belirleyici oluyor (ornegin
+         * "unable to get local issuer certificate" ile "certificate
+         * has expired" ayni cevrilmis cumleye dusuyordu).
+         */
         $parcalar[] = 'curl ' . (int) $yanit['hata_no'];
+
+        $ham = trim((string) ($yanit['hata'] ?? ''));
+
+        if ($ham !== '') {
+            $parcalar[] = '"' . $ham . '"';
+        }
     }
 
     $dogrulama = http_dogrulama_acikla((int) ($yanit['dogrulama'] ?? 0));
@@ -538,8 +730,15 @@ function kanun_onbellekten(string $anahtar): ?array
         return null;
     }
 
-    $tur   = (string) $veri['tur'];
-    $omur  = $tur === 'yok' ? KANUN_HATA_ONBELLEK_SURE : KANUN_ONBELLEK_SURE;
+    $tur = (string) $veri['tur'];
+
+    /*
+     * Yerel dosya karari da kisa omurlu: resmi kaynak geri geldiginde
+     * sayfanin saatlerce kopyada takili kalmamasi icin.
+     */
+    $omur = in_array($tur, ['yok', 'yerel'], true)
+        ? KANUN_HATA_ONBELLEK_SURE
+        : KANUN_ONBELLEK_SURE;
 
     if (time() - (int) $veri['zaman'] > $omur) {
         return null;

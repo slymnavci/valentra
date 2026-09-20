@@ -32,12 +32,40 @@ if ($kanun === null) {
     exit;
 }
 
+require_once __DIR__ . '/../includes/kanun_dosya.php';
+
 /*
  * Hangi adayin calistigini sayfa zaten bulmus ve onbellege yazmis
  * oluyor; burada ayni aramayi bastan yapmanin anlami yok. Onbellek
  * yoksa adaylar yeniden deneniyor.
  */
 $adres = kanun_pdf_adresi($kanun);
+
+/*
+ * Resmi kaynaklarin hicbiri vermiyorsa panelden yuklenmis kopya
+ * gonderiliyor. Dosya includes/ altinda duruyor ve o klasor dogrudan
+ * erisime kapali; tek cikis yolu burasi.
+ *
+ * Adres istekten ALINMIYOR: yalnizca kanun numarasi aliniyor ve yol
+ * ondan uretiliyor, yani istekle baska bir dosya istenemez.
+ */
+if ($adres === null && kanun_dosya_var_mi((int) $kanun['no'])) {
+    $yol = kanun_dosya_yolu((int) $kanun['no']);
+
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+
+    header('Content-Type: application/pdf');
+    header('Content-Length: ' . filesize($yol));
+    header('Content-Disposition: inline; filename="' . (int) $kanun['no'] . '.pdf"');
+    // Yuklenen dosya panelden degistirilebiliyor; uzun onbellek eski
+    // kopyayi ziyaretcide birakirdi.
+    header('Cache-Control: public, max-age=900');
+
+    readfile($yol);
+    exit;
+}
 
 if ($adres === null) {
     http_response_code(502);
