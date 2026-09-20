@@ -24,8 +24,9 @@ require __DIR__ . '/includes/sayfa_ust.php';
 <div class="kategori-basligi">
     <h1>Pratik Bilgiler</h1>
     <p>
-        Günlük işte en çok kullanılan değerler. Her satırın yanında
-        kaynağı ve geçerlilik dönemi yazıyor.
+        Günlük işte en çok kullanılan değerler. Başlığa tıklayın:
+        değerin tamamı, geçerlilik dönemi ve resmî kaynağı kendi
+        sayfasında.
     </p>
 </div>
 
@@ -38,41 +39,41 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
     <div class="ana-duzen">
         <div class="ana-kolon">
+            <?php
+            /*
+             * Liste, kart degil.
+             *
+             * Onceki halinde her degerin tamami kartin icine
+             * basiliyordu; harcirah ve gelir vergisi tarifesi gibi
+             * onlarca satirlik degerler kartlari kilometrelerce
+             * uzatiyor, tek rakamlik degerler ise aralarinda
+             * kayboluyordu. Simdi giriste yalnizca baslik ve tek
+             * satirlik ozet var; tamami kendi sayfasinda.
+             */
+            ?>
             <?php foreach ($gruplar as $grup => $satirlar): ?>
                 <div class="bolum-basligi">
                     <h2><?= e(pratik_grup_adi((string) $grup)) ?></h2>
                     <span class="cizgi"></span>
                 </div>
 
-                <section class="pratik-izgara">
+                <ul class="pratik-liste">
                     <?php foreach ($satirlar as $satir): ?>
-                        <article class="pratik-kart">
-                            <h3><?= e((string) $satir['baslik']) ?></h3>
-
-                            <pre class="pratik-deger"><?= e((string) $satir['deger']) ?></pre>
-
-                            <div class="pratik-alt">
-                                <?php if (!empty($satir['donem'])): ?>
-                                    <span class="donem"><?= e((string) $satir['donem']) ?></span>
-                                <?php endif; ?>
-
-                                <?php $kaynak = guvenli_url((string) ($satir['kaynak_url'] ?? '')); ?>
-                                <?php if ($kaynak !== ''): ?>
-                                    <a href="<?= e($kaynak) ?>" target="_blank" rel="noopener">
-                                        <?= e((string) $satir['kaynak_adi']) ?> &nearr;
-                                    </a>
-                                <?php endif; ?>
-                            </div>
-
-                            <?php if (!empty($satir['onay_tarihi'])): ?>
-                                <span class="pratik-tarih">
-                                    Son güncelleme:
-                                    <?= e(tarih_bicimle((string) $satir['onay_tarihi'], false)) ?>
+                        <li>
+                            <a href="<?= e(pratik_bilgi_yolu((string) $satir['anahtar'])) ?>">
+                                <span class="pratik-liste-ad">
+                                    <?= e((string) $satir['baslik']) ?>
+                                    <?php if (!empty($satir['donem'])): ?>
+                                        <small><?= e((string) $satir['donem']) ?></small>
+                                    <?php endif; ?>
                                 </span>
-                            <?php endif; ?>
-                        </article>
+                                <span class="pratik-liste-deger">
+                                    <?= e(pratik_ozet((string) $satir['deger'])) ?>
+                                </span>
+                            </a>
+                        </li>
                     <?php endforeach; ?>
-                </section>
+                </ul>
             <?php endforeach; ?>
 
             <p class="ipucu" style="margin:24px 0 34px;">

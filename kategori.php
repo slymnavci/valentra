@@ -63,11 +63,11 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <?php if ($sonSayfa > 1): ?>
                 <nav class="kart-alt" style="justify-content:center;margin:32px 0;gap:14px;">
                     <?php if ($sayfa > 1): ?>
-                        <a href="/kategori.php?k=<?= e($kategori['slug']) ?>&sayfa=<?= $sayfa - 1 ?>">&larr; Önceki</a>
+                        <a href="<?= e(kategori_yolu((string) $kategori['slug'], $sayfa - 1)) ?>">&larr; Önceki</a>
                     <?php endif; ?>
                     <span>Sayfa <?= $sayfa ?> / <?= $sonSayfa ?></span>
                     <?php if ($sayfa < $sonSayfa): ?>
-                        <a href="/kategori.php?k=<?= e($kategori['slug']) ?>&sayfa=<?= $sayfa + 1 ?>">Sonraki &rarr;</a>
+                        <a href="<?= e(kategori_yolu((string) $kategori['slug'], $sayfa + 1)) ?>">Sonraki &rarr;</a>
                     <?php endif; ?>
                 </nav>
             <?php endif; ?>

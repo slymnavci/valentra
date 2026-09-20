@@ -68,6 +68,25 @@ $menuAktif = static function (array $grup) use ($aktifKategori): bool {
              sayfa sanip ikisinin de degerini dusurur. */ ?>
     <link rel="canonical" href="<?= e($seoAdres) ?>">
 
+    <?php
+    /*
+     * Search Console dogrulama etiketi.
+     *
+     * Panelden girilebiliyor (Arama motoru sayfasi); girilmemisse
+     * kodda tanimli varsayilan kullaniliyor. Google siteyi ancak
+     * dogruladiktan sonra indeksleme raporu gosteriyor; o rapor
+     * olmadan "Google bizi goruyor mu" sorusunun cevabi yok.
+     *
+     * Deger gizli degil — zaten her sayfanin kaynagında herkese acik
+     * duruyor. Islevi sahiplik kanitlamak: Search Console'a bu siteyi
+     * ekleyen kisinin sunucuya dosya koyabildigini gosteriyor.
+     */
+    $googleKodu = ayar_oku('google_dogrulama', SEO_GOOGLE_DOGRULAMA);
+    ?>
+    <?php if ($googleKodu !== ''): ?>
+        <meta name="google-site-verification" content="<?= e($googleKodu) ?>">
+    <?php endif; ?>
+
     <meta property="og:type" content="<?= e($seoTur) ?>">
     <meta property="og:site_name" content="Valentra">
     <meta property="og:locale" content="tr_TR">
@@ -106,12 +125,12 @@ $menuAktif = static function (array $grup) use ($aktifKategori): bool {
                 <a class="menu-oge <?= $aktifKategori === '' ? 'aktif' : '' ?>" href="/">Ana Sayfa</a>
 
                 <a class="menu-oge <?= ($aktifKategori ?? '') === 'pratik' ? 'aktif' : '' ?>"
-                   href="/pratik-bilgiler.php">Pratik Bilgiler</a>
+                   href="<?= e(pratik_yolu()) ?>">Pratik Bilgiler</a>
 
                 <?php foreach ($menu as $grup): ?>
                     <?php if ($grup['altlar'] === []): ?>
                         <a class="menu-oge <?= $menuAktif($grup) ? 'aktif' : '' ?>"
-                           href="/kategori.php?k=<?= e($grup['slug']) ?>">
+                           href="<?= e(kategori_yolu((string) $grup['slug'])) ?>">
                             <?= e($grup['ad']) ?>
                         </a>
                     <?php else: ?>
@@ -136,14 +155,14 @@ $menuAktif = static function (array $grup) use ($aktifKategori): bool {
                                  */
                                 ?>
                                 <?php if ($grup['slug'] === 'vergi-kanunlari'): ?>
-                                    <a href="/kanunlar.php"
+                                    <a href="<?= e(kanunlar_yolu()) ?>"
                                        class="<?= ($aktifKategori ?? '') === 'kanunlar' ? 'aktif' : '' ?>">
                                         <span>Kanun Metinleri</span>
                                     </a>
                                 <?php endif; ?>
 
                                 <?php foreach ($grup['altlar'] as $alt): ?>
-                                    <a href="/kategori.php?k=<?= e($alt['slug']) ?>"
+                                    <a href="<?= e(kategori_yolu((string) $alt['slug'])) ?>"
                                        class="<?= $aktifKategori === $alt['slug'] ? 'aktif' : '' ?>">
                                         <span><?= e($alt['ad']) ?></span>
                                         <?php if ($alt['adet'] > 0): ?>

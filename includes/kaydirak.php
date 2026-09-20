@@ -23,7 +23,7 @@ if (($mansetler ?? []) === []) {
             <article class="kaydirak-slayt <?= $gorsel !== '' ? 'gorselli' : '' ?>"
                      aria-roledescription="slide"
                      aria-label="<?= (int) $sira + 1 ?> / <?= count($mansetler) ?>">
-                <a href="/haber.php?h=<?= e($haber['slug']) ?>">
+                <a href="<?= e(haber_yolu((string) $haber['slug'])) ?>">
                     <?php if ($gorsel !== ''): ?>
                         <img class="ust-gorsel" src="<?= e($gorsel) ?>" alt=""
                              loading="<?= $sira === 0 ? 'eager' : 'lazy' ?>">

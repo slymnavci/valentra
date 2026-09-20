@@ -52,7 +52,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
 <article class="detay">
     <?php if (!empty($haber['kategori_slug'])): ?>
-        <a class="etiket" href="/kategori.php?k=<?= e($haber['kategori_slug']) ?>">
+        <a class="etiket" href="<?= e(kategori_yolu((string) $haber['kategori_slug'])) ?>">
             <?= e($haber['kategori_adi']) ?>
         </a>
     <?php else: ?>

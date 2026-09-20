@@ -3,6 +3,20 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/url.php';
 require_once __DIR__ . '/kazima.php';
+require_once __DIR__ . '/http_ortak.php';
+
+/*
+ * Panelden yapilan denemeler de ortak curl ayarlarini kullanir.
+ *
+ * Bu dosyadaki uc istek kendi curl secenek listesini tutuyordu ve
+ * guncel kok sertifika listesi (includes/sertifika/ca-bundle.crt)
+ * onlara hic ulasmiyordu; kimlik de "ValentraBot" olarak gidiyordu.
+ * Sonucu panelde goruluyordu: gecerli sertifikasi olan kamu siteleri
+ * "guvenlik sertifikasi dogrulanamadi", bot trafigini eleyen siteler
+ * ise "calisan besleme bulunamadi" diye isaretleniyordu — yani hata
+ * kaynakta degil, denemenin kendisindeydi. Ayni ayarlarin iki yerde
+ * durmasi bunun sebebiydi, o yuzden tek yere baglandi.
+ */
 
 /**
  * Bir RSS/Atom beslemesini deneyip sonucu raporlar.
@@ -21,14 +35,13 @@ function besleme_dene(string $url, int $zamanAsimi = 15): array
     }
 
     $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_MAXREDIRS      => 4,
-        CURLOPT_TIMEOUT        => $zamanAsimi,
-        CURLOPT_CONNECTTIMEOUT => 8,
-        CURLOPT_USERAGENT      => 'ValentraBot/1.0 (+https://valentra.com.tr)',
-        CURLOPT_ENCODING       => '',
+    curl_setopt_array($ch, http_ortak_secenekler($zamanAsimi));
+
+    // Besleme ararken XML one alinir; HTML yalnizca son care.
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Accept: application/rss+xml, application/atom+xml, application/xml, '
+            . 'text/xml, text/html;q=0.9, */*;q=0.8',
+        'Accept-Language: tr-TR,tr;q=0.9,en;q=0.8',
     ]);
 
     $govde = curl_exec($ch);
@@ -153,15 +166,7 @@ function besleme_kesfet(string $siteUrl, int $enFazlaDeneme = 8): array
 
     // 1) Sayfanın kendi ilanı
     $ch = curl_init($siteUrl);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_MAXREDIRS      => 4,
-        CURLOPT_TIMEOUT        => 15,
-        CURLOPT_CONNECTTIMEOUT => 8,
-        CURLOPT_USERAGENT      => 'ValentraBot/1.0 (+https://valentra.com.tr)',
-        CURLOPT_ENCODING       => '',
-    ]);
+    curl_setopt_array($ch, http_ortak_secenekler(15));
     $html = curl_exec($ch);
     $sonAdres = (string) curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
     curl_close($ch);
@@ -272,15 +277,7 @@ function kazima_sayfayi_dene(string $listeUrl, string $secici = '', int $zamanAs
     }
 
     $ch = curl_init($listeUrl);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_MAXREDIRS      => 4,
-        CURLOPT_TIMEOUT        => $zamanAsimi,
-        CURLOPT_CONNECTTIMEOUT => 8,
-        CURLOPT_USERAGENT      => 'ValentraBot/1.0 (+https://valentra.com.tr)',
-        CURLOPT_ENCODING       => '',
-    ]);
+    curl_setopt_array($ch, http_ortak_secenekler($zamanAsimi));
 
     $html   = curl_exec($ch);
     $kod    = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);

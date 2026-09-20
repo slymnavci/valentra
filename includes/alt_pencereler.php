@@ -28,13 +28,13 @@ if ($altBloklar === []) {
         ?>
         <section class="pencere blok">
             <h3 class="blok-baslik">
-                <a href="/kategori.php?k=<?= e($blok['slug']) ?>">
+                <a href="<?= e(kategori_yolu((string) $blok['slug'])) ?>">
                     <?= e($blok['ad']) ?>
                     <span class="devam">Tümü &rarr;</span>
                 </a>
             </h3>
 
-            <a class="blok-one-cikan" href="/haber.php?h=<?= e($ilk['slug']) ?>">
+            <a class="blok-one-cikan" href="<?= e(haber_yolu((string) $ilk['slug'])) ?>">
                 <?php if ($ilkGorsel !== ''): ?>
                     <img src="<?= e($ilkGorsel) ?>" alt="" loading="lazy">
                 <?php endif; ?>
@@ -47,7 +47,7 @@ if ($altBloklar === []) {
                 <ul class="blok-liste">
                     <?php foreach ($haberler as $haber): ?>
                         <li>
-                            <a href="/haber.php?h=<?= e($haber['slug']) ?>">
+                            <a href="<?= e(haber_yolu((string) $haber['slug'])) ?>">
                                 <?= e($haber['baslik']) ?>
                             </a>
                         </li>

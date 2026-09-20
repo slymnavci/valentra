@@ -1,14 +1,91 @@
 # Valentra
 
-# Site haritasi PHP ile uretiliyor; bu kural yalnizca kolaylik icin,
-# /sitemap.xml adresini de calisir kiliyor. Hicbir sey buna bagli
-# degil: robots.txt dogrudan /sitemap.php adresini bildiriyor, cunku
-# arama motorlari harita adresinde .xml uzantisi sart kosmuyor.
-#
-# IfModule sarmalayicisi sart: mod_rewrite yoksa yonerge sunucuyu 500
-# ile dusurur ve TUM site erisilemez olur. Paylasimli hostingde bunu
-# onceden denemek mumkun degil, o yuzden en temkinli hali.
+# IfModule sarmalayicisi sart: mod_rewrite yoksa yonergeler sunucuyu
+# 500 ile dusurur ve TUM site erisilemez olur. Paylasimli hostingde
+# bunu onceden denemek mumkun degil, o yuzden en temkinli hali.
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # Site haritasi PHP ile uretiliyor; bu kural yalnizca kolaylik
+    # icin, /sitemap.xml adresini de calisir kiliyor. Hicbir sey buna
+    # bagli degil: robots.txt dogrudan /sitemap.php adresini bildiriyor,
+    # cunku arama motorlari harita adresinde .xml uzantisi sart
+    # kosmuyor.
     RewriteRule ^sitemap\.xml$ /sitemap.php [L]
+
+    # --- Eski adresler -> temiz adres (kalici yonlendirme) ------------
+    #
+    # Ayni icerigin iki adresten servis edilmesi arama motorunda
+    # bolunmeye yol acar. Eski baglantilar (paylasilmis, yer imine
+    # eklenmis, indekslenmis) kirilmasin diye silinmiyor; 301 ile yeni
+    # adrese tasiniyor, boylece birikmis deger de yeni adrese geciyor.
+    #
+    # Kosul THE_REQUEST uzerinden kuruluyor, REQUEST_URI uzerinden
+    # degil: asagidaki ic yonlendirmeler REQUEST_URI'yi degistirir ve
+    # kural kendi ciktisini yeniden yakalayip sonsuz donguye girerdi.
+    # THE_REQUEST ise istemcinin gonderdigi ham istek satiri; ic
+    # yonlendirmeyle degismez.
+    #
+    # Adres satirin basinda araniyor (\s/haber\.php), yani /admin/ ya da
+    # baska bir dizin altindaki ayni adli dosyalar etkilenmiyor.
+
+    RewriteCond %{THE_REQUEST} \s/haber\.php\?h=([^\s&]+) [NC]
+    RewriteRule ^ /haber/%1? [R=301,L]
+
+    # Sayfa numarasi korunuyor: yalnizca kategoriye dusurmek
+    # ziyaretciyi baktigi yerden koparirdi.
+    RewriteCond %{THE_REQUEST} \s/kategori\.php\?k=([^\s&]+)&sayfa=([0-9]+) [NC]
+    RewriteRule ^ /kategori/%1?sayfa=%2 [R=301,L]
+
+    RewriteCond %{THE_REQUEST} \s/kategori\.php\?k=([^\s&]+) [NC]
+    RewriteRule ^ /kategori/%1? [R=301,L]
+
+    RewriteCond %{THE_REQUEST} \s/kanun\.php\?k=([^\s&]+)&tani=1 [NC]
+    RewriteRule ^ /kanun/%1?tani=1 [R=301,L]
+
+    RewriteCond %{THE_REQUEST} \s/kanun\.php\?k=([^\s&]+) [NC]
+    RewriteRule ^ /kanun/%1? [R=301,L]
+
+    RewriteCond %{THE_REQUEST} \s/kanunlar\.php[\s?] [NC]
+    RewriteRule ^ /kanunlar? [R=301,L]
+
+    RewriteCond %{THE_REQUEST} \s/pratik-bilgi\.php\?p=([^\s&]+) [NC]
+    RewriteRule ^ /pratik/%1? [R=301,L]
+
+    RewriteCond %{THE_REQUEST} \s/pratik-bilgiler\.php[\s?] [NC]
+    RewriteRule ^ /pratik-bilgiler? [R=301,L]
+
+    RewriteCond %{THE_REQUEST} \s/index\.php[\s?] [NC]
+    RewriteRule ^ /? [R=301,L]
+
+    # --- Temiz adres -> gercek dosya (ic yonlendirme) ----------------
+    #
+    # QSA: sayfa numarasi gibi eklenen parametreler korunur.
+    # Gercekten var olan bir dosya ya da dizin istenmisse hicbir sey
+    # yapilmiyor; /assets, /admin ve /api oldugu gibi calismaya devam
+    # ediyor.
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^haber/([^/]+)/?$ haber.php?h=$1 [L,QSA]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^kategori/([^/]+)/?$ kategori.php?k=$1 [L,QSA]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^kanun/([^/]+)/?$ kanun.php?k=$1 [L,QSA]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^kanunlar/?$ kanunlar.php [L,QSA]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^pratik-bilgiler/?$ pratik-bilgiler.php [L,QSA]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^pratik/([^/]+)/?$ pratik-bilgi.php?p=$1 [L,QSA]
 </IfModule>

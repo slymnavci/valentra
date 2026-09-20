@@ -34,7 +34,7 @@ $yanMenu = array_values(array_filter(
                 <?php foreach ($sonEklenenler as $sira => $haber): ?>
                     <li>
                         <span class="sira"><?= $sira + 1 ?></span>
-                        <a href="/haber.php?h=<?= e($haber['slug']) ?>">
+                        <a href="<?= e(haber_yolu((string) $haber['slug'])) ?>">
                             <span class="ad"><?= e($haber['baslik']) ?></span>
                             <span class="ust-bilgi">
                                 <?php if (!empty($haber['kategori_adi'])): ?>
@@ -56,7 +56,7 @@ $yanMenu = array_values(array_filter(
             <ul class="konu-listesi">
                 <?php foreach ($yanMenu as $grup): ?>
                     <li>
-                        <a href="/kategori.php?k=<?= e($grup['slug']) ?>">
+                        <a href="<?= e(kategori_yolu((string) $grup['slug'])) ?>">
                             <?= e($grup['ad']) ?>
                             <span class="adet"><?= $grup['adet'] ?></span>
                         </a>

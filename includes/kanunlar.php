@@ -159,16 +159,76 @@ function kanun_adresi(array $kanun): string
  *   MevzuatMetin/{tur}.{tertip}.{no}.pdf
  * Tur ve tertip zaten elimizde oldugu icin tahmine gerek yok.
  *
- * @return array{pdf:string,doc:string,sayfa:string}
+ * Tek bir adrese guvenmiyoruz. Ayni metne giden birden cok yol var ve
+ * hangisinin acik oldugu sunucudan sunucuya degisiyor: "www" olmayan
+ * alan adi bazen farkli bir guvenlik duvarinin arkasinda duruyor,
+ * uygulamanin kendi PDF ucu ise duragan dosya kapali olsa bile
+ * calisabiliyor. Adaylar sirayla deneniyor, ilk tutan kullaniliyor ve
+ * hepsinin sonucu tani ekraninda gorunuyor.
+ *
+ * @return list<array{ad:string,tur:string,url:string}>
  */
-function kanun_metin_adresleri(array $kanun): array
+function kanun_metin_adaylari(array $kanun): array
 {
-    $kok = 'https://www.mevzuat.gov.tr/MevzuatMetin/1.'
-         . (int) $kanun['tertip'] . '.' . (int) $kanun['no'];
+    $tertip = (int) $kanun['tertip'];
+    $no     = (int) $kanun['no'];
+    $dosya  = '/MevzuatMetin/1.' . $tertip . '.' . $no;
 
     return [
-        'pdf'   => $kok . '.pdf',
-        'doc'   => $kok . '.doc',
-        'sayfa' => kanun_adresi($kanun),
+        [
+            'ad'  => 'PDF',
+            'tur' => 'pdf',
+            'url' => 'https://www.mevzuat.gov.tr' . $dosya . '.pdf',
+        ],
+        [
+            // Bazi aglarda yalnizca www'suz ad cozuluyor.
+            'ad'  => 'PDF (www yok)',
+            'tur' => 'pdf',
+            'url' => 'https://mevzuat.gov.tr' . $dosya . '.pdf',
+        ],
+        [
+            // Uygulamanin "PDF indir" dugmesinin arkasindaki uc.
+            'ad'  => 'PDF (uygulama ucu)',
+            'tur' => 'pdf',
+            'url' => 'https://www.mevzuat.gov.tr/File/GeneratePdf?mevzuatNo=' . $no
+                   . '&mevzuatTur=KanunTertip&mevzuatTertip=' . $tertip,
+        ],
+        [
+            'ad'  => 'DOC',
+            'tur' => 'doc',
+            'url' => 'https://www.mevzuat.gov.tr' . $dosya . '.doc',
+        ],
+        [
+            'ad'  => 'Sayfa',
+            'tur' => 'sayfa',
+            'url' => kanun_adresi($kanun),
+        ],
     ];
+}
+
+/**
+ * Yalnızca PDF adayları.
+ *
+ * PDF'i aktaran uc (api/kanun-pdf.php) yalnizca bunlari dener; DOC ve
+ * sayfa oradan ise yaramaz.
+ *
+ * @return list<array{ad:string,tur:string,url:string}>
+ */
+function kanun_pdf_adaylari(array $kanun): array
+{
+    return array_values(array_filter(
+        kanun_metin_adaylari($kanun),
+        static fn (array $aday): bool => $aday['tur'] === 'pdf'
+    ));
+}
+
+/**
+ * İstekleri gönderirken kullanılacak Referer.
+ *
+ * Duragan dosyalara dogrudan gelen istekleri reddeden sunucular, ayni
+ * siteden geliyormus gibi gorunen istekleri gecirir.
+ */
+function kanun_referer(array $kanun): string
+{
+    return kanun_adresi($kanun);
 }
