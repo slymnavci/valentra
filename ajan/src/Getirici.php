@@ -23,27 +23,39 @@ namespace Valentra\Ajan;
  */
 final class Getirici implements Indirici
 {
-    /**
-     * Bir calismada site uzerinden yapilabilecek en fazla istek.
-     *
-     * Tavan SART. Bu yol acilmadan once site zaten araliklarla
-     * ulasilamaz oluyordu ve ajan gunde on kez kosuyor; her calismada
-     * paylasimli hostinge onlarca ek istek yagdirmak IHS'nin hiz
-     * sinirlayicisini tetikleyip durumu kotulestirebilir. Sinira
-     * gelindiginde yalnizca bu yol kapanir, dogrudan indirme
-     * calismaya devam eder.
-     */
-    private const SITE_ISTEK_TAVANI = 25;
-
     /** @var array<string,bool> Site yolunun denendigi ama tutmadigi sunucular */
     private array $umitsiz = [];
 
     private int $siteyleGelen = 0;
     private int $siteIstegi   = 0;
+    private float $sonSiteIstegi = 0.0;
 
+    /**
+     * @param int   $siteTavani Bir calismada site uzerinden en fazla istek
+     * @param float $siteAraligi Iki site istegi arasindaki en az sure (sn)
+     *
+     * TAVAN VE ARALIK SART — bedeli olcusuz degil, olculdu.
+     *
+     * Bu yol acildiktan sonra site araliklarla ulasilamaz olmaya
+     * basladi. Sebep bulundu: kaynak testi basarisiz her kaynak icin
+     * hem RSS hem kazima adresini siteden istiyor, ustune kesif
+     * cagrilari da ayni yoldan geciyordu. 32 basarisiz kaynakta bu,
+     * uc dakikada 128 istek demek — paylasimli hostinglerdeki
+     * guvenlik duvarlari (Imunify360, fail2ban) tam bu davranista
+     * IP'yi gecici olarak yasaklar.
+     *
+     * Zaman cizelgesi de uyuyordu: yasaklar her seferinde test
+     * kosturmalarindan sonra basliyordu. Yani cozumumuz kendi
+     * sorunumuzu uretiyordu.
+     *
+     * Tavana gelindiginde yalnizca bu yol kapanir; dogrudan indirme
+     * calismaya devam eder.
+     */
     public function __construct(
         private readonly Http $http,
         private readonly ?Site $site = null,
+        private readonly int $siteTavani = 8,
+        private readonly float $siteAraligi = 1.0,
     ) {
     }
 
@@ -70,10 +82,24 @@ final class Getirici implements Indirici
             return null;
         }
 
-        if ($this->siteIstegi >= self::SITE_ISTEK_TAVANI) {
+        if ($this->siteIstegi >= $this->siteTavani) {
             return null;
         }
 
+        /*
+         * Istekler arasina zorunlu bosluk.
+         *
+         * Tavan tek basina yetmiyor: sekiz istegi de ayni saniyede
+         * gondermek hiz sinirlayicisi acisindan "sekiz istek/saniye"
+         * demek ve tam da yasaklanan davranis bu.
+         */
+        $gecen = microtime(true) - $this->sonSiteIstegi;
+
+        if ($this->sonSiteIstegi > 0.0 && $gecen < $this->siteAraligi) {
+            usleep((int) (($this->siteAraligi - $gecen) * 1_000_000));
+        }
+
+        $this->sonSiteIstegi = microtime(true);
         $this->siteIstegi++;
         $siteden = $this->site->hamGetir($url);
 
@@ -99,6 +125,6 @@ final class Getirici implements Indirici
     /** Site istek tavanina gelindi mi; gunluge yazmak icin. */
     public function siteTavaniDoldu(): bool
     {
-        return $this->siteIstegi >= self::SITE_ISTEK_TAVANI;
+        return $this->siteIstegi >= $this->siteTavani;
     }
 }

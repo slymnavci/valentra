@@ -366,16 +366,44 @@ foreach ($kaynaklar as $kaynak) {
     $girdiler = [];
     $yontem   = '';
 
-    // Once RSS: varsa ve haber veriyorsa en guvenilir yol.
-    if ($beslemeUrl !== '') {
-        $girdiler = $besleme->oku($beslemeUrl, $saat);
-        $yontem   = 'besleme';
-    }
+    /*
+     * BIR KAYNAK CALISMAYI OLDUREMEZ.
+     *
+     * Kaynaklar sirayla okunuyordu ve okuma sirasinda cikan her hata
+     * butun calismayi bitiriyordu. Gercek bir calismada bozuk bir
+     * beslemede olumcul hata cikti ve Haberturk'ten SONRAKI butun
+     * kaynaklar hic taranmadi — o ana kadar bulunan adaylar da cope
+     * gitti, cunku haber yazma adimina hic gelinemedi.
+     *
+     * Bir kaynagin bozuk olmasi normaldir: adres degisir, sunucu
+     * hata dondurur, besleme bozulur, site beklenmedik bicim uretir.
+     * Anormal olan, birinin digerlerini durdurmasi.
+     *
+     * Throwable yakalaniyor — Exception degil: bu bir "beklenen hata"
+     * yonetimi degil, "ne cikarsa ciksin devam et" kalkani. Ayrintisi
+     * gunluge yaziliyor ki sorun gizlenmesin, kaynak da atlaniyor.
+     */
+    try {
+        // Once RSS: varsa ve haber veriyorsa en guvenilir yol.
+        if ($beslemeUrl !== '') {
+            $girdiler = $besleme->oku($beslemeUrl, $saat);
+            $yontem   = 'besleme';
+        }
 
-    // Besleme yoksa ya da bos dondüyse duyuru sayfasini kaziyoruz.
-    if ($girdiler === [] && $listeUrl !== '') {
-        $girdiler = $kazima->oku($listeUrl, (string) ($kaynak['liste_secici'] ?? ''));
-        $yontem   = 'kazıma';
+        // Besleme yoksa ya da bos dondüyse duyuru sayfasini kaziyoruz.
+        if ($girdiler === [] && $listeUrl !== '') {
+            $girdiler = $kazima->oku($listeUrl, (string) ($kaynak['liste_secici'] ?? ''));
+            $yontem   = 'kazıma';
+        }
+    } catch (Throwable $e) {
+        gunluk(sprintf(
+            '  %s: HATA, atlandı — %s (%s:%d)',
+            $kaynak['ad'],
+            $e->getMessage(),
+            basename($e->getFile()),
+            $e->getLine()
+        ));
+        continue;
     }
 
     if ($girdiler === []) {
@@ -549,7 +577,30 @@ foreach ($gruplar as $grupNo => $grup) {
          * asagisinda duruyor ve bu sinirla hic okunmuyordu. Modele
          * giden miktari Yazar ayrica kendi sinirina gore kirpar.
          */
-        $okunan = $sayfa->oku($aday['girdi']['baglanti'], 30000);
+        /*
+         * Sayfa okumasi da kalkanli — ama ADAY ATLANMAZ.
+         *
+         * Hata yakalanip bos metinle devam ediliyor. Adayi listeden
+         * duşurmek cazip gorunuyor ama TEHLIKELI: model sonuclari
+         * siraya gore eslestiriliyor ve $grup'ta duran bir aday
+         * $modelAdaylari'ndan cikarilirsa sonraki butun sonuclar bir
+         * kayar. Sonuc sessizce YANLIS olur — haber metni baska bir
+         * kaynaga baglanir. Ayni tuzaga pratik bilgilerde dusulmus
+         * ve SGK'nin notu TCMB faizine iliştirilmişti.
+         *
+         * Bos metinle giden aday zararsiz: model baslik ve ozete
+         * bakar, yetersiz bulursa "ilgili degil" der.
+         */
+        try {
+            $okunan = $sayfa->oku($aday['girdi']['baglanti'], 30000);
+        } catch (Throwable $e) {
+            gunluk(sprintf(
+                '  sayfa okunamadı, yalnızca başlıkla değerlendirilecek — %s (%s)',
+                mb_substr($aday['girdi']['baslik'], 0, 60),
+                $e->getMessage()
+            ));
+            $okunan = ['metin' => '', 'gorsel' => ''];
+        }
 
         // Gorsel once beslemeden, yoksa haber sayfasinin og:image'inden.
         // Besleme gorseli daha guvenilir: siteyi yazan kisi haberin

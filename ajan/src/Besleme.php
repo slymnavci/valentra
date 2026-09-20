@@ -115,7 +115,39 @@ final class Besleme
         libxml_clear_errors();
         libxml_use_internal_errors($onceki);
 
+        /*
+         * Kurtarma bazen YARIM bir nesne dondurur.
+         *
+         * Cok bozuk bir belgede LIBXML kurtarma modu false yerine
+         * "properly initialized" olmayan bir SimpleXMLElement
+         * veriyor. Nesne elde var gorunuyor ama ilk erisimde
+         * "SimpleXMLElement is not properly initialized" ile olumcul
+         * hataya dusuyor — gercek bir calismada tam bu oldu ve
+         * Haberturk'ten sonraki butun kaynaklar hic taranamadi.
+         *
+         * Bu yuzden dondurmeden once nesneye dokunup kullanilabilir
+         * oldugu dogrulaniyor.
+         */
+        if ($xml !== false && !$this->kullanilabilir($xml)) {
+            return false;
+        }
+
         return $xml;
+    }
+
+    /**
+     * Nesne gerçekten kullanılabilir mi?
+     *
+     * Kok ogenin adini okumak en ucuz dokunus; yarim nesne burada
+     * hata firlatiyor ve biz onu yutup "besleme okunamadi" diyoruz.
+     */
+    private function kullanilabilir(\SimpleXMLElement $xml): bool
+    {
+        try {
+            return $xml->getName() !== '';
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     /**

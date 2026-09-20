@@ -173,7 +173,25 @@ $http    = new Http();
  * istiyor. Test bunu yapmasaydi "basarisiz" derken ajan ayni kaynagi
  * sorunsuz okuyor olabilirdi — yani tani araci yaniltirdi.
  */
-$getirici = new Getirici($http, $site);
+/*
+ * Iki ayri getirici — ve bu ayrim onemli.
+ *
+ * $getirici: kaynagin BESLEME adresini okur. Dogrudan erisilemeyen
+ * adreslerde site sunucusuna dusebilir, ama tavani dar (10) ve
+ * istekler arasinda 1,5 saniye bosluk var.
+ *
+ * $dogrudan: kesif cagrilari icin; site yolu YOK. Kesif kaynagin
+ * kendi ana sayfasini cekiyor ve bu adresler zaten dogrudan
+ * acilabiliyor; siteyi araya sokmanin faydasi yok, maliyeti buyuk.
+ *
+ * NEDEN: bu ayrim yokken test, basarisiz her kaynak icin hem RSS hem
+ * kazima adresini, ustune iki kesif cagrisini de siteden istiyordu.
+ * 32 basarisiz kaynakta uc dakikada 128 istek eder ve paylasimli
+ * hostingin guvenlik duvari IP'yi gecici olarak yasaklar. Site
+ * gercekten de her test kosturmasindan sonra erisilemez oluyordu.
+ */
+$getirici = new Getirici($http, $site, 10, 1.5);
+$dogrudan = new Getirici($http, null);
 $besleme = new Besleme($getirici);
 
 /**
@@ -402,7 +420,7 @@ foreach ($kaynaklar as $kaynak) {
                  * yeni adresi ana sayfalarinda ilan ediyor. Tahmin
                  * etmek yerine okuyoruz.
                  */
-                foreach (beslemeleriKesfet($getirici, $kaynakSitesi) as $aday) {
+                foreach (beslemeleriKesfet($dogrudan, $kaynakSitesi) as $aday) {
                     yaz('       ÖNERİ — sitede ilan edilen besleme: ' . $aday['url']
                         . ($aday['ad'] !== '' ? '  (' . $aday['ad'] . ')' : ''));
                 }
@@ -548,12 +566,12 @@ foreach ($kaynaklar as $kaynak) {
      * yapildi; burada tekrarlanmiyor.
      */
     if ($calisanYol === '') {
-        foreach (beslemeleriKesfet($getirici, $kaynakSitesi) as $aday) {
+        foreach (beslemeleriKesfet($dogrudan, $kaynakSitesi) as $aday) {
             yaz('  ÖNERİ (besleme) — ' . $aday['url']
                 . ($aday['ad'] !== '' ? '  [' . $aday['ad'] . ']' : ''));
         }
 
-        foreach (adresOner($getirici, $kaynakSitesi) as $aday) {
+        foreach (adresOner($dogrudan, $kaynakSitesi) as $aday) {
             yaz('  ÖNERİ (liste) — ' . $aday['url']
                 . ($aday['yazi'] !== '' ? '  [' . mb_substr($aday['yazi'], 0, 40) . ']' : ''));
         }
