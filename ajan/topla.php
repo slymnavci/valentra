@@ -24,6 +24,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/src/Indirici.php';
 require_once __DIR__ . '/src/Http.php';
 require_once __DIR__ . '/src/Getirici.php';
+require_once __DIR__ . '/src/Depo.php';
 require_once __DIR__ . '/src/Besleme.php';
 require_once __DIR__ . '/src/Sayfa.php';
 require_once __DIR__ . '/src/Kazima.php';
@@ -33,7 +34,7 @@ require_once __DIR__ . '/src/KotaBittiException.php';
 require_once __DIR__ . '/src/SemaliIstemci.php';
 require_once __DIR__ . '/src/Yazar.php';
 
-use Valentra\Ajan\{Besleme, Getirici, Http, Kazima, KotaBittiException, Sayfa, Site, Suzgec, Yazar};
+use Valentra\Ajan\{Besleme, Depo, Getirici, Http, Kazima, KotaBittiException, Sayfa, Site, Suzgec, Yazar};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
@@ -86,11 +87,51 @@ $yazar   = new Yazar($apiKey);
 
 // --- 1. Yapılandırma -------------------------------------------------------
 
+/*
+ * SITEYE ULASILAMAMASI CALISMAYI BITIRMEMELI.
+ *
+ * Ajan yapilandirmayi (kaynak listesi, konu gruplari, bilinen
+ * haberler) siteden aliyordu ve bu cagri duserse calisma daha ilk
+ * adimda oluyordu: kaynaklar taranmiyor, model cagrilmiyor, hicbir
+ * haber yazilmiyor. IHS 443'te saatlerce baglanti kabul etmedigi bir
+ * gunde ajan tamamen durdu.
+ *
+ * Oysa siteye ulasilamamasi haber TOPLAMAYI engellemek zorunda degil.
+ * Kaynak listesi nadiren degisiyor; son basarili calismadan kalan
+ * kopyayla tarama pekala yapilabilir. Yazilan haberler de gonderim
+ * dusunce kaybolmuyor, depoda bekleyip bir sonraki calismada
+ * gonderiliyor.
+ *
+ * Onbellek kopyasi bir haftadan eskiyse kullanilmiyor: cok eski bir
+ * kaynak listesiyle calismak, guncel listeyle calistigini sanmaktan
+ * kotudur.
+ */
+$depo = new Depo(__DIR__ . '/onbellek');
+
+$yapilandirma   = null;
+$onbellekteyiz  = false;
+
 try {
     $yapilandirma = $site->yapilandirma();
+    $depo->yaz('yapilandirma', $yapilandirma);
 } catch (Throwable $e) {
-    fwrite(STDERR, 'Yapılandırma alınamadı: ' . $e->getMessage() . "\n");
-    exit(1);
+    gunluk('Siteden yapılandırma alınamadı: ' . $e->getMessage());
+
+    $yedek = $depo->oku('yapilandirma', 7);
+
+    if (!is_array($yedek) || ($yedek['kaynaklar'] ?? []) === []) {
+        fwrite(STDERR, "Önbellekte kullanılabilir yapılandırma da yok; çalışma durdu.\n");
+        exit(1);
+    }
+
+    $yapilandirma  = $yedek;
+    $onbellekteyiz = true;
+
+    gunluk(sprintf(
+        'Önbellekteki yapılandırmayla devam ediliyor (%s gün önce alınmış). '
+        . 'Haberler yazılacak ve siteye ulaşılabildiğinde gönderilecek.',
+        $depo->yas('yapilandirma') ?? '?'
+    ));
 }
 
 $kaynaklar   = $yapilandirma['kaynaklar'];
@@ -715,29 +756,64 @@ if ($kuruCalisma) {
     exit(0);
 }
 
-if ($haberler === []) {
+/*
+ * Onceki calismalardan bekleyen haberler varsa onlar da gonderilir.
+ *
+ * Gonderim duserse haberler artik kaybolmuyor, depoda bekliyor. Kopya
+ * engeli dort katmanli oldugu icin bekleyenleri yeniden gondermek
+ * risksiz: sitede zaten varsa "yinelenen" sayilip atiliyor.
+ */
+$bekleyen = $depo->oku('bekleyen_haberler', 7);
+$bekleyen = is_array($bekleyen) ? $bekleyen : [];
+
+if ($bekleyen !== []) {
+    gunluk(count($bekleyen) . ' haber önceki çalışmadan bekliyor, onlar da gönderilecek.');
+}
+
+$gonderilecek = array_merge($bekleyen, $haberler);
+
+if ($gonderilecek === []) {
     gunluk('Gönderilecek haber yok.');
     exit(0);
 }
 
 try {
-    $yanit = $site->gonder($haberler);
+    $yanit = $site->gonder($gonderilecek);
 } catch (Throwable $e) {
-    fwrite(STDERR, 'Gönderim başarısız: ' . $e->getMessage() . "\n");
+    /*
+     * Model cagrilari bu noktada zaten yapildi ve odendi.
+     *
+     * Eskiden haberler yalnizca gunluge dokuluyor ve calisma hata
+     * koduyla bitiyordu; yani emek ve para cope gidiyordu. Artik
+     * depoya yaziliyorlar ve siteye ulasilabilen ilk calismada
+     * gonderiliyorlar.
+     */
+    gunluk('Gönderim başarısız: ' . $e->getMessage());
 
-    // Model cagrilari bu noktada zaten yapildi ve odendi. Gonderim
-    // dustugunde haberleri sessizce kaybetmek yerine gunluge dokuyoruz;
-    // boylece metin elde kaliyor, gerekirse panelden elle girilebiliyor.
-    fwrite(STDERR, "\nYazılan haberler aşağıda; site tekrar ayağa kalktığında\n");
-    fwrite(STDERR, "ajanı yeniden çalıştırmak yeterli, kopya engeli aynı haberi\n");
-    fwrite(STDERR, "iki kez eklemez.\n\n");
+    if ($depo->yaz('bekleyen_haberler', $gonderilecek)) {
+        gunluk(count($gonderilecek) . ' haber saklandı; siteye ulaşılabilen '
+            . 'ilk çalışmada gönderilecek. Kopya engeli aynı haberi iki kez eklemez.');
+
+        /*
+         * Cikis kodu 0: bu bir BASARISIZLIK degil, ertelenmis bir
+         * gonderim. Kirmizi bir is, gercekten bozuk bir sey oldugunda
+         * fark edilsin diye ayrilmali.
+         */
+        exit(0);
+    }
+
+    // Depoya da yazilamadiysa son care: gunluge dok, elle kurtarilabilsin.
+    fwrite(STDERR, "Haberler depoya da yazılamadı; aşağıda:\n\n");
     fwrite(
         STDERR,
-        json_encode($haberler, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n"
+        json_encode($gonderilecek, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n"
     );
 
     exit(1);
 }
+
+// Gonderim tuttu: bekleyenler artik sitede, depoyu temizle.
+$depo->sil('bekleyen_haberler');
 
 gunluk(
     'Siteye gönderildi: ' . ($yanit['eklenen'] ?? 0) . ' yeni taslak, '

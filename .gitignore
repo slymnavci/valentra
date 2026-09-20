@@ -15,3 +15,4 @@ includes/sertifika/ca-bundle-guncel.crt
 
 # Panelden yuklenen kanun PDF'leri; depoya girmez.
 includes/kanun_pdf/
+ajan/onbellek/

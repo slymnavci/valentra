@@ -79,6 +79,25 @@ jobs:
           key: ajan-vendor-${{ hashFiles('ajan/composer.json') }}
           restore-keys: ajan-vendor-
 
+      # Ajanin calismalar arasi kucuk deposu.
+      #
+      # Iki sey tasiyor: son basarili yapilandirma (kaynak listesi) ve
+      # gonderilemeden kalan haberler. Site ulasilamaz oldugunda ajan
+      # bu kopyayla taramaya devam ediyor ve yazdigi haberler
+      # kaybolmak yerine burada bekleyip siteye ulasilan ilk
+      # calismada gonderiliyor.
+      #
+      # Anahtara calisma numarasi konuyor ve restore-keys ile en son
+      # kayit geri yukleniyor: GitHub onbellegi ayni anahtara ikinci
+      # kez YAZMAZ, sabit anahtar kullanilsa depo ilk calismadan sonra
+      # hic guncellenmezdi.
+      - name: Ajan deposu
+        uses: actions/cache@v4
+        with:
+          path: ajan/onbellek
+          key: ajan-depo-${{ github.run_id }}
+          restore-keys: ajan-depo-
+
       - name: Bagimliliklari kur
         working-directory: ajan
         run: composer install --no-interaction --no-progress --prefer-dist
