@@ -40,6 +40,7 @@ on:
           - pratik-bilgiler
           - kaynak-testi
           - kanun-testi
+          - ag-tanisi
       kuru:
         description: 'Kuru calisma (siteye gonderme, sadece ciktiyi goster)'
         type: boolean
@@ -113,6 +114,18 @@ jobs:
         if: inputs.mod == 'kanun-testi'
         working-directory: ajan
         run: php kaynak_dene.php --kanunlar
+
+      # Baglanan sunucunun dis IP adresini ve baglanti sonucunu yazar.
+      #
+      # Barindirici 443'teki zaman asimini inceleyebilmek icin IP
+      # istedi. GitHub Actions'in sabit IP'si yok, her calisma farkli
+      # bir adres aliyor; bu adim "IP + saat + sonuc" uclusunu
+      # uretiyor, kayitlarda aranacak olan bu.
+      - name: Ag tanisi
+        if: inputs.mod == 'ag-tanisi'
+        env:
+          VALENTRA_SITE_URL: ${{ secrets.VALENTRA_SITE_URL }}
+        run: php ag_tani.php
 
       - name: Kaynaklari sina
         if: inputs.mod == 'kaynak-testi'
