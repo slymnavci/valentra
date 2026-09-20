@@ -10,6 +10,19 @@ declare(strict_types=1);
  * olarak tanimazsa Haberler sekmesine ve zengin sonuclara hic girmez.
  */
 
+/**
+ * Google Search Console doğrulama kodu (varsayılan).
+ *
+ * Panelden girilen deger bunun onune geciyor; burasi yalnizca
+ * varsayilan. Kodda durmasinin sebebi pratik: dogrulama etiketinin
+ * sitede olmasi, panele girilmesini beklemeden kanitlanabilir olsun.
+ *
+ * Gizli bir deger degil — her sayfanin kaynaginda herkese acik duruyor
+ * ve tek isi Search Console'a bu siteyi ekleyen kisinin sunucuya
+ * erisebildigini gostermek.
+ */
+const SEO_GOOGLE_DOGRULAMA = 'vKzjIi4Q2RMg9zdzN8djF6vX-f3Rtc9WjlwRiA6by2A';
+
 /** Sitenin kendi adresi (protokol dahil, sonda / yok). */
 function site_adresi(): string
 {

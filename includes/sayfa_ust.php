@@ -72,12 +72,16 @@ $menuAktif = static function (array $grup) use ($aktifKategori): bool {
     /*
      * Search Console dogrulama etiketi.
      *
-     * Panelden giriliyor (Arama motoru sayfasi) ve yalnizca doluysa
-     * basiliyor. Google siteyi ancak dogruladiktan sonra indeksleme
-     * raporu gosteriyor; o rapor olmadan "Google bizi goruyor mu"
-     * sorusunun cevabi yok.
+     * Panelden girilebiliyor (Arama motoru sayfasi); girilmemisse
+     * kodda tanimli varsayilan kullaniliyor. Google siteyi ancak
+     * dogruladiktan sonra indeksleme raporu gosteriyor; o rapor
+     * olmadan "Google bizi goruyor mu" sorusunun cevabi yok.
+     *
+     * Deger gizli degil — zaten her sayfanin kaynagında herkese acik
+     * duruyor. Islevi sahiplik kanitlamak: Search Console'a bu siteyi
+     * ekleyen kisinin sunucuya dosya koyabildigini gosteriyor.
      */
-    $googleKodu = ayar_oku('google_dogrulama');
+    $googleKodu = ayar_oku('google_dogrulama', SEO_GOOGLE_DOGRULAMA);
     ?>
     <?php if ($googleKodu !== ''): ?>
         <meta name="google-site-verification" content="<?= e($googleKodu) ?>">
