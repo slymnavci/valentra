@@ -177,6 +177,67 @@ $getirici = new Getirici($http, $site);
 $besleme = new Besleme($getirici);
 
 /**
+ * Sitenin ana sayfasında ilan ettiği beslemeleri bulur.
+ *
+ * NEDEN: kaynaklarin onda biri "HTTP 404" veriyor, yani adres
+ * degismis. Dogru adresi tahmin etmek tehlikeli — daha once
+ * mevzuat.gov.tr'de tam bunu yapip yanlis yerde arandi. Oysa siteler
+ * beslemelerini <link rel="alternate" type="application/rss+xml">
+ * etiketiyle kendileri ilan ediyor. Tahmin yerine SORMAK.
+ *
+ * Ana sayfa da alinamazsa bos doner; o zaman adres elle bulunacak.
+ *
+ * @return list<array{ad:string,url:string}>
+ */
+function beslemeleriKesfet(Getirici $getirici, string $siteUrl): array
+{
+    if ($siteUrl === '') {
+        return [];
+    }
+
+    $html = $getirici->indir($siteUrl);
+
+    if ($html === null) {
+        return [];
+    }
+
+    // Yalnizca <head> yetmez: bazi siteler besleme bagini govdeye koyuyor.
+    $desen = '#<link[^>]+type=["\']application/(?:rss|atom)\+xml["\'][^>]*>#i';
+
+    if (preg_match_all($desen, $html, $eslesmeler) === 0) {
+        return [];
+    }
+
+    $bulunan = [];
+    $gorulen = [];
+
+    foreach ($eslesmeler[0] as $etiket) {
+        if (preg_match('#href=["\']([^"\']+)["\']#i', $etiket, $h) !== 1) {
+            continue;
+        }
+
+        $adres = besleme_url_birlestir($siteUrl, html_entity_decode(
+            trim($h[1]),
+            ENT_QUOTES | ENT_HTML5,
+            'UTF-8'
+        ));
+
+        if (guvenli_url($adres) === '' || isset($gorulen[$adres])) {
+            continue;
+        }
+
+        $baslik = preg_match('#title=["\']([^"\']*)["\']#i', $etiket, $t) === 1
+            ? trim($t[1])
+            : '';
+
+        $gorulen[$adres] = true;
+        $bulunan[]       = ['ad' => $baslik, 'url' => $adres];
+    }
+
+    return $bulunan;
+}
+
+/**
  * Doğrudan erişilemeyen adresi site sunucusundan dener.
  *
  * @return array{tamam:bool,boyut:int}
@@ -212,7 +273,8 @@ yaz();
 $ozet = [];
 
 foreach ($kaynaklar as $kaynak) {
-    $ad         = (string) $kaynak['ad'];
+    $ad           = (string) $kaynak['ad'];
+    $kaynakSitesi = trim((string) ($kaynak['site_url'] ?? ''));
     $beslemeUrl = trim((string) ($kaynak['besleme_url'] ?? ''));
     $listeUrl   = trim((string) ($kaynak['liste_url'] ?? ''));
     $secici     = trim((string) ($kaynak['liste_secici'] ?? ''));
@@ -253,6 +315,18 @@ foreach ($kaynaklar as $kaynak) {
             } else {
                 yaz('       Site sunucusu üzerinden de alınamadı.');
                 $not = 'RSS: HTTP ' . $yanit['kod'] . ', site yolu da düştü';
+
+                /*
+                 * Adres yanlissa dogrusunu SITEYE SORALIM.
+                 *
+                 * 404 aliniyorsa besleme tasinmis demektir ve siteler
+                 * yeni adresi ana sayfalarinda ilan ediyor. Tahmin
+                 * etmek yerine okuyoruz.
+                 */
+                foreach (beslemeleriKesfet($getirici, $kaynakSitesi) as $aday) {
+                    yaz('       ÖNERİ — sitede ilan edilen besleme: ' . $aday['url']
+                        . ($aday['ad'] !== '' ? '  (' . $aday['ad'] . ')' : ''));
+                }
             }
         } else {
             $girdiler = $besleme->oku($beslemeUrl, $saat);
@@ -383,6 +457,21 @@ foreach ($kaynaklar as $kaynak) {
                     yaz('       örnek: ' . mb_substr($ornek, 0, 120));
                 }
             }
+        }
+    }
+
+    /*
+     * Hicbir yol tutmadiysa son bir sans: sitenin kendi ilan ettigi
+     * besleme. "Kazima: sonuc yok" diyen kaynaklarin bir kismi
+     * aslinda RSS yayinliyor, yalnizca panelde tanimli degil.
+     *
+     * Besleme adresi zaten tanimliysa ve 404 aldiysa kesif yukarida
+     * yapildi; burada tekrarlanmiyor.
+     */
+    if ($calisanYol === '' && $beslemeUrl === '') {
+        foreach (beslemeleriKesfet($getirici, $kaynakSitesi) as $aday) {
+            yaz('  ÖNERİ — sitede ilan edilen besleme: ' . $aday['url']
+                . ($aday['ad'] !== '' ? '  (' . $aday['ad'] . ')' : ''));
         }
     }
 
