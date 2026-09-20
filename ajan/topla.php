@@ -507,6 +507,11 @@ if ($getirici->siteyleGelenSayisi() > 0) {
         . ' adres site sunucusu üzerinden alındı (doğrudan erişilemedi).');
 }
 
+if ($getirici->siteTavaniDoldu()) {
+    gunluk('  Site üzerinden getirme tavanı doldu; kalan adresler yalnızca '
+        . 'doğrudan denendi. Sunucuyu yormamak için konulmuş bir sınır.');
+}
+
 gunluk(count($adaylar) . ' aday modele gönderilecek.');
 
 // --- 4. Gemini: sınıflandır ve yaz ----------------------------------------

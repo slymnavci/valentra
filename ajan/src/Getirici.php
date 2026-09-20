@@ -23,10 +23,23 @@ namespace Valentra\Ajan;
  */
 final class Getirici implements Indirici
 {
+    /**
+     * Bir calismada site uzerinden yapilabilecek en fazla istek.
+     *
+     * Tavan SART. Bu yol acilmadan once site zaten araliklarla
+     * ulasilamaz oluyordu ve ajan gunde on kez kosuyor; her calismada
+     * paylasimli hostinge onlarca ek istek yagdirmak IHS'nin hiz
+     * sinirlayicisini tetikleyip durumu kotulestirebilir. Sinira
+     * gelindiginde yalnizca bu yol kapanir, dogrudan indirme
+     * calismaya devam eder.
+     */
+    private const SITE_ISTEK_TAVANI = 25;
+
     /** @var array<string,bool> Site yolunun denendigi ama tutmadigi sunucular */
     private array $umitsiz = [];
 
     private int $siteyleGelen = 0;
+    private int $siteIstegi   = 0;
 
     public function __construct(
         private readonly Http $http,
@@ -57,6 +70,11 @@ final class Getirici implements Indirici
             return null;
         }
 
+        if ($this->siteIstegi >= self::SITE_ISTEK_TAVANI) {
+            return null;
+        }
+
+        $this->siteIstegi++;
         $siteden = $this->site->hamGetir($url);
 
         if ($siteden === null) {
@@ -76,5 +94,11 @@ final class Getirici implements Indirici
     public function siteyleGelenSayisi(): int
     {
         return $this->siteyleGelen;
+    }
+
+    /** Site istek tavanina gelindi mi; gunluge yazmak icin. */
+    public function siteTavaniDoldu(): bool
+    {
+        return $this->siteIstegi >= self::SITE_ISTEK_TAVANI;
     }
 }
