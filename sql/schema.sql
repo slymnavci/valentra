@@ -606,6 +606,11 @@ CREATE TABLE IF NOT EXISTS ziyaretler (
     id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     zaman       DATETIME        NOT NULL,
     ziyaretci   CHAR(16)        NOT NULL,
+    -- Ham adres. Yonetici panelinde gosterilmek uzere saklaniyor.
+    -- KISISEL VERIDIR: sitenin aydinlatma metninde yer almasi gerekir.
+    -- Diger alanlarla birlikte 180 gun sonra siliniyor ve hicbir
+    -- ucuncu tarafa gonderilmiyor.
+    ip          VARCHAR(45)     NOT NULL DEFAULT '',
     yol         VARCHAR(255)    NOT NULL,
     haber_id    INT UNSIGNED    NULL,
     baslik      VARCHAR(255)    NOT NULL DEFAULT '',

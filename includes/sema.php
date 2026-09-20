@@ -221,6 +221,10 @@ function sema_yukselt(array &$hatalar = []): array
     $sutunEkle('kaynaklar', 'liste_url', 'VARCHAR(500) NULL AFTER besleme_url');
     $sutunEkle('kaynaklar', 'liste_secici', 'VARCHAR(200) NULL AFTER besleme_url');
 
+    // Ziyaret kaydina ham adres sutunu. Tablo zaten kurulu oldugu icin
+    // CREATE TABLE onu eklemez; mevcut kurulumlara boyle iniyor.
+    $sutunEkle('ziyaretler', 'ip', "VARCHAR(45) NOT NULL DEFAULT '' AFTER ziyaretci");
+
     // kaynaklar.besleme_url benzersiz olmali; yoksa sema her
     // calistirildiginda INSERT IGNORE kopya kayit uretir.
     $adim('kaynaklar benzersizlik kisiti', static function (): bool {

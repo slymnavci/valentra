@@ -11,12 +11,20 @@ declare(strict_types=1);
  * cikiyor. Kendi tarafimizda tutunca hem veri bizde kaliyor hem de
  * her istek sayiliyor.
  *
- * KISISEL VERI: ham IP adresi HICBIR YERDE saklanmiyor. IP ve tarayici
- * imzasi, veritabaninda tutulan rastgele bir tuzla birlikte
- * hashleniyor ve yalnizca ilk 16 karakteri yaziliyor. Bu, "ayni
- * ziyaretci mi" sorusunu cevaplamaya yetiyor ama kimligi geri
- * getirmeye yetmiyor. Tuz degistirilirse eski kayitlar hicbir kisiye
- * baglanamaz hale gelir.
+ * KISISEL VERI. Iki alan tutuluyor, ikisi ayri ise yariyor:
+ *
+ *   ziyaretci - adres + tarayici imzasi + gizli tuz ile uretilen takma
+ *               kimlik. "Ayni ziyaretci mi" sorusunu cevapliyor,
+ *               kimlige geri goturmuyor; raporlarin tamami bunu
+ *               kullaniyor. Tuz degistirilirse eski kayitlar hicbir
+ *               kisiye baglanamaz hale gelir.
+ *   ip        - ham adres. Panelde gosterilmek uzere, sitenin
+ *               yoneticisinin acik talebi uzerine saklaniyor.
+ *
+ * Ham adres kisisel veridir; saklanmasi KVKK kapsaminda bir islemedir
+ * ve sitenin aydinlatma metninde yer almasi gerekir. Veri hicbir
+ * ucuncu tarafa gonderilmiyor ve diger alanlarla birlikte 180 gun
+ * sonra siliniyor.
  */
 
 require_once __DIR__ . '/ayarlar.php';
@@ -42,12 +50,13 @@ function ziyaret_kaydet(?int $haberId = null, string $baslik = ''): void
 
     try {
         $ifade = db()->prepare(
-            'INSERT INTO ziyaretler (zaman, ziyaretci, yol, haber_id, baslik, yonlendiren)
-             VALUES (NOW(), :z, :y, :h, :b, :r)'
+            'INSERT INTO ziyaretler (zaman, ziyaretci, ip, yol, haber_id, baslik, yonlendiren)
+             VALUES (NOW(), :z, :i, :y, :h, :b, :r)'
         );
 
         $ifade->execute([
             'z' => ziyaretci_imzasi(),
+            'i' => ziyaret_adresi(),
             'y' => mb_substr((string) ($_SERVER['REQUEST_URI'] ?? '/'), 0, 255, 'UTF-8'),
             'h' => $haberId,
             'b' => mb_substr($baslik, 0, 255, 'UTF-8'),
@@ -131,6 +140,50 @@ function ziyaretci_imzasi(): string
     $ua = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
 
     return substr(hash('sha256', ziyaret_tuzu() . '|' . $ip . '|' . $ua), 0, 16);
+}
+
+/**
+ * Ziyaretçinin ağ adresi.
+ *
+ * Normalde REMOTE_ADDR dogru cevaptir ve istemci tarafindan
+ * degistirilemez: TCP baglantisinin gercek karsi tarafidir.
+ * X-Forwarded-For basligi ise istemcinin yazabildigi bir metindir,
+ * yani tek basina guvenilmez — ona bakan bir kod, adresini istedigi
+ * gibi gosteren ziyaretcilere kanar.
+ *
+ * Tek istisna, sitenin bir vekil sunucunun (CDN, yuk dengeleyici)
+ * arkasinda olmasi: o durumda REMOTE_ADDR butun ziyaretciler icin ayni
+ * ve ozel araliktan bir adres olur, gercek adres yalnizca baslikta
+ * bulunur. Bu yuzden basliga SADECE REMOTE_ADDR ozel/yerel bir adresse
+ * bakiliyor.
+ *
+ * Takma kimligi ureten ziyaretci_imzasi() bilerek degistirilmedi:
+ * o REMOTE_ADDR kullanmaya devam ediyor, boylece eskiden beri sayilan
+ * ziyaretciler ayni takma kimlikle gorunmeye devam ediyor.
+ */
+function ziyaret_adresi(): string
+{
+    $uzak = trim((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+
+    $dis = static fn (string $adres): bool => filter_var(
+        $adres,
+        FILTER_VALIDATE_IP,
+        FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+    ) !== false;
+
+    if ($uzak !== '' && $dis($uzak)) {
+        return mb_substr($uzak, 0, 45, 'UTF-8');
+    }
+
+    foreach (explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '')) as $aday) {
+        $aday = trim($aday);
+
+        if ($aday !== '' && $dis($aday)) {
+            return mb_substr($aday, 0, 45, 'UTF-8');
+        }
+    }
+
+    return mb_substr($uzak, 0, 45, 'UTF-8');
 }
 
 /**
@@ -459,7 +512,7 @@ function ziyaret_ziyaretciler(int $gun = 7, int $adet = 50): array
 {
     try {
         return db()->query(
-            'SELECT o.ziyaretci, o.ilk, o.son, o.sayfa, o.yonlendiren,
+            'SELECT o.ziyaretci, o.ilk, o.son, o.sayfa, o.yonlendiren, o.ip,
                     s.yol AS son_yol, s.baslik AS son_baslik
                FROM (SELECT ziyaretci,
                             MIN(zaman) AS ilk,
@@ -469,7 +522,12 @@ function ziyaret_ziyaretciler(int $gun = 7, int $adet = 50): array
                             -- Ziyaretcinin nereden geldigi ilk istekte
                             -- belli olur; sonraki sayfalarda yonlendiren
                             -- bos kalir, o yuzden dolu olan aliniyor.
-                            MAX(CASE WHEN yonlendiren <> "" THEN yonlendiren END) AS yonlendiren
+                            MAX(CASE WHEN yonlendiren <> "" THEN yonlendiren END) AS yonlendiren,
+                            -- Ayni takma kimlik farkli adreslerden
+                            -- gelebilir (mobil ag degisimi); listede en
+                            -- son gorulen yeterli, tamami gezinti
+                            -- dokumunde duruyor.
+                            MAX(CASE WHEN ip <> "" THEN ip END) AS ip
                        FROM ziyaretler
                       WHERE zaman >= (CURDATE() - INTERVAL ' . max(0, $gun - 1) . ' DAY)
                       GROUP BY ziyaretci) o
@@ -498,7 +556,7 @@ function ziyaret_gezinti(string $imza, int $adet = 300): array
 
     try {
         $ifade = db()->prepare(
-            'SELECT zaman, yol, baslik, haber_id, yonlendiren
+            'SELECT zaman, yol, baslik, haber_id, yonlendiren, ip
                FROM ziyaretler
               WHERE ziyaretci = :z
               ORDER BY id
