@@ -18,6 +18,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/kanunlar.php';
 require_once __DIR__ . '/../includes/kanun_metni.php';
 require_once __DIR__ . '/../includes/sertifika_onar.php';
+require_once __DIR__ . '/../includes/kanun_dosya.php';
 
 giris_zorunlu();
 
@@ -40,6 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $islem = (string) ($_POST['islem'] ?? '');
 
+    $no  = (int) ($_POST['no'] ?? 0);
+    $url = trim((string) ($_POST['yedek'] ?? ''));
+
     if ($islem === 'ca_guncelle' || $islem === 'zincir_onar') {
         $sonuc = $islem === 'ca_guncelle'
             ? ca_paketi_guncelle()
@@ -54,13 +58,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ayar_sil('kanun_gosterim_' . (int) $k['no']);
             }
         }
-    }
+    } elseif ($islem === 'pdf_yukle') {
+        if (kanun_bul((string) $no) === null) {
+            $hata = 'Kanun bulunamadı.';
+        } else {
+            $sonuc    = kanun_dosya_yukle($no, $_FILES['pdf'] ?? []);
+            $bildirim = $sonuc['tamam'] ? $sonuc['mesaj'] : '';
+            $hata     = $sonuc['tamam'] ? '' : $sonuc['mesaj'];
 
-    $no  = (int) ($_POST['no'] ?? 0);
-    $url = trim((string) ($_POST['yedek'] ?? ''));
-
-    if ($islem === 'ca_guncelle' || $islem === 'zincir_onar') {
-        // Yukarida islendi.
+            // Karar onbellegi dosyadan habersizdi; tazelensin.
+            if ($sonuc['tamam']) {
+                ayar_sil('kanun_gosterim_' . $no);
+            }
+        }
+    } elseif ($islem === 'pdf_sil') {
+        if (kanun_bul((string) $no) === null) {
+            $hata = 'Kanun bulunamadı.';
+        } else {
+            $bildirim = kanun_dosya_sil($no)
+                ? 'Yüklenen PDF silindi.'
+                : '';
+            $hata = $bildirim === '' ? 'Dosya silinemedi.' : '';
+            ayar_sil('kanun_gosterim_' . $no);
+        }
     } elseif (kanun_bul((string) $no) === null) {
         $hata = 'Kanun bulunamadı.';
     } elseif ($url !== '' && guvenli_url($url) === '') {
@@ -132,6 +152,16 @@ require __DIR__ . '/ust.php';
 </p>
 
 <p class="ipucu">
+    <strong>PDF yükleme.</strong> Otomatik indirme hiçbir kaynaktan
+    çalışmazsa kanunun PDF'ini buradan yükleyebilirsiniz. Dosya
+    yüklenirken doğrulanır (PDF imzası, eksik dosya kontrolü); doğrulama
+    geçmezse <em>eskisi korunur</em>. Yüklenen dosya yalnızca
+    <em>bütün resmî kaynaklar düştüğünde</em> kullanılır, yani kaynak
+    geri geldiğinde sayfa kendiliğinden yürürlükteki metne döner.
+    Ziyaretçi bunun bir suret olduğunu ve yüklenme tarihini görür.
+</p>
+
+<p class="ipucu">
     <strong>Yedek kaynak.</strong> Resmî adresler çalışmıyorsa satırdaki
     kutuya başka bir adres girebilirsiniz — kanun metnini yayımlayan
     herhangi bir sayfa ya da doğrudan bir PDF/DOC dosyası olur. Girilen
@@ -145,6 +175,33 @@ require __DIR__ . '/ust.php';
     <h2 style="margin-top:0;font-size:1.02rem;">Kök sertifika listesi</h2>
 
     <p class="ipucu"><?= e(ca_paketi_durumu()) ?></p>
+
+    <?php
+    /*
+     * curl'un resmi rehberi (curl.se/docs/sslcerts.html) dogrulamayi
+     * uc seye bagliyor: listenin YERI, OKUNABILIRLIGI ve zincirin
+     * tamamlanabilmesi. "Sertifika dogrulanamadi" hangisinde
+     * takildigini soylemedigi icin ucu de ayri ayri yaziliyor.
+     */
+    $ssl = http_ssl_durumu();
+    ?>
+    <table class="liste-tablo" style="margin-bottom:12px;">
+        <tbody>
+            <tr><td>curl / TLS</td><td><code><?= e($ssl['curl']) ?> · <?= e($ssl['ssl']) ?></code></td></tr>
+            <tr><td>Kullanılan liste</td><td><code><?= e($ssl['ca_yolu']) ?></code></td></tr>
+            <tr><td>Dosya</td><td><?= e($ssl['dosya']) ?></td></tr>
+            <tr>
+                <td>Klasör yazılabilir</td>
+                <td>
+                    <?= e($ssl['yazilabilir']) ?>
+                    <?php if ($ssl['yazilabilir'] !== 'evet'): ?>
+                        — onarılan liste geçici klasöre yazılır; kalıcı olması için
+                        <code><?= e($ssl['klasor']) ?></code> yazılabilir olmalı.
+                    <?php endif; ?>
+                </td>
+            </tr>
+        </tbody>
+    </table>
 
     <p class="ipucu">
         <strong>mevzuat.gov.tr'deki sorun bu listede değil.</strong>
@@ -218,6 +275,8 @@ require __DIR__ . '/ust.php';
                     <span class="rozet rozet-skor">sınanmadı</span>
                 <?php elseif ($sonuc['tur'] === 'yok'): ?>
                     <span class="rozet rozet-reddedildi">gelmiyor</span>
+                <?php elseif ($sonuc['tur'] === 'yerel'): ?>
+                    <span class="rozet rozet-taslak">yüklenen PDF</span>
                 <?php else: ?>
                     <span class="rozet rozet-yayinda"><?= e($sonuc['tur']) ?></span>
                 <?php endif; ?>
@@ -254,6 +313,30 @@ require __DIR__ . '/ust.php';
                            value="<?= e(kanun_yedek_oku((int) $kanun['no'])) ?>">
                     <button class="dugme" type="submit">Kaydet</button>
                 </form>
+
+                <?php $yuklenen = kanun_dosya_bilgisi((int) $kanun['no']); ?>
+
+                <form method="post" enctype="multipart/form-data" style="margin-top:8px;">
+                    <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                    <input type="hidden" name="no" value="<?= (int) $kanun['no'] ?>">
+                    <input type="hidden" name="islem" value="pdf_yukle">
+                    <input type="file" name="pdf" accept="application/pdf,.pdf"
+                           style="width:230px;">
+                    <button class="dugme" type="submit">PDF yükle</button>
+                </form>
+
+                <?php if ($yuklenen['var']): ?>
+                    <p class="ipucu" style="margin:6px 0 0;">
+                        Yüklü: <?= e(tarih_bicimle($yuklenen['tarih'])) ?> ·
+                        <?= number_format($yuklenen['boyut'] / 1024 / 1024, 1) ?> MB
+                        <form method="post" style="display:inline;">
+                            <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                            <input type="hidden" name="no" value="<?= (int) $kanun['no'] ?>">
+                            <input type="hidden" name="islem" value="pdf_sil">
+                            <button class="dugme" type="submit">Sil</button>
+                        </form>
+                    </p>
+                <?php endif; ?>
             </td>
         </tr>
     <?php endforeach; ?>
@@ -266,8 +349,16 @@ require __DIR__ . '/ust.php';
     mevzuat.gov.tr'ye çıkış yok — hosting firması dış bağlantıları
     kapatmış ya da kaynak sunucumuzun IP'sini engelliyor olabilir.
     “HTTP 403”: kaynak isteği görüyor ama reddediyor.
-    “Yanıt PDF değil”: adres var ama hata sayfası dönüyor; tertip
-    numarası yanlış olabilir.
+    “PDF beklenirken HTML sayfası geldi”: adres dosyaya değil bir
+    sayfaya gidiyor; yedek kaynak olarak girilen HTML adresleri böyle
+    görünür ve PDF gibi işlenmez.
+    “Yanıt PDF imzası taşımıyor”: adres var ama gelen şey PDF değil;
+    ilk baytlar satırda yazıyor.
+    “… kanunun metni değil”: sayfa açıldı, metin de çıktı, ama o metin
+    bu kanuna ait değil (fihrist, arama sonucu ya da başka bir kanun) —
+    bu yüzden başarı sayılmadı.
+    “Gelen şey bir hata/uyarı sayfası”: kaynak HTTP 200 döndürdü ama
+    içerik hata sayfası.
     “Güvenlik sertifikası doğrulanamadı”: kök sertifika listesi eski.
 </p>
 

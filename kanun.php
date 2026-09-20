@@ -112,6 +112,31 @@ $metin = kanun_gosterim_guvenli($kanun, !$tani);
         <a href="<?= e($adres) ?>" target="_blank" rel="noopener">resmî kaynağa</a>
         gidebilirsiniz.
     </p>
+<?php elseif ($metin['tur'] === 'yerel'): ?>
+    <?php
+    /*
+     * Panelden yuklenmis kopya.
+     *
+     * Bunun bir kopya oldugu ve ne zaman yuklendigi SAKLANMIYOR:
+     * ziyaretci yururlukteki metne mi yoksa bir suretine mi baktigini
+     * bilmeli. Mevzuat sik degisiyor ve bir YMM sitesinde eski hukme
+     * gore islem yapmak gercek bir risk.
+     */
+    $yuklenen = kanun_dosya_bilgisi((int) $kanun['no']);
+    ?>
+    <p class="kanun-kopya-uyari">
+        <strong>Bu metin bir kopyadır.</strong>
+        Resmî kaynağa şu anda ulaşılamadığı için
+        <?= e(tarih_bicimle($yuklenen['tarih'], false)) ?>
+        tarihinde yüklenen sureti gösteriliyor. O tarihten sonraki
+        değişiklikleri içermeyebilir;
+        <a href="<?= e($adres) ?>" target="_blank" rel="noopener">yürürlükteki
+        metni mevzuat.gov.tr'de</a> teyit edin.
+    </p>
+
+    <iframe class="kanun-pdf"
+            src="/api/kanun-pdf.php?k=<?= e(kanun_anahtari($kanun)) ?>"
+            title="<?= e($kanun['ad']) ?> — yüklenen suret"></iframe>
 <?php elseif ($metin['tur'] === 'html'): ?>
 
     <article class="kanun-metin"><?= $metin['govde'] ?></article>

@@ -49,6 +49,11 @@ function ca_paketi_yollari(): array
 {
     return [
         __DIR__ . '/sertifika/ca-bundle-guncel.crt',
+        // Paylasimli hostingde includes/sertifika salt okunur olabilir;
+        // o durumda tamamlanmis liste gecici klasore yaziliyor. Gecici
+        // klasor temizlenirse liste kaybolur ve onarim yeniden
+        // calistirilir — kalicilik garantisi yok ama calisiyor.
+        sys_get_temp_dir() . '/valentra-ca-bundle.crt',
         __DIR__ . '/sertifika/ca-bundle.crt',
     ];
 }
@@ -235,6 +240,54 @@ function ca_paketi_durumu(): string
 }
 
 /**
+ * TLS kurulumunun panelde gösterilecek tam durumu.
+ *
+ * curl'un resmi rehberi (https://curl.se/docs/sslcerts.html) sertifika
+ * dogrulamasinin uc seye bagli oldugunu soyluyor: kok listesinin YERI
+ * (CURLOPT_CAINFO / CURLOPT_CAPATH), o dosyanin OKUNABILIR olmasi ve
+ * zincirin listedeki bir koke kadar TAMAMLANABILMESI. "Sertifika
+ * dogrulanamadi" hatasi bu ucunden hangisinde takildigini soylemiyor,
+ * o yuzden ucu de ayri ayri raporlaniyor.
+ *
+ * Klasorun yazilabilirligi de burada: eksik ara sertifika oraya
+ * yaziliyor ve paylasimli hostingde klasor salt okunur olabiliyor —
+ * o durumda onarim sessizce basarisiz olurdu.
+ *
+ * @return array<string,string>
+ */
+function http_ssl_durumu(): array
+{
+    $surum  = curl_version();
+    $klasor = __DIR__ . '/sertifika';
+    $yol    = ca_paketi();
+
+    $durum = [
+        'curl'       => (string) ($surum['version'] ?? '?'),
+        'ssl'        => (string) ($surum['ssl_version'] ?? '?'),
+        'ca_yolu'    => $yol ?? '(yok — sistemin kendi listesi kullanılıyor)',
+        'klasor'     => $klasor,
+        'yazilabilir' => is_writable($klasor) ? 'evet' : 'HAYIR',
+    ];
+
+    if ($yol === null) {
+        $durum['dosya'] = 'Liste bulunamadı.';
+
+        return $durum;
+    }
+
+    $govde = (string) @file_get_contents($yol);
+
+    $durum['dosya'] = sprintf(
+        'okunabilir: %s · %d sertifika · %s KB',
+        is_readable($yol) ? 'evet' : 'HAYIR',
+        substr_count($govde, 'BEGIN CERTIFICATE'),
+        number_format(strlen($govde) / 1024, 0)
+    );
+
+    return $durum;
+}
+
+/**
  * OpenSSL doğrulama sonucunu açıklar.
  *
  * Sayilar OpenSSL'in X509 dogrulama kodlari. Hangi isin yapilmasi
@@ -405,7 +458,11 @@ function http_bas_getir(string $url, int $bayt = 1024, int $zamanAsimi = 15, str
     $ayrinti = http_ayrinti($ch);
     curl_close($ch);
 
-    $temel = $ayrinti + ['hata_no' => $hataNo, 'boyut' => strlen($tampon)];
+    // Ham curl mesaji da tasiniyor: cevrilmis cumle "ne oldu"yu
+    // soyluyor, ham mesaj "tam olarak neresi"ni soyluyor ve tani
+    // ekraninda ikisi birden gerekiyor.
+    $temel = $ayrinti + ['hata_no' => $hataNo, 'hata' => $hata,
+                         'boyut' => strlen($tampon)];
 
     // 23: aktarimi biz kestik. Elimizde veri varsa bu bir hata degil.
     $kesildi = $hataNo === 23 && $tampon !== '';

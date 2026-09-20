@@ -34,10 +34,23 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/http_ortak.php';
 
-/** Onarılmış listenin yazılacağı dosya. */
+/**
+ * Onarılmış listenin yazılacağı dosya.
+ *
+ * Tercih edilen yer includes/sertifika; ama paylasimli hostingde o
+ * klasor salt okunur olabiliyor ve onarim sessizce basarisiz olurdu.
+ * Yazilamiyorsa gecici klasore duseriz — kalici degil, ama calisir ve
+ * gerektiginde onarim yeniden calistirilir.
+ */
 function sertifika_onarim_dosyasi(): string
 {
-    return __DIR__ . '/sertifika/ca-bundle-guncel.crt';
+    $tercih = __DIR__ . '/sertifika/ca-bundle-guncel.crt';
+
+    if (is_writable(dirname($tercih)) || is_writable($tercih)) {
+        return $tercih;
+    }
+
+    return sys_get_temp_dir() . '/valentra-ca-bundle.crt';
 }
 
 /** Temel (depoyla gelen) kök listesi. */

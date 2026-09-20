@@ -1700,3 +1700,33 @@ a.menu-oge.aktif::after,
 }
 
 .pratik-kunye a { color: var(--vurgu); }
+
+/*
+ * Yuklenen suret uyarisi.
+ *
+ * Ziyaretci yururlukteki metne mi yoksa bir kopyaya mi baktigini
+ * bilmeli; bu yuzden metnin USTUNDE ve goz ardi edilemeyecek kadar
+ * belirgin duruyor. Hata rengi degil uyari rengi: bozulan bir sey yok,
+ * dikkat edilmesi gereken bir sey var.
+ */
+.kanun-kopya-uyari {
+    background: #fff8e8;
+    border: 1px solid #e8d5a8;
+    border-left: 4px solid var(--altin-koyu);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 0 0 14px;
+    font-size: .88rem;
+    line-height: 1.6;
+    color: #6b5322;
+}
+
+.kanun-kopya-uyari a { color: var(--vurgu); text-decoration: underline; }
+
+@media (prefers-color-scheme: dark) {
+    .kanun-kopya-uyari {
+        background: #2a2314;
+        border-color: #4d3f22;
+        color: #e8d3a4;
+    }
+}
