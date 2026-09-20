@@ -22,7 +22,8 @@ final class Site
      */
     public function yapilandirma(): array
     {
-        [$kod, $govde] = $this->istek('GET', '/api/kaynaklar.php');
+        // Sabirli: bu cagri duserse butun calisma bos gider.
+        [$kod, $govde] = $this->istek('GET', '/api/kaynaklar.php', null, true);
 
         if ($kod !== 200) {
             throw new \RuntimeException(
@@ -258,7 +259,12 @@ final class Site
     /**
      * @return array{0:int,1:string}
      */
-    private function istek(string $yontem, string $yol, ?string $govde = null): array
+    private function istek(
+        string $yontem,
+        string $yol,
+        ?string $govde = null,
+        bool $sabirli = false
+    ): array
     {
         $adres = rtrim($this->taban, '/') . $yol;
 
@@ -293,6 +299,33 @@ final class Site
         // onemli: model cagrilari zaten yapilmis oluyor, burada
         // vazgecmek para harcanmis sonucu cope atmak demek.
         $beklemeler = [5, 15, 30, 60];
+
+        /*
+         * SABIRLI MOD: yapilandirma icin daha uzun bekle.
+         *
+         * IHS 443'te araliklarla baglanti kabul etmiyor; ayni
+         * dakikalarda FTP calistigi icin sunucu ayakta ama
+         * baglantilar TCP seviyesinde zaman asimina ugruyor. Bir
+         * gunde olcum: 20:07 dustu, 20:11 calisti, 20:17 calisti,
+         * 20:26 dustu.
+         *
+         * Yapilandirma cagrisi calismanin ILK adimi ve tek basarisiz
+         * olmasi butun calismayi olduruyor — kaynak taranmiyor, model
+         * cagrilmiyor, hicbir haber yazilmiyor. Uc buçuk dakikalik
+         * pencere bazi kesintilere yetmedi.
+         *
+         * Bu yuzden yalnizca o cagri icin pencere ~9 dakikaya
+         * cikariliyor. Is icin ayrilan sure buna musait ve bekleyip
+         * haber toplamak, hemen vazgecip bos donmekten iyi.
+         *
+         * Diger cagrilar icin pencere ayni kaliyor: gonderim adiminda
+         * dakikalarca beklemek, model parasi zaten harcanmis olsa da
+         * isi gereksiz uzatir.
+         */
+        if ($sabirli) {
+            $beklemeler = [5, 15, 30, 45, 60, 90, 120, 120];
+        }
+
         $enFazlaDeneme = count($beklemeler) + 1;
 
         for ($deneme = 1; $deneme <= $enFazlaDeneme; $deneme++) {
