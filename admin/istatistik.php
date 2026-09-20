@@ -281,6 +281,7 @@ require __DIR__ . '/ust.php';
                 <thead>
                     <tr>
                         <th>Zaman</th>
+                        <th>IP</th>
                         <th>Sayfa</th>
                         <th>Adres</th>
                         <th>Nereden</th>
@@ -290,6 +291,11 @@ require __DIR__ . '/ust.php';
                 <?php foreach ($gezinti as $adim): ?>
                     <tr>
                         <td><?= e(date('d.m.Y H:i:s', strtotime((string) $adim['zaman']))) ?></td>
+                        <td>
+                            <code><?= e(((string) ($adim['ip'] ?? '')) !== ''
+                                ? (string) $adim['ip']
+                                : '—') ?></code>
+                        </td>
                         <td>
                             <?= e(((string) $adim['baslik']) !== ''
                                 ? (string) $adim['baslik']
@@ -321,10 +327,16 @@ require __DIR__ . '/ust.php';
     <p class="ipucu">
         Her satır bir ziyaretçi. Takma kimliğe tıklayınca o ziyaretçinin
         gezdiği bütün sayfalar sırasıyla açılır.
-        <strong>IP adresi saklanmıyor:</strong> kayıt anında IP, tarayıcı
-        kimliği ve gizli bir tuzla birlikte geri çevrilemez biçimde
-        özetleniyor. Bu yüzden listede IP göremezsiniz; “aynı kişi mi,
-        nereye girdi, ne kadar kaldı” sorularının hepsi yine yanıtlanıyor.
+    </p>
+
+    <p class="ipucu">
+        <strong>IP adresi kişisel veridir.</strong> Bu sütun sitenin
+        yöneticisinin talebi üzerine eklendi. Adresler hiçbir üçüncü tarafa
+        gönderilmiyor ve diğer kayıtlarla birlikte
+        <?= (int) ZIYARET_SAKLAMA_GUN ?> gün sonra siliniyor. KVKK
+        kapsamında bir işleme olduğu için sitenin aydınlatma metninde yer
+        alması gerekir. Sütun boş görünüyorsa kayıt bu özellik eklenmeden
+        önce yazılmıştır.
     </p>
 
     <?php if ($kisiler === []): ?>
@@ -334,6 +346,7 @@ require __DIR__ . '/ust.php';
             <thead>
                 <tr>
                     <th>Takma kimlik</th>
+                    <th>IP</th>
                     <th class="sag">Sayfa</th>
                     <th>İlk</th>
                     <th>Son</th>
@@ -348,6 +361,11 @@ require __DIR__ . '/ust.php';
                         <a href="?gun=<?= (int) $aralik ?>&amp;kisi=<?= e((string) $satir['ziyaretci']) ?>">
                             <code><?= e((string) $satir['ziyaretci']) ?></code>
                         </a>
+                    </td>
+                    <td>
+                        <code><?= e(((string) ($satir['ip'] ?? '')) !== ''
+                            ? (string) $satir['ip']
+                            : '—') ?></code>
                     </td>
                     <td class="sag"><strong><?= number_format((int) $satir['sayfa']) ?></strong></td>
                     <td><?= e(date('d.m H:i', strtotime((string) $satir['ilk']))) ?></td>
