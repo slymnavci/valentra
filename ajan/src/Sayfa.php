@@ -51,18 +51,48 @@ final class Sayfa
             $html
         );
 
-        // Paragraf sınırlarını koru, kalan etiketleri düşür.
-        $html = (string) preg_replace('#</(p|div|li|h[1-6]|br)\s*/?>#i', "\n", $html);
+        /*
+         * Paragraf VE TABLO sınırlarını koru, kalan etiketleri düşür.
+         *
+         * Once yalnizca p/div/li/h/br satir sonu sayiliyordu; td ve tr
+         * listede yoktu. Sonuc olarak bir tarife tablosu tek bir
+         * yapisik dizgeye doniyordu:
+         *   "190.000 TL ye kadar%15400.000 TL%20"
+         * Model bunu ayristiramaz. Oysa haberin en degerli kismi tam
+         * da bu tablolar.
+         *
+         * Hucre arasina sekme, satir sonuna yeni satir konuyor;
+         * boylece tablo satir satir ve sutunlari ayrilmis geliyor.
+         */
+        $html = (string) preg_replace('#</(td|th)\s*>#i', "\t", $html);
+        $html = (string) preg_replace('#</(p|div|li|tr|h[1-6]|br)\s*/?>#i', "\n", $html);
         $metin = strip_tags($html);
         $metin = html_entity_decode($metin, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-        // Satırları temizle, menü artığı kısa satırları ele.
+        /*
+         * Satırları temizle, menü artığı kısa satırları ele.
+         *
+         * Uzunluk esigi tek basina yetmiyordu: tarife dilimleri, oran
+         * listeleri ve had tablolari kisa satirlardan olusuyor
+         * ("190.000 TL'ye kadar %15") ve 40 karakter esigine takilip
+         * atiliyordu. Haberin en degerli kismi tam da bunlar.
+         *
+         * Bu yuzden kisa satirlar da, icinde SAYI varsa aliniyor.
+         * Menu ve buton yazilari ("Ana Sayfa", "İletişim") sayi
+         * tasimadigi icin elenmeye devam ediyor.
+         */
         $satirlar = [];
 
         foreach (preg_split('/\R/u', $metin) ?: [] as $satir) {
-            $satir = trim((string) preg_replace('/[ \t\x{00A0}]+/u', ' ', $satir));
+            $satir   = trim((string) preg_replace('/[ \t\x{00A0}]+/u', ' ', $satir));
+            $uzunluk = mb_strlen($satir, 'UTF-8');
 
-            if (mb_strlen($satir, 'UTF-8') >= 40) {
+            if ($uzunluk >= 40) {
+                $satirlar[] = $satir;
+                continue;
+            }
+
+            if ($uzunluk >= 6 && preg_match('/\d/u', $satir) === 1) {
                 $satirlar[] = $satir;
             }
         }

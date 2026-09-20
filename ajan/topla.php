@@ -85,18 +85,36 @@ $kaynaklar   = $yapilandirma['kaynaklar'];
 $kategoriler = $yapilandirma['kategoriler'];
 
 /*
- * Sitede zaten bulunan haberlerin parmak izleri.
+ * Sitede zaten bulunan haberler.
  *
  * Kopya engeli yalnizca yazma aninda calisiyordu; ayni haber her
  * calismada yeniden modele gidip ucretlendiriliyor, sonra "zaten vardi"
- * diye atiliyordu. Ajan sik kostugunda maliyetin buyuk kismi buna
- * gidiyor. Artik bilinen adresler modele hic sorulmuyor.
+ * diye atiliyordu. Artik bilinenler modele hic sorulmuyor.
  *
- * Parmak izi hesabi site tarafindaki haber_parmak_izi() ile birebir
- * ayni olmali: kaynak adresi kucultulup kirpilir, sonra sha256.
- * Ayrilirsa suzgec sessizce hicbir seyi yakalamaz.
+ * Tek olcut yetmiyordu. Ham adresin parmak izi, ayni sayfaya
+ * "?utm_source=..." eklenmis ya da sonuna egik cizgi gelmis halini
+ * FARKLI sayiyor ve haber yeniden toplaniyordu. Simdi dort katman var:
+ *   1. eski ham adres parmak izi (geriye donuk uyum)
+ *   2. sadelestirilmis adres parmak izi
+ *   3. katlanmis baslik parmak izi — ayni haberi baska bir kaynaktan
+ *      ikinci kez almayi onler
+ *   4. baslik benzerligi — birebir ayni olmayan ama ayni olayi
+ *      anlatan basliklar icin
  */
-$bilinen = array_fill_keys($yapilandirma['bilinen'], true);
+$bilinen       = array_fill_keys($yapilandirma['bilinen'], true);
+$bilinenUrl    = array_fill_keys($yapilandirma['bilinen_url'], true);
+$bilinenBaslik = array_fill_keys($yapilandirma['bilinen_baslik'], true);
+
+/** @var list<array<string,bool>> Bilinen basliklarin kelime kumeleri */
+$bilinenKumeler = [];
+
+foreach ($yapilandirma['son_basliklar'] as $eskiBaslik) {
+    $kume = baslik_kumesi((string) $eskiBaslik);
+
+    if ($kume !== []) {
+        $bilinenKumeler[] = $kume;
+    }
+}
 
 if ($kaynaklar === []) {
     gunluk('Aktif kaynak yok. Yönetim panelinden kaynak ekleyin.');
@@ -116,6 +134,145 @@ function parmak_izi(string $kaynakUrl, string $baslik): string
         : 'baslik:' . mb_strtolower(trim(preg_replace('/\s+/u', ' ', $baslik) ?? ''), 'UTF-8');
 
     return hash('sha256', $temel);
+}
+
+/*
+ * Asagidaki uc fonksiyon site tarafindaki karsiliklariyla BIREBIR ayni
+ * sonucu uretmek zorunda (includes/haberler.php). Ayrilirlarsa suzgec
+ * sessizce hicbir seyi yakalamaz — en kotu hata turu, cunku hicbir
+ * yerde hata gorunmez, yalnizca kopyalar geri gelir.
+ */
+
+/** includes/haberler.php -> haber_url_sadelestir() ile ayni. */
+function url_sadelestir(string $url): string
+{
+    $url = trim($url);
+
+    if ($url === '') {
+        return '';
+    }
+
+    $parca = parse_url($url);
+
+    if ($parca === false || !isset($parca['host'])) {
+        return mb_strtolower($url, 'UTF-8');
+    }
+
+    $sunucu = strtolower($parca['host']);
+    $sunucu = preg_replace('/^www\./', '', $sunucu) ?? $sunucu;
+
+    $yol = rtrim((string) ($parca['path'] ?? ''), '/');
+
+    $sorgu = '';
+
+    if (isset($parca['query']) && $parca['query'] !== '') {
+        parse_str($parca['query'], $parametreler);
+
+        foreach (array_keys($parametreler) as $ad) {
+            $kucuk = strtolower((string) $ad);
+
+            if (str_starts_with($kucuk, 'utm_')
+                || in_array($kucuk, ['fbclid', 'gclid', 'yclid', 'mc_cid', 'mc_eid',
+                                     'ref', 'referrer', 'amp', 'source', 'src',
+                                     'sessionid', 'phpsessid'], true)) {
+                unset($parametreler[$ad]);
+            }
+        }
+
+        ksort($parametreler);
+        $sorgu = http_build_query($parametreler);
+    }
+
+    return $sunucu . $yol . ($sorgu !== '' ? '?' . $sorgu : '');
+}
+
+/** includes/haberler.php -> haber_baslik_sadelestir() ile ayni. */
+function baslik_sadelestir(string $baslik): string
+{
+    $baslik = str_replace(['İ', 'I', 'ı'], 'i', $baslik);
+    $baslik = mb_strtolower($baslik, 'UTF-8');
+    $baslik = str_replace("\xCC\x87", '', $baslik);
+    $baslik = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $baslik) ?? $baslik;
+
+    return trim($baslik);
+}
+
+function url_parmak(string $url): string
+{
+    $sade = url_sadelestir($url);
+
+    return $sade === '' ? '' : hash('sha256', 'url:' . $sade);
+}
+
+function baslik_parmak(string $baslik): string
+{
+    $sade = baslik_sadelestir($baslik);
+
+    return $sade === '' ? '' : hash('sha256', 'baslik:' . $sade);
+}
+
+/**
+ * Başlığın karşılaştırmaya giren kelime kümesi.
+ *
+ * Iki kural, ikisi de deneyle bulundu:
+ *
+ * 1. Uc harften KISA kelimeler atilir ama uc harfliler KALIR. Ilk
+ *    surumde esik "uc harften uzun" idi ve tam da ayirt edici
+ *    kelimeleri eliyordu: "KDV Genel Tebligi 45 seri no yayimlandi"
+ *    ile "OTV Genel Tebligi 12 seri no yayimlandi" ayni kumeye
+ *    iniyor ve iki AYRI teblig kopya sayiliyordu. Bu alanda ayirt
+ *    eden kelime cogu zaman uc harfli kisaltmadir: KDV, OTV, GVK,
+ *    VUK, SGK.
+ *
+ * 2. Icinde rakam gecen her parca uzunlugu ne olursa olsun kalir.
+ *    Teblig sira numarasi ("45", "585") ve yil ("2026") iki haberi
+ *    birbirinden ayiran en kesin isarettir.
+ *
+ * @return array<string,bool>
+ */
+function baslik_kumesi(string $baslik): array
+{
+    $kelimeler = preg_split('/\s+/u', baslik_sadelestir($baslik), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+    $secilen = array_filter(
+        $kelimeler,
+        static fn (string $k): bool => mb_strlen($k, 'UTF-8') >= 3
+                                    || preg_match('/\d/u', $k) === 1
+    );
+
+    return array_fill_keys($secilen, true);
+}
+
+/**
+ * İki başlık aynı haberi mi anlatıyor?
+ *
+ * Olcut: ortak kelimelerin, KISA olanin kelime sayisina orani. Jaccard
+ * yerine bu secildi cunku kaynaklar ayni olayi bazen cok daha uzun bir
+ * baslikla duyuruyor ("... hakkinda Genel Teblig Resmi Gazete'de
+ * yayimlandi"); uzun basligi paydaya katmak gercek kopyalari kacirirdi.
+ *
+ * Esik 0.8: uc kelimeden ikisinin tutmasi yetmez, dortte uc tutmali.
+ * Dusuk esik ayni konudaki FARKLI haberleri (ornegin ardarda cikan iki
+ * KDV tebligini) eler; bu, kopya gostermekten daha kotu.
+ *
+ * Kelime sayisi 4'un altinda olan basliklarda benzerlige hic
+ * bakilmiyor: "KDV orani degisti" gibi kisa bir baslikta tek kelime
+ * bile orani sicratiyor.
+ *
+ * @param array<string,bool> $a
+ * @param array<string,bool> $b
+ */
+function baslik_benzer(array $a, array $b): bool
+{
+    $kisa = min(count($a), count($b));
+
+    if ($kisa < 4) {
+        return false;
+    }
+
+    $ortak = count(array_intersect_key($a, $b));
+
+    return $ortak / $kisa >= 0.8;
 }
 
 // --- 2 ve 3. Beslemeleri oku, ön elemeden geçir ---------------------------
@@ -226,9 +383,41 @@ foreach ($kaynaklar as $kaynak) {
         }
 
         // Sitede zaten olan haberi modele sormak bosa para.
-        if (isset($bilinen[parmak_izi($girdi['baglanti'], $girdi['baslik'])])) {
+        if (isset($bilinen[parmak_izi($girdi['baglanti'], $girdi['baslik'])])
+            || isset($bilinenUrl[url_parmak($girdi['baglanti'])])
+            || isset($bilinenBaslik[baslik_parmak($girdi['baslik'])])) {
             $zatenVar++;
             continue;
+        }
+
+        // Birebir ayni olmayan ama ayni olayi anlatan baslik.
+        $kume = baslik_kumesi($girdi['baslik']);
+        $benzerVar = false;
+
+        foreach ($bilinenKumeler as $eskiKume) {
+            if (baslik_benzer($kume, $eskiKume)) {
+                $benzerVar = true;
+                break;
+            }
+        }
+
+        if ($benzerVar) {
+            $zatenVar++;
+            continue;
+        }
+
+        /*
+         * Ayni calismanin icindeki kopyalar da eleniyor.
+         *
+         * Bir tebligi ayni anda bes kaynak duyurabiliyor; hepsi de
+         * "yeni" cunku hicbiri henuz sitede yok. Once gelen aliniyor,
+         * kaynaklar zaten resmi olanlar once gelecek sekilde sirali.
+         */
+        $bilinenUrl[url_parmak($girdi['baglanti'])]  = true;
+        $bilinenBaslik[baslik_parmak($girdi['baslik'])] = true;
+
+        if ($kume !== []) {
+            $bilinenKumeler[] = $kume;
         }
 
         $adaylar[] = [
@@ -289,7 +478,15 @@ foreach ($gruplar as $grupNo => $grup) {
     $gorseller = [];
 
     foreach ($grup as $sira => $aday) {
-        $okunan = $sayfa->oku($aday['girdi']['baglanti']);
+        /*
+         * Sayfa genis okunuyor.
+         *
+         * Varsayilan 6.000 karakterdi; haberin ayrintisi (yururluk
+         * tarihi, gecis hukumleri, tutar tablosu) cogu kaynakta metnin
+         * asagisinda duruyor ve bu sinirla hic okunmuyordu. Modele
+         * giden miktari Yazar ayrica kendi sinirina gore kirpar.
+         */
+        $okunan = $sayfa->oku($aday['girdi']['baglanti'], 30000);
 
         // Gorsel once beslemeden, yoksa haber sayfasinin og:image'inden.
         // Besleme gorseli daha guvenilir: siteyi yazan kisi haberin

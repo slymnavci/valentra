@@ -18,6 +18,15 @@ final class Yazar implements SemaliIstemci
      * model adi degisirse kod duzenlemeye gerek kalmaz.
      */
     private const VARSAYILAN_MODEL = 'gemini-3.8-flash';
+
+    /**
+     * Aday basina modele giden sayfa metni siniri (karakter).
+     *
+     * 3.000'den yukseltildi: haberin ayrintisi (yururluk tarihi, gecis
+     * hukumleri, tutar tablolari) cogu kaynakta metnin asagisinda
+     * duruyor ve eski sinirla modele hic ulasmiyordu.
+     */
+    private const SAYFA_METNI_SINIRI = 14000;
     private const API   = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
     private const YONERGE = <<<'METIN'
@@ -75,9 +84,33 @@ final class Yazar implements SemaliIstemci
              standart) bunu kaynakta yazılı olduğu ölçüde belirt.
              Kaynakta yoksa kendin çıkarım yapma.
            - Para birimlerini kaynaktaki birimiyle ver, TL'ye çevirme.
-           - 3-5 paragraf. Paragrafları BOŞ SATIRLA ayır.
+           - UZUNLUK: 5-9 paragraf. Kaynak metin zenginse uzun yaz,
+             kısaysa kısa kal. Kaynakta olmayanı yazmak pahasına
+             uzatma — boş cümleyle paragraf doldurmak, kısa ama dolu
+             bir haberden kötüdür.
+           - Paragrafları BOŞ SATIRLA ayır.
+           - AYRINTIYI ATLAMA. Kaynakta varsa şunların hepsi habere
+             girmeli; okuyucu haberi okuduktan sonra kaynağa gitmek
+             zorunda kalmamalı:
+               * Neyin değiştiği ve ÖNCEKİ durumun ne olduğu
+               * Bütün sayısal değerler: oranlar, tutarlar, hadler,
+                 limitler, ceza tutarları
+               * Tarihler: Resmî Gazete yayım tarihi ve sayısı,
+                 yürürlük tarihi, başvuru/beyan son tarihi
+               * Dayanak: kanun ve madde numarası, tebliğ/sirküler
+                 sıra numarası, karar sayısı
+               * Kimin kapsama girdiği ve kimin girmediği (istisnalar)
+               * Geçiş hükümleri ve varsa önceki düzenlemenin durumu
+           - Kaynakta bir TABLO varsa (tarife dilimleri, oran listesi,
+             had tablosu) satırlarını metin içinde tek tek aktar;
+             "tabloda belirtilmiştir" deyip geçme.
+           - İLK PARAGRAF haberin özünü tek başına versin: ne oldu,
+             kimi ilgilendiriyor, ne zaman yürürlüğe giriyor. Okuyucu
+             yalnızca ilk paragrafı okusa bile ana bilgiyi almalı.
            - Kaynakta olmayan hiçbir bilgiyi ekleme. Rakam, oran, tarih ve
              tutarları kaynaktaki gibi ver; kaynakta yoksa uydurma.
+             Eksik bir ayrıntı varsa (örneğin yürürlük tarihi kaynakta
+             yazmıyorsa) onu ajan notunda editöre bildir.
            - Yorum ve tavsiye verme; olanı aktar. "Yapmalısınız" deme.
            - Başlık en fazla 90 karakter, olguyu bildirsin.
            - Özet tek cümle, en fazla 200 karakter.
@@ -150,7 +183,7 @@ final class Yazar implements SemaliIstemci
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
             'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı, en fazla 90 karakter'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
-            'icerik'      => ['type' => 'string',  'description' => '3-5 paragraf, paragraflar boş satırla ayrılmış'],
+            'icerik'      => ['type' => 'string',  'description' => '5-9 paragraf, paragraflar boş satırla ayrılmış; kaynaktaki tüm rakam, tarih, dayanak ve istisnalar dahil'],
             'etiketler'   => [
                 'type'  => 'array',
                 'items' => ['type' => 'string'],
@@ -174,7 +207,7 @@ final class Yazar implements SemaliIstemci
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
             'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı, en fazla 90 karakter'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
-            'icerik'      => ['type' => 'string',  'description' => '3-5 paragraf, paragraflar boş satırla ayrılmış'],
+            'icerik'      => ['type' => 'string',  'description' => '5-9 paragraf, paragraflar boş satırla ayrılmış; kaynaktaki tüm rakam, tarih, dayanak ve istisnalar dahil'],
             'etiketler'   => [
                 'type'  => 'array',
                 'items' => ['type' => 'string'],
@@ -380,7 +413,10 @@ final class Yazar implements SemaliIstemci
             self::YONERGE,
             $this->topluIstemHazirla($adaylar, $kategoriler),
             self::TOPLU_SEMA,
-            24000,
+            // Haber basina daha uzun metin istendigi icin butce
+            // yukseltildi; bes adaylik bir grupta 24.000 token
+            // yaziyi ortasindan kesiyordu.
+            48000,
             count($adaylar),
             'ilgili'
         );
@@ -487,10 +523,20 @@ final class Yazar implements SemaliIstemci
                 ? 'Birincil/resmî kaynak.'
                 : 'İkincil haber kaynağı.';
 
-            // Grup halinde gonderildigi icin sayfa metni kisaltiliyor;
-            // aksi halde istek gereksiz buyur ve model dagilir.
+            /*
+             * Sayfa metni sinirli ama GENIS.
+             *
+             * Onceki sinir 3.000 karakterdi ve haberler yuzeysel
+             * kaliyordu: bir tebligin yururluk tarihi, gecis hukumleri
+             * ve tutar tablosu cogu zaman metnin asagisinda duruyor,
+             * yani modele hic gitmiyordu. Model kaynakta olmayan seyi
+             * yazamadigi icin sonuc kacinilmaz olarak kisaydi.
+             *
+             * Sinir tamamen kalkmiyor: bes adaylik bir grupta cok uzun
+             * metinler istegi sisirir ve modelin dikkati dagilir.
+             */
             $metin = $aday['sayfaMetni'] !== ''
-                ? mb_substr($aday['sayfaMetni'], 0, 3000, 'UTF-8')
+                ? mb_substr($aday['sayfaMetni'], 0, self::SAYFA_METNI_SINIRI, 'UTF-8')
                 : '(Sayfa metni alınamadı; yalnızca başlık ve özet mevcut.)';
 
             $bloklar[] = <<<METIN

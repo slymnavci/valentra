@@ -16,6 +16,13 @@ const HABER_REDDEDILDI  = 'reddedildi';
 /**
  * Ayni haberin iki kez girmesini engelleyen parmak izi.
  * Kaynak URL varsa onu, yoksa basligi esas alir.
+ *
+ * ESKI ALAN. Yeni kayitlarda hala dolduruluyor ki once eklenmis
+ * haberlerin parmak izleriyle karsilastirma bozulmasin, ama kopya
+ * denetimi artik haber_url_parmak() ve haber_baslik_parmak()
+ * uzerinden yapiliyor. Bu hesap ham adresi oldugu gibi kullandigi
+ * icin "?utm_source=..." eklenmis ya da sonuna egik cizgi gelmis
+ * ayni haberi FARKLI sayiyordu.
  */
 function haber_parmak_izi(string $kaynakUrl, string $baslik): string
 {
@@ -24,6 +31,174 @@ function haber_parmak_izi(string $kaynakUrl, string $baslik): string
         : 'baslik:' . mb_strtolower(trim(preg_replace('/\s+/u', ' ', $baslik) ?? ''), 'UTF-8');
 
     return hash('sha256', $temel);
+}
+
+/**
+ * Adresi, aynı haberin farklı yazımlarını tek biçime indirger.
+ *
+ * Ayni haber her calismada yeniden geliyordu cunku adres her seferinde
+ * birazcik farkliydi. Gorulen farklar:
+ *   - izleme parametreleri (utm_*, fbclid, gclid, ref, amp)
+ *   - http/https ve www olan/olmayan yazim
+ *   - sonda egik cizgi olan/olmayan yazim
+ *   - "#icerik" gibi capalar
+ *
+ * Hicbiri farkli bir haber demek degil; hepsi ayni sayfa. Bu yuzden
+ * parmak izi ham adresten degil, sadelestirilmis adresten hesaplaniyor.
+ *
+ * Kalan parametreler siralaniyor: "?a=1&b=2" ile "?b=2&a=1" ayni sayfa.
+ */
+function haber_url_sadelestir(string $url): string
+{
+    $url = trim($url);
+
+    if ($url === '') {
+        return '';
+    }
+
+    $parca = parse_url($url);
+
+    if ($parca === false || !isset($parca['host'])) {
+        return mb_strtolower($url, 'UTF-8');
+    }
+
+    $sunucu = strtolower($parca['host']);
+    $sunucu = preg_replace('/^www\./', '', $sunucu) ?? $sunucu;
+
+    $yol = rtrim((string) ($parca['path'] ?? ''), '/');
+
+    $sorgu = '';
+
+    if (isset($parca['query']) && $parca['query'] !== '') {
+        parse_str($parca['query'], $parametreler);
+
+        foreach (array_keys($parametreler) as $ad) {
+            $kucuk = strtolower((string) $ad);
+
+            /*
+             * Izleme parametreleri atiliyor. Bunlar sayfayi degil,
+             * ziyaretcinin nereden geldigini anlatir; iceride ayni
+             * haber durur.
+             */
+            if (str_starts_with($kucuk, 'utm_')
+                || in_array($kucuk, ['fbclid', 'gclid', 'yclid', 'mc_cid', 'mc_eid',
+                                     'ref', 'referrer', 'amp', 'source', 'src',
+                                     'sessionid', 'phpsessid'], true)) {
+                unset($parametreler[$ad]);
+            }
+        }
+
+        ksort($parametreler);
+        $sorgu = http_build_query($parametreler);
+    }
+
+    // Semayi atiyoruz: http ve https ayni sayfayi gosterir.
+    return $sunucu . $yol . ($sorgu !== '' ? '?' . $sorgu : '');
+}
+
+/**
+ * Başlığı karşılaştırmaya uygun biçime indirger.
+ *
+ * Turkce katlama sart: mb_strtolower("İ") "i" + birlesen nokta
+ * uretiyor ve ayni baslik iki farkli dizgeye donusebiliyor. Noktalama
+ * ve fazla bosluk da atiliyor; kaynaklar ayni basligi tirnak, tire ve
+ * bosluk farklariyla yaziyor.
+ */
+function haber_baslik_sadelestir(string $baslik): string
+{
+    $baslik = str_replace(['İ', 'I', 'ı'], 'i', $baslik);
+    $baslik = mb_strtolower($baslik, 'UTF-8');
+    $baslik = str_replace("\xCC\x87", '', $baslik);
+
+    // Harf ve rakam disinda ne varsa tek bosluga indir.
+    $baslik = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $baslik) ?? $baslik;
+
+    return trim($baslik);
+}
+
+/** Sadelestirilmis adresin parmak izi; adres yoksa bos. */
+function haber_url_parmak(string $kaynakUrl): string
+{
+    $sade = haber_url_sadelestir($kaynakUrl);
+
+    return $sade === '' ? '' : hash('sha256', 'url:' . $sade);
+}
+
+/** Sadelestirilmis basligin parmak izi. */
+function haber_baslik_parmak(string $baslik): string
+{
+    $sade = haber_baslik_sadelestir($baslik);
+
+    return $sade === '' ? '' : hash('sha256', 'baslik:' . $sade);
+}
+
+/**
+ * Verilen parmak izlerinden herhangi biriyle eşleşen haberin id'si.
+ *
+ * Durum farketmez: reddedilmis bir haberi yeniden yazdirmak da
+ * istemiyoruz, yoksa ayni haber her calismada geri gelirdi.
+ */
+function haber_kopya_bul(string $parmak, string $urlParmak, string $baslikParmak): ?int
+{
+    $kosullar = ['kaynak_parmak = :p'];
+    $degerler = ['p' => $parmak];
+
+    if ($urlParmak !== '') {
+        $kosullar[] = 'url_parmak = :u';
+        $degerler['u'] = $urlParmak;
+    }
+
+    if ($baslikParmak !== '') {
+        $kosullar[] = 'baslik_parmak = :b';
+        $degerler['b'] = $baslikParmak;
+    }
+
+    $ifade = db()->prepare(
+        'SELECT id FROM haberler WHERE ' . implode(' OR ', $kosullar) . ' LIMIT 1'
+    );
+    $ifade->execute($degerler);
+
+    $id = $ifade->fetchColumn();
+
+    return $id === false ? null : (int) $id;
+}
+
+/**
+ * Yeni parmak izi alanları boş kalan eski kayıtları doldurur.
+ *
+ * Alanlar sonradan eklendi; eski satirlarda NULL duruyorlar. Doldurmayi
+ * SQL'de yapamiyoruz (adres sadelestirme ve Turkce katlama PHP'de),
+ * bu yuzden ajan siteye her bagland8ginda birkac yuz satir isleniyor.
+ * Tek seferde hepsini yapmaya kalkmak buyuk bir arsivde istegi
+ * zaman asimina ugratirdi.
+ */
+function haber_parmaklari_tamamla(int $adet = 400): int
+{
+    $satirlar = db()->query(
+        'SELECT id, baslik, kaynak_url
+           FROM haberler
+          WHERE baslik_parmak IS NULL
+          ORDER BY id DESC
+          LIMIT ' . max(1, min(2000, $adet))
+    )->fetchAll();
+
+    if ($satirlar === []) {
+        return 0;
+    }
+
+    $guncelle = db()->prepare(
+        'UPDATE haberler SET url_parmak = :u, baslik_parmak = :b WHERE id = :id'
+    );
+
+    foreach ($satirlar as $satir) {
+        $guncelle->execute([
+            'u'  => haber_url_parmak((string) ($satir['kaynak_url'] ?? '')) ?: null,
+            'b'  => haber_baslik_parmak((string) $satir['baslik']),
+            'id' => (int) $satir['id'],
+        ]);
+    }
+
+    return count($satirlar);
 }
 
 /**
@@ -71,14 +246,22 @@ function haber_taslak_ekle(array $veri): array
         throw new InvalidArgumentException('Baslik ve icerik zorunludur.');
     }
 
-    $parmak = haber_parmak_izi($kaynakUrl, $baslik);
+    $parmak       = haber_parmak_izi($kaynakUrl, $baslik);
+    $urlParmak    = haber_url_parmak($kaynakUrl);
+    $baslikParmak = haber_baslik_parmak($baslik);
 
-    $mevcut = db()->prepare('SELECT id FROM haberler WHERE kaynak_parmak = :parmak LIMIT 1');
-    $mevcut->execute(['parmak' => $parmak]);
-    $mevcutId = $mevcut->fetchColumn();
+    /*
+     * Uc olcut de deneniyor ve biri tutarsa haber eklenmiyor.
+     *
+     * Tek olcut (ham adres) yetmiyordu: ayni haber izleme
+     * parametresi eklenmis bir adresle ya da baska bir kaynaktan
+     * geldiginde yeniden yaziliyordu. Basliga da bakmak ayni haberin
+     * iki kaynaktan gelen kopyasini da yakaliyor.
+     */
+    $mevcutId = haber_kopya_bul($parmak, $urlParmak, $baslikParmak);
 
-    if ($mevcutId !== false) {
-        return ['durum' => 'yinelenen', 'id' => (int) $mevcutId];
+    if ($mevcutId !== null) {
+        return ['durum' => 'yinelenen', 'id' => $mevcutId];
     }
 
     $ozet = trim((string) ($veri['ozet'] ?? ''));
@@ -89,10 +272,12 @@ function haber_taslak_ekle(array $veri): array
     $ifade = db()->prepare(
         'INSERT INTO haberler
             (baslik, slug, ozet, icerik, gorsel_url, etiketler, durum, kategori_id,
-             kaynak_id, kaynak_adi, kaynak_url, kaynak_parmak, guven_skoru, ajan_notu)
+             kaynak_id, kaynak_adi, kaynak_url, kaynak_parmak, url_parmak,
+             baslik_parmak, guven_skoru, ajan_notu)
          VALUES
             (:baslik, :slug, :ozet, :icerik, :gorsel_url, :etiketler, :durum, :kategori_id,
-             :kaynak_id, :kaynak_adi, :kaynak_url, :kaynak_parmak, :guven_skoru, :ajan_notu)'
+             :kaynak_id, :kaynak_adi, :kaynak_url, :kaynak_parmak, :url_parmak,
+             :baslik_parmak, :guven_skoru, :ajan_notu)'
     );
 
     $ifade->execute([
@@ -108,6 +293,8 @@ function haber_taslak_ekle(array $veri): array
         'kaynak_adi'    => mb_substr(trim((string) ($veri['kaynak_adi'] ?? '')), 0, 160, 'UTF-8'),
         'kaynak_url'    => mb_substr($kaynakUrl, 0, 500, 'UTF-8'),
         'kaynak_parmak' => $parmak,
+        'url_parmak'    => $urlParmak !== '' ? $urlParmak : null,
+        'baslik_parmak' => $baslikParmak !== '' ? $baslikParmak : null,
         'guven_skoru'   => max(0, min(100, (int) ($veri['guven_skoru'] ?? 0))),
         'ajan_notu'     => mb_substr(trim((string) ($veri['ajan_notu'] ?? '')), 0, 600, 'UTF-8'),
     ]);

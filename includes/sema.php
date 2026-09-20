@@ -217,9 +217,34 @@ function sema_yukselt(array &$hatalar = []): array
 
     $sutunEkle('haberler', 'kategori_id', 'INT UNSIGNED NULL AFTER one_cikan');
     $sutunEkle('haberler', 'iframe_url', 'VARCHAR(1000) NULL AFTER gorsel_url');
+
+    /*
+     * Kopya denetimi alanlari.
+     *
+     * NULL birakiliyor: eski kayitlar icin deger PHP tarafinda
+     * hesaplanip sonradan dolduruluyor (haber_parmaklari_tamamla).
+     * Adres sadelestirme ve Turkce katlama SQL'de yapilamaz.
+     */
+    $sutunEkle('haberler', 'url_parmak', 'CHAR(64) NULL AFTER kaynak_parmak');
+    $sutunEkle('haberler', 'baslik_parmak', 'CHAR(64) NULL AFTER url_parmak');
     $sutunEkle('kategoriler', 'ust_id', 'INT UNSIGNED NULL AFTER aciklama');
     $sutunEkle('kaynaklar', 'liste_url', 'VARCHAR(500) NULL AFTER besleme_url');
     $sutunEkle('kaynaklar', 'liste_secici', 'VARCHAR(200) NULL AFTER besleme_url');
+
+    // Kopya sorgulari bu iki alan uzerinden calisiyor; indekssiz
+    // arama arsiv buyudukce her aday icin tam tarama demek olurdu.
+    foreach ([['url_parmak', 'ix_haber_url_parmak'],
+              ['baslik_parmak', 'ix_haber_baslik_parmak']] as [$sutun, $indeks]) {
+        $adim('haberler.' . $indeks . ' indeksi', static function () use ($sutun, $indeks): bool {
+            if (!sema_sutun_var('haberler', $sutun) || sema_indeks_var('haberler', $indeks)) {
+                return false;
+            }
+
+            db()->exec('ALTER TABLE haberler ADD INDEX ' . $indeks . ' (' . $sutun . ')');
+
+            return true;
+        });
+    }
 
     // kaynaklar.besleme_url benzersiz olmali; yoksa sema her
     // calistirildiginda INSERT IGNORE kopya kayit uretir.

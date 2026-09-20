@@ -68,15 +68,67 @@ $kategoriler = db()->query(
  * Parmak izlerini onden verip ajanin modele hic sormamasini sagliyoruz.
  * Durum farketmez: reddedilmis bir haberi tekrar yazdirmak da istemiyoruz.
  *
+ * UC AYRI LISTE gonderiliyor:
+ *   bilinen         - eski ham adres parmak izi (geriye donuk uyum)
+ *   bilinen_url     - sadelestirilmis adres; izleme parametresi
+ *                     eklenmis ayni haberi de yakalar
+ *   bilinen_baslik  - katlanmis baslik; ayni haberin BASKA bir
+ *                     kaynaktan gelen kopyasini yakalar
+ *   son_basliklar   - ajan benzerlik karsilastirmasi yapsin diye
+ *                     duz metin basliklar (birebir ayni olmayan ama
+ *                     ayni olayi anlatan basliklar icin)
+ *
  * 21 gun: beslemelerin geriye bakis penceresinden (en fazla 36 saat) kat
  * kat uzun, ama liste sinirsiz buyumuyor.
  */
-$parmaklar = db()->query(
-    'SELECT kaynak_parmak
-       FROM haberler
-      WHERE kaynak_parmak IS NOT NULL
-        AND olusturuldu >= DATE_SUB(NOW(), INTERVAL 21 DAY)'
-)->fetchAll(PDO::FETCH_COLUMN);
+
+// Yeni alanlari bos kalan eski kayitlari doldur. Ajan siteye her
+// baglandiginda birkac yuz satir isleniyor; tek seferde hepsini
+// denemek buyuk bir arsivde istegi zaman asimina ugratirdi.
+haber_parmaklari_tamamla();
+
+$pencere = 'olusturuldu >= DATE_SUB(NOW(), INTERVAL 21 DAY)';
+
+$sutun = static function (string $sorgu): array {
+    try {
+        return array_values(array_filter(array_map(
+            'strval',
+            db()->query($sorgu)->fetchAll(PDO::FETCH_COLUMN)
+        ), static fn (string $d): bool => $d !== ''));
+    } catch (PDOException $e) {
+        return [];
+    }
+};
+
+$parmaklar = $sutun(
+    'SELECT kaynak_parmak FROM haberler
+      WHERE kaynak_parmak IS NOT NULL AND ' . $pencere
+);
+
+$urlParmaklari = $sutun(
+    'SELECT url_parmak FROM haberler
+      WHERE url_parmak IS NOT NULL AND ' . $pencere
+);
+
+$baslikParmaklari = $sutun(
+    'SELECT baslik_parmak FROM haberler
+      WHERE baslik_parmak IS NOT NULL AND ' . $pencere
+);
+
+/*
+ * Duz basliklar da gidiyor.
+ *
+ * Parmak izi yalnizca BIREBIR ayni basligi yakalar. Ayni tebligi iki
+ * kaynak birkac kelime farkla duyurdugunda okuyucu icin bu ayni haber
+ * ama parmak izleri farkli. Ajan bu listeyle kelime benzerligine
+ * bakabiliyor; model cagrisi gerekmiyor.
+ */
+$sonBasliklar = $sutun(
+    'SELECT baslik FROM haberler
+      WHERE ' . $pencere . '
+      ORDER BY id DESC
+      LIMIT 600'
+);
 
 ajan_json(200, [
     'kaynaklar' => array_map(static fn (array $k): array => [
@@ -89,5 +141,8 @@ ajan_json(200, [
         'tur'          => $k['tur'],
     ], $kaynaklar),
     'kategoriler' => $kategoriler,
-    'bilinen'     => array_values(array_map('strval', $parmaklar)),
+    'bilinen'        => $parmaklar,
+    'bilinen_url'    => $urlParmaklari,
+    'bilinen_baslik' => $baslikParmaklari,
+    'son_basliklar'  => $sonBasliklar,
 ]);

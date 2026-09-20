@@ -42,7 +42,10 @@ final class Site
             // Eski surum bir site bu alani gondermez; bos liste ile
             // calismak yine dogru, yalnizca kopya suzgeci devre disi
             // kalir ve eski davranisa donulur.
-            'bilinen'     => $veri['bilinen'] ?? [],
+            'bilinen'        => $veri['bilinen'] ?? [],
+            'bilinen_url'    => $veri['bilinen_url'] ?? [],
+            'bilinen_baslik' => $veri['bilinen_baslik'] ?? [],
+            'son_basliklar'  => $veri['son_basliklar'] ?? [],
         ];
     }
 

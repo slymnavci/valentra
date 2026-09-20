@@ -84,6 +84,16 @@ CREATE TABLE IF NOT EXISTS haberler (
     kaynak_url      VARCHAR(500)  NOT NULL DEFAULT '',
     kaynak_parmak   CHAR(64)      NOT NULL,
 
+    -- Kopya denetimi bu iki alanla yapilir. kaynak_parmak ham adresi
+    -- oldugu gibi hashliyordu; "?utm_source=..." eklenmis ya da sonuna
+    -- egik cizgi gelmis AYNI haber farkli gorunuyor ve her calismada
+    -- yeniden toplaniyordu. url_parmak sadelestirilmis adresten,
+    -- baslik_parmak ise Turkce katlanmis ve noktalamasi atilmis
+    -- baslikten hesaplanir; ikincisi ayni haberi baska bir kaynaktan
+    -- ikinci kez almayi da onler.
+    url_parmak      CHAR(64)      NULL,
+    baslik_parmak   CHAR(64)      NULL,
+
     guven_skoru     TINYINT UNSIGNED NOT NULL DEFAULT 0,
     ajan_notu       VARCHAR(600)  NOT NULL DEFAULT '',
 
@@ -97,6 +107,8 @@ CREATE TABLE IF NOT EXISTS haberler (
     PRIMARY KEY (id),
     UNIQUE KEY uq_haber_slug (slug),
     UNIQUE KEY uq_haber_parmak (kaynak_parmak),
+    KEY ix_haber_url_parmak (url_parmak),
+    KEY ix_haber_baslik_parmak (baslik_parmak),
     KEY ix_haber_durum_tarih (durum, yayin_tarihi),
     KEY ix_haber_bekleyen (durum, olusturuldu),
     KEY ix_haber_kategori (kategori_id, durum, yayin_tarihi),
