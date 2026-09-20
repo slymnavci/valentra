@@ -99,7 +99,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$dogrulamaKodu = ayar_oku('google_dogrulama');
+/*
+ * Panelde girilmemisse kodda tanimli varsayilan gosteriliyor; sayfalara
+ * basilan deger de o. Aksi halde kutu bos gorunur ve "etiket sitede var
+ * mi" sorusu panelden cevaplanamazdi.
+ */
+$dogrulamaKodu = ayar_oku('google_dogrulama', SEO_GOOGLE_DOGRULAMA);
 $temizAcik     = ayar_oku('temiz_adres') === '1';
 
 require __DIR__ . '/ust.php';
