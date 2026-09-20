@@ -123,6 +123,27 @@ $ham = $indirme['govde'];
 $kod = $indirme['kod'];
 
 /*
+ * HAM MOD.
+ *
+ * Ajan besleme (RSS/Atom) okurken HTML'den arindirilmis metin ISE
+ * YARAMAZ; etiketler atilinca XML yapisi da gider. Bu yuzden ham=1
+ * ile govde oldugu gibi donuyor.
+ *
+ * base64 ile gonderiliyor: beslemelerin bir kismi ISO-8859-9 gibi
+ * UTF-8 olmayan kodlamalarda ve bunlari dogrudan JSON'a koymak
+ * json_encode'u bos string dondurmeye iter. Kodlama cevrimini ajan
+ * tarafi zaten yapiyor.
+ */
+if (isset($_GET['ham'])) {
+    ajan_json(200, [
+        'url'   => $url,
+        'kod'   => $kod,
+        'ham'   => base64_encode($ham),
+        'bayt'  => strlen($ham),
+    ]);
+}
+
+/*
  * Duz metne indirgeme.
  *
  * Ajanin ihtiyaci metin; ham HTML'i tasimak hem gereksiz buyuk hem de

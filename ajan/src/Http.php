@@ -6,11 +6,28 @@ namespace Valentra\Ajan;
 /**
  * Dış kaynaklardan indirme. Beslemeler ve haber sayfaları ortak kullanır.
  */
-final class Http
+final class Http implements Indirici
 {
+    /**
+     * Tarayıcı kimliği.
+     *
+     * Onceden "ValentraBot/1.0" yaziyordu ve bu, kaynaklarin yarisinin
+     * neden bos dondugunun buyuk bir kismiydi: 80 kaynagin 39'u "yeni
+     * girdi yok" veriyordu ve aralarinda Resmi Gazete, GIB, Hazine,
+     * KGK, TUIK, Alomaliye, ISMMMO, MuhasebeTR gibi sitenin TUM cekirdek
+     * vergi kaynaklari vardi. Kamu ve kurum siteleri bilinmeyen
+     * istemcileri reddediyor.
+     *
+     * Site tarafinda ayni sorun yasanmis ve ayni sekilde cozulmustu
+     * (includes/http_ortak.php); ajan tarafi geride kalmisti.
+     */
+    private const TARAYICI = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                           . 'AppleWebKit/537.36 (KHTML, like Gecko) '
+                           . 'Chrome/128.0.0.0 Safari/537.36';
+
     public function __construct(
         private readonly int $zamanAsimi = 15,
-        private readonly string $kullaniciAjani = 'Mozilla/5.0 (compatible; ValentraBot/1.0; +https://valentra.com.tr)',
+        private readonly string $kullaniciAjani = self::TARAYICI,
     ) {
     }
 

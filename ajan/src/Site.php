@@ -98,6 +98,40 @@ final class Site
     }
 
     /**
+     * Adresin HAM gövdesini site sunucusu üzerinden getirir.
+     *
+     * Besleme okurken metne indirgenmis govde ise yaramaz: etiketler
+     * atilinca XML yapisi da gider. Bu yuzden ayri bir uc.
+     *
+     * Neden site uzerinden: Turk kamu ve meslek siteleri veri merkezi
+     * IP'lerini engelliyor, ajan ise GitHub'da calisiyor. Son
+     * calismada 80 kaynagin 39'u bos dondu ve aralarinda Resmi Gazete,
+     * GIB, Hazine, TUIK, Alomaliye, ISMMMO vardi. Site Turkiye'de
+     * barindigi icin ayni adreslere ulasabiliyor.
+     */
+    public function hamGetir(string $url): ?string
+    {
+        [$kod, $govde] = $this->istek(
+            'GET',
+            '/api/getir.php?ham=1&url=' . rawurlencode($url)
+        );
+
+        if ($kod !== 200) {
+            return null;
+        }
+
+        $veri = json_decode($govde, true);
+
+        if (!is_array($veri) || !isset($veri['ham'])) {
+            return null;
+        }
+
+        $ham = base64_decode((string) $veri['ham'], true);
+
+        return is_string($ham) && $ham !== '' ? $ham : null;
+    }
+
+    /**
      * Sayfanın metnini ve içindeki bağlantıları birlikte döndürür.
      *
      * Baglantilar fihrist sayfalari icin gerekli: bazi derlemeler

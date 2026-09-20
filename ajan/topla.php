@@ -17,10 +17,13 @@ declare(strict_types=1);
  *
  * Çalıştırma:
  *   php ajan/topla.php [--kuru] [--saat=36] [--enfazla=25] [--grup=5]
+ *                      [--kaynakbasina=4]
  */
 
 require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/src/Indirici.php';
 require_once __DIR__ . '/src/Http.php';
+require_once __DIR__ . '/src/Getirici.php';
 require_once __DIR__ . '/src/Besleme.php';
 require_once __DIR__ . '/src/Sayfa.php';
 require_once __DIR__ . '/src/Kazima.php';
@@ -30,13 +33,13 @@ require_once __DIR__ . '/src/KotaBittiException.php';
 require_once __DIR__ . '/src/SemaliIstemci.php';
 require_once __DIR__ . '/src/Yazar.php';
 
-use Valentra\Ajan\{Besleme, Http, Kazima, KotaBittiException, Sayfa, Site, Suzgec, Yazar};
+use Valentra\Ajan\{Besleme, Getirici, Http, Kazima, KotaBittiException, Sayfa, Site, Suzgec, Yazar};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
 /** Komut satırı seçenekleri */
-$secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::']);
+$secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::', 'kaynakbasina::']);
 $kuruCalisma = isset($secenekler['kuru']);
 $saat        = max(1, (int) ($secenekler['saat'] ?? 36));
 $enFazlaAday = max(1, (int) ($secenekler['enfazla'] ?? 25));
@@ -66,9 +69,18 @@ gunluk('Valentra ajanı başlıyor' . ($kuruCalisma ? ' (KURU ÇALIŞMA — gön
 
 $site    = new Site($siteUrl, $ajanKey);
 $http    = new Http();
-$besleme = new Besleme($http);
-$sayfa   = new Sayfa($http);
-$kazima  = new Kazima($http);
+
+/*
+ * Indirmeler site sunucusuna dusebilsin diye Getirici uzerinden.
+ *
+ * Turk kamu ve meslek siteleri veri merkezi IP'lerini engelliyor,
+ * ajan ise GitHub'da calisiyor. Getirici once dogrudan deniyor,
+ * olmazsa site sunucusundan istiyor.
+ */
+$getirici = new Getirici($http, $site);
+$besleme = new Besleme($getirici);
+$sayfa   = new Sayfa($getirici);
+$kazima  = new Kazima($getirici);
 $suzgec  = new Suzgec();
 $yazar   = new Yazar($apiKey);
 
@@ -447,7 +459,53 @@ if ($adaylar === []) {
 
 // Güçlü sinyal verenler önce; bütçe sınırına takılırsa en iyileri işlensin.
 usort($adaylar, static fn (array $a, array $b): int => $b['puan'] <=> $a['puan']);
-$adaylar = array_slice($adaylar, 0, $enFazlaAday);
+
+/*
+ * KAYNAK BASINA TAVAN.
+ *
+ * Tek bir kaynak butun kontenjani yiyebiliyordu. Bir calismada 25
+ * adayin 14'u IFRS Foundation'dan geldi ve hepsi haber degil, sitenin
+ * menu sayfalariydi ("IFRS Foundation Trustees", "How we set IFRS
+ * Standards"). Model 25'inin 25'ini de eledi ve o calismada SIFIR
+ * haber yazildi — oysa Dunya Gazetesi, Ekonomim ve CNBC'den gercek
+ * haberler de listedeydi, sadece siralamada altta kalmislardi.
+ *
+ * Puana gore siralama bunu tek basina cozmuyor: kurumsal tanitim
+ * sayfalarinin basliklari vergi terimleriyle dolu oldugu icin
+ * on elemeden yuksek puanla geciyorlar.
+ *
+ * Tavan sirlama SONRASI uygulaniyor; her kaynak en iyi birkac adayiyla
+ * temsil ediliyor ve kalan yer digerlerine kaliyor.
+ */
+$kaynakBasinaTavan = max(1, (int) ($secenekler['kaynakbasina'] ?? 4));
+$kaynakSayaci      = [];
+$secilen           = [];
+
+foreach ($adaylar as $aday) {
+    $ad = (string) $aday['kaynak']['ad'];
+    $kaynakSayaci[$ad] = ($kaynakSayaci[$ad] ?? 0) + 1;
+
+    if ($kaynakSayaci[$ad] > $kaynakBasinaTavan) {
+        continue;
+    }
+
+    $secilen[] = $aday;
+}
+
+$tavanaTakilan = count($adaylar) - count($secilen);
+$adaylar       = array_slice($secilen, 0, $enFazlaAday);
+
+if ($tavanaTakilan > 0) {
+    gunluk(
+        '  ' . $tavanaTakilan . ' aday kaynak başına tavana takıldı '
+        . '(kaynak başına en fazla ' . $kaynakBasinaTavan . ').'
+    );
+}
+
+if ($getirici->siteyleGelenSayisi() > 0) {
+    gunluk('  ' . $getirici->siteyleGelenSayisi()
+        . ' adres site sunucusu üzerinden alındı (doğrudan erişilemedi).');
+}
 
 gunluk(count($adaylar) . ' aday modele gönderilecek.');
 

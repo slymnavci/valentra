@@ -12,7 +12,7 @@ namespace Valentra\Ajan;
  */
 final class Sayfa
 {
-    public function __construct(private readonly Http $http = new Http())
+    public function __construct(private readonly Indirici $http = new Http())
     {
         // guvenli_url ve besleme_url_birlestir paylasilan dosyada.
         require_once dirname(__DIR__, 2) . '/includes/url.php';

@@ -12,7 +12,7 @@ namespace Valentra\Ajan;
  */
 final class Besleme
 {
-    public function __construct(private readonly Http $http = new Http())
+    public function __construct(private readonly Indirici $http = new Http())
     {
     }
 

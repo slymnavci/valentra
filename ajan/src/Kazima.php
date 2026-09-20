@@ -12,7 +12,7 @@ namespace Valentra\Ajan;
  */
 final class Kazima
 {
-    public function __construct(private readonly Http $http = new Http())
+    public function __construct(private readonly Indirici $http = new Http())
     {
         // Paylasilan cekirdek. Ajan depo koku altindan calistigi icin
         // dosya her iki ortamda da ayni yerdedir.

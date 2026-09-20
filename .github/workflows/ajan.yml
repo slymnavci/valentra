@@ -120,7 +120,13 @@ jobs:
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
         run: |
           # Zamanli calismada girdi yok; varsayilanlar burada.
-          BAYRAKLAR="--saat=${{ inputs.saat || '6' }} --enfazla=${{ inputs.enfazla || '25' }}"
+          #
+          # enfazla 25'ten 40'a cikti. Eski tavan gercek haberleri
+          # disarida birakiyordu: bir calismada 25 adayin 14'u tek
+          # kaynaktan gelen menu sayfalariydi ve o calismada hic haber
+          # yazilmadi. Kaynak basina tavanla birlikte kontenjan artik
+          # daha cok kaynaga dagiliyor.
+          BAYRAKLAR="--saat=${{ inputs.saat || '6' }} --enfazla=${{ inputs.enfazla || '40' }}"
 
           if [ "${{ inputs.kuru }}" = "true" ]; then
             BAYRAKLAR="$BAYRAKLAR --kuru"
