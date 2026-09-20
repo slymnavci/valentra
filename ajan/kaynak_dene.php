@@ -20,7 +20,9 @@ declare(strict_types=1);
  *   php ajan/kaynak_dene.php [--saat=36] [--kaynak=ad-parcasi]
  */
 
+require_once __DIR__ . '/src/Indirici.php';
 require_once __DIR__ . '/src/Http.php';
+require_once __DIR__ . '/src/Getirici.php';
 require_once __DIR__ . '/src/Besleme.php';
 require_once __DIR__ . '/src/Kazima.php';
 require_once __DIR__ . '/src/Suzgec.php';
@@ -28,7 +30,7 @@ require_once __DIR__ . '/src/Site.php';
 require_once __DIR__ . '/../includes/url.php';
 require_once __DIR__ . '/../includes/kazima.php';
 
-use Valentra\Ajan\{Besleme, Http, Site, Suzgec};
+use Valentra\Ajan\{Besleme, Getirici, Http, Site, Suzgec};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
@@ -163,7 +165,28 @@ if ($kanunModu) {
 
 $site    = new Site(ayar('VALENTRA_SITE_URL'), ayar('VALENTRA_AGENT_KEY'));
 $http    = new Http();
-$besleme = new Besleme($http);
+
+/*
+ * Besleme okumasi ajanin GERCEKTE kullandigi yoldan gecmeli.
+ *
+ * Ajan artik dogrudan erisemedigi adresleri site sunucusundan
+ * istiyor. Test bunu yapmasaydi "basarisiz" derken ajan ayni kaynagi
+ * sorunsuz okuyor olabilirdi — yani tani araci yaniltirdi.
+ */
+$getirici = new Getirici($http, $site);
+$besleme = new Besleme($getirici);
+
+/**
+ * Doğrudan erişilemeyen adresi site sunucusundan dener.
+ *
+ * @return array{tamam:bool,boyut:int}
+ */
+function siteYolunuDene(Site $site, string $url): array
+{
+    $ham = $site->hamGetir($url);
+
+    return ['tamam' => $ham !== null, 'boyut' => $ham !== null ? strlen($ham) : 0];
+}
 $suzgec  = new Suzgec();
 
 try {
@@ -208,11 +231,29 @@ foreach ($kaynaklar as $kaynak) {
 
         if ($yanit['govde'] === null || $yanit['kod'] < 200 || $yanit['kod'] >= 300) {
             yaz(sprintf(
-                '  RSS: BAŞARISIZ — HTTP %d %s',
+                '  RSS: doğrudan BAŞARISIZ — HTTP %d %s',
                 $yanit['kod'],
                 $yanit['hata'] !== '' ? '(' . $yanit['hata'] . ')' : ''
             ));
-            $not = 'RSS: HTTP ' . $yanit['kod'];
+
+            // Ajanin ikinci yolu: site sunucusu.
+            $siteden = siteYolunuDene($site, $beslemeUrl);
+
+            if ($siteden['tamam']) {
+                $girdiler = $besleme->oku($beslemeUrl, $saat);
+
+                yaz(sprintf(
+                    '       ANCAK site sunucusu üzerinden alındı (%d bayt, %d girdi) — ajan bu kaynağı okuyabilir.',
+                    $siteden['boyut'],
+                    count($girdiler)
+                ));
+
+                $calisanYol = 'RSS (site üzerinden)';
+                $not        = 'site üzerinden ' . count($girdiler) . ' girdi';
+            } else {
+                yaz('       Site sunucusu üzerinden de alınamadı.');
+                $not = 'RSS: HTTP ' . $yanit['kod'] . ', site yolu da düştü';
+            }
         } else {
             $girdiler = $besleme->oku($beslemeUrl, $saat);
             $tumu     = $besleme->oku($beslemeUrl, 24 * 365);
@@ -269,13 +310,28 @@ foreach ($kaynaklar as $kaynak) {
 
         if ($yanit['govde'] === null || $yanit['kod'] < 200 || $yanit['kod'] >= 300) {
             yaz(sprintf(
-                '  Kazıma: BAŞARISIZ — HTTP %d %s',
+                '  Kazıma: doğrudan BAŞARISIZ — HTTP %d %s',
                 $yanit['kod'],
                 $yanit['hata'] !== '' ? '(' . $yanit['hata'] . ')' : ''
             ));
 
-            if ($not === '') {
-                $not = 'Kazıma: HTTP ' . $yanit['kod'];
+            $siteden = siteYolunuDene($site, $listeUrl);
+
+            if ($siteden['tamam']) {
+                yaz(sprintf(
+                    '       ANCAK site sunucusu üzerinden alındı (%d bayt) — ajan bu kaynağı okuyabilir.',
+                    $siteden['boyut']
+                ));
+
+                if ($calisanYol === '') {
+                    $calisanYol = 'Kazıma (site üzerinden)';
+                }
+            } else {
+                yaz('       Site sunucusu üzerinden de alınamadı.');
+
+                if ($not === '') {
+                    $not = 'Kazıma: HTTP ' . $yanit['kod'] . ', site yolu da düştü';
+                }
             }
         } else {
             $tani = kazima_tani($yanit['govde'], $listeUrl, $secici);

@@ -18,7 +18,9 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/src/Indirici.php';
 require_once __DIR__ . '/src/Http.php';
+require_once __DIR__ . '/src/Getirici.php';
 require_once __DIR__ . '/src/Sayfa.php';
 require_once __DIR__ . '/src/Site.php';
 require_once __DIR__ . '/src/KotaBittiException.php';
