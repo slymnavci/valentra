@@ -12,6 +12,22 @@ namespace Valentra\Ajan;
  */
 final class Besleme
 {
+    /**
+     * libxml'in kurtarma bayragi (XML_PARSE_RECOVER).
+     *
+     * SAYI olarak yaziliyor, LIBXML_RECOVER sabitiyle degil. Sabit her
+     * PHP yapisinda YOK: gelistirme ortamindaki PHP 8.4'te tanimli ama
+     * ajanin kostugu PHP 8.3'te tanimsiz ve tum kaynak testi
+     * "Undefined constant" ile olumcul hataya dustu. Yerel testler
+     * gecmisti; fark ancak gercek ortamda ortaya cikti.
+     *
+     * Ayni tuzaga daha once curl hata sabitlerinde de dusuldu
+     * (CURLE_PEER_FAILED_VERIFICATION), orada da sayilara gecildi.
+     *
+     * Deger libxml'de sabittir ve degismez: XML_PARSE_RECOVER = 1.
+     */
+    private const KURTAR = 1;
+
     public function __construct(private readonly Indirici $http = new Http())
     {
     }
@@ -92,7 +108,7 @@ final class Besleme
             $xml = simplexml_load_string(
                 $this->xmlTemizle($ham),
                 'SimpleXMLElement',
-                LIBXML_NOCDATA | LIBXML_RECOVER | LIBXML_NOWARNING | LIBXML_NOERROR
+                LIBXML_NOCDATA | self::KURTAR | LIBXML_NOWARNING | LIBXML_NOERROR
             );
         }
 
