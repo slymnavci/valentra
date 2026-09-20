@@ -647,7 +647,7 @@ a.menu-oge.aktif::after,
      * clamp: kisa ekranda 300 pikselin altina inmez, buyuk ekranda
      * 520 pikseli asmaz, arada ekran yuksekliginin yarisini alir.
      */
-    height: clamp(300px, 52vh, 520px);
+    height: clamp(320px, 58vh, 580px);
     background: linear-gradient(150deg, #17304f 0%, #23405f 55%, #2b4a73 100%);
     color: #fff;
 }
@@ -664,6 +664,23 @@ a.menu-oge.aktif::after,
     width: 100%;
     height: 100%;
     object-fit: cover;
+
+    /*
+     * Kirpma ortadan degil USTTEN.
+     *
+     * Kutu, haber gorsellerinin cogundan daha genis bir orana sahip
+     * (yaklasik 2:1'e karsi 16:9). object-fit: cover genisligi
+     * doldurup artan yuksekligi ustten ve alttan ESIT kirpiyor;
+     * binanin ya da kisinin ustu kesiliyordu.
+     *
+     * %35 ile kirpma agirligi ust yariya kayiyor: haber
+     * fotograflarinda konu neredeyse her zaman ust-orta bolgede,
+     * alt bolge ise zaten koyu gecisin altinda kaliyor.
+     *
+     * Ayni ayar kart ve manset gorsellerine UYGULANMADI: onlarin kutu
+     * oranlari farkli ve sikayet yalnizca kaydiraktaydi.
+     */
+    object-position: center 35%;
     /*
      * Eskiden .5 idi. Kaynak sitelerin paylasim gorsellerinde baslik
      * cogu zaman resmin icine gomulu oluyor; yariya indirilmis resim
@@ -688,16 +705,34 @@ a.menu-oge.aktif::after,
 
 .kaydirak-slayt.gorselli .kaydirak-govde {
     flex: none;
-    /* Resim netlestigi icin gecis de koyulastirildi; alt bant neredeyse
-       tam opak, ustte yumusayarak kayboluyor. */
+
+    /*
+     * Gecis DAHA DAR ve DAHA DIK.
+     *
+     * Kirpma olculdu ve sorun orada degildi: gorselin yalnizca %3'u
+     * kirpiliyor. "Resim yarim gorunuyor" sikayetinin sebebi koyu
+     * gecisti — eski degerlerle karartma gorselin yarisindan
+     * fazlasini kapliyordu (bantli test gorselinde %50 bandindan
+     * asagisi tamamen koyuydu).
+     *
+     * Metnin arkasi koyu KALIYOR; okunurluk pazarlik konusu degil,
+     * beyaz yazi fotograf uzerinde okunmali. Degisen yalnizca ust
+     * kisim: karartma %55'ten sonra hizla siliniyor, boylece
+     * fotografin ust yarisi net duruyor.
+     */
     background: linear-gradient(to top,
         rgba(8, 16, 30, .97) 0%,
-        rgba(8, 16, 30, .88) 45%,
-        rgba(8, 16, 30, .45) 80%,
+        rgba(8, 16, 30, .93) 38%,
+        rgba(8, 16, 30, .55) 68%,
+        rgba(8, 16, 30, .12) 88%,
         transparent 100%);
-    /* Yukseklik ekrana baglandigi icin ust dolgu da orantili:
-       sabit 110px kisa ekranda metni asagi itip kirpiyordu. */
-    padding-top: clamp(50px, 12vh, 110px);
+
+    /*
+     * Ust dolgu kucultuldu: 110px'lik dolgu kutuyu bosu bosuna
+     * buyutuyor ve buyuyen kutu daha fazla gorseli karartma altinda
+     * birakiyordu.
+     */
+    padding-top: clamp(26px, 7vh, 64px);
 }
 
 .kaydirak-govde .grup {
@@ -719,6 +754,19 @@ a.menu-oge.aktif::after,
     line-height: 1.16;
     letter-spacing: -.012em;
     color: #fff;
+
+    /*
+     * En fazla iki satir.
+     *
+     * Metin kutusunun yuksekligi dogrudan gorselin ne kadarinin
+     * karartma altinda kaldigini belirliyor. Uc satirlik bir baslik
+     * kutuyu buyutup fotografi yutuyordu. Kesilen baslik zaten
+     * habere tiklandiginda tam gorunuyor.
+     */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .kaydirak-govde .ozet {
@@ -726,6 +774,13 @@ a.menu-oge.aktif::after,
     color: #c8d5e6;
     font-size: 1rem;
     max-width: 62ch;
+
+    /* Ayni gerekce: uc satirlik spot kutuyu buyutup gorseli
+       karartma altinda birakiyordu. Iki satir ozeti veriyor. */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .kaydirak-govde .kunye {
@@ -810,6 +865,16 @@ a.menu-oge.aktif::after,
     /* Telefonda ekranin yarisindan fazlasini tek habere vermek,
        altindaki listeyi tamamen gorunmez yapiyor. */
     .kaydirak-slayt > a { height: clamp(280px, 46vh, 380px); }
+
+    /*
+     * Telefonda spot gizleniyor.
+     *
+     * Olcum: dar ekranda metin kutusu 380 pikselik slaytin 366'sini
+     * kapliyordu, yani fotograf pratikte hic gorunmuyordu. Baslik ve
+     * kunye kaliyor; spot zaten haberin ilk cumlesi ve bir dokunus
+     * otede.
+     */
+    .kaydirak-govde .ozet { display: none; }
     .kaydirak-ok { display: none; }
 }
 
