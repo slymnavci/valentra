@@ -238,6 +238,85 @@ function beslemeleriKesfet(Getirici $getirici, string $siteUrl): array
 }
 
 /**
+ * Sitenin ana sayfasında duyuru/haber listesi olabilecek adresleri bulur.
+ *
+ * NEDEN: kaynaklarin ucte biri calismiyor ve cogunda sebep yanlis
+ * adres. Dogru adresi hafizadan yazmak tehlikeli — mevzuat.gov.tr'de
+ * tam bunu yapip haftalarca yanlis yerde arandi. Oysa adres sitenin
+ * ana sayfasinda duruyor: "Duyurular", "Haberler", "Basin Bultenleri"
+ * baglantilari.
+ *
+ * Yol adinda su parcalari arayan baglantilar aday sayiliyor. Yazidan
+ * degil YOLDAN bakiliyor; yazi dile gore degisiyor ama yol kaliplari
+ * sitelerde sasmiyor.
+ *
+ * @return list<array{yazi:string,url:string}>
+ */
+function adresOner(Getirici $getirici, string $siteUrl): array
+{
+    if ($siteUrl === '') {
+        return [];
+    }
+
+    $html = $getirici->indir($siteUrl);
+
+    if ($html === null) {
+        return [];
+    }
+
+    $kaliplar = ['duyuru', 'haber', 'news', 'press', 'basin', 'bulten',
+                 'bulletin', 'yayin', 'insight', 'publication', 'sirküler',
+                 'sirkuler', 'announc', 'media', 'guncel', 'gundem'];
+
+    $bulunan = [];
+    $gorulen = [];
+
+    if (preg_match_all('#<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>#is', $html, $eslesmeler, PREG_SET_ORDER) === 0) {
+        return [];
+    }
+
+    foreach ($eslesmeler as $eslesme) {
+        $adres = besleme_url_birlestir($siteUrl, html_entity_decode(
+            trim($eslesme[1]),
+            ENT_QUOTES | ENT_HTML5,
+            'UTF-8'
+        ));
+
+        if (guvenli_url($adres) === '' || isset($gorulen[$adres])) {
+            continue;
+        }
+
+        // Yalnizca ayni site; disari giden baglantilar kaynak olamaz.
+        if (parse_url($adres, PHP_URL_HOST) !== parse_url($siteUrl, PHP_URL_HOST)) {
+            continue;
+        }
+
+        $yol = strtolower((string) parse_url($adres, PHP_URL_PATH));
+
+        if ($yol === '' || $yol === '/') {
+            continue;
+        }
+
+        foreach ($kaliplar as $kalip) {
+            if (str_contains($yol, $kalip)) {
+                $gorulen[$adres] = true;
+                $bulunan[] = [
+                    'yazi' => trim((string) preg_replace('/\s+/u', ' ', strip_tags($eslesme[2]))),
+                    'url'  => $adres,
+                ];
+                break;
+            }
+        }
+
+        if (count($bulunan) >= 12) {
+            break;
+        }
+    }
+
+    return $bulunan;
+}
+
+/**
  * Doğrudan erişilemeyen adresi site sunucusundan dener.
  *
  * @return array{tamam:bool,boyut:int}
@@ -468,10 +547,15 @@ foreach ($kaynaklar as $kaynak) {
      * Besleme adresi zaten tanimliysa ve 404 aldiysa kesif yukarida
      * yapildi; burada tekrarlanmiyor.
      */
-    if ($calisanYol === '' && $beslemeUrl === '') {
+    if ($calisanYol === '') {
         foreach (beslemeleriKesfet($getirici, $kaynakSitesi) as $aday) {
-            yaz('  ÖNERİ — sitede ilan edilen besleme: ' . $aday['url']
-                . ($aday['ad'] !== '' ? '  (' . $aday['ad'] . ')' : ''));
+            yaz('  ÖNERİ (besleme) — ' . $aday['url']
+                . ($aday['ad'] !== '' ? '  [' . $aday['ad'] . ']' : ''));
+        }
+
+        foreach (adresOner($getirici, $kaynakSitesi) as $aday) {
+            yaz('  ÖNERİ (liste) — ' . $aday['url']
+                . ($aday['yazi'] !== '' ? '  [' . mb_substr($aday['yazi'], 0, 40) . ']' : ''));
         }
     }
 
