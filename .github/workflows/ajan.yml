@@ -51,6 +51,9 @@ on:
       enfazla:
         description: 'En fazla kac aday islensin'
         default: '25'
+      aday:
+        description: 'kaynak-testi: DB disi aday adresler  (Ad=https://..., Ad=https://...)'
+        default: ''
 
 # Ayni anda iki ajan calismasin; ust uste binerse kopya istek olusur.
 concurrency:
@@ -134,7 +137,14 @@ jobs:
         env:
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
-        run: php kaynak_dene.php --saat=${{ inputs.saat || '36' }}
+        # Aday adresleri once SINANIR, sonra schema.sql'e yazilir.
+        # Tersi sira denendi ve listede 32 bozuk adres birikti.
+        run: |
+          if [ -n "${{ inputs.aday }}" ]; then
+            php kaynak_dene.php --saat=${{ inputs.saat || '36' }} --aday="${{ inputs.aday }}"
+          else
+            php kaynak_dene.php --saat=${{ inputs.saat || '36' }}
+          fi
 
       # Pratik bilgiler nadiren (yilda birkac kez) degisiyor; haber
       # toplamayla ayni siklikta kosmasi anlamsiz olurdu. Haftada bir

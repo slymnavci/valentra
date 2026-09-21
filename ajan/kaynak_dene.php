@@ -26,19 +26,21 @@ require_once __DIR__ . '/src/Getirici.php';
 require_once __DIR__ . '/src/Besleme.php';
 require_once __DIR__ . '/src/Kazima.php';
 require_once __DIR__ . '/src/Suzgec.php';
+require_once __DIR__ . '/src/TohumYapilandirma.php';
 require_once __DIR__ . '/src/Site.php';
 require_once __DIR__ . '/../includes/url.php';
 require_once __DIR__ . '/../includes/kazima.php';
 
-use Valentra\Ajan\{Besleme, Getirici, Http, Site, Suzgec};
+use Valentra\Ajan\{Besleme, Getirici, Http, Site, Suzgec, TohumYapilandirma};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
-$secenekler = getopt('', ['saat::', 'kaynak::', 'kanunlar']);
+$secenekler = getopt('', ['saat::', 'kaynak::', 'kanunlar', 'aday::']);
 $saat       = max(1, (int) ($secenekler['saat'] ?? 36));
 $suzgu      = trim((string) ($secenekler['kaynak'] ?? ''));
 $kanunModu  = isset($secenekler['kanunlar']);
+$adayGirdi  = trim((string) ($secenekler['aday'] ?? ''));
 
 function yaz(string $mesaj = ''): void
 {
@@ -347,14 +349,93 @@ function siteYolunuDene(Site $site, string $url): array
 }
 $suzgec  = new Suzgec();
 
-try {
-    $yapilandirma = $site->yapilandirma();
-} catch (Throwable $e) {
-    fwrite(STDERR, 'Yapılandırma alınamadı: ' . $e->getMessage() . "\n");
-    exit(1);
-}
+/*
+ * ADAY MODU: henuz veritabaninda olmayan adresleri sinar.
+ *
+ * Bir kaynagi once EKLEYIP sonra calisip calismadigina bakmak yanlis
+ * sira: listede 32 bozuk adresin birikme sebebi tam olarak buydu.
+ * Bu modda aday once sinaniyor, schema.sql'e yalnizca calistigi
+ * gorulen yaziliyor.
+ *
+ * Bicim:  --aday='Ad=https://adres, Baska Ad=https://baska'
+ * Ad verilmezse sunucu adi kullanilir.
+ */
+$kaynaklar = [];
 
-$kaynaklar = $yapilandirma['kaynaklar'] ?? [];
+if ($adayGirdi !== '') {
+    foreach (explode(',', $adayGirdi) as $parca) {
+        $parca = trim($parca);
+
+        if ($parca === '') {
+            continue;
+        }
+
+        $esit = strpos($parca, '=');
+        $ad   = '';
+        $url  = $parca;
+
+        if ($esit !== false) {
+            $ad  = trim(substr($parca, 0, $esit));
+            $url = trim(substr($parca, $esit + 1));
+        }
+
+        if ($ad === '') {
+            $ad = (string) parse_url($url, PHP_URL_HOST);
+        }
+
+        /*
+         * Aday hem besleme hem liste olarak deneniyor.
+         *
+         * Verilen adresin RSS mi yoksa haber listesi mi oldugunu
+         * onceden bilmiyoruz; ikisini de denemek bir tur fazladan
+         * istek demek ama dogru cevabi veriyor. Site adresi de
+         * doldurulyor ki besleme kesfi calissin.
+         */
+        $kaynaklar[] = [
+            'ad'           => $ad,
+            'site_url'     => (string) (parse_url($url, PHP_URL_SCHEME) ?: 'https')
+                              . '://' . (string) parse_url($url, PHP_URL_HOST),
+            'besleme_url'  => $url,
+            'liste_url'    => $url,
+            'liste_secici' => '',
+            'tur'          => 'aday',
+        ];
+    }
+
+    yaz('ADAY MODU — veritabanına hiçbir şey yazılmaz, yalnızca sınanır.');
+    yaz();
+} else {
+    $yapilandirma = null;
+
+    try {
+        $yapilandirma = $site->yapilandirma();
+    } catch (Throwable $e) {
+        yaz('Siteden yapılandırma alınamadı: ' . $e->getMessage());
+
+        /*
+         * Tohum listesine dusuluyor.
+         *
+         * Eskiden burada exit(1) vardi ve site ulasilamaz oldugunda
+         * tani araci hic calismiyordu — yani tam da tesihse en cok
+         * ihtiyac duyulan anda. Kaynak listesi zaten schema.sql'de
+         * duruyor; panelden yapilan degisiklikleri icermez ama
+         * adreslerin calisip calismadigini sinamaya yeter.
+         */
+        $tohum = (new TohumYapilandirma(dirname(__DIR__) . '/sql/schema.sql'))->oku();
+
+        if ($tohum === null) {
+            fwrite(STDERR, "Kaynak listesi hiçbir yoldan alınamadı.\n");
+            exit(1);
+        }
+
+        $yapilandirma = $tohum;
+        yaz(count($tohum['kaynaklar']) . ' kaynak schema.sql tohum listesinden okundu. '
+            . 'Panelden yapılan değişiklikler bu listede yoktur.');
+        yaz();
+    }
+
+    $kaynaklar = $yapilandirma['kaynaklar'] ?? [];
+}
 
 if ($suzgu !== '') {
     $kaynaklar = array_values(array_filter(
