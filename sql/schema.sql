@@ -886,3 +886,42 @@ UPDATE pratik_bilgiler SET
  WHERE anahtar IN ('kdv-oranlari', 'damga-vergisi-oranlari',
                    'fatura-duzenleme-siniri', 'amortisman-siniri',
                    'beyanname-damga-vergisi', 'harcirah-tutarlari');
+
+-- ---------------------------------------------------------------------------
+-- Sinanmis kaynak duzeltmeleri (21.09.2026)
+--
+-- Her adres EKLENMEDEN ONCE ajanin kostugu yerde sinandi
+-- (ajan/kaynak_dene.php --aday=...). Sinanmadan eklenen adresler
+-- listede otuz kusur olu kaynak biriktirdi; bu blok o sirayi tersine
+-- cevirmek icin var. Sinamadan gecmeyenler kasten EKLENMEDI:
+--
+--   verginet.net           Kok adres ve /rss.aspx birebir ayni 193 KB'lik
+--                          sayfayi donduruyor, icinde iki baglanti var.
+--                          Icerik tarayicida olusuyor; ajan JavaScript
+--                          calistirmadigi icin bu siteden haber alinamaz.
+--   dijital.gib.gov.tr     React uygulamasi. Baglanti metni olarak CSS
+--                          kodu geliyor, duyurular sayfada yok.
+--   mynet.com              Tek ilan edilen besleme ana sayfa beslemesi:
+--                          47 girdinin on elemeden gecen ucu magazin ve
+--                          asayis haberiydi, uCu de vergi puani sifir.
+-- ---------------------------------------------------------------------------
+
+-- Euronews'in vergi etiketi ayri bir kaynak olarak ekleniyor.
+-- Mevcut "Euronews Türkçe" kaydi genel is/ekonomi beslemesini okuyor;
+-- vergi etiketi sayfasi 436 baglantidan 11 haber verdi ve hepsi
+-- /business/ altindaki gercek makalelerdi.
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) VALUES
+    ('Euronews Vergi',          'https://tr.euronews.com',
+     NULL, 'https://tr.euronews.com/tag/vergiler', 'web', 1);
+
+-- Bloomberg HT'nin RSS'i okunuyor ama site guncellemiyor: sinamada en
+-- taze girdi ALTI GUN oncesine aitti, yani kaynak pratikte olu.
+-- Makro sayfasi ayni sinamada 152 baglantidan 52 aday uretti (kazima
+-- duz adresli sitelerde de calisir hale getirildikten sonra bunlar
+-- kullanilabiliyor). Besleme birakilirsa ajan once onu deneyip bos
+-- donecegi icin NULL yapiliyor.
+UPDATE kaynaklar
+   SET besleme_url = NULL,
+       liste_url   = 'https://www.bloomberght.com/ekonomik-veriler-ve-gundem',
+       tur         = 'web'
+ WHERE ad = 'Bloomberg HT';
