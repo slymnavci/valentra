@@ -8,11 +8,38 @@ namespace Valentra\Ajan;
  */
 final class Site
 {
+    /**
+     * Site baglanti seviyesinde bir kez tamamen dustu mu?
+     *
+     * NEDEN VAR: yeniden deneme pencereleri tek bir cagri icin
+     * tasarlandi, arka arkaya ONLARCA cagri icin degil. Site 443'te
+     * baglanti kabul etmedigi bir calismada olcum sudur:
+     * yapilandirma cagrisi 11 dakika (9 deneme), ardindan her kaynak
+     * icin 3,5 dakika (5 deneme). Uc kaynak 10,5 dakika yedi ve 80
+     * kaynagin 72'si zaman butcesi doldugu icin hic taranmadi. O
+     * calismada sifir haber yazildi.
+     *
+     * Ayni dakikalarda ulasilamayan bir sunucuya ayni sabirla tekrar
+     * tekrar gitmek bilgi uretmiyor; yalnizca calismayi yiyor.
+     *
+     * Latch SESSIZ DEGIL, HIZLI: sonraki cagrilar yine deneniyor ama
+     * tek seferde ve kisa zaman asimiyla. Site geri gelirse ilk
+     * basarili cagri latch'i acar. Buyuk fark: basarisizligin bedeli
+     * 3,5 dakikadan ~8 saniyeye iniyor.
+     */
+    private bool $cekimser = false;
+
     public function __construct(
         private readonly string $taban,
         private readonly string $anahtar,
         private readonly int $zamanAsimi = 30,
     ) {
+    }
+
+    /** Siteye baglanti seviyesinde ulasilamiyor mu; gunluge yazmak icin. */
+    public function cekimserMi(): bool
+    {
+        return $this->cekimser;
     }
 
     /**
@@ -301,7 +328,7 @@ final class Site
         $beklemeler = [5, 15, 30, 60];
 
         /*
-         * SABIRLI MOD: yapilandirma icin daha uzun bekle.
+         * SABIRLI MOD: yapilandirma icin biraz daha uzun bekle.
          *
          * IHS 443'te araliklarla baglanti kabul etmiyor; ayni
          * dakikalarda FTP calistigi icin sunucu ayakta ama
@@ -309,21 +336,37 @@ final class Site
          * gunde olcum: 20:07 dustu, 20:11 calisti, 20:17 calisti,
          * 20:26 dustu.
          *
-         * Yapilandirma cagrisi calismanin ILK adimi ve tek basarisiz
-         * olmasi butun calismayi olduruyor — kaynak taranmiyor, model
-         * cagrilmiyor, hicbir haber yazilmiyor. Uc buçuk dakikalik
-         * pencere bazi kesintilere yetmedi.
+         * Pencere bir ara ~9 dakikaya cikarilmisti: o zaman
+         * yapilandirma cagrisinin dusmesi butun calismayi olduruyordu
+         * (kaynak taranmiyor, model cagrilmiyor, hicbir haber
+         * yazilmiyor) ve beklemek her seye degerdi.
          *
-         * Bu yuzden yalnizca o cagri icin pencere ~9 dakikaya
-         * cikariliyor. Is icin ayrilan sure buna musait ve bekleyip
-         * haber toplamak, hemen vazgecip bos donmekten iyi.
+         * ARTIK DEGMIYOR, cunku o varsayim dogru degil: yapilandirma
+         * alinamazsa onbellekteki kopyaya, o da yoksa depodaki tohum
+         * listesine dusuluyor ve tarama normal sekilde yapiliyor.
+         * Dokuz denemeyle beklemenin olculen bedeli ise agir — site
+         * kapaliyken tek basina 11 DAKIKA yiyor ve bu sure dogrudan
+         * kaynak taramasindan kesiliyor.
          *
-         * Diger cagrilar icin pencere ayni kaliyor: gonderim adiminda
-         * dakikalarca beklemek, model parasi zaten harcanmis olsa da
-         * isi gereksiz uzatir.
+         * Pencere ~4,5 dakika: bir FTP yayin penceresi (1-2 dakika)
+         * rahatlikla sigiyor. Daha uzun suren bir kesintide beklemek
+         * degil, yedek listeyle taramaya baslamak dogru.
          */
         if ($sabirli) {
-            $beklemeler = [5, 15, 30, 45, 60, 90, 120, 120];
+            $beklemeler = [5, 15, 30, 45, 60];
+        }
+
+        /*
+         * Site zaten dustuyse tek deneme.
+         *
+         * Sabirli mod dahil butun beklemeler iptal: ayni calismada
+         * dakikalar once baglanti kabul etmeyen sunucuya dokuz kez
+         * daha gitmenin karsiligi yok. Yine de bir deneme yapiliyor
+         * (sifir deneme degil) cunku site donebilir ve donduyse
+         * bunu ogrenmenin bedeli birkac saniye.
+         */
+        if ($this->cekimser) {
+            $beklemeler = [];
         }
 
         $enFazlaDeneme = count($beklemeler) + 1;
@@ -335,8 +378,8 @@ final class Site
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_CUSTOMREQUEST  => $yontem,
                 CURLOPT_HTTPHEADER     => $basliklar,
-                CURLOPT_TIMEOUT        => max($this->zamanAsimi, 45),
-                CURLOPT_CONNECTTIMEOUT => 20,
+                CURLOPT_TIMEOUT        => $this->cekimser ? 15 : max($this->zamanAsimi, 45),
+                CURLOPT_CONNECTTIMEOUT => $this->cekimser ? 8 : 20,
                 CURLOPT_FOLLOWLOCATION => false,
                 CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
                 CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
@@ -353,6 +396,10 @@ final class Site
             curl_close($ch);
 
             if (is_string($yanit)) {
+                // Site dondu: latch acilir, sonraki cagrilar yine
+                // sabirli davranir.
+                $this->cekimser = false;
+
                 return [$sonKod, $yanit];
             }
 
@@ -364,6 +411,17 @@ final class Site
             if ($deneme < $enFazlaDeneme) {
                 sleep($beklemeler[$deneme - 1]);
             }
+        }
+
+        /*
+         * Butun denemeler baglanti seviyesinde tukendiyse latch kapanir.
+         *
+         * Yalnizca baglanti hatalarinda: sunucunun 500 dondurmesi
+         * "ulasilamiyor" demek degil, o durumda sabri kismak yanlis
+         * olur.
+         */
+        if (in_array($errno, [CURLE_COULDNT_RESOLVE_HOST, CURLE_COULDNT_CONNECT, CURLE_OPERATION_TIMEDOUT], true)) {
+            $this->cekimser = true;
         }
 
         throw new \RuntimeException(

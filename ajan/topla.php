@@ -72,17 +72,6 @@ gunluk('Valentra ajanı başlıyor' . ($kuruCalisma ? ' (KURU ÇALIŞMA — gön
 $site    = new Site($siteUrl, $ajanKey);
 $http    = new Http();
 
-/*
- * Indirmeler site sunucusuna dusebilsin diye Getirici uzerinden.
- *
- * Turk kamu ve meslek siteleri veri merkezi IP'lerini engelliyor,
- * ajan ise GitHub'da calisiyor. Getirici once dogrudan deniyor,
- * olmazsa site sunucusundan istiyor.
- */
-$getirici = new Getirici($http, $site);
-$besleme = new Besleme($getirici);
-$sayfa   = new Sayfa($getirici);
-$kazima  = new Kazima($getirici);
 $suzgec  = new Suzgec();
 $yazar   = new Yazar($apiKey);
 
@@ -189,6 +178,31 @@ if ($yapilandirmaKaynagi !== 'site') {
 
         gunluk(count($bekleyenler) . ' bekleyen haber "zaten var" listesine eklendi.');
     }
+}
+
+/*
+ * Indirmeler site sunucusuna dusebilsin diye Getirici uzerinden.
+ *
+ * Turk kamu ve meslek siteleri veri merkezi IP'lerini engelliyor,
+ * ajan ise GitHub'da calisiyor. Getirici once dogrudan deniyor,
+ * olmazsa site sunucusundan istiyor.
+ *
+ * KURULUM YAPILANDIRMADAN SONRA: site ayakta degilse ikinci yol hic
+ * takilmiyor. Eskiden Getirici yapilandirmadan ONCE kuruluyordu ve
+ * elinde her halukarda site nesnesi oluyordu; site dustugunde
+ * durumu ancak kaynak kaynak, her biri icin dakikalarca bekleyerek
+ * ogreniyordu. Oysa bilgi zaten elimizde: yapilandirma siteden
+ * gelemediyse site kapalidir.
+ */
+$siteyeUlasilir = $yapilandirmaKaynagi === 'site';
+$getirici = new Getirici($http, $siteyeUlasilir ? $site : null);
+$besleme  = new Besleme($getirici);
+$sayfa    = new Sayfa($getirici);
+$kazima   = new Kazima($getirici);
+
+if (!$siteyeUlasilir) {
+    gunluk('Site sunucusu üzerinden indirme bu çalışmada kapalı; '
+        . 'kaynaklar yalnızca doğrudan taranacak.');
 }
 
 $kaynaklar   = $yapilandirma['kaynaklar'];
