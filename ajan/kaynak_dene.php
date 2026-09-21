@@ -528,6 +528,47 @@ foreach ($kaynaklar as $kaynak) {
             } else {
                 $calisanYol = 'RSS';
                 $not = count($girdiler) . ' girdi';
+
+                /*
+                 * "Girdi var ama penceredeki sifir" durumunda SEBEBI yaz.
+                 *
+                 * Bu ozet tek basina yaniltici: Bloomberg HT "20 girdi,
+                 * son 72 saatte 0" dondurdu ve bu iki bambaska seyin
+                 * ikisine de uyuyor — besleme gercekten guncellenmiyor
+                 * olabilir, ya da tarihler okunamadigi icin girdiler
+                 * pencerenin disinda sayiliyordur. Biri kaynagi
+                 * atmamizi gerektirir, digeri bizim hatamizdir.
+                 *
+                 * En taze girdinin tarihi ikisini ayirir: tarih
+                 * yoksa/okunamiyorsa ayristirma sorunu, tarih eskiyse
+                 * besleme gercekten durgun.
+                 */
+                if ($girdiler === []) {
+                    $enTaze = null;
+
+                    foreach ($tumu as $girdi) {
+                        if ($girdi['tarih'] !== null
+                            && ($enTaze === null || $girdi['tarih'] > $enTaze)) {
+                            $enTaze = $girdi['tarih'];
+                        }
+                    }
+
+                    if ($enTaze === null) {
+                        yaz('       Girdilerin HİÇBİRİNDE okunabilir tarih yok — '
+                            . 'besleme durgun değil, tarih ayrıştırması başarısız. '
+                            . 'Bu kaynak pencere ne olursa olsun hep boş döner.');
+                        $not = 'tarihler okunamıyor';
+                    } else {
+                        $yas = (int) floor((time() - strtotime($enTaze)) / 86400);
+                        yaz(sprintf(
+                            '       En taze girdi: %s (%d gün önce) — besleme okunuyor '
+                            . 'ama güncellenmiyor.',
+                            $enTaze,
+                            $yas
+                        ));
+                        $not = 'en taze girdi ' . $yas . ' gün önce';
+                    }
+                }
             }
 
             $gecen = 0;
