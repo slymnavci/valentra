@@ -25,6 +25,14 @@ require_once __DIR__ . '/ayarlar.php';
 require_once __DIR__ . '/http_ortak.php';
 
 const PIYASA_ONBELLEK_ANAHTAR = 'piyasa_onbellek';
+
+/*
+ * Gunluk degisim referansi ayri anahtarda.
+ *
+ * Onbellege yazilamaz: onbellek her cekimde bastan yaziliyor ve suresi
+ * dolunca gecersiz sayiliyor; referansin ise gun boyu yasamasi gerek.
+ */
+const PIYASA_REFERANS_ANAHTAR = 'piyasa_gun_referansi';
 const PIYASA_ONBELLEK_SURE    = 120;
 
 /**
@@ -96,6 +104,8 @@ function piyasa_onbellekten(bool $sureyiYoksay = false): ?array
         'eur'          => isset($veri['eur']) ? (float) $veri['eur'] : null,
         'bist'         => isset($veri['bist']) ? (float) $veri['bist'] : null,
         'bist_degisim' => isset($veri['bist_degisim']) ? (float) $veri['bist_degisim'] : null,
+        'usd_degisim'  => isset($veri['usd_degisim']) ? (float) $veri['usd_degisim'] : null,
+        'eur_degisim'  => isset($veri['eur_degisim']) ? (float) $veri['eur_degisim'] : null,
         'zaman'        => (string) $veri['zaman'],
         'kaynak'       => (string) ($veri['kaynak'] ?? ''),
     ];
@@ -140,7 +150,94 @@ function piyasa_cek(): array
 
     $sonuc['kaynak'] = implode(' + ', $kaynaklar);
 
+    return piyasa_degisimi_ekle($sonuc);
+}
+
+/**
+ * Dolar ve euroya günlük değişim yüzdesi ekler.
+ *
+ * NEDEN HESAPLANIYOR: kur saglayicilari yalnizca ANLIK degeri
+ * veriyor, bir onceki kapanisi vermiyor. BIST'te degisim kaynaktan
+ * geliyor; kurda gelmiyor. Oysa "48,8197" tek basina okuyucuya bir
+ * sey soylemiyor — artti mi azaldi mi bilinmeden sayi olu bir veri.
+ *
+ * YONTEM: gunun ilk olcumu REFERANS olarak saklaniyor, gun icindeki
+ * her olcum ona gore yuzde hesapliyor. Tarih degisince referans, bir
+ * onceki gunun SON degeriyle yenileniyor — yani sabah acilista
+ * gosterilen sey "dune gore" oluyor, finans sitelerindeki gunluk
+ * degisimin karsiligi.
+ *
+ * Ilk calismada referans yok; o zaman degisim null donuyor ve serit
+ * yalnizca degeri gosteriyor. Sifir gostermek yanlis olurdu: "hic
+ * degismedi" ile "bilmiyoruz" ayni sey degil.
+ *
+ * @param array<string,mixed> $sonuc
+ * @return array<string,mixed>
+ */
+function piyasa_degisimi_ekle(array $sonuc): array
+{
+    $sonuc['usd_degisim'] = null;
+    $sonuc['eur_degisim'] = null;
+
+    $bugun   = date('Y-m-d');
+    $referans = piyasa_referans_oku();
+
+    /*
+     * Referans gunu gecmisse yenileniyor.
+     *
+     * Yeni referans, onbellekte duran SON degerdir: yani dun gunun
+     * sonunda olculen kur. Bugunku ilk olcumu referans yapmak yanlis
+     * olurdu — o zaman sabah degisim hep sifir cikar ve gun icinde
+     * "dune gore" degil "sabaha gore" degisim gosterilirdi.
+     */
+    if (($referans['tarih'] ?? '') !== $bugun) {
+        $eski = piyasa_onbellekten(true);
+
+        $referans = [
+            'tarih' => $bugun,
+            'usd'   => $eski['usd'] ?? null,
+            'eur'   => $eski['eur'] ?? null,
+        ];
+
+        piyasa_referans_yaz($referans);
+    }
+
+    foreach (['usd', 'eur'] as $ad) {
+        $simdi = $sonuc[$ad] ?? null;
+        $temel = $referans[$ad] ?? null;
+
+        // Sifir bolme ve anlamsiz taban korumasi.
+        if ($simdi === null || $temel === null || $temel <= 0.0) {
+            continue;
+        }
+
+        $sonuc[$ad . '_degisim'] = round((($simdi - $temel) / $temel) * 100, 2);
+    }
+
     return $sonuc;
+}
+
+/** @return array{tarih:string,usd:?float,eur:?float} */
+function piyasa_referans_oku(): array
+{
+    $ham  = ayar_oku(PIYASA_REFERANS_ANAHTAR);
+    $veri = $ham !== '' ? json_decode($ham, true) : null;
+
+    if (!is_array($veri)) {
+        return ['tarih' => '', 'usd' => null, 'eur' => null];
+    }
+
+    return [
+        'tarih' => (string) ($veri['tarih'] ?? ''),
+        'usd'   => isset($veri['usd']) ? (float) $veri['usd'] : null,
+        'eur'   => isset($veri['eur']) ? (float) $veri['eur'] : null,
+    ];
+}
+
+/** @param array{tarih:string,usd:?float,eur:?float} $referans */
+function piyasa_referans_yaz(array $referans): void
+{
+    ayar_yaz(PIYASA_REFERANS_ANAHTAR, (string) json_encode($referans, JSON_UNESCAPED_UNICODE));
 }
 
 /**

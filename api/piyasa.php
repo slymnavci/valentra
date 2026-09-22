@@ -28,6 +28,8 @@ echo json_encode([
     'eur'          => $veri['eur'],
     'bist'         => $veri['bist'],
     'bist_degisim' => $veri['bist_degisim'],
+    'usd_degisim'  => $veri['usd_degisim'] ?? null,
+    'eur_degisim'  => $veri['eur_degisim'] ?? null,
     'zaman'        => $veri['zaman'],
     // Hangi saglayicinin verdigi gorunsun: kazima kirildiginda
     // "TCMB" yazmasi sorunu tek bakista anlatiyor.

@@ -13,9 +13,12 @@
     --vurgu:         #1b4f8f;
     --golge:         0 1px 2px rgba(20, 33, 58, .05), 0 4px 16px rgba(20, 33, 58, .06);
     --yuvarlak:      10px;
-    /* 1180px genis ekranda iki yanda genis bosluk birakiyordu; haber
-       sitelerinin alistigi yogunluga yaklasmak icin genisletildi. */
-    --genislik:      1460px;
+    /* Genislik iki kez artti (1180 -> 1460 -> 1680). Sebep her
+       seferinde ayni: 1460'ta bile 1720px'lik bir ekranda iki yanda
+       ~130'ar piksel bos kaliyor ve goz haberlere degil bosluga
+       gidiyordu. 1680 bir haber sitesinin alistigi yogunlugu veriyor;
+       daha genisi satir uzunlugunu okunmaz hale getirir. */
+    --genislik:      1680px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -91,8 +94,8 @@ img { max-width: 100%; display: block; }
 }
 
 .logo .marka {
-    width: 40px;
-    height: 35px;
+    width: 54px;
+    height: 47px;
     flex: none;
 }
 
@@ -102,17 +105,27 @@ img { max-width: 100%; display: block; }
     line-height: 1;
 }
 
+/*
+ * Marka adi kucuk kaliyordu.
+ *
+ * 1.32rem ve 400 agirlik, genis harf araligiyla birlikte adi
+ * silikleştiriyordu: sayfanin en ust satirindaki en onemli kelime,
+ * yanindaki tarih yazisindan yalnizca biraz buyuktu. Punto ve agirlik
+ * artti, harf araligi bir tik kisaldi — cok genis aralik buyuk
+ * puntoda adi dagitiyor.
+ */
 .logo .ad {
-    font-size: 1.32rem;
-    font-weight: 400;
-    letter-spacing: .22em;
-    text-indent: .22em;
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: .16em;
+    text-indent: .16em;
     color: var(--lacivert);
+    line-height: 1.05;
 }
 
 .logo .alt {
-    margin-top: 5px;
-    font-size: .55rem;
+    margin-top: 6px;
+    font-size: .68rem;
     font-weight: 500;
     letter-spacing: .19em;
     text-indent: .19em;
@@ -243,10 +256,34 @@ img { max-width: 100%; display: block; }
 
 /* --- Kartlar ------------------------------------------------------------- */
 
+/*
+ * Sutun sayisi artik acik yaziliyor, auto-fill degil.
+ *
+ * auto-fill kart genisligine gore sutun sayisini kendi seciyordu ve
+ * genis ekranda uce dusuyordu; 10 haberde son satirda tek kart
+ * kaliyordu. Acik sutun sayisi hem dorde cikariyor hem de kac haber
+ * basilacagini onceden bilinir kiliyor (index.php 12 basiyor: 4, 3 ve
+ * 2 sutunun hepsinde satirlar tam doluyor).
+ *
+ * Esikler kenar cubugu hesaba katilarak secildi: 1500px'lik ekranda
+ * ana kolon ~1050px kaliyor ve dort kart 248'er piksel oluyor.
+ */
 .kart-izgara {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 20px;
+}
+
+@media (max-width: 1500px) {
+    .kart-izgara { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1100px) {
+    .kart-izgara { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 620px) {
+    .kart-izgara { grid-template-columns: 1fr; }
 }
 
 .kart {
@@ -1207,8 +1244,18 @@ a.menu-oge.aktif::after,
     font-variant-numeric: tabular-nums;
 }
 
-.piyasa-oge .degisim.arti { color: #57d38c; }
-.piyasa-oge .degisim.eksi { color: #ff8a80; }
+.piyasa-oge .degisim.arti   { color: #57d38c; }
+.piyasa-oge .degisim.eksi   { color: #ff8a80; }
+.piyasa-oge .degisim.duraan { color: #b9c8dd; }
+
+/*
+ * Degisim bilinmiyorsa kutu hic yer kaplamasin.
+ *
+ * Bos bir span, yanindaki bosluk kadar aralik birakip seridi
+ * duzensiz gosterirdi. Referans olusmadan (ilk gun) bu durum
+ * yasaniyor.
+ */
+.piyasa-oge .degisim.bos { display: none; }
 
 .piyasa-zaman .deger {
     font-size: .8rem;

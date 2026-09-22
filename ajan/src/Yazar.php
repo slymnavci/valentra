@@ -27,6 +27,16 @@ final class Yazar implements SemaliIstemci
      * duruyor ve eski sinirla modele hic ulasmiyordu.
      */
     private const SAYFA_METNI_SINIRI = 14000;
+
+    /**
+     * İsteme kaç tane "daha önce yayımlandı" başlığı yazılacağı.
+     *
+     * Ayni olayi yeniden yazmayi onlemek icin son basliklari gormek
+     * yeterli; ayin basindaki bir haberin bugunku bir adayla ayni olay
+     * olmasi cok nadir. Uzun liste istegi sisirir ve modelin dikkatini
+     * adaylardan uzaklastirir.
+     */
+    private const ONCEKI_BASLIK_SINIRI = 60;
     private const API   = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
     private const YONERGE = <<<'METIN'
@@ -61,6 +71,33 @@ final class Yazar implements SemaliIstemci
            Emin değilsen ilgili sayma. A grubuna girenler daha değerli;
            B grubunda yalnızca somut veri ya da karar içeren haberleri al,
            yorum ve beklenti yazılarını alma.
+
+           AYNI OLAY İKİNCİ KEZ YAZILMAZ. İstemde "DAHA ÖNCE
+           YAYIMLANANLAR" başlığı altında başlıklar verilmişse, bunlardan
+           biriyle AYNI OLAYI anlatan adayı ilgili sayma: ilgili=false yap
+           ve red_nedeni'ni "yinelenen: " ile başlat, ardından hangi
+           başlıkla çakıştığını yaz.
+
+           Ölçüt kelime benzerliği DEĞİL, olayın aynılığıdır. Şunlar aynı
+           olaydır: aynı faiz kararı, aynı tebliğ, aynı kanun değişikliği,
+           aynı veri açıklaması — başlıklar bambaşka kelimelerle kurulmuş,
+           farklı kaynaktan gelmiş ve farklı ayrıntıyı öne çıkarmış olsa
+           bile. "Fed politika faizini yüzde 3,75-4,00 aralığına çıkardı"
+           ile "Fed faiz artırdı: ons altın ve tahvilde dalgalanma" AYNI
+           olaydır.
+
+           Şunlar aynı olay DEĞİLDİR: aynı konuda ardarda çıkan farklı
+           düzenlemeler (iki ayrı KDV tebliği), aynı kurumun farklı
+           tarihlerdeki iki ayrı kararı, bir önceki haberin üzerine yeni
+           ve somut bir gelişme ekleyen haber. Tereddütte kalırsan
+           yinelenen SAYMA; yeni bir haberi kaçırmak, aynı haberi iki kez
+           yayımlamaktan daha az zararlıdır ve onay aşaması zaten var.
+
+           AYNI PARTİ İÇİNDE DE GEÇERLİ: aşağıdaki adaylardan ikisi aynı
+           olayı anlatıyorsa yalnızca BİRİNİ ilgili say. Kalanı seçerken
+           resmî/birincil kaynağı, o da yoksa sayfa metni en ayrıntılı
+           olanı tut; diğerlerini "yinelenen: ADAY n ile aynı olay" diye
+           ele.
 
         2) İLGİLİYSE HABERİ YAZ. Kurallar:
            - Kaynak metni yalnızca anlamak için okursun. ASLA cümle
@@ -403,7 +440,7 @@ final class Yazar implements SemaliIstemci
      * @param list<array<string,mixed>> $kategoriler
      * @return array<int,array<string,mixed>> sira => sonuc
      */
-    public function topluIsle(array $adaylar, array $kategoriler): array
+    public function topluIsle(array $adaylar, array $kategoriler, array $onceki = []): array
     {
         if ($adaylar === []) {
             return [];
@@ -411,7 +448,7 @@ final class Yazar implements SemaliIstemci
 
         return $this->semaliIstek(
             self::YONERGE,
-            $this->topluIstemHazirla($adaylar, $kategoriler),
+            $this->topluIstemHazirla($adaylar, $kategoriler, $onceki),
             self::TOPLU_SEMA,
             // Haber basina daha uzun metin istendigi icin butce
             // yukseltildi; bes adaylik bir grupta 24.000 token
@@ -511,7 +548,7 @@ final class Yazar implements SemaliIstemci
      * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string}> $adaylar
      * @param list<array<string,mixed>> $kategoriler
      */
-    private function topluIstemHazirla(array $adaylar, array $kategoriler): string
+    private function topluIstemHazirla(array $adaylar, array $kategoriler, array $onceki = []): string
     {
         $gruplar = $this->gruplariYaz($kategoriler);
         $bloklar = [];
@@ -555,9 +592,54 @@ final class Yazar implements SemaliIstemci
         $adayMetni = implode("\n\n", $bloklar);
         $adet      = count($adaylar);
 
+        /*
+         * DAHA ONCE YAYIMLANANLAR.
+         *
+         * Mekanik kopya engeli ayni olayi FARKLI kelimelerle anlatan
+         * basliklari yakalayamiyor; yapisi geregi yakalayamaz. Olculen
+         * ornek: "Fed Politika Faizini Yuzde 3,75-4,00 Araligina
+         * Cikardi" ile "Fed Faiz Artirdi: Ons Altin ve Tahvil
+         * Getirilerinde Dalgalanma" arasinda ortak kelime orani 0,12 —
+         * esik 0,80. Esigi dusurmek cozum degil: o zaman ardarda cikan
+         * iki AYRI KDV tebligi de birlesir ve gercek haber kaybolur.
+         *
+         * Bu ayrimi yapabilen tek katman model: olayin ayni olup
+         * olmadigina bakiyor, kelimelere degil. Bu yuzden son
+         * basliklar istemde gosteriliyor.
+         *
+         * Liste kisa tutuluyor: cok uzun bir gecmis hem istegi sisirir
+         * hem de modelin dikkatini dagitir.
+         */
+        $oncekiBlok = '';
+
+        if ($onceki !== []) {
+            $satirlar = [];
+
+            foreach (array_slice($onceki, 0, self::ONCEKI_BASLIK_SINIRI) as $baslik) {
+                $temiz = trim((string) $baslik);
+
+                if ($temiz !== '') {
+                    $satirlar[] = '- ' . mb_substr($temiz, 0, 160, 'UTF-8');
+                }
+            }
+
+            if ($satirlar !== []) {
+                $liste = implode("\n", $satirlar);
+
+                $oncekiBlok = <<<ONCEKI
+
+                DAHA ÖNCE YAYIMLANANLAR (bunlarla aynı olayı anlatan adayı
+                ilgili sayma; red_nedeni'ni "yinelenen: " ile başlat):
+                {$liste}
+
+                ONCEKI;
+            }
+        }
+
         return <<<METIN
         Konu grupları (kategori alanına bunlardan birinin slug'ını yaz):
         {$gruplar}
+        {$oncekiBlok}
 
         Aşağıda {$adet} haber adayı var. HER BİRİNİ ayrı ayrı değerlendir
         ve "sonuclar" dizisinde {$adet} sonuç döndür. Her sonucun "sira"

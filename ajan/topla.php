@@ -72,17 +72,6 @@ gunluk('Valentra ajanı başlıyor' . ($kuruCalisma ? ' (KURU ÇALIŞMA — gön
 $site    = new Site($siteUrl, $ajanKey);
 $http    = new Http();
 
-/*
- * Indirmeler site sunucusuna dusebilsin diye Getirici uzerinden.
- *
- * Turk kamu ve meslek siteleri veri merkezi IP'lerini engelliyor,
- * ajan ise GitHub'da calisiyor. Getirici once dogrudan deniyor,
- * olmazsa site sunucusundan istiyor.
- */
-$getirici = new Getirici($http, $site);
-$besleme = new Besleme($getirici);
-$sayfa   = new Sayfa($getirici);
-$kazima  = new Kazima($getirici);
 $suzgec  = new Suzgec();
 $yazar   = new Yazar($apiKey);
 
@@ -183,12 +172,48 @@ if ($yapilandirmaKaynagi !== 'site') {
 
             if ($baslik !== '') {
                 $yapilandirma['bilinen_baslik'][] = baslik_parmak($baslik);
-                $yapilandirma['son_basliklar'][]  = $baslik;
+
+                /*
+                 * BASA ekleniyor, sona degil.
+                 *
+                 * Bu basliklar cevrimdisi gecen onceki calismalarda
+                 * yazildi; listenin EN TAZE ucu onlar. Modele
+                 * gosterilen liste bastan kirpildigi icin sona
+                 * eklenseler tam da onlenmeleri gereken durumda —
+                 * site kapaliyken ust uste calisan ajanda — sinirin
+                 * disinda kalirlardi.
+                 */
+                array_unshift($yapilandirma['son_basliklar'], $baslik);
             }
         }
 
         gunluk(count($bekleyenler) . ' bekleyen haber "zaten var" listesine eklendi.');
     }
+}
+
+/*
+ * Indirmeler site sunucusuna dusebilsin diye Getirici uzerinden.
+ *
+ * Turk kamu ve meslek siteleri veri merkezi IP'lerini engelliyor,
+ * ajan ise GitHub'da calisiyor. Getirici once dogrudan deniyor,
+ * olmazsa site sunucusundan istiyor.
+ *
+ * KURULUM YAPILANDIRMADAN SONRA: site ayakta degilse ikinci yol hic
+ * takilmiyor. Eskiden Getirici yapilandirmadan ONCE kuruluyordu ve
+ * elinde her halukarda site nesnesi oluyordu; site dustugunde
+ * durumu ancak kaynak kaynak, her biri icin dakikalarca bekleyerek
+ * ogreniyordu. Oysa bilgi zaten elimizde: yapilandirma siteden
+ * gelemediyse site kapalidir.
+ */
+$siteyeUlasilir = $yapilandirmaKaynagi === 'site';
+$getirici = new Getirici($http, $siteyeUlasilir ? $site : null);
+$besleme  = new Besleme($getirici);
+$sayfa    = new Sayfa($getirici);
+$kazima   = new Kazima($getirici);
+
+if (!$siteyeUlasilir) {
+    gunluk('Site sunucusu üzerinden indirme bu çalışmada kapalı; '
+        . 'kaynaklar yalnızca doğrudan taranacak.');
 }
 
 $kaynaklar   = $yapilandirma['kaynaklar'];
@@ -223,6 +248,31 @@ foreach ($yapilandirma['son_basliklar'] as $eskiBaslik) {
 
     if ($kume !== []) {
         $bilinenKumeler[] = $kume;
+    }
+}
+
+/*
+ * Modele gosterilecek "daha once yayimlandi" listesi.
+ *
+ * Mekanik katmanlar ayni olayi FARKLI kelimelerle anlatan basligi
+ * yakalayamiyor ve yapisi geregi yakalayamaz: olculen ornekte ortak
+ * kelime orani 0,12 iken esik 0,80. Esigi dusurmek ardarda cikan iki
+ * AYRI tebligi de birlestirirdi — gercek haberi kaybetmek, kopya
+ * gostermekten kotudur.
+ *
+ * Olayin ayni olup olmadigina karar verebilen tek katman model. Liste
+ * ona veriliyor; karari o veriyor.
+ *
+ * $bilinenKumeler ile ayni kaynaktan besleniyor ama isi farkli: orada
+ * kelime kumesi, burada okunabilir baslik gerekiyor.
+ */
+$modeleGosterilecek = [];
+
+foreach ($yapilandirma['son_basliklar'] as $eskiBaslik) {
+    $temiz = trim((string) $eskiBaslik);
+
+    if ($temiz !== '') {
+        $modeleGosterilecek[] = $temiz;
     }
 }
 
@@ -644,6 +694,7 @@ gunluk(count($adaylar) . ' aday modele gönderilecek.');
 
 $haberler  = [];
 $elenen    = 0;
+$yinelenen = 0;
 $hatali    = 0;
 $kotaBitti = false;
 
@@ -718,7 +769,7 @@ foreach ($gruplar as $grupNo => $grup) {
     $no = $grupNo + 1;
 
     try {
-        $sonuclar = $yazar->topluIsle($modelAdaylari, $kategoriler);
+        $sonuclar = $yazar->topluIsle($modelAdaylari, $kategoriler, $modeleGosterilecek);
     } catch (KotaBittiException $e) {
         $kalan = count($adaylar) - ($grupNo * $grupBoyu);
         gunluk("  [grup {$no}] günlük model kotası doldu — kalan {$kalan} aday atlanıyor.");
@@ -753,7 +804,22 @@ foreach ($gruplar as $grupNo => $grup) {
         if (empty($sonuc['ilgili'])) {
             $elenen++;
             $neden = trim((string) ($sonuc['red_nedeni'] ?? 'belirtilmedi'));
-            gunluk("  vergi dışı — {$kisaBaslik} ({$neden})");
+
+            /*
+             * Yinelenen ile "vergi disi" ayri sayiliyor.
+             *
+             * Ikisi de eleme ama anlamlari bambaska: biri kopya
+             * engelinin calistigini, digeri kaynagin alakasiz icerik
+             * urettigini gosterir. Ayni satirda toplanirsa kopya
+             * engelinin ise yarayip yaramadigi gunlukten anlasilmaz.
+             */
+            if (stripos($neden, 'yinelenen') === 0) {
+                $yinelenen++;
+                gunluk("  yinelenen — {$kisaBaslik} ({$neden})");
+            } else {
+                gunluk("  vergi dışı — {$kisaBaslik} ({$neden})");
+            }
+
             continue;
         }
 
@@ -773,6 +839,19 @@ foreach ($gruplar as $grupNo => $grup) {
             'gorsel_url'  => $gorseller[$sira] ?? '',
         ];
 
+        /*
+         * Bu calismada kabul edilen baslik sonraki GRUPLARA tasiniyor.
+         *
+         * Gruplar ayri istekler ve birbirini gormuyor. Gercek bir
+         * calismada ayni Fed faiz karari iki ayri grupta iki ayri
+         * kaynaktan gelip IKI HABER olarak yazildi; ikisi de modele
+         * ayri ayri soruldugu icin ikisi de "yeni" gorundu.
+         *
+         * Listenin basina ekleniyor: en taze baslik, sinira takilsa
+         * bile listede kalmali.
+         */
+        array_unshift($modeleGosterilecek, (string) $sonuc['baslik']);
+
         gunluk("  kabul (%{$sonuc['guven_skoru']}, {$sonuc['kategori']}) — {$sonuc['baslik']}");
     }
 }
@@ -780,7 +859,11 @@ foreach ($gruplar as $grupNo => $grup) {
 // --- 5. Siteye gönder ------------------------------------------------------
 
 gunluk('---');
-gunluk(count($haberler) . ' haber yazıldı, ' . $elenen . ' eleme, ' . $hatali . ' hata.');
+gunluk(
+    count($haberler) . ' haber yazıldı, ' . $elenen . ' eleme'
+    . ($yinelenen > 0 ? ' (' . $yinelenen . ' yinelenen)' : '')
+    . ', ' . $hatali . ' hata.'
+);
 
 $kullanim = $yazar->kullanim();
 

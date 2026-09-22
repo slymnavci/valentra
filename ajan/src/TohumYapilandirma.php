@@ -48,6 +48,8 @@ final class TohumYapilandirma
             return null;
         }
 
+        $kaynaklar = $this->guncellemeleriUygula($sema, $kaynaklar);
+
         return [
             'kaynaklar'   => $this->kaynaklariDuzenle($kaynaklar),
             'kategoriler' => $this->kategorileriDuzenle($this->satirlariCoz($sema, 'kategoriler')),
@@ -218,6 +220,156 @@ final class TohumYapilandirma
      * @param list<array<string,string|null>> $satirlar
      * @return list<array<string,mixed>>
      */
+    /**
+     * schema.sql'deki UPDATE kaynaklar satırlarını uygular.
+     *
+     * NEDEN SART: tohum okuyucu yalnizca INSERT bloklarini okuyordu ve
+     * semadaki ON SEKIZ duzeltme satiri gorunmez kaliyordu. Bunlarin
+     * cogu kazima adresini veriyor — ilk tohumda adreslerin cogu
+     * kurumun ANA SAYFASIYDI ve duzeltmeler sonradan UPDATE olarak
+     * eklenmis.
+     *
+     * Sonuc sessiz bir bozulmaydi: site ulasilamaz oldugunda ajan
+     * tohuma dusuyor ve tam da o anda Resmi Gazete, GIB, Hazine, KGK,
+     * TURMOB, ISMMMO gibi kaynaklar kazima adresi OLMADAN taraniyordu.
+     * Yani yedek liste, yedegini aldigini sandigi listeden farkliydi.
+     *
+     * Desteklenen bicim semada kullanilanla ayni:
+     *   UPDATE kaynaklar SET sutun = 'deger'[, ...]
+     *    WHERE ad = 'Kaynak Adı' [AND sutun IS NULL];
+     *
+     * "IS NULL" kosuluna uyuluyor: semadaki duzeltmeler elle girilmis
+     * bir degeri ezmemek icin bu kosulu tasiyor, tohumda da ayni
+     * davranmali.
+     *
+     * @param list<array<string,string|null>> $satirlar
+     * @return list<array<string,string|null>>
+     */
+    private function guncellemeleriUygula(string $sema, array $satirlar): array
+    {
+        $kalip = '/UPDATE\s+kaynaklar\s+SET\s+(.+?)\s+WHERE\s+(.+?);/is';
+
+        if (preg_match_all($kalip, $sema, $eslesmeler, PREG_SET_ORDER) === false) {
+            return $satirlar;
+        }
+
+        foreach ($eslesmeler as $eslesme) {
+            $atamalar = $this->atamalariCoz($eslesme[1]);
+            $kosul    = $eslesme[2];
+
+            if ($atamalar === []) {
+                continue;
+            }
+
+            if (preg_match("/\bad\s*=\s*'((?:[^']|'')*)'/i", $kosul, $adEslesme) !== 1) {
+                // Ad'a dayanmayan bir kosulu guvenle uygulayamayiz.
+                continue;
+            }
+
+            $hedefAd = str_replace("''", "'", $adEslesme[1]);
+
+            // "AND sutun IS NULL" kosullari.
+            preg_match_all('/\b(\w+)\s+IS\s+NULL/i', $kosul, $bosOlmali);
+
+            foreach ($satirlar as $sira => $satir) {
+                if (($satir['ad'] ?? null) !== $hedefAd) {
+                    continue;
+                }
+
+                foreach ($bosOlmali[1] as $sutun) {
+                    if (($satir[$sutun] ?? null) !== null) {
+                        continue 2;
+                    }
+                }
+
+                foreach ($atamalar as $sutun => $deger) {
+                    $satirlar[$sira][$sutun] = $deger;
+                }
+            }
+        }
+
+        return $satirlar;
+    }
+
+    /**
+     * "a = 'x', b = NULL" biçimindeki atama listesini ayrıştırır.
+     *
+     * Virgulle bolmek yetmiyor: deger icinde virgul olabilir. Tirnak
+     * icinde miyiz bilgisi tutularak yurunuyor; ayni yaklasim demet
+     * ayirmada da kullaniliyor.
+     *
+     * @return array<string,string|null>
+     */
+    private function atamalariCoz(string $metin): array
+    {
+        $parcalar = [];
+        $tampon   = '';
+        $tirnakta = false;
+        $uzunluk  = strlen($metin);
+
+        for ($i = 0; $i < $uzunluk; $i++) {
+            $harf = $metin[$i];
+
+            if ($harf === "'") {
+                // SQL'de '' kacis dizisidir; tirnak durumunu bozmamali.
+                if ($tirnakta && $i + 1 < $uzunluk && $metin[$i + 1] === "'") {
+                    $tampon .= "''";
+                    $i++;
+                    continue;
+                }
+
+                $tirnakta = !$tirnakta;
+                $tampon  .= $harf;
+                continue;
+            }
+
+            if ($harf === ',' && !$tirnakta) {
+                $parcalar[] = $tampon;
+                $tampon     = '';
+                continue;
+            }
+
+            $tampon .= $harf;
+        }
+
+        if (trim($tampon) !== '') {
+            $parcalar[] = $tampon;
+        }
+
+        $sonuc = [];
+
+        foreach ($parcalar as $parca) {
+            $esit = strpos($parca, '=');
+
+            if ($esit === false) {
+                continue;
+            }
+
+            $sutun = trim(substr($parca, 0, $esit));
+            $ham   = trim(substr($parca, $esit + 1));
+
+            if (preg_match('/^\w+$/', $sutun) !== 1) {
+                continue;
+            }
+
+            /*
+             * Tirnaklar burada sokuluyor.
+             *
+             * INSERT yolunda bunu degerleriAyir yapiyor ve
+             * degeriCevir'e tirnaksiz deger geliyor; buradaki metin
+             * ise ham. Atlanirsa adresler tirnaklariyla birlikte
+             * kaydediliyor ve hicbiri acilmiyor.
+             */
+            if (strlen($ham) >= 2 && $ham[0] === "'" && substr($ham, -1) === "'") {
+                $ham = str_replace("''", "'", substr($ham, 1, -1));
+            }
+
+            $sonuc[$sutun] = $this->degeriCevir($ham);
+        }
+
+        return $sonuc;
+    }
+
     private function kaynaklariDuzenle(array $satirlar): array
     {
         $sonuc = [];

@@ -23,6 +23,29 @@ if ($piyasa['usd'] === null && $piyasa['eur'] === null && $piyasa['bist'] === nu
 /** 41,2345 -> "41,2345" (TL kuru dort hane, endeks iki hane) */
 $bicimle = static fn (?float $s, int $hane): string =>
     $s === null ? '—' : number_format($s, $hane, ',', '.');
+
+/**
+ * Yon oku ve yuzde.
+ *
+ * Uc kalem de ayni gosterimi kullansin diye tek yere alindi; onceden
+ * yalnizca BIST'te vardi ve iki yerde kopyalanmis olurdu.
+ *
+ * null, "degismedi" degil "bilmiyoruz" demek — ilk gun referans
+ * olusmadan degisim hesaplanamaz — ve o durumda hicbir sey
+ * basilmiyor. Sifiri yukari okla gostermek yanlis bilgi olurdu.
+ */
+$yon = static function (?float $degisim, string $ad) : string {
+    if ($degisim === null) {
+        return '<span class="degisim bos" data-piyasa="' . $ad . '"></span>';
+    }
+
+    $sinif = $degisim > 0 ? 'arti' : ($degisim < 0 ? 'eksi' : 'duraan');
+    $ok    = $degisim > 0 ? '▲' : ($degisim < 0 ? '▼' : '■');
+
+    return '<span class="degisim ' . $sinif . '" data-piyasa="' . $ad . '">'
+        . $ok . ' %' . number_format(abs($degisim), 2, ',', '.')
+        . '</span>';
+};
 ?>
 <div class="piyasa-serit" id="piyasaSerit" aria-label="Piyasa özeti">
     <div class="piyasa-akis">
@@ -42,6 +65,7 @@ $bicimle = static fn (?float $s, int $hane): string =>
                 <span class="piyasa-oge">
                     <span class="ad">USD/TL</span>
                     <span class="deger" data-piyasa="usd"><?= e($bicimle($piyasa['usd'], 4)) ?></span>
+                    <?= $yon($piyasa['usd_degisim'] ?? null, 'usd_degisim') ?>
                 </span>
             <?php endif; ?>
 
@@ -49,6 +73,7 @@ $bicimle = static fn (?float $s, int $hane): string =>
                 <span class="piyasa-oge">
                     <span class="ad">EUR/TL</span>
                     <span class="deger" data-piyasa="eur"><?= e($bicimle($piyasa['eur'], 4)) ?></span>
+                    <?= $yon($piyasa['eur_degisim'] ?? null, 'eur_degisim') ?>
                 </span>
             <?php endif; ?>
 
@@ -56,13 +81,7 @@ $bicimle = static fn (?float $s, int $hane): string =>
                 <span class="piyasa-oge">
                     <span class="ad">BIST 100</span>
                     <span class="deger" data-piyasa="bist"><?= e($bicimle($piyasa['bist'], 2)) ?></span>
-                    <?php if ($piyasa['bist_degisim'] !== null): ?>
-                        <span class="degisim <?= $piyasa['bist_degisim'] >= 0 ? 'arti' : 'eksi' ?>"
-                              data-piyasa="bist_degisim">
-                            <?= $piyasa['bist_degisim'] >= 0 ? '▲' : '▼' ?>
-                            %<?= e(number_format(abs($piyasa['bist_degisim']), 2, ',', '.')) ?>
-                        </span>
-                    <?php endif; ?>
+                    <?= $yon($piyasa['bist_degisim'] ?? null, 'bist_degisim') ?>
                 </span>
             <?php endif; ?>
 
@@ -106,14 +125,22 @@ $bicimle = static fn (?float $s, int $hane): string =>
                 if (v.eur !== null)  { yaz('eur', bicimle(v.eur, 4)); }
                 if (v.bist !== null) { yaz('bist', bicimle(v.bist, 2)); }
 
-                if (v.bist_degisim !== null && v.bist_degisim !== undefined) {
-                    var ok = v.bist_degisim >= 0 ? '▲' : '▼';
-                    yaz('bist_degisim', ok + ' %' + bicimle(Math.abs(v.bist_degisim), 2));
+                // Uc kalem de ayni sekilde tazeleniyor; PHP tarafindaki
+                // $yon islevinin JavaScript karsiligi.
+                ['usd_degisim', 'eur_degisim', 'bist_degisim'].forEach(function (ad) {
+                    var d = v[ad];
 
-                    serit.querySelectorAll('[data-piyasa="bist_degisim"]').forEach(function (e) {
-                        e.className = 'degisim ' + (v.bist_degisim >= 0 ? 'arti' : 'eksi');
+                    if (d === null || d === undefined) { return; }
+
+                    var sinif = d > 0 ? 'arti' : (d < 0 ? 'eksi' : 'duraan');
+                    var ok    = d > 0 ? '▲' : (d < 0 ? '▼' : '■');
+
+                    yaz(ad, ok + ' %' + bicimle(Math.abs(d), 2));
+
+                    serit.querySelectorAll('[data-piyasa="' + ad + '"]').forEach(function (e) {
+                        e.className = 'degisim ' + sinif;
                     });
-                }
+                });
 
                 if (v.zaman) { yaz('zaman', v.zaman.substring(11, 16)); }
             })

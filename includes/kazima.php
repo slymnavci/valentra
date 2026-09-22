@@ -201,6 +201,45 @@ function kazima_adaylari_topla(string $html, string $tabanUrl, string $secici = 
  *
  * @return list<array{baslik:string,baglanti:string}>
  */
+/**
+ * Adres tek tek bakıldığında haber adresine benziyor mu?
+ *
+ * Kalip kurali tutmadiginda kullanilan ikinci olcut. Haber adresleri
+ * son parcalarinda uzun, tireli bir baslik tasir; gezinme adresleri
+ * kisadir. Olcut adresin KENDISINE bakar, digerleriyle iliskisine
+ * degil — zaten kalip kuralinin yapamadigi da tam olarak bu.
+ *
+ * Esik dort tire: "/son-dakika-haberleri" (iki tire) gibi bolum
+ * adreslerini disarida birakacak kadar yuksek. Sonu uzun bir sayiyla
+ * biten adreslerde uc tire yetiyor, cunku sayi zaten haber kimligi
+ * oldugunu gosteriyor.
+ */
+function kazima_makale_adresi_mi(string $url): bool
+{
+    $yol = (string) parse_url($url, PHP_URL_PATH);
+    $yol = rtrim($yol, '/');
+
+    if ($yol === '') {
+        return false;
+    }
+
+    $parcalar = explode('/', $yol);
+    $son      = (string) end($parcalar);
+
+    // Sayfa numarasi ya da kimlik tek basina haber basligi degildir.
+    if ($son === '' || preg_match('/^\d+$/', $son) === 1) {
+        return false;
+    }
+
+    $tire = substr_count($son, '-');
+
+    if ($tire >= 4) {
+        return true;
+    }
+
+    return $tire >= 2 && preg_match('/-\d{4,}$/', $son) === 1;
+}
+
 function kazima_haberleri_bul(string $html, string $tabanUrl, string $secici = '', int $enFazla = 40): array
 {
     $toplama = kazima_adaylari_topla($html, $tabanUrl, $secici);
@@ -231,7 +270,46 @@ function kazima_haberleri_bul(string $html, string $tabanUrl, string $secici = '
 
     // Tek başına duran bir kalıp haber listesi değildir.
     if ($sayimlar[$enIyiKalip] < 3) {
-        return [];
+        /*
+         * DUZ ADRESLI SITELER ICIN IKINCI OLCUT.
+         *
+         * Kalip kurali gezinme sayfasini haber listesi sanmayi
+         * onluyor ve bu is goruyor — ama yalnizca adreslerini
+         * bolumlere ayiran sitelerde. Bloomberg HT gibi haberi
+         * dogrudan kokte yayimlayan sitelerde her haberin kalibi
+         * benzersiz ve sayisi 1 oluyor; eldeki butun haberler
+         * atiliyor.
+         *
+         * Olculdu: bloomberght.com/ekonomik-veriler-ve-gundem
+         * sayfasinda 152 baglantidan 52'si suzgecten gecti ve
+         * kalip kurali yuzunden 52'si de atildi. Mynet'in vergi
+         * sayfasi da ayni sebeple sifir dondu.
+         *
+         * Ikinci olcut adresin SON parcasina bakiyor: haber
+         * adresleri uzun tireli bir baslik tasiyor
+         * ("...-tuketici-guven-on-endeksi-geriledi-3788892"),
+         * gezinme adresleri kisa olur ("/sondakika",
+         * "/borsa/en-cok", "/son-dakika-haberleri").
+         *
+         * En az uc tane bulunmasi sart: tek basina duran bir
+         * baglanti yine haber listesi sayilmaz.
+         */
+        $duzAdresli = [];
+
+        foreach ($adaylar as $aday) {
+            if (kazima_makale_adresi_mi($aday['baglanti'])) {
+                $duzAdresli[] = [
+                    'baslik'   => $aday['baslik'],
+                    'baglanti' => $aday['baglanti'],
+                ];
+            }
+        }
+
+        if (count($duzAdresli) < 3) {
+            return [];
+        }
+
+        return array_slice($duzAdresli, 0, $enFazla);
     }
 
     $sonuc = [];

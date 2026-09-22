@@ -26,6 +26,15 @@ final class Getirici implements Indirici
     /** @var array<string,bool> Site yolunun denendigi ama tutmadigi sunucular */
     private array $umitsiz = [];
 
+    /**
+     * Site sunucusunun kendisi bu calismada ulasilamaz mi?
+     *
+     * $umitsiz'den farkli: orada "bu KAYNAK site uzerinden de
+     * gelmedi" bilgisi tutuluyor. Burada tutulan "SITE ayakta degil"
+     * — yani hicbir kaynak icin bu yolun denenmesinin anlami yok.
+     */
+    private bool $siteKapali = false;
+
     private int $siteyleGelen = 0;
     private int $siteIstegi   = 0;
     private float $sonSiteIstegi = 0.0;
@@ -67,7 +76,7 @@ final class Getirici implements Indirici
             return $govde;
         }
 
-        if ($this->site === null) {
+        if ($this->site === null || $this->siteKapali) {
             return $govde;
         }
 
@@ -101,7 +110,29 @@ final class Getirici implements Indirici
 
         $this->sonSiteIstegi = microtime(true);
         $this->siteIstegi++;
-        $siteden = $this->site->hamGetir($url);
+
+        /*
+         * SITE HATASI KAYNAGIN HATASI DEGILDIR.
+         *
+         * hamGetir baglanti kurulamazsa istisna firlatiyor ve bu
+         * istisna buradan cikinca topla.php'deki kaynak kalkanina
+         * dusuyordu: kaynak "HATA, atlandı" diye isaretleniyor,
+         * ustelik her biri icin dakikalarca beklendikten sonra.
+         * Gercek calismada Resmi Gazete, GIB ve BDO boyle elendi —
+         * ucunun de kendi sunucusu saglamdi, dusen bizim sitemizdi.
+         *
+         * Dogru davranis: bu adres icin ikinci yol tutmadi (null),
+         * kaynak dongusu bozulmadan devam etsin. Ustelik site
+         * cokmusse yol butun calisma icin kapanir; bir daha hicbir
+         * kaynak bu bedeli odemez.
+         */
+        try {
+            $siteden = $this->site->hamGetir($url);
+        } catch (\Throwable $e) {
+            $this->siteKapali = true;
+
+            return null;
+        }
 
         if ($siteden === null) {
             if ($sunucu !== '') {
@@ -126,5 +157,11 @@ final class Getirici implements Indirici
     public function siteTavaniDoldu(): bool
     {
         return $this->siteIstegi >= $this->siteTavani;
+    }
+
+    /** Site yolu bu calismada tamamen kapandi mi; gunluge yazmak icin. */
+    public function siteKapaliMi(): bool
+    {
+        return $this->siteKapali;
     }
 }
