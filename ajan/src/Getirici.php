@@ -59,12 +59,27 @@ final class Getirici implements Indirici
      *
      * Tavana gelindiginde yalnizca bu yol kapanir; dogrudan indirme
      * calismaya devam eder.
+     *
+     * TAVAN 8'DEN 20'YE CIKTI, ARALIK 1 SN'DEN 2 SN'YE.
+     *
+     * Sekiz istek mevzuat kaynaklarina yetmiyordu: yalnizca Turk kamu
+     * sitelerinden on ucu bu yola muhtac ve bircogu hem besleme hem
+     * liste adresi istiyor, yani hak dort kaynakta tukeniyordu.
+     * Gerisi her calismada ayni yerde eleniyor, mevzuat haberi
+     * gelmiyordu.
+     *
+     * Hacmi artirirken HIZ DUSURULDU, cunku yasaklanmanin sebebi
+     * toplam degil hizdi: eski ayar saniyede bir istek demekti, yeni
+     * ayar saniyede yarim. Yirmi istek iki saniye arayla kirk saniyeye
+     * yayiliyor — eskisinin sekiz saniyesine kiyasla daha uzun sure
+     * ama daha seyrek. Paylasimli hostinglerdeki guvenlik duvarlari
+     * (Imunify360, fail2ban) ani yogunluga tepki veriyor.
      */
     public function __construct(
         private readonly Http $http,
         private readonly ?Site $site = null,
-        private readonly int $siteTavani = 8,
-        private readonly float $siteAraligi = 1.0,
+        private readonly int $siteTavani = 20,
+        private readonly float $siteAraligi = 2.0,
     ) {
     }
 

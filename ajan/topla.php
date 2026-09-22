@@ -41,7 +41,7 @@ date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
 /** Komut satırı seçenekleri */
-$secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::', 'kaynakbasina::']);
+$secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::', 'sitetavani::', 'sitearaligi::', 'kaynakbasina::']);
 $kuruCalisma = isset($secenekler['kuru']);
 $saat        = max(1, (int) ($secenekler['saat'] ?? 36));
 $enFazlaAday = max(1, (int) ($secenekler['enfazla'] ?? 25));
@@ -206,7 +206,20 @@ if ($yapilandirmaKaynagi !== 'site') {
  * gelemediyse site kapalidir.
  */
 $siteyeUlasilir = $yapilandirmaKaynagi === 'site';
-$getirici = new Getirici($http, $siteyeUlasilir ? $site : null);
+/*
+ * Tavan ve aralik komut satirindan ayarlanabiliyor.
+ *
+ * Varsayilan degerler paylasimli hosting icin guvenli tarafta secildi;
+ * sunucu daha fazlasini kaldiriyorsa --sitetavani ile yukseltilebilir,
+ * guvenlik duvari tepki verirse dusurulebilir. Ayari denemeden
+ * degistirmek dogru degil: yasaklar bu yolun ilk acilisinda yasandi.
+ */
+$getirici = new Getirici(
+    $http,
+    $siteyeUlasilir ? $site : null,
+    max(1, (int) ($secenekler['sitetavani'] ?? 20)),
+    max(0.2, (float) ($secenekler['sitearaligi'] ?? 2.0))
+);
 $besleme  = new Besleme($getirici);
 $sayfa    = new Sayfa($getirici);
 $kazima   = new Kazima($getirici);
@@ -436,6 +449,102 @@ function baslik_benzer(array $a, array $b): bool
 }
 
 /**
+ * Kaynakları tarama sırasına dizer.
+ *
+ * @param list<array<string,mixed>> $kaynaklar
+ * @return list<array<string,mixed>>
+ */
+function kaynaklari_sirala(array $kaynaklar, int $calismaNo): array
+{
+    if ($kaynaklar === []) {
+        return $kaynaklar;
+    }
+
+    /*
+     * MEVZUAT KAYNAKLARI EN ONDE.
+     *
+     * Bu grup Turk kamu siteleri ve mevzuatin birincil kaynagi. Ayri
+     * tutulmalarinin sebebi siralama degil, KIT BIR KAYNAGI paylasmak:
+     * bu siteler veri merkezi IP'lerini engelledigi icin ajan onlara
+     * ancak site sunucusu uzerinden ulasabiliyor ve o yolun bir
+     * calismada sinirli sayida istek hakki var (bkz. Getirici). Hak
+     * tarama sirasina gore harcandigi icin, listede sonra gelen
+     * mevzuat kaynaklari hakkin tukenmesinden sonra siraya giriyor ve
+     * HIC okunamiyordu.
+     *
+     * Hazine ve Maliye, ISMMMO, SGK, SPK, BDDK, Ticaret Bakanligi ve
+     * Rekabet Kurumu daha once bu listede degildi; mevzuatin buyuk
+     * kismi oralardan cikmasina ragmen genel kaynaklarla ayni siraya
+     * konmuslardi.
+     */
+    $mevzuatAdlari = [
+        'Resmî Gazete', 'Gelir İdaresi Başkanlığı', 'Hazine ve Maliye Bakanlığı',
+        'KGK', 'TÜRMOB', 'İSMMMO', 'SGK', 'SPK', 'BDDK',
+        'Ticaret Bakanlığı', 'Rekabet Kurumu', 'KOSGEB', 'TÜİK',
+    ];
+
+    // Ikinci halka: mesleki ve uluslararasi kaynaklar. Bunlar cogunlukla
+    // dogrudan erisilebiliyor, yani kit kaynagi tuketmiyorlar.
+    $cekirdekAdlar = [
+        'OECD Vergi', 'Avrupa Komisyonu Vergi', 'IFRS Foundation',
+        'IAS Plus', 'EFRAG', 'Deloitte Türkiye', 'PwC Türkiye',
+        'KPMG Türkiye', 'BDO Türkiye', 'EY Türkiye',
+        'Grant Thornton Türkiye', 'Tax Foundation', 'Accountancy Age',
+        'ICAEW', 'IFAC', 'Avrupa Merkez Bankası', 'Federal Reserve',
+    ];
+
+    $mevzuat   = [];
+    $cekirdek  = [];
+    $digerleri = [];
+
+    foreach ($kaynaklar as $kaynak) {
+        $ad = (string) $kaynak['ad'];
+
+        if (in_array($ad, $mevzuatAdlari, true)) {
+            $mevzuat[] = $kaynak;
+        } elseif (in_array($ad, $cekirdekAdlar, true)) {
+            $cekirdek[] = $kaynak;
+        } else {
+            $digerleri[] = $kaynak;
+        }
+    }
+
+    
+    /**
+     * Listeyi calisma numarasina gore kaydirir.
+     *
+     * Kaydirma rastgele degil saate bagli: ayni calisma iki kez
+     * tetiklenirse ayni sirayi izler, davranis ongorulebilir kalir.
+     */
+    $kaydir = static function (array $liste, int $calismaNo, int $bolen = 3): array {
+        if ($liste === []) {
+            return $liste;
+        }
+
+        $adim  = max(1, intdiv(count($liste), $bolen));
+        $kayma = ($calismaNo * $adim) % count($liste);
+
+        return array_merge(array_slice($liste, $kayma), array_slice($liste, 0, $kayma));
+    };
+
+    /*
+     * Mevzuat grubu da kaydiriliyor — ONCEKI HALINDE KAYDIRILMIYORDU.
+     *
+     * Site uzerinden istek hakki grubun tamamina yetmedigi icin hep
+     * ayni ilk birkac kaynak okunuyor, gerisi her calismada ayni yerde
+     * eleniyordu. Kaydirma ile hak sirayla dolasiyor: bir calismada
+     * okunamayan kaynak sonrakinde basa geciyor.
+     *
+     * Bolen 1: her calismada bir adim kayiyor, boylece dolasim yavas
+     * ve duzenli oluyor.
+     */
+    $mevzuat   = $kaydir($mevzuat, $calismaNo, max(1, count($mevzuat)));
+    $digerleri = $kaydir($digerleri, $calismaNo);
+
+    return array_merge($mevzuat, $cekirdek, $digerleri);
+}
+
+/**
  * Kontenjanı konulara paylaştırarak aday seçer.
  *
  * Puana gore duz siralama bir konu turunu sistematik olarak aciz
@@ -591,45 +700,7 @@ $taramaBaslangic = time();
 $taramaButcesi   = 8 * 60;
 $atlanan         = 0;
 
-if ($kaynaklar !== []) {
-    // Vergi, TMS/TFRS ve denetim kaynaklari sitenin ana omurgasi.
-    // Kaynak sayisi buyudugunde genel ekonomi siteleri bunlari zaman
-    // butcesinin disina itemesin diye once bu cekirdek grup taranir.
-    $oncelikliAdlar = [
-        'Resmî Gazete', 'Gelir İdaresi Başkanlığı', 'KGK', 'TÜRMOB',
-        'OECD Vergi', 'Avrupa Komisyonu Vergi', 'IFRS Foundation',
-        'IAS Plus', 'EFRAG', 'Deloitte Türkiye', 'PwC Türkiye',
-        'KPMG Türkiye', 'BDO Türkiye', 'EY Türkiye',
-        'Grant Thornton Türkiye', 'Tax Foundation', 'Accountancy Age',
-        'ICAEW', 'IFAC', 'Avrupa Merkez Bankası', 'Federal Reserve',
-    ];
-
-    $oncelikli = [];
-    $digerleri = [];
-
-    foreach ($kaynaklar as $kaynak) {
-        if (in_array((string) $kaynak['ad'], $oncelikliAdlar, true)) {
-            $oncelikli[] = $kaynak;
-        } else {
-            $digerleri[] = $kaynak;
-        }
-    }
-
-    // Diger kaynaklarda baslangic her calismada kayar; boylece listenin
-    // sonunda kalan yabanci ekonomi kaynaklari da duzenli olarak taranir.
-    if ($digerleri !== []) {
-        $adim      = max(1, intdiv(count($digerleri), 3));
-        $calismaNo = (int) floor(time() / 7200);
-        $kayma     = ($calismaNo * $adim) % count($digerleri);
-
-        $digerleri = array_merge(
-            array_slice($digerleri, $kayma),
-            array_slice($digerleri, 0, $kayma)
-        );
-    }
-
-    $kaynaklar = array_merge($oncelikli, $digerleri);
-}
+$kaynaklar = kaynaklari_sirala($kaynaklar, (int) floor(time() / 7200));
 
 foreach ($kaynaklar as $kaynak) {
     if (time() - $taramaBaslangic > $taramaButcesi) {
