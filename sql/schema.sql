@@ -941,3 +941,53 @@ UPDATE kaynaklar
 INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) VALUES
     ('GİB e-Belge Duyuruları',  'https://ebelge.gib.gov.tr',
      NULL, 'https://ebelge.gib.gov.tr/duyurular.html', 'resmi', 1);
+
+-- ---------------------------------------------------------------------------
+-- Vergi takvimi: yan penceredeki "Yaklasan Tarihler"
+--
+-- Beyan ve odeme sureleri her ay TEKRAR ettigi icin tek tek tarih
+-- yazmak yerine kural saklaniyor: "her ayin 26'si", "Subat/Mayis/
+-- Agustos/Kasim aylarinin 17'si". Yaklasan tarihler bu kuraldan
+-- hesaplaniyor; her yil listeyi elle yenilemek gerekmiyor.
+--
+-- DIKKAT — SORUMLULUK: buradaki gunler GIB'in yayimladigi standart
+-- vergi takvimine dayaniyor ama RESMI KAYNAK DEGILDIR. Sure sonu hafta
+-- sonuna ya da resmi tatile denk geldiginde ilk is gunune kayar; GIB
+-- ayrica sik sik sure uzatimi yayimlar. Bu yuzden her kaydin yaninda
+-- kaynak baglantisi duruyor ve sitede "resmi takvimden dogrulayin"
+-- uyarisi gosteriliyor.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS vergi_takvimi (
+    id          INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    baslik      VARCHAR(200)  NOT NULL,
+    aciklama    VARCHAR(400)  NOT NULL DEFAULT '',
+    -- 'aylik' : her ay, ayin `gun` gunu
+    -- 'secili': yalnizca `aylar` listesindeki aylarda
+    tekrar      ENUM('aylik','secili') NOT NULL DEFAULT 'aylik',
+    gun         TINYINT UNSIGNED NOT NULL,
+    -- Virgulle ayrilmis ay numaralari; tekrar='secili' ise kullanilir.
+    aylar       VARCHAR(40)   NOT NULL DEFAULT '',
+    kaynak_url  VARCHAR(500)  NOT NULL DEFAULT '',
+    sira        SMALLINT      NOT NULL DEFAULT 100,
+    aktif       TINYINT(1)    NOT NULL DEFAULT 1,
+    olusturuldu DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    guncellendi DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_takvim_aktif (aktif, sira)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO vergi_takvimi (baslik, aciklama, tekrar, gun, aylar, kaynak_url, sira) VALUES
+    ('Muhtasar ve Prim Hizmet Beyannamesi', 'Bir önceki aya ait beyan ve ödeme',
+     'aylik', 26, '', 'https://www.gib.gov.tr/vergi-takvimi', 10),
+    ('Damga Vergisi Beyannamesi', 'Bir önceki aya ait beyan ve ödeme',
+     'aylik', 26, '', 'https://www.gib.gov.tr/vergi-takvimi', 20),
+    ('KDV Beyannamesi', 'Bir önceki aya ait beyan ve ödeme',
+     'aylik', 28, '', 'https://www.gib.gov.tr/vergi-takvimi', 30),
+    ('Form Ba - Form Bs', 'Bir önceki aya ait bildirimler',
+     'aylik', 30, '', 'https://www.gib.gov.tr/vergi-takvimi', 40),
+    ('Geçici Vergi Beyannamesi', 'Üç aylık dönem beyanı ve ödemesi',
+     'secili', 17, '2,5,8,11', 'https://www.gib.gov.tr/vergi-takvimi', 50),
+    ('Yıllık Gelir Vergisi Beyannamesi', 'Bir önceki yıla ait beyan',
+     'secili', 31, '3', 'https://www.gib.gov.tr/vergi-takvimi', 60),
+    ('Kurumlar Vergisi Beyannamesi', 'Bir önceki hesap dönemine ait beyan',
+     'secili', 30, '4', 'https://www.gib.gov.tr/vergi-takvimi', 70);

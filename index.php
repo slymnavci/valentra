@@ -18,7 +18,12 @@ $sayfa = max(1, (int) ($_GET['sayfa'] ?? 1));
  * tam bolunuyor.
  */
 $adet       = 12;   // izgaradaki kart sayisi
-$mansetAdet = 10;   // kaydiraktaki haber sayisi
+/*
+ * On slayt cok: kimse onuncu slayta kadar gelmiyor ve numaralar
+ * seridi kalabaliklastiriyor. Bes secilmis haber mansetin isini
+ * goruyor; gerisi zaten hemen altindaki izgarada.
+ */
+$mansetAdet = 5;    // kaydiraktaki haber sayisi
 
 $toplam = haber_yayinda_sayisi();
 

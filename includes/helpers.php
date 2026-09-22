@@ -59,6 +59,23 @@ function kisalt(string $metin, int $uzunluk = 160): string
 /**
  * "12 Eylül 2026, 14:30" bicimi.
  */
+/**
+ * Ay numarasından kısa Türkçe ay adı ("Eyl").
+ *
+ * Takvim kutusunda gun ve ay alt alta duruyor; tam ad ("Eylül")
+ * kutuyu tasiriyor.
+ */
+function ay_kisa(int $ay): string
+{
+    $adlar = [
+        1 => 'Oca', 2 => 'Şub', 3 => 'Mar', 4 => 'Nis',
+        5 => 'May', 6 => 'Haz', 7 => 'Tem', 8 => 'Ağu',
+        9 => 'Eyl', 10 => 'Eki', 11 => 'Kas', 12 => 'Ara',
+    ];
+
+    return $adlar[$ay] ?? '';
+}
+
 function tarih_bicimle(?string $tarih, bool $saatIle = true): string
 {
     if ($tarih === null || $tarih === '' || str_starts_with($tarih, '0000')) {

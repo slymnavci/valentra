@@ -681,10 +681,16 @@ a.menu-oge.aktif::after,
      * numaralariyla birlikte kaydirak bir ekrana sigmiyor, ziyaretci
      * ilk haberi gormek icin kaydirmak zorunda kaliyordu.
      *
-     * clamp: kisa ekranda 300 pikselin altina inmez, buyuk ekranda
-     * 520 pikseli asmaz, arada ekran yuksekliginin yarisini alir.
+     * OLCULDU: 58vh, 1718x900 ekranda mansetı 522 piksel yapiyordu ve
+     * kart izgarasinin ust kenari 651 pikselde kaliyordu — yani
+     * ziyaretci ilk ekranda tek bir haber kartı bile goremiyordu.
+     * Manset sayfanin yuzu, tamami degil.
+     *
+     * 42vh / en fazla 400px: ayni ekranda manset 378 piksele, ilk
+     * kart 507 pikseline iniyor; izgaranin ust siri katlanin ustunde
+     * basliyor.
      */
-    height: clamp(320px, 58vh, 580px);
+    height: clamp(300px, 42vh, 400px);
     background: linear-gradient(150deg, #17304f 0%, #23405f 55%, #2b4a73 100%);
     color: #fff;
 }
@@ -1873,3 +1879,78 @@ a.menu-oge.aktif::after,
         color: #e8d3a4;
     }
 }
+
+/* --- Yaklasan Tarihler (yan pencere) ------------------------------------- */
+
+.takvim-listesi {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.takvim-listesi li {
+    display: grid;
+    /* Gun kutusu sabit; baslik esner; kalan gun sagda hizali durur. */
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 11px 0;
+    border-top: 1px solid var(--cizgi);
+}
+
+.takvim-listesi li:first-child { border-top: 0; }
+
+.takvim-gun {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 0;
+    border-radius: 8px;
+    background: var(--lacivert);
+    color: #fff;
+    line-height: 1.1;
+}
+
+.takvim-gun strong {
+    font-size: 1.05rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.takvim-gun span {
+    font-size: .6rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    opacity: .85;
+}
+
+.takvim-yazi { display: flex; flex-direction: column; min-width: 0; }
+
+.takvim-yazi .ad {
+    font-size: .88rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.takvim-yazi .ust-bilgi {
+    margin-top: 2px;
+    font-size: .74rem;
+    color: var(--metin-soluk);
+}
+
+.takvim-kalan {
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--metin-soluk);
+    white-space: nowrap;
+}
+
+.pencere-not {
+    margin: 12px 0 0;
+    font-size: .72rem;
+    line-height: 1.5;
+    color: var(--metin-soluk);
+}
+
+.pencere-not a { color: var(--vurgu); text-decoration: underline; }

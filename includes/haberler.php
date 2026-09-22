@@ -685,6 +685,51 @@ function haber_manset(int $limit = 8): array
  * Mansetten farkli siralama: one_cikan dikkate alinmaz, yalnizca en
  * yeniler. Boylece yan kolon mansetin kopyasi olmaz.
  */
+/**
+ * Yan pencere için "Önemli Düzenlemeler".
+ *
+ * NEDEN AYRI BIR SORGU: "Son Eklenen" listesi yalnizca tarihe
+ * bakiyordu ve ana koloncun altindaki izgarayla buyuk olcude ayni
+ * haberleri gosteriyordu — yani sag sutun kendi basina yeni bir sey
+ * sunmuyordu. Okuyucunun sag sutundan bekledigi sey "en yenisi" degil,
+ * "kacirmamam gereken" olmali.
+ *
+ * OLCUT: mevzuat kategorileri. Ekonomi gundemi ve genel haberler
+ * disarida kaliyor — kur, enflasyon ve piyasa haberleri onemli olabilir
+ * ama bir DUZENLEME degil. Icerideki gruplar: vergi kanunlari
+ * (kurumlar, gelir, KDV, OTV, VUK, e-belge, tesvik) ve muhasebe/denetim
+ * (TMS-TFRS, denetim).
+ *
+ * Siralama once one_cikan, sonra tarih: yonetici panelden bir haberi
+ * one cikardiginda listenin basina geciyor.
+ *
+ * @return list<array<string,mixed>>
+ */
+function haber_onemli_duzenlemeler(int $limit = 5): array
+{
+    $gruplar = [
+        'kurumlar-vergisi', 'gelir-vergisi', 'kdv', 'vergi-usul-kanunu',
+        'otv-ve-diger', 'e-belge', 'tesvik-yapilandirma',
+        'tms-tfrs', 'denetim',
+    ];
+
+    $yer = implode(',', array_fill(0, count($gruplar), '?'));
+
+    $ifade = db()->prepare(
+        'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
+           FROM haberler h
+           JOIN kategoriler k ON k.id = h.kategori_id
+          WHERE h.durum = ?
+            AND k.slug IN (' . $yer . ')
+          ORDER BY h.one_cikan DESC, h.yayin_tarihi DESC
+          LIMIT ' . (int) $limit
+    );
+
+    $ifade->execute(array_merge([HABER_YAYINDA], $gruplar));
+
+    return $ifade->fetchAll();
+}
+
 function haber_son_eklenenler(int $limit = 8): array
 {
     $ifade = db()->prepare(

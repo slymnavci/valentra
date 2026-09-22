@@ -8,14 +8,26 @@ declare(strict_types=1);
  * okuyucuya farkli bir giris kapisi veriyor: en son eklenenler, konu
  * basliklari ve etiketler.
  *
- * Kaydirakla tekrar olmasin diye "Son Eklenen" listesi one_cikan
- * siralamasini kullanmiyor, yalnizca yayin tarihine bakiyor.
+ * "SON EKLENEN" KALDIRILDI.
+ *
+ * On haberlik o liste, hemen solundaki izgarayla buyuk olcude ayni
+ * haberleri gosteriyordu: ikisi de tarihe gore siralaniyordu. Yani
+ * sag sutun ekranin dortte birini kaplayip okuyucuya yeni bir sey
+ * sunmuyordu.
+ *
+ * Yerine iki pencere geldi:
+ *   Onemli Duzenlemeler — yalnizca mevzuat kategorileri, bes madde.
+ *                          "En yenisi" degil "kacirmamam gereken".
+ *   Yaklasan Tarihler   — beyan ve odeme sureleri. Okuyucunun geri
+ *                          donme sebebi: haber bir kez okunur, takvim
+ *                          her ay lazim olur.
  */
 
-// Yan pencere genisledigi icin daha fazla haber sigiyor; kolon
-// yuksekligi ana kolona yaklasinca sagda bosluk kalmiyor.
-$sonEklenenler = haber_son_eklenenler(10);
-$yanMenu       = kategori_menusu();
+require_once __DIR__ . '/takvim.php';
+
+$onemliler = haber_onemli_duzenlemeler(5);
+$yaklasan  = takvim_yaklasanlar(45, 5);
+$yanMenu   = kategori_menusu();
 $etiketler     = haber_etiket_bulutu(12);
 
 // Konu listesinde bos gruplari gostermek anlamsiz.
@@ -26,12 +38,12 @@ $yanMenu = array_values(array_filter(
 ?>
 <aside class="yan-pencere">
 
-    <?php if ($sonEklenenler !== []): ?>
+    <?php if ($onemliler !== []): ?>
         <section class="pencere">
-            <h2 class="pencere-baslik">Son Eklenen</h2>
+            <h2 class="pencere-baslik">Önemli Düzenlemeler</h2>
 
             <ol class="sirali-liste">
-                <?php foreach ($sonEklenenler as $sira => $haber): ?>
+                <?php foreach ($onemliler as $sira => $haber): ?>
                     <li>
                         <span class="sira"><?= $sira + 1 ?></span>
                         <a href="<?= e(haber_yolu((string) $haber['slug'])) ?>">
@@ -46,6 +58,44 @@ $yanMenu = array_values(array_filter(
                     </li>
                 <?php endforeach; ?>
             </ol>
+        </section>
+    <?php endif; ?>
+
+    <?php if ($yaklasan !== []): ?>
+        <section class="pencere">
+            <h2 class="pencere-baslik">Yaklaşan Tarihler</h2>
+
+            <ul class="takvim-listesi">
+                <?php foreach ($yaklasan as $olay): ?>
+                    <li>
+                        <span class="takvim-gun">
+                            <strong><?= e(date('j', strtotime($olay['tarih']))) ?></strong>
+                            <span><?= e(ay_kisa((int) date('n', strtotime($olay['tarih'])))) ?></span>
+                        </span>
+                        <span class="takvim-yazi">
+                            <span class="ad"><?= e($olay['baslik']) ?></span>
+                            <?php if ($olay['aciklama'] !== ''): ?>
+                                <span class="ust-bilgi"><?= e($olay['aciklama']) ?></span>
+                            <?php endif; ?>
+                        </span>
+                        <span class="takvim-kalan">
+                            <?= $olay['kalan'] === 0 ? 'bugün' : $olay['kalan'] . ' gün' ?>
+                        </span>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+
+            <?php /*
+                Uyari kaldirilmamali. Sure sonu hafta sonuna ya da resmi
+                tatile denk geldiginde ilk is gunune kayar ve GIB sik sik
+                sure uzatimi yayimlar. Bir YMM sitesinde yanlis tarih,
+                okuyucuya ceza yazdirir.
+            */ ?>
+            <p class="pencere-not">
+                Tarihler bilgi amaçlıdır; süre uzatımı ve tatil kaymaları için
+                <a href="https://www.gib.gov.tr/vergi-takvimi" target="_blank"
+                   rel="noopener">GİB vergi takvimini</a> esas alın.
+            </p>
         </section>
     <?php endif; ?>
 
