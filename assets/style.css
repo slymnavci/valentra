@@ -13,12 +13,17 @@
     --vurgu:         #1b4f8f;
     --golge:         0 1px 2px rgba(20, 33, 58, .05), 0 4px 16px rgba(20, 33, 58, .06);
     --yuvarlak:      10px;
-    /* Genislik iki kez artti (1180 -> 1460 -> 1680). Sebep her
-       seferinde ayni: 1460'ta bile 1720px'lik bir ekranda iki yanda
-       ~130'ar piksel bos kaliyor ve goz haberlere degil bosluga
-       gidiyordu. 1680 bir haber sitesinin alistigi yogunlugu veriyor;
-       daha genisi satir uzunlugunu okunmaz hale getirir. */
-    --genislik:      1680px;
+    /* Genislik ucuncu kez artti (1180 -> 1460 -> 1680 -> 1880).
+       Olculen sebep: 1680'lik kapak 1920px'lik ekranda iki yana
+       120'ser piksel bos birakiyordu. 1880'de bu 20'ye iniyor ve
+       ana kolon 1230'dan ~1420'ye cikiyor; dort kartin her biri
+       261 yerine ~340 piksel oluyor, yazilar kutulara sigmak icin
+       kucuk gorunmekten kurtuluyor.
+
+       Metin sayfalari bu genisligi KULLANMAZ: 1880'lik bir kapta
+       duz paragraf satiri 190 karaktere ciktigi icin okunmuyordu.
+       Onlar body.okuma ile daraliyor (asagida). */
+    --genislik:      1880px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -34,6 +39,18 @@
 }
 
 * { box-sizing: border-box; }
+
+/*
+ * KOK PUNTO 16 -> 17.
+ *
+ * Kart sayisi satir basina ucten dorde cikinca her kart 390'dan
+ * 261 piksele indi; punto ayni kalsa da yazi kutunun icinde
+ * kuculmus gibi gorunuyordu. Tek tek onlarca kurali buyutmek
+ * yerine kok punto buyutuldu: dosyadaki butun olculer rem, boslukla
+ * ilgili olanlar ise px cinsinden — yani yazilar buyuyor, ic
+ * bosluklar ve kirilma noktalari yerinde kaliyor.
+ */
+html { font-size: 17px; }
 
 body {
     margin: 0;
@@ -52,8 +69,17 @@ img { max-width: 100%; display: block; }
     width: 100%;
     max-width: var(--genislik);
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 0 24px;
 }
+
+/*
+ * Okuma sayfalari (haber detayi gibi duz metin agirlikli olanlar)
+ * kapin tamamini kullanmaz. Tipografi olcusu bellidir: bir satir
+ * 80 karakteri gecince goz satir basini kaybeder. 1320'lik kapta
+ * yan pencere ve ic bosluklar dustukten sonra metin ~775 piksel,
+ * yani ~80 karakter kaliyor.
+ */
+body.okuma .sinirli { max-width: 1320px; }
 
 /* --- Ust bant ------------------------------------------------------------ */
 
@@ -326,14 +352,14 @@ img { max-width: 100%; display: block; }
 
 .kart h3 {
     margin: 0;
-    font-size: 1.02rem;
+    font-size: 1.06rem;
     font-weight: 700;
     line-height: 1.32;
 }
 
 .ozet {
     margin: 0;
-    font-size: .88rem;
+    font-size: .92rem;
     color: var(--metin-soluk);
 }
 
@@ -391,6 +417,15 @@ img { max-width: 100%; display: block; }
     font-size: 1.08rem;
     color: var(--metin-soluk);
     margin: 0 0 22px;
+}
+
+/*
+ * Haber govdesi. Satir araligi govde varsayilanindan (1.55) yuksek:
+ * uzun duz metinde satirlarin birbirinden ayrilmasi gerekiyor.
+ */
+.detay .icerik {
+    font-size: 1.04rem;
+    line-height: 1.72;
 }
 
 .detay .icerik p { margin: 0 0 1.05em; }

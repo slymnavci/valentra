@@ -47,8 +47,21 @@ if ($haberGorseli !== '') {
     $seoGorsel = $haberGorseli;
 }
 
+/*
+ * Okuma sayfasi: kap daraliyor.
+ *
+ * Kap 1880'e cikinca haber govdesindeki duz paragraf satiri 1550
+ * pikseli, yani ~190 karakteri buluyordu; goz bu uzunlukta satir
+ * basini kaybediyor. "okuma" sinifi kapi 1320'ye indiriyor, yan
+ * pencere de sag tarafi bos birakmadan dolduruyor.
+ */
+$govdeSinifi = 'okuma';
+
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
+
+<div class="ana-duzen">
+<div class="ana-kolon">
 
 <article class="detay">
     <?php if (!empty($haber['kategori_slug'])): ?>
@@ -178,5 +191,10 @@ require __DIR__ . '/includes/sayfa_ust.php';
         </div>
     <?php endif; ?>
 </article>
+
+</div>
+
+<?php require __DIR__ . '/includes/yan_pencere.php'; ?>
+</div>
 
 <?php require __DIR__ . '/includes/sayfa_alt.php'; ?>
