@@ -926,21 +926,31 @@ UPDATE kaynaklar
        tur         = 'web'
  WHERE ad = 'Bloomberg HT';
 
--- e-Belge (e-Fatura / e-Arşiv) duyurulari — 22.09.2026
+-- e-Belge (e-Fatura / e-Arşiv) — EKLENMEDI, gerekcesi asagida.
 --
--- Sinandi: ebelge.gib.gov.tr/duyurular.html 1072 baglantidan 10 haber
--- veriyor ve en kalabalik kalip /dosyalar/tebligler, yani e-belge
--- tebligleri. Bir YMM sitesi icin birinci sinif kaynak.
+-- ebelge.gib.gov.tr/duyurular.html sinandi ve teknik olarak
+-- "calisiyor" gorundu: 1072 baglantidan 10 haber, en kalabalik kalip
+-- /dosyalar/tebligler. Once eklendi, sonra kabul edilen baglantilara
+-- bakilinca iki ayri kusur cikti:
 --
--- ACIK RISK: tebligler PDF olabilir. Ajan HTML okuyor; oyleyse baslik
--- gelir ama sayfa metni bos kalir ve model yalnizca baslikla haber
--- yazmaya calisir. Ilk calismanin ciktisina bakilip karar verilecek;
--- yuzeysel haber uretirse panelden kapatilacak.
+--   1. HEPSI PDF.
+--      .../dosyalar/tebligler/462_Sira_Nolu_VUK_Genel_Tebligi.pdf
+--      Ajan HTML okuyor, PDF okumuyor: baslik gelir ama sayfa metni
+--      bos kalir ve model yalnizca baslikla yazmaya calisir. Sonuc
+--      yuzeysel haber olur.
 --
--- forum.efatura.gov.tr denendi, HTTP 503 donuyor; eklenmedi.
-INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) VALUES
-    ('GİB e-Belge Duyuruları',  'https://ebelge.gib.gov.tr',
-     NULL, 'https://ebelge.gib.gov.tr/duyurular.html', 'resmi', 1);
+--   2. GUNCEL DEGIL.
+--      462 ve 463 sira numarali tebligler 2015-2016'ya ait. Sayfa bir
+--      duyuru akisi degil, teblig arsivi. Ajanin geriye bakis
+--      penceresi ne olursa olsun buradan yeni haber cikmaz.
+--
+-- "Calisiyor" gorunen bir kaynagin gercekte ne getirdigine bakmadan
+-- eklenmemesi gerektigini gosteren ornek; tani araci bu yuzden artik
+-- kabul edilen baglantilari yaziyor.
+--
+-- forum.efatura.gov.tr de denendi, HTTP 503 donuyor.
+--
+-- e-Belge icin islevsel bir kaynak bulunursa buraya eklenecek.
 
 -- ---------------------------------------------------------------------------
 -- Vergi takvimi: yan penceredeki "Yaklasan Tarihler"
