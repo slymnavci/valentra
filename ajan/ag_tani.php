@@ -147,3 +147,78 @@ for ($i = 1; $i <= $tekrar; $i++) {
 yaz();
 yaz('Kontrol adresleri başarılı ve yalnızca hedef başarısızsa, sorun');
 yaz('çalışan makinenin ağında değil hedef sunucudadır.');
+
+/*
+ * PORT PORT TCP DENEMESI — barindiricinin "bize hicbir baglanti
+ * istegi ulasmadi" cevabina karsi.
+ *
+ * Barindirici ag katmaninda hicbir istek gormedigini bildirdi. Oysa
+ * AYNI GitHub Actions ortamindan ayni sunucuya FTP ile baglanilip
+ * dosya yukleniyor: 20.09 22:01'de dagitim basariyla tamamlandi,
+ * 22:14'te ayni sunucunun 443 portu zaman asimina ugradi. Yani
+ * paketler o aga ulasiyor; ulasmayan yalnizca 443.
+ *
+ * Bu bolum bunu TEK BIR CALISMADA, saniyeler arayla kanitliyor:
+ * ayni makineden ayni IP'ye uc ayri porta ham TCP baglantisi
+ * deneniyor. HTTP katmani yok, TLS yok — yalnizca el sikismasi.
+ *
+ * Adrese DOGRUDAN IP ile gidiliyor ki DNS bir degisken olarak
+ * kalmasin; cozumlenen IP de yaziliyor. Barindiricinin sunucusu
+ * baska bir adresteyse bu satirdan anlasilir.
+ */
+yaz();
+yaz('================ PORT DENEMESİ ================');
+yaz();
+
+$sunucu = (string) parse_url($site, PHP_URL_HOST);
+$ip     = gethostbyname($sunucu);
+
+yaz('Alan adı : ' . $sunucu);
+yaz('Çözümlenen IP : ' . ($ip !== $sunucu ? $ip : '(çözümlenemedi)'));
+yaz('Saat (TR) : ' . date('d.m.Y H:i:s'));
+yaz();
+
+if ($ip === $sunucu) {
+    yaz('IP çözümlenemediği için port denemesi yapılamadı.');
+} else {
+    /*
+     * FTP ozellikle listede: dagitim isi bu portu kullaniyor ve
+     * calisiyor. Ayni calismada 21 acilip 443 acilmazsa, sorunun
+     * "bu IP'den bize paket gelmiyor" olmadigi kanitlanmis olur.
+     */
+    $portlar = [
+        21  => 'FTP   (dağıtım bu portu kullanıyor ve çalışıyor)',
+        80  => 'HTTP',
+        443 => 'HTTPS (ajanın kullandığı port)',
+    ];
+
+    foreach ($portlar as $port => $aciklama) {
+        $basla = microtime(true);
+        $hataNo = 0;
+        $hataMetni = '';
+
+        // 10 saniye yeterli: acik bir port milisaniyelerde cevap
+        // verir, filtrelenen port zaten hic cevap vermez.
+        $soket = @fsockopen($ip, $port, $hataNo, $hataMetni, 10);
+        $sure  = microtime(true) - $basla;
+
+        if ($soket !== false) {
+            fclose($soket);
+            yaz(sprintf('  %s:%-4d AÇIK        (%.2f sn)  %s', $ip, $port, $sure, $aciklama));
+        } else {
+            yaz(sprintf(
+                '  %s:%-4d BAŞARISIZ   (%.2f sn)  %s — %s',
+                $ip,
+                $port,
+                $sure,
+                $aciklama,
+                $hataMetni !== '' ? $hataMetni : 'hata ' . $hataNo
+            ));
+        }
+    }
+
+    yaz();
+    yaz('21 açık ve 443 kapalıysa: paketler bu IP adresinden sunucunun');
+    yaz('ağına ULAŞIYOR demektir. O hâlde sorun "bize istek gelmiyor"');
+    yaz('değil, yalnızca 443 portunun filtrelenmesidir.');
+}
