@@ -112,3 +112,88 @@ function takvim_sonraki_tarih(array $kural, DateTimeImmutable $bugun): ?DateTime
 
     return null;
 }
+
+/**
+ * Bir yılın tamamını ay ay döndürür.
+ *
+ * Yaklasan tarihler yan pencere icin; bu ise takvim SAYFASI icin.
+ * Fark: burada gecmis aylar da var, cunku okuyucu "gecen ay neyi
+ * kacirdim" diye de bakiyor.
+ *
+ * @return array<int,list<array{baslik:string,aciklama:string,gun:int,kaynak_url:string}>>
+ *         Ay numarasi (1-12) => o aydaki yukumlulukler, gune gore sirali
+ */
+function takvim_yili(int $yil): array
+{
+    try {
+        $satirlar = db()->query(
+            'SELECT baslik, aciklama, tekrar, gun, aylar, kaynak_url
+               FROM vergi_takvimi
+              WHERE aktif = 1
+              ORDER BY sira'
+        )->fetchAll();
+    } catch (PDOException $e) {
+        return [];
+    }
+
+    $yillik = array_fill(1, 12, []);
+
+    foreach ($satirlar as $satir) {
+        $secili = [];
+
+        if ((string) $satir['tekrar'] === 'secili') {
+            foreach (explode(',', (string) $satir['aylar']) as $parca) {
+                $ay = (int) trim($parca);
+
+                if ($ay >= 1 && $ay <= 12) {
+                    $secili[] = $ay;
+                }
+            }
+
+            // Ay listesi bos ya da bozuksa kural hic uygulanmaz; her aya
+            // yaymak sessizce yanlis takvim uretirdi.
+            if ($secili === []) {
+                continue;
+            }
+        }
+
+        for ($ay = 1; $ay <= 12; $ay++) {
+            if ($secili !== [] && !in_array($ay, $secili, true)) {
+                continue;
+            }
+
+            /*
+             * Ayda olmayan gun ayin son gunune cekiliyor — yaklasan
+             * tarih hesabiyla ayni kural. Ikisi ayrilirsa yan pencere
+             * ile takvim sayfasi farkli tarih gosterir.
+             */
+            $sonGun = (int) (new DateTimeImmutable(sprintf('%04d-%02d-01', $yil, $ay)))->format('t');
+
+            $yillik[$ay][] = [
+                'baslik'     => (string) $satir['baslik'],
+                'aciklama'   => (string) $satir['aciklama'],
+                'gun'        => min(max(1, (int) $satir['gun']), $sonGun),
+                'kaynak_url' => (string) $satir['kaynak_url'],
+            ];
+        }
+    }
+
+    foreach ($yillik as $ay => $olaylar) {
+        usort($olaylar, static fn (array $a, array $b): int => [$a['gun'], $a['baslik']] <=> [$b['gun'], $b['baslik']]);
+        $yillik[$ay] = $olaylar;
+    }
+
+    return $yillik;
+}
+
+/** Ay numarasından tam Türkçe ay adı. */
+function takvim_ay_adi(int $ay): string
+{
+    $adlar = [
+        1 => 'Ocak', 2 => 'Şubat', 3 => 'Mart', 4 => 'Nisan',
+        5 => 'Mayıs', 6 => 'Haziran', 7 => 'Temmuz', 8 => 'Ağustos',
+        9 => 'Eylül', 10 => 'Ekim', 11 => 'Kasım', 12 => 'Aralık',
+    ];
+
+    return $adlar[$ay] ?? '';
+}

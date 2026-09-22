@@ -64,8 +64,32 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
     <h1><?= e($haber['baslik']) ?></h1>
 
+    <?php
+    /*
+     * KUNYE: hazirlayan, yayin tarihi, guncelleme tarihi, kaynak.
+     *
+     * Google'in icerik rehberi yazar bilgisini ve acik kaynaklandirmayi
+     * guven olcutu sayiyor; ikisi de burada.
+     *
+     * GUNCELLEME TARIHI yalnizca GERCEKTEN degismisse basiliyor.
+     * guncellendi sutunu ON UPDATE CURRENT_TIMESTAMP tasidigi icin
+     * her kayit dokunusunda degisiyor — onay isleminin kendisi bile
+     * onu ileri atiyor. Her haberde "guncellendi" yazmak, okuyucuya
+     * yapilmamis bir revizyonu bildirmek olurdu. Bir dakikalik pay,
+     * ekleme ve onaylama arasindaki farki eliyor.
+     */
+    $yayin  = strtotime((string) $haber['yayin_tarihi']);
+    $guncel = strtotime((string) ($haber['guncellendi'] ?? ''));
+    $revize = $guncel && $yayin && ($guncel - $yayin) > 60;
+    ?>
     <div class="kunye">
-        <span><?= e(tarih_bicimle($haber['yayin_tarihi'])) ?></span>
+        <span class="hazirlayan">Valentra Yayın Kurulu</span>
+        <span>&middot; <?= e(tarih_bicimle($haber['yayin_tarihi'])) ?></span>
+
+        <?php if ($revize): ?>
+            <span>&middot; Güncelleme: <?= e(tarih_bicimle((string) $haber['guncellendi'])) ?></span>
+        <?php endif; ?>
+
         <?php if ($haber['kaynak_adi'] !== ''): ?>
             <span>&middot; Kaynak: <?= e($haber['kaynak_adi']) ?></span>
         <?php endif; ?>

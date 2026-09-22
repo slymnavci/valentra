@@ -45,7 +45,11 @@ function gecerli_adres(): string
  * Haber için NewsArticle şeması.
  *
  * Yalnizca elimizde gercekten olan alanlar yaziliyor. Olmayan bir alani
- * uydurmak (ornegin yazar adi) yapisal veri ihlali sayilir.
+ * uydurmak yapisal veri ihlali sayilir.
+ *
+ * YAZAR eklendi: haberlerin kunyesinde "Valentra Yayın Kurulu" imzasi
+ * duruyor, yani uydurma degil sitede gorunen gercek imzanin karsiligi.
+ * Person degil Organization: yayin kurulu bir kisi degil.
  *
  * @param array<string,mixed> $haber
  */
@@ -62,6 +66,11 @@ function seo_haber_semasi(array $haber): string
             '@type' => 'WebPage',
             '@id'   => site_adresi() . haber_yolu((string) $haber['slug']),
         ],
+        'author' => [
+            '@type' => 'Organization',
+            'name'  => 'Valentra Yayın Kurulu',
+            'url'   => site_adresi(),
+        ],
         'publisher' => [
             '@type' => 'Organization',
             'name'  => 'Valentra',
@@ -72,8 +81,20 @@ function seo_haber_semasi(array $haber): string
         ],
     ];
 
-    if (!empty($haber['guncellendi'])) {
-        $sema['dateModified'] = date('c', (int) strtotime((string) $haber['guncellendi']));
+    /*
+     * dateModified yalnizca GERCEK bir revizyon varsa.
+     *
+     * guncellendi sutunu ON UPDATE CURRENT_TIMESTAMP tasiyor; onay
+     * isleminin kendisi bile onu ileri atiyor. Kosulsuz basmak, hicbir
+     * seyin degismedigi haberde de "guncellendi" bildirmek olurdu ve
+     * sayfada gosterdigimiz kunyeyle celisirdi. Ayni bir dakikalik pay
+     * kullaniliyor.
+     */
+    $yayinZamani  = (int) strtotime((string) $haber['yayin_tarihi']);
+    $guncelZamani = (int) strtotime((string) ($haber['guncellendi'] ?? ''));
+
+    if ($guncelZamani > 0 && ($guncelZamani - $yayinZamani) > 60) {
+        $sema['dateModified'] = date('c', $guncelZamani);
     }
 
     $gorsel = guvenli_url((string) ($haber['gorsel_url'] ?? ''));

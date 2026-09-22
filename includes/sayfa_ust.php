@@ -127,6 +127,9 @@ $menuAktif = static function (array $grup) use ($aktifKategori): bool {
                 <a class="menu-oge <?= ($aktifKategori ?? '') === 'pratik' ? 'aktif' : '' ?>"
                    href="<?= e(pratik_yolu()) ?>">Pratik Bilgiler</a>
 
+                <a class="menu-oge <?= ($aktifKategori ?? '') === 'takvim' ? 'aktif' : '' ?>"
+                   href="<?= e(takvim_yolu()) ?>">Vergi Takvimi</a>
+
                 <?php foreach ($menu as $grup): ?>
                     <?php if ($grup['altlar'] === []): ?>
                         <a class="menu-oge <?= $menuAktif($grup) ? 'aktif' : '' ?>"

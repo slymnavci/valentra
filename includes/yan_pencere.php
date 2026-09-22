@@ -92,7 +92,8 @@ $yanMenu = array_values(array_filter(
                 okuyucuya ceza yazdirir.
             */ ?>
             <p class="pencere-not">
-                Tarihler bilgi amaçlıdır; süre uzatımı ve tatil kaymaları için
+                <a href="<?= e(takvim_yolu()) ?>">Tüm takvimi görün</a> &middot;
+                tarihler bilgi amaçlıdır, süre uzatımı ve tatil kaymaları için
                 <a href="https://www.gib.gov.tr/vergi-takvimi" target="_blank"
                    rel="noopener">GİB vergi takvimini</a> esas alın.
             </p>
