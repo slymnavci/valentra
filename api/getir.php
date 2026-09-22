@@ -84,11 +84,35 @@ if ($sunucu === '') {
 $izinli = false;
 
 /*
+ * Makine okunur veri uclari: sabit izin listesi.
+ *
+ * Bu adresler hicbir kaynak satirinda yazmiyor — ajan onlari koddan
+ * kuruyor (includes/ekonomi.php). Yine de site uzerinden getirilmeleri
+ * gerekebiliyor: ajan GitHub'da kosuyor ve TCMB veri merkezi
+ * IP'lerini engelleyebiliyor; site Turkiye'de barindigi icin
+ * ulasabiliyor.
+ *
+ * Liste SABIT. "Her hosta izin ver" demek SSRF kapisini acmak olurdu;
+ * burada yalnizca uc alan adi var ve ucu de resmi istatistik ucu.
+ */
+const VERI_UCLARI = [
+    'evds2.tcmb.gov.tr',   // TCMB EVDS
+    'api.worldbank.org',   // Dunya Bankasi
+    'www.imf.org',         // IMF DataMapper
+];
+
+if (in_array($sunucu, VERI_UCLARI, true)) {
+    $izinli = true;
+}
+
+/*
  * Karsilastirma SQL'de degil PHP'de: "www." onekini yok saymak ve
  * sunucu adini ayiklamak SQL'de cirkin bir ifade olurdu. Tanimli
  * adres sayisi birkac yuz, maliyeti onemsiz.
+ *
+ * Uc zaten izinliyse sorgu hic calismiyor.
  */
-foreach ([
+foreach ($izinli ? [] : [
     'SELECT kaynak_url FROM pratik_bilgiler
       WHERE kaynak_url IS NOT NULL AND kaynak_url <> \'\'',
     'SELECT besleme_url FROM kaynaklar WHERE besleme_url IS NOT NULL',

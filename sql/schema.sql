@@ -959,3 +959,59 @@ UPDATE kaynaklar
 INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) VALUES
     ('GİB e-Belge Duyuruları',  'https://ebelge.gib.gov.tr',
      NULL, 'https://ebelge.gib.gov.tr/duyurular.html', 'resmi', 1);
+
+-- ---------------------------------------------------------------------------
+-- Ekonomik gostergeler: sayfa kazima yerine resmi API — 22.09.2026
+--
+-- Pratik bilgilerin geri kalani sayfa okunarak toplaniyor. Sayilar icin
+-- bu yol gereksiz kirilgandi:
+--
+--   - Kamu siteleri veri merkezi IP'lerini engelliyor; ajan sayfaya
+--     cogu zaman hic ulasamiyor.
+--   - Ulassa bile rakami MODEL okuyor ve "1.234,56" ile "1.234.56"
+--     arasindaki fark bir vergi hesabinda gercek zarar demek.
+--
+-- Bu kaynaklarin hepsinin makine okunur ucu var; oradan gelen sayi
+-- zaten sayi. Hangi satirin hangi seriden okunacagi includes/ekonomi.php
+-- icinde tanimli. Onay sarti DEGISMIYOR: deger yine aday olarak geliyor.
+--
+-- kaynak_url burada ZIYARETCIYE gosterilecek insan okunur sayfa; ajan
+-- API adresini koddan kuruyor, bu adresi kazimiyor.
+-- ---------------------------------------------------------------------------
+
+INSERT IGNORE INTO pratik_bilgiler (anahtar, baslik, aciklama, grup, sira, kaynak_url, kaynak_adi, arama_ipucu) VALUES
+    ('gsyh', 'Gayrisafi Yurt İçi Hasıla (GSYH)',
+     'Cari fiyatlarla yıllık GSYH', 'ekonomi', 30,
+     'https://data.worldbank.org/country/turkiye', 'Dünya Bankası',
+     'Türkiye''nin cari fiyatlarla yıllık gayrisafi yurt içi hasılası.'),
+
+    ('kisi-basi-gelir', 'Kişi Başına Gelir',
+     'Kişi başına düşen yıllık GSYH', 'ekonomi', 40,
+     'https://data.worldbank.org/country/turkiye', 'Dünya Bankası',
+     'Türkiye''de kişi başına düşen gayrisafi yurt içi hasıla.'),
+
+    ('buyume-orani', 'Büyüme Oranı',
+     'Sabit fiyatlarla yıllık GSYH büyümesi', 'ekonomi', 50,
+     'https://data.worldbank.org/country/turkiye', 'Dünya Bankası',
+     'Türkiye ekonomisinin sabit fiyatlarla yıllık büyüme oranı.'),
+
+    ('issizlik-orani', 'İşsizlik Oranı',
+     'Yıllık ortalama işsizlik oranı', 'ekonomi', 60,
+     'https://www.imf.org/external/datamapper/profile/TUR', 'IMF — World Economic Outlook',
+     'Türkiye''de yıllık ortalama işsizlik oranı.'),
+
+    ('kamu-borcu-gsyh', 'Kamu Borcu / GSYH',
+     'Genel yönetim brüt borç stokunun GSYH''ye oranı', 'ekonomi', 70,
+     'https://www.imf.org/external/datamapper/profile/TUR', 'IMF — World Economic Outlook',
+     'Türkiye''de genel yönetim brüt borç stokunun GSYH''ye oranı.');
+
+-- Politika faizi ve enflasyon artik once EVDS'den okunuyor; kaynak adi
+-- da onu soylemeli. Sayfa okuma YEDEK olarak duruyor, bu yuzden
+-- kaynak_url degistirilmiyor.
+UPDATE pratik_bilgiler
+   SET kaynak_adi = 'TCMB — EVDS'
+ WHERE anahtar = 'politika-faizi';
+
+UPDATE pratik_bilgiler
+   SET kaynak_adi = 'TÜİK — TCMB EVDS üzerinden'
+ WHERE anahtar = 'enflasyon-orani';

@@ -406,6 +406,26 @@ code.anahtar {
     padding-top: 12px;
 }
 
+/*
+ * API'den okunan satirlar ayirt edilsin: bu degerler sayfa okunarak
+ * degil kaynagin kendi ucundan geliyor ve o fark onaylayan kisi icin
+ * onemli — biri makine okumasi, digeri model okumasi.
+ */
+.pratik-api {
+    margin-top: 14px;
+    border-top: 1px solid var(--cizgi);
+    padding-top: 12px;
+}
+
+.pratik-api code {
+    background: var(--zemin);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: .88rem;
+}
+
+.pratik-api form { margin: 0; }
+
 .pratik-elle summary {
     cursor: pointer;
     font-size: .94rem;

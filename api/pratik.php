@@ -15,6 +15,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/ajan_yetki.php';
 require_once __DIR__ . '/../includes/pratik.php';
+require_once __DIR__ . '/../includes/ayarlar.php';
 
 $anahtarId = ajan_anahtar_dogrula($neden);
 
@@ -23,7 +24,17 @@ if ($anahtarId === null) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    ajan_json(200, ['bilgiler' => pratik_toplanacaklar()]);
+    /*
+     * EVDS anahtari da gonderiliyor.
+     *
+     * Bu uc ajan anahtariyla korunuyor (yukarida dogrulandi), yani
+     * anahtar yalnizca kimligini kanitlamis ajana gidiyor. Panelde
+     * girilmemisse bos string doner; ajan o kaynaklari atlar.
+     */
+    ajan_json(200, [
+        'bilgiler'      => pratik_toplanacaklar(),
+        'evds_anahtari' => ayar_oku('evds_anahtari'),
+    ]);
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

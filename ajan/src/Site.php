@@ -265,8 +265,26 @@ final class Site
             throw new \RuntimeException('Bilgi listesi yanıtı çözümlenemedi.');
         }
 
+        /*
+         * EVDS anahtari da bu yanitla geliyor.
+         *
+         * Neden ortam degiskeni degil: anahtari giren kisi mali
+         * musavir, GitHub ayarlarina girmiyor. Panelde tek alana
+         * yaziliyor, uc de anahtarla korunuyor. Anahtar yoksa alan
+         * bos gelir ve EVDS'ye bagli bilgiler sessizce atlanir.
+         */
+        $this->evdsAnahtari = trim((string) ($veri['evds_anahtari'] ?? ''));
+
         return $veri['bilgiler'] ?? [];
     }
+
+    /** pratikBilgiler() cagrisinda gelen EVDS anahtari; yoksa bos. */
+    public function evdsAnahtari(): string
+    {
+        return $this->evdsAnahtari;
+    }
+
+    private string $evdsAnahtari = '';
 
     /**
      * Okunan değerleri ADAY olarak gönderir.
