@@ -10,7 +10,14 @@ require_once __DIR__ . '/includes/bootstrap.php';
 
 $sayfa = max(1, (int) ($_GET['sayfa'] ?? 1));
 
-$adet       = 10;   // izgaradaki kart sayisi
+/*
+ * 12, 10 degil: son satirda tek kart kalmasin diye.
+ *
+ * Izgara genis ekranda dort, ortada uc, darda iki sutun. 10 haberde
+ * ucunde de son satir yarim kaliyordu (4+4+2, 3+3+3+1, 2x5). 12 hepsinde
+ * tam bolunuyor.
+ */
+$adet       = 12;   // izgaradaki kart sayisi
 $mansetAdet = 10;   // kaydiraktaki haber sayisi
 
 $toplam = haber_yayinda_sayisi();
