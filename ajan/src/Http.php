@@ -96,21 +96,47 @@ final class Http implements Indirici
     }
 
     /** Başarısızlıkta null döner; çağıran tarafta akış durmaz. */
+    /** Son basarisiz indirmenin sebebi; gunluge yazmak icin. */
+    private string $sonHata = '';
+
     public function indir(string $url, int $enFazlaBayt = 2_000_000): ?string
     {
         $ch = curl_init($url);
 
         curl_setopt_array($ch, $this->ortakSecenekler($enFazlaBayt));
 
-        $govde = curl_exec($ch);
-        $kod   = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        $govde  = curl_exec($ch);
+        $kod    = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        $hata   = curl_error($ch);
+        $hataNo = curl_errno($ch);
         curl_close($ch);
 
         if (!is_string($govde) || $kod < 200 || $kod >= 300) {
+            /*
+             * Sebep kaydediliyor — donus degeri degismiyor.
+             *
+             * Akis icin null dogru, ama "bu kaynak neden bos dondu"
+             * sorusunun cevabi buradaydi ve atiliyordu. Ajan
+             * gunlugunde 29 kaynak icin tek ve ayni cumle
+             * goruluyordu; hangisinin sertifikadan, hangisinin
+             * 403'ten dustugu bilinmeden hicbiri duzeltilemez.
+             */
+            $this->sonHata = $hataNo !== 0
+                ? 'curl ' . $hataNo . ': ' . $hata
+                : 'HTTP ' . $kod;
+
             return null;
         }
 
+        $this->sonHata = '';
+
         return $govde;
+    }
+
+    /** Son indir() cagrisinin basarisizlik sebebi; bos ise sorun yok. */
+    public function sonHatasi(): string
+    {
+        return $this->sonHata;
     }
 
     /**
