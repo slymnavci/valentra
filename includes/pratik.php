@@ -106,7 +106,13 @@ function pratik_aday_yaz(array $veri): array
     )->execute([
         'deger' => $deger,
         'donem' => trim((string) ($veri['donem'] ?? '')) ?: null,
-        'not'   => trim((string) ($veri['not'] ?? '')) ?: null,
+        /*
+         * Not 500 karakterle sinirli (sutun boyle tanimli). Uzun bir
+         * not, siki kipteki MySQL'de butun kaydi dusururdu; yani
+         * saglam bir rakam yalnizca aciklamasi uzun diye kaybolurdu.
+         * Kirpilan not zarar vermiyor, kaybolan deger veriyor.
+         */
+        'not'   => mb_substr(trim((string) ($veri['not'] ?? '')), 0, 500, 'UTF-8') ?: null,
         'guven' => isset($veri['guven']) ? max(0, min(100, (int) $veri['guven'])) : null,
         'id'    => (int) $mevcut['id'],
     ]);

@@ -12,10 +12,14 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/pratik.php';
+require_once __DIR__ . '/../includes/ayarlar.php';
+require_once __DIR__ . '/../includes/ekonomi.php';
 
 giris_zorunlu();
 
-$bildirim = '';
+$bildirim   = '';
+$apiDeneme  = null;   // panelden yapilan API denemesinin sonucu
+$apiDenenen = '';     // hangi satir denendi
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_dogrula($_POST['csrf'] ?? null);
@@ -43,6 +47,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             (string) ($_POST['kaynak_adi'] ?? '')
         );
         $bildirim = 'Kaynak adresi güncellendi.';
+    } elseif ($islem === 'evds_kaydet') {
+        ayar_yaz('evds_anahtari', trim((string) ($_POST['evds_anahtari'] ?? '')));
+        $bildirim = 'EVDS anahtarı kaydedildi.';
+    } elseif ($islem === 'api_dene') {
+        /*
+         * Panelden tek satiri API'den cekip ONAYA koyar.
+         *
+         * Neden panelden: ajan haftada bir kosuyor ve GitHub'in IP'si
+         * kamu sitelerinde engellenebiliyor. Site Turkiye'de barindigi
+         * icin buradan yapilan istek cogu zaman gecerken ajanin
+         * istegi dusuyor. Bir de anahtarin dogru girilip girilmedigi
+         * ancak boyle aninda gorulebiliyor.
+         *
+         * Yayindaki degere DOKUNMUYOR: basarili sonuc da aday olarak
+         * yaziliyor, onay yine burada veriliyor.
+         */
+        $deneAnahtar = (string) ($_POST['anahtar'] ?? '');
+        $seri        = ekonomi_serisi($deneAnahtar);
+
+        if ($seri === null) {
+            $bildirim = 'Bu bilgi için tanımlı bir API serisi yok.';
+        } else {
+            $apiDeneme = ekonomi_oku($seri, ayar_oku('evds_anahtari'));
+            $apiDenenen = $deneAnahtar;
+
+            if ($apiDeneme['tamam']) {
+                try {
+                    $yazim = pratik_aday_yaz([
+                        'anahtar' => $deneAnahtar,
+                        'deger'   => $apiDeneme['deger'],
+                        'donem'   => $apiDeneme['donem'],
+                        'not'     => $apiDeneme['not'] . ' (panelden çekildi)',
+                        'guven'   => 95,
+                    ]);
+
+                    /*
+                     * Gelen deger yayindakinin aynisiysa aday
+                     * YAZILMIYOR. Ekranin "onay bekliyor" demesi
+                     * yanlis olurdu: onay kutusu hic acilmayacak ve
+                     * kullanici bekledigi seyi bulamayacakti.
+                     */
+                    $apiDeneme['durum'] = $yazim['durum'];
+                } catch (Throwable $e) {
+                    $apiDeneme['hata']  = 'Değer alındı ama kaydedilemedi: '
+                                        . $e->getMessage();
+                    $apiDeneme['tamam'] = false;
+                }
+            }
+        }
     } elseif ($islem === 'tumunu_onayla') {
         $adet = 0;
 
@@ -91,6 +144,60 @@ require __DIR__ . '/ust.php';
     <?php endif; ?>
 </div>
 
+<div class="kutu" style="margin-top:18px;">
+    <h2 style="margin:0 0 6px;font-size:1.05rem;">Ekonomik veri kaynakları</h2>
+    <p class="ipucu" style="margin:0 0 10px;">
+        Sayısal göstergeler artık sayfa okunarak değil, kaynağın kendi
+        <strong>makine okunur ucundan</strong> alınıyor. Model devreye
+        girmediği için okuma hatası olmuyor; değer yine onayınıza geliyor.
+    </p>
+
+    <table class="liste-tablo" style="margin:0 0 14px;">
+        <tbody>
+            <tr>
+                <td>Dünya Bankası</td>
+                <td>GSYH, kişi başına gelir, büyüme</td>
+                <td><strong>Anahtar gerekmez</strong></td>
+            </tr>
+            <tr>
+                <td>IMF — World Economic Outlook</td>
+                <td>İşsizlik, kamu borcu / GSYH</td>
+                <td><strong>Anahtar gerekmez</strong></td>
+            </tr>
+            <tr>
+                <td>TCMB — EVDS</td>
+                <td>Politika faizi, TÜFE</td>
+                <td><?= ayar_oku('evds_anahtari') !== ''
+                        ? 'Anahtar girildi'
+                        : '<strong>Anahtar gerekli</strong>' ?></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p class="ipucu" style="margin:0 0 10px;">
+        EVDS anahtarı ücretsizdir:
+        <a href="https://evds2.tcmb.gov.tr/index.php?/evds/login" target="_blank"
+           rel="noopener">evds2.tcmb.gov.tr</a> adresinden üye olun, giriş
+        yaptıktan sonra <em>Profil &rarr; API Anahtarı</em> bölümünden kopyalayıp
+        buraya yapıştırın. Anahtar girilene kadar politika faizi ve enflasyon
+        eski yoldan, sayfa okunarak toplanmaya devam eder.
+    </p>
+
+    <form method="post">
+        <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+        <input type="hidden" name="islem" value="evds_kaydet">
+
+        <div class="alan">
+            <label for="evds">EVDS API anahtarı</label>
+            <input type="text" id="evds" name="evds_anahtari"
+                   value="<?= e(ayar_oku('evds_anahtari')) ?>"
+                   placeholder="TCMB EVDS'den aldığınız anahtar">
+        </div>
+
+        <button type="submit" class="dugme">Kaydet</button>
+    </form>
+</div>
+
 <?php
 $oncekiGrup = null;
 
@@ -98,6 +205,8 @@ foreach ($satirlar as $satir):
     $grup       = (string) $satir['grup'];
     $adayDeger  = trim((string) ($satir['aday_deger'] ?? ''));
     $yayinDeger = trim((string) ($satir['deger'] ?? ''));
+    $satirSeri  = ekonomi_serisi((string) $satir['anahtar']);
+    $satirDeneme = ($apiDenenen === (string) $satir['anahtar']) ? $apiDeneme : null;
 
     if ($grup !== $oncekiGrup):
         $oncekiGrup = $grup;
@@ -174,6 +283,60 @@ foreach ($satirlar as $satir):
                 </div>
             <?php endif; ?>
         </div>
+
+        <?php if ($satirSeri !== null): ?>
+            <div class="pratik-api">
+                <p class="ipucu" style="margin:0 0 8px;">
+                    Bu değer <strong><?= e((string) $satirSeri['kaynak_adi']) ?></strong>
+                    kaynağından <code><?= e((string) $satirSeri['seri']) ?></code>
+                    serisiyle okunuyor.
+                    <?php if (ekonomi_anahtar_ister((string) $satirSeri['saglayici'])
+                              && ayar_oku('evds_anahtari') === ''): ?>
+                        <strong>EVDS anahtarı girilmediği için şu an kullanılamıyor.</strong>
+                    <?php endif; ?>
+                </p>
+
+                <form method="post">
+                    <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                    <input type="hidden" name="islem" value="api_dene">
+                    <input type="hidden" name="anahtar" value="<?= e((string) $satir['anahtar']) ?>">
+                    <button type="submit" class="dugme">Kaynaktan şimdi çek</button>
+                </form>
+
+                <?php if ($satirDeneme !== null): ?>
+                    <div class="uyari <?= $satirDeneme['tamam'] ? 'uyari-basari' : 'uyari-hata' ?>"
+                         style="margin-top:12px;">
+                        <?php if ($satirDeneme['tamam']): ?>
+                            <strong><?= ($satirDeneme['durum'] ?? '') === 'degismedi'
+                                ? 'Alındı — yayındaki değerle aynı, onay gerekmiyor.'
+                                : 'Alındı — onay bekliyor.' ?></strong>
+                            <?= nl2br(e($satirDeneme['deger'])) ?>
+                            (<?= e($satirDeneme['donem']) ?>)
+                        <?php else: ?>
+                            <strong>Alınamadı.</strong> <?= e($satirDeneme['hata']) ?>
+                        <?php endif; ?>
+                    </div>
+
+                    <details style="margin-top:8px;">
+                        <summary class="ipucu">Teknik ayrıntı</summary>
+                        <table class="liste-tablo" style="margin:10px 0 0;">
+                            <tbody>
+                                <tr><td>Adres</td>
+                                    <td style="word-break:break-all;"><?=
+                                        e(ekonomi_adres_gizle((string) $satirDeneme['adres'])) ?></td></tr>
+                                <tr><td>HTTP durumu</td>
+                                    <td><?= (int) $satirDeneme['kod'] ?></td></tr>
+                                <tr><td>Yanıt boyutu</td>
+                                    <td><?= number_format((int) $satirDeneme['boyut']) ?> bayt</td></tr>
+                                <tr><td>Yanıtın başı</td>
+                                    <td style="word-break:break-all;"><?=
+                                        e((string) $satirDeneme['ham']) ?></td></tr>
+                            </tbody>
+                        </table>
+                    </details>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
 
         <details class="pratik-elle">
             <summary>Elle düzenle</summary>

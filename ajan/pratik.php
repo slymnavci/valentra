@@ -27,6 +27,7 @@ require_once __DIR__ . '/src/KotaBittiException.php';
 require_once __DIR__ . '/src/SemaliIstemci.php';
 require_once __DIR__ . '/src/Yazar.php';
 require_once __DIR__ . '/src/DegerOkuyucu.php';
+require_once __DIR__ . '/../includes/ekonomi.php';
 
 use Valentra\Ajan\{DegerOkuyucu, Http, KotaBittiException, Sayfa, Site, Yazar};
 
@@ -88,6 +89,106 @@ if ($bilgiler === []) {
 }
 
 gunluk(count($bilgiler) . ' bilgi toplanacak.');
+
+// --- 1b. Makine okunur uclardan alinabilenleri once al ---------------------
+
+/*
+ * Sayisal gostergeler sayfa okunarak degil, kaynagin kendi API'sinden
+ * aliniyor. Sebep: sayfa kazima bu is icin gereksiz kirilgan — sayfa
+ * duzeni degisince desen tutmuyor, model rakami yanlis okuyabiliyor ve
+ * kamu siteleri ajanin IP'sini engelliyor. API'den gelen sayi zaten
+ * sayi; okunmasina gerek yok.
+ *
+ * Model bu adimda hic devreye girmiyor, yani hem daha ucuz hem daha
+ * kesin. Deger yine ADAY olarak gidiyor: API'den gelmesi dogru seriden
+ * ve dogru donemden geldigini kanitlamaz.
+ */
+$apiSonuclari  = [];
+$kalanBilgiler = [];
+$evdsAnahtari  = $site->evdsAnahtari();
+
+if ($evdsAnahtari === '') {
+    gunluk('EVDS anahtarı tanımlı değil; TCMB serileri atlanacak '
+         . '(panel → Pratik bilgiler → EVDS anahtarı).');
+}
+
+foreach ($bilgiler as $bilgi) {
+    $anahtar = (string) ($bilgi['anahtar'] ?? '');
+    $seri    = ekonomi_serisi($anahtar);
+
+    if ($seri === null) {
+        $kalanBilgiler[] = $bilgi;
+        continue;
+    }
+
+    $okuma = ekonomi_oku($seri, $evdsAnahtari);
+
+    /*
+     * Dogrudan istek dustuyse SITE uzerinden denenir.
+     *
+     * Ajan GitHub'da kosuyor ve Turk kamu sunuculari veri merkezi
+     * IP'lerini engelleyebiliyor — bu projede tekrar tekrar yasandi.
+     * Site Turkiye'de barindigi icin ayni adrese ulasabiliyor.
+     * api/getir.php bu uc alan adina sabit izin listesiyle geciyor.
+     */
+    if (ekonomi_tekrar_denenir($okuma)) {
+        $adres = ekonomi_adres($seri, $evdsAnahtari);
+        $ham   = $adres !== '' ? $site->hamGetir($adres) : null;
+
+        if ($ham !== null) {
+            $siteOkuma = ekonomi_cozumle($seri, $ham);
+
+            if ($siteOkuma['tamam']) {
+                gunluk('      doğrudan istek düştü, site üzerinden alındı.');
+                $okuma = $siteOkuma + $okuma;
+            }
+        }
+    }
+
+    if ($okuma['tamam']) {
+        $apiSonuclari[] = [
+            'anahtar' => $anahtar,
+            'deger'   => $okuma['deger'],
+            'donem'   => $okuma['donem'],
+            'not'     => $okuma['not'] . ' Kaynak: ' . $seri['kaynak_adi'] . '.',
+            /*
+             * Guven 95: rakam modelden degil kaynagin kendi
+             * ucundan geldi, okuma hatasi yok. 100 degil, cunku
+             * seri kodunun dogru gosterge oldugunu ve kaynagin
+             * veriyi revize etmedigini bu katman bilemez.
+             */
+            'guven'   => 95,
+        ];
+
+        gunluk(sprintf(
+            '  API — %s: %s (%s)',
+            $bilgi['baslik'],
+            str_replace("\n", ' / ', $okuma['deger']),
+            $okuma['donem']
+        ));
+
+        continue;
+    }
+
+    gunluk('  API düştü — ' . $bilgi['baslik'] . ': ' . $okuma['hata']);
+
+    /*
+     * Yedege dusulur mu: yalnizca satirin okunabilir bir Turkce
+     * kaynak sayfasi varsa. Makro gostergelerin boyle bir sayfasi
+     * yok; oraya model gondermek bos istek harcamak olurdu.
+     */
+    if (!empty($seri['yedek_kazima'])) {
+        gunluk('      sayfa okumaya düşülüyor.');
+        $kalanBilgiler[] = $bilgi;
+    }
+}
+
+$bilgiler = $kalanBilgiler;
+
+if ($apiSonuclari !== []) {
+    gunluk(count($apiSonuclari) . ' değer API\'den alındı, '
+         . count($bilgiler) . ' bilgi için sayfa okunacak.');
+}
 
 // --- 2. Kaynak sayfalarini oku --------------------------------------------
 
@@ -163,15 +264,22 @@ foreach ($bilgiler as $bilgi) {
 }
 
 if ($adaylar === []) {
+    /*
+     * Sayfa okunamadi diye CIKILMIYOR: API'den gelen degerler varsa
+     * onlar gonderilmeli. Eskiden burada exit vardi ve sayfa yolu
+     * dustugunde API'den alinmis saglam rakamlar da cope gidiyordu.
+     */
     gunluk('Hiçbir kaynak sayfası okunamadı.');
-    exit(0);
+    gonderVeBit($site, $yazar, $apiSonuclari, [], 0, $kuru);
 }
 
 gunluk(count($sayfaOnbellek) . ' ayrı sayfa indirildi, ' . count($adaylar) . ' bilgi işlenecek.');
 
 // --- 3. Degerleri okut ------------------------------------------------------
 
-$sonuclar = [];
+// API'den gelenler listenin basinda duruyor; sayfa okumasi
+// bunlarin uzerine ekleniyor.
+$sonuclar = $apiSonuclari;
 $hatali   = 0;
 
 $kalan = degerleriOku($okuyucu, $adaylar, $grupBoyu, $sonuclar, $hatali);
@@ -258,51 +366,76 @@ $kalanSon = array_merge($vazgecilen, $kalan);
 
 // --- 4. Siteye gonder -------------------------------------------------------
 
-gunluk('---');
-gunluk(count($sonuclar) . ' değer okundu, ' . count($kalanSon) . ' bulunamadı, ' . $hatali . ' hata.');
+gonderVeBit($site, $yazar, $sonuclar, $kalanSon, $hatali, $kuru);
 
-$kullanim = $yazar->kullanim();
+/**
+ * Sonuçları siteye gönderir ve çalışmayı bitirir.
+ *
+ * Fonksiyona alindi cunku cikis noktasi iki tane: butun sayfalar
+ * dusunce de (API'den deger gelmis olabilir) normal akisin sonunda da
+ * buraya geliniyor. Iki yerde kopya durmasi, birinde yapilan
+ * duzeltmenin digerine gecmemesi demekti.
+ *
+ * @param list<array<string,mixed>> $sonuclar
+ * @param list<array<string,mixed>> $bulunamayanlar
+ */
+function gonderVeBit(
+    Site $site,
+    Yazar $yazar,
+    array $sonuclar,
+    array $bulunamayanlar,
+    int $hatali,
+    bool $kuru
+): never {
+    gunluk('---');
+    gunluk(count($sonuclar) . ' değer okundu, ' . count($bulunamayanlar)
+         . ' bulunamadı, ' . $hatali . ' hata.');
 
-if ($kullanim['istek'] > 0) {
-    gunluk(sprintf(
-        'Model kullanımı: %d istek, %s giriş + %s çıkış token.',
-        $kullanim['istek'],
-        number_format($kullanim['girdi']),
-        number_format($kullanim['cikti'])
-    ));
-}
+    $kullanim = $yazar->kullanim();
 
-if ($kuru) {
-    gunluk('Kuru çalışma: gönderim yapılmadı.');
-
-    foreach ($sonuclar as $s) {
-        echo PHP_EOL, '--- ', $s['anahtar'], ' ---', PHP_EOL;
-        echo 'Dönem: ', $s['donem'], ' | Güven: %', $s['guven'], PHP_EOL;
-        echo 'Not: ', $s['not'], PHP_EOL;
-        echo $s['deger'], PHP_EOL;
+    if ($kullanim['istek'] > 0) {
+        gunluk(sprintf(
+            'Model kullanımı: %d istek, %s giriş + %s çıkış token.',
+            $kullanim['istek'],
+            number_format($kullanim['girdi']),
+            number_format($kullanim['cikti'])
+        ));
     }
 
+    if ($kuru) {
+        gunluk('Kuru çalışma: gönderim yapılmadı.');
+
+        foreach ($sonuclar as $s) {
+            echo PHP_EOL, '--- ', $s['anahtar'], ' ---', PHP_EOL;
+            echo 'Dönem: ', $s['donem'], ' | Güven: %', $s['guven'], PHP_EOL;
+            echo 'Not: ', $s['not'], PHP_EOL;
+            echo $s['deger'], PHP_EOL;
+        }
+
+        exit(0);
+    }
+
+    if ($sonuclar === []) {
+        gunluk('Gönderilecek değer yok.');
+        exit(0);
+    }
+
+    try {
+        $yanit = $site->pratikGonder($sonuclar);
+    } catch (Throwable $e) {
+        fwrite(STDERR, 'Gönderim başarısız: ' . $e->getMessage() . "\n");
+        fwrite(STDERR, json_encode($sonuclar, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n");
+        exit(1);
+    }
+
+    gunluk(
+        'Siteye gönderildi: ' . ($yanit['aday'] ?? 0) . ' değer onay bekliyor, '
+        . ($yanit['degismedi'] ?? 0) . ' değişmemiş.'
+    );
+    gunluk('Hiçbir değer onaysız yayımlanmadı.');
+
     exit(0);
 }
-
-if ($sonuclar === []) {
-    gunluk('Gönderilecek değer yok.');
-    exit(0);
-}
-
-try {
-    $yanit = $site->pratikGonder($sonuclar);
-} catch (Throwable $e) {
-    fwrite(STDERR, 'Gönderim başarısız: ' . $e->getMessage() . "\n");
-    fwrite(STDERR, json_encode($sonuclar, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n");
-    exit(1);
-}
-
-gunluk(
-    'Siteye gönderildi: ' . ($yanit['aday'] ?? 0) . ' değer onay bekliyor, '
-    . ($yanit['degismedi'] ?? 0) . ' değişmemiş.'
-);
-gunluk('Hiçbir değer onaysız yayımlanmadı.');
 
 /**
  * Aday değerleri modele okutur; okunanları $sonuclar'a yazar.
