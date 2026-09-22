@@ -27,6 +27,16 @@ final class Getirici implements Indirici
     private array $umitsiz = [];
 
     /**
+     * @var array<string,string> Sunucu basina son basarisizlik sebebi
+     *
+     * Gunluge yazilmak uzere tutuluyor. Onceki halinde her basarisizlik
+     * sessizce null'a donusuyordu ve ajan gunlugunde 29 kaynak icin tek
+     * ve ayni cumle goruluyordu: "okunamadi veya yeni girdi yok".
+     * Sebebi bilmeden hicbir kaynagi duzeltmek mumkun degil.
+     */
+    private array $sebepler = [];
+
+    /**
      * Site sunucusunun kendisi bu calismada ulasilamaz mi?
      *
      * $umitsiz'den farkli: orada "bu KAYNAK site uzerinden de
@@ -91,6 +101,14 @@ final class Getirici implements Indirici
             return $govde;
         }
 
+        // Dogrudan yolun sebebi her durumda kaydediliyor; site yolu
+        // tutarsa uzerine yazilmiyor, tutmazsa gunlukte bu goruluyor.
+        $dogrudanSebebi = $this->http->sonHatasi() ?: 'doğrudan indirme boş döndü';
+        $this->sebepEkle(
+            strtolower((string) parse_url($url, PHP_URL_HOST)),
+            'doğrudan: ' . $dogrudanSebebi
+        );
+
         if ($this->site === null || $this->siteKapali) {
             return $govde;
         }
@@ -107,6 +125,8 @@ final class Getirici implements Indirici
         }
 
         if ($this->siteIstegi >= $this->siteTavani) {
+            $this->sebepEkle($sunucu, 'site üzerinden getirme tavanı dolmuştu');
+
             return null;
         }
 
@@ -145,6 +165,7 @@ final class Getirici implements Indirici
             $siteden = $this->site->hamGetir($url);
         } catch (\Throwable $e) {
             $this->siteKapali = true;
+            $this->sebepEkle($sunucu, 'site sunucusuna ulaşılamadı: ' . $e->getMessage());
 
             return null;
         }
@@ -154,12 +175,34 @@ final class Getirici implements Indirici
                 $this->umitsiz[$sunucu] = true;
             }
 
+            $this->sebepEkle($sunucu, $this->site->sonHamHatasi() ?: 'site üzerinden de gelmedi');
+
             return null;
         }
 
         $this->siteyleGelen++;
 
         return $siteden;
+    }
+
+    private function sebepEkle(string $sunucu, string $sebep): void
+    {
+        if ($sunucu !== '') {
+            $this->sebepler[$sunucu] = $sebep;
+        }
+    }
+
+    /**
+     * Bir adres icin kaydedilmis son basarisizlik sebebi.
+     *
+     * Bos donerse site yolu bu adres icin hic denenmemistir — yani
+     * dogrudan indirme zaten calismistir ya da site yolu kapaliydi.
+     */
+    public function sonSebep(string $url): string
+    {
+        $sunucu = strtolower((string) parse_url($url, PHP_URL_HOST));
+
+        return $this->sebepler[$sunucu] ?? '';
     }
 
     /** Kac adresin site uzerinden geldigi; gunluge yazmak icin. */

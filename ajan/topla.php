@@ -755,9 +755,30 @@ foreach ($kaynaklar as $kaynak) {
     }
 
     if ($girdiler === []) {
-        $neden = $beslemeUrl === '' && $listeUrl === ''
-            ? 'adres tanımlı değil'
-            : 'okunamadı veya yeni girdi yok';
+        /*
+         * SEBEBI YAZ, "okunamadi" deyip gecme.
+         *
+         * Gercek bir calismada 82 kaynagin 29'u bu satira dusuyordu ve
+         * hepsi ayni cumleyi yaziyordu — aralarinda GIB, Hazine ve
+         * Maliye, KGK, ISMMMO, SPK, BDDK gibi sitenin cekirdek mevzuat
+         * kaynaklari vardi. Tek bir cumleyle hangisinin sertifikadan,
+         * hangisinin 403'ten, hangisinin gercekten bos beslemeden
+         * dustugu anlasilamiyor ve hicbiri duzeltilemiyordu.
+         *
+         * Getirici site yolunu denediyse sebebi tutuyor; tutmadiysa
+         * dogrudan indirme calismis ama besleme bos gelmis demektir.
+         */
+        if ($beslemeUrl === '' && $listeUrl === '') {
+            $neden = 'adres tanımlı değil';
+        } else {
+            $sebep = $getirici->sonSebep($beslemeUrl !== '' ? $beslemeUrl : $listeUrl);
+
+            $neden = $sebep !== ''
+                ? 'alınamadı — ' . $sebep
+                : 'adrese ulaşıldı ama yeni girdi yok (besleme boş ya da '
+                  . 'girdiler zaman penceresinin dışında)';
+        }
+
         gunluk("  {$kaynak['ad']}: {$neden}");
         continue;
     }
