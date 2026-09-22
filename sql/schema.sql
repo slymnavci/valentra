@@ -925,3 +925,19 @@ UPDATE kaynaklar
        liste_url   = 'https://www.bloomberght.com/ekonomik-veriler-ve-gundem',
        tur         = 'web'
  WHERE ad = 'Bloomberg HT';
+
+-- e-Belge (e-Fatura / e-Arşiv) duyurulari — 22.09.2026
+--
+-- Sinandi: ebelge.gib.gov.tr/duyurular.html 1072 baglantidan 10 haber
+-- veriyor ve en kalabalik kalip /dosyalar/tebligler, yani e-belge
+-- tebligleri. Bir YMM sitesi icin birinci sinif kaynak.
+--
+-- ACIK RISK: tebligler PDF olabilir. Ajan HTML okuyor; oyleyse baslik
+-- gelir ama sayfa metni bos kalir ve model yalnizca baslikla haber
+-- yazmaya calisir. Ilk calismanin ciktisina bakilip karar verilecek;
+-- yuzeysel haber uretirse panelden kapatilacak.
+--
+-- forum.efatura.gov.tr denendi, HTTP 503 donuyor; eklenmedi.
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) VALUES
+    ('GİB e-Belge Duyuruları',  'https://ebelge.gib.gov.tr',
+     NULL, 'https://ebelge.gib.gov.tr/duyurular.html', 'resmi', 1);
