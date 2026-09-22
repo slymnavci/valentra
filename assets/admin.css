@@ -51,7 +51,7 @@ a { color: var(--vurgu); }
 .panel-ust .logo {
     font-weight: 800;
     letter-spacing: .14em;
-    font-size: 1.05rem;
+    font-size: 1.10rem;
 }
 
 .panel-ust .logo span { color: var(--altin); }
@@ -75,7 +75,7 @@ a { color: var(--vurgu); }
     color: var(--metin-soluk);
     text-decoration: none;
     font-weight: 600;
-    font-size: .86rem;
+    font-size: .96rem;
 }
 
 .sekmeler a.aktif {
@@ -91,7 +91,7 @@ a { color: var(--vurgu); }
     border-radius: 999px;
     background: var(--altin-koyu);
     color: #fff;
-    font-size: .72rem;
+    font-size: .82rem;
 }
 
 .sekmeler a.aktif .adet { background: var(--altin); color: #14213a; }
@@ -113,7 +113,7 @@ a { color: var(--vurgu); }
 
 .haber-satiri h3 {
     margin: 0 0 6px;
-    font-size: 1.02rem;
+    font-size: 1.08rem;
     line-height: 1.35;
 }
 
@@ -123,14 +123,14 @@ a { color: var(--vurgu); }
 .haber-satiri .ozet {
     margin: 0 0 10px;
     color: var(--metin-soluk);
-    font-size: .88rem;
+    font-size: .96rem;
 }
 
 .satir-bilgi {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
-    font-size: .76rem;
+    font-size: .86rem;
     color: var(--metin-soluk);
 }
 
@@ -147,7 +147,7 @@ a { color: var(--vurgu); }
     display: inline-block;
     padding: 2px 9px;
     border-radius: 999px;
-    font-size: .72rem;
+    font-size: .82rem;
     font-weight: 700;
     letter-spacing: .03em;
 }
@@ -166,7 +166,7 @@ a { color: var(--vurgu); }
     border-radius: 7px;
     background: var(--kart);
     color: var(--metin);
-    font-size: .85rem;
+    font-size: .95rem;
     font-weight: 600;
     text-align: center;
     text-decoration: none;
@@ -202,7 +202,7 @@ a { color: var(--vurgu); }
     display: block;
     margin-bottom: 6px;
     font-weight: 600;
-    font-size: .85rem;
+    font-size: .95rem;
 }
 
 .alan input[type=text],
@@ -215,7 +215,7 @@ a { color: var(--vurgu); }
     border: 1px solid var(--cizgi);
     border-radius: 7px;
     font-family: inherit;
-    font-size: .92rem;
+    font-size: .99rem;
     color: var(--metin);
     background: #fff;
 }
@@ -228,7 +228,7 @@ a { color: var(--vurgu); }
     border-color: var(--vurgu);
 }
 
-.alan .ipucu { font-size: .78rem; color: var(--metin-soluk); margin-top: 5px; }
+.alan .ipucu { font-size: .90rem; color: var(--metin-soluk); margin-top: 5px; }
 
 /* --- Uyarilar ------------------------------------------------------------ */
 
@@ -236,7 +236,7 @@ a { color: var(--vurgu); }
     padding: 12px 16px;
     border-radius: 8px;
     margin-bottom: 16px;
-    font-size: .88rem;
+    font-size: .96rem;
 }
 
 .uyari-basari { background: #e0f5ea; color: #14623a; }
@@ -289,7 +289,7 @@ a { color: var(--vurgu); }
 .giris-kutusu .aciklama {
     text-align: center;
     color: var(--metin-soluk);
-    font-size: .84rem;
+    font-size: .94rem;
     margin-bottom: 22px;
 }
 
@@ -304,7 +304,7 @@ code.anahtar {
     background: var(--lacivert);
     color: #7ee0a6;
     border-radius: 7px;
-    font-size: .86rem;
+    font-size: .96rem;
     word-break: break-all;
     margin: 10px 0;
 }
@@ -320,7 +320,7 @@ code.anahtar {
     padding: 18px 24px;
 }
 
-.toplama-cubugu strong { font-size: 1.05rem; }
+.toplama-cubugu strong { font-size: 1.10rem; }
 
 @media (max-width: 600px) {
     .toplama-cubugu .dugme,
@@ -343,11 +343,11 @@ code.anahtar {
     margin-bottom: 14px;
 }
 
-.pratik-ust h3 { margin: 0 0 4px; font-size: 1.02rem; }
+.pratik-ust h3 { margin: 0 0 4px; font-size: 1.08rem; }
 .pratik-ust .ipucu { margin: 0; }
 
 .pratik-kaynak {
-    font-size: .78rem;
+    font-size: .90rem;
     font-weight: 600;
     color: var(--vurgu);
     white-space: nowrap;
@@ -374,7 +374,7 @@ code.anahtar {
 
 .etiketcik {
     display: inline-block;
-    font-size: .68rem;
+    font-size: .80rem;
     font-weight: 700;
     letter-spacing: .1em;
     text-transform: uppercase;
@@ -385,7 +385,7 @@ code.anahtar {
 .pratik-kutu .pratik-deger {
     margin: 0 0 6px;
     font-family: inherit;
-    font-size: .98rem;
+    font-size: 1.04rem;
     font-weight: 700;
     line-height: 1.45;
     white-space: pre-wrap;
@@ -408,7 +408,7 @@ code.anahtar {
 
 .pratik-elle summary {
     cursor: pointer;
-    font-size: .84rem;
+    font-size: .94rem;
     font-weight: 600;
     color: var(--metin-soluk);
 }
@@ -420,7 +420,7 @@ code.anahtar {
 /* Panelin baska yerlerinde de "ipucu" kullaniliyordu ama kural yalnizca
    .alan icinde tanimliydi; disarida kalanlar govde metniyle ayni
    gorunuyordu. Genel kural burada. */
-.ipucu { font-size: .82rem; color: var(--metin-soluk); }
+.ipucu { font-size: .94rem; color: var(--metin-soluk); }
 
 .sayfa-basligi h1 { margin: 0 0 4px; font-size: 1.5rem; }
 .sayfa-basligi .ipucu { margin: 0; max-width: 70ch; }
@@ -448,8 +448,8 @@ code.anahtar {
 .olcum-vurgu { border-color: var(--altin); background: #fffaf1; }
 
 .olcum-sayi { font-size: 1.9rem; font-weight: 700; line-height: 1.1; }
-.olcum-ad   { font-weight: 600; font-size: .85rem; }
-.olcum-alt  { font-size: .76rem; color: var(--metin-soluk); }
+.olcum-ad   { font-weight: 600; font-size: .95rem; }
+.olcum-alt  { font-size: .86rem; color: var(--metin-soluk); }
 
 /* Cubuk grafik: kutuphane yok, sutunlar flex ile ciziliyor. */
 .cubuk-grafik {
@@ -480,13 +480,13 @@ code.anahtar {
 .cubuk-sutun:hover .cubuk { background: var(--altin-koyu); }
 
 .cubuk-deger {
-    font-size: .7rem;
+    font-size: .82rem;
     color: var(--metin-soluk);
     margin-bottom: 3px;
 }
 
 .cubuk-ad {
-    font-size: .68rem;
+    font-size: .80rem;
     color: var(--metin-soluk);
     text-align: center;
     margin-top: 6px;
@@ -503,12 +503,12 @@ code.anahtar {
 .liste-tablo {
     width: 100%;
     border-collapse: collapse;
-    font-size: .86rem;
+    font-size: .96rem;
 }
 
 .liste-tablo th {
     text-align: left;
-    font-size: .74rem;
+    font-size: .86rem;
     text-transform: uppercase;
     letter-spacing: .04em;
     color: var(--metin-soluk);
@@ -539,7 +539,7 @@ code.anahtar {
 .tani-liste {
     margin: 0;
     padding-left: 18px;
-    font-size: .82rem;
+    font-size: .94rem;
 }
 
 .tani-liste li { margin-bottom: 6px; }
