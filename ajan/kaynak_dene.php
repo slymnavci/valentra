@@ -672,8 +672,36 @@ foreach ($kaynaklar as $kaynak) {
                 $calisanYol = 'Kazıma';
                 $not = $tani['sonuc'] . ' bağlantı';
 
-                foreach ($tani['ornekler'] as $ornek) {
-                    yaz('       örnek: ' . mb_substr($ornek, 0, 120));
+                /*
+                 * KABUL EDILEN baglantilar yaziliyor, aday ornekleri degil.
+                 *
+                 * kazima_tani'nin "ornekler" listesi elemeden GECMEMIS
+                 * adaylari da iceriyor ve gezinme baglantilarini one
+                 * cikariyor. GIB e-Belge sinamasinda tam bu oldu: sonuc
+                 * 10 baglantiydi ama ekranda "Mevzuat ve Teknik
+                 * Mimari", "Yararlanma Yontemleri" gibi menu adresleri
+                 * gorundu. Yani kaynagin gercekte ne getirdigi
+                 * anlasilamadi ve PDF olup olmadigi sorusu acikta
+                 * kaldi.
+                 *
+                 * Bu satirlar kaynagin ajana verecegi ILK uc haberi
+                 * oldugu gibi gosteriyor; uzantisindan dosya mi sayfa
+                 * mi oldugu da buradan okunuyor.
+                 */
+                $kabuller = kazima_haberleri_bul($yanit['govde'], $listeUrl, $secici, 3);
+
+                foreach ($kabuller as $kabul) {
+                    yaz(sprintf(
+                        '       alınan: %s -> %s',
+                        mb_substr($kabul['baslik'], 0, 70),
+                        $kabul['baglanti']
+                    ));
+                }
+
+                if ($kabuller === []) {
+                    foreach ($tani['ornekler'] as $ornek) {
+                        yaz('       örnek: ' . mb_substr($ornek, 0, 120));
+                    }
                 }
             }
         }
