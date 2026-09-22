@@ -435,6 +435,135 @@ function baslik_benzer(array $a, array $b): bool
     return $ortak / $kisa >= 0.8;
 }
 
+/**
+ * Kontenjanı konulara paylaştırarak aday seçer.
+ *
+ * Puana gore duz siralama bir konu turunu sistematik olarak aciz
+ * birakiyordu. Olculdu: "KDV tevkifat oranlarinda degisiklik" 17 puan
+ * alirken "7530 sayili Kanun ile bazi kanunlarda degisiklik yapildi"
+ * 2, "IASB issues amendments to IFRS 9" 4 puan aliyor. Vergi terimi
+ * yogun basliklar dogalari geregi daha cok terim barindirdigi icin
+ * listenin tamamini kapliyor; mevzuat ve standart haberleri kontenjana
+ * hic giremiyordu. Sitede TMS/TFRS ve kanun degisikligi haberlerinin
+ * cikmamasinin sebebi buydu.
+ *
+ * Cozum siralamayi bozmak degil, kontenjani konulara paylastirmak. Her
+ * turdan sirayla aliniyor; bir konuda aday kalmazsa payi otekilere
+ * geciyor, yani liste hicbir zaman bos yer birakmiyor.
+ *
+ * Adaylarin puana gore sirali geldigi varsayiliyor: her kovadan bastan
+ * alindigi icin konu icinde en iyi aday once seciliyor.
+ *
+ * @param list<array<string,mixed>>   $adaylar     Puana gore sirali
+ * @param array<string,int>           $paylar      Konu => tur basina pay
+ * @return list<array<string,mixed>>
+ */
+function konu_kontenjani(array $adaylar, array $paylar, int $enFazla, Suzgec $suzgec): array
+{
+    /** @var array<string,list<array<string,mixed>>> */
+    $kovalar = array_fill_keys(array_keys($paylar), []);
+
+    foreach ($adaylar as $aday) {
+        $konu = $suzgec->konu(
+            (string) $aday['girdi']['baslik'],
+            (string) ($aday['girdi']['ozet'] ?? '')
+        );
+
+        // Bilinmeyen bir konu gelirse aday kaybolmasin.
+        if (!isset($kovalar[$konu])) {
+            $konu = array_key_first($paylar);
+        }
+
+        $kovalar[$konu][] = $aday;
+    }
+
+    $secilen = [];
+
+    while (count($secilen) < $enFazla) {
+        $alindi = false;
+
+        foreach ($paylar as $konu => $pay) {
+            for ($i = 0; $i < $pay; $i++) {
+                if (count($secilen) >= $enFazla || $kovalar[$konu] === []) {
+                    break;
+                }
+
+                $secilen[] = array_shift($kovalar[$konu]);
+                $alindi    = true;
+            }
+        }
+
+        // Butun kovalar bosaldi: dongu kendini tekrar etmesin.
+        if (!$alindi) {
+            break;
+        }
+    }
+
+    return $secilen;
+}
+
+/**
+ * Aynı olayı anlatan adaylardan yalnızca en iyisini bırakır.
+ *
+ * Bilinen basliklara benzerlik zaten olculuyor ama o denetim GECMISE
+ * bakiyor: sitede olan bir haberin tekrarini yakaliyor. Ayni calismada
+ * BES FARKLI kaynagin ayni tebligi duyurmasini yakalamiyordu — besi de
+ * listeye giriyor ve kontenjanin bes katini yiyordu.
+ *
+ * Adaylar puana gore sirali geldigi icin her kumeden elde kalan en
+ * yuksek puanli aday tutuluyor.
+ *
+ * YALNIZCA FARKLI KAYNAKLAR arasinda eleme yapiliyor. Sebebi olculdu:
+ * kural kaynak ayrimi gozetmeden uygulandiginda Resmi Gazete'nin ayni
+ * gun yayimladigi bes AYRI teblig birbirinin kopyasi sayiliyordu —
+ * basliklari dogalari geregi birbirine cok benziyor ("... Genel
+ * Tebliginde Degisiklik Yapilmasina Dair Teblig"). Gercek haberi
+ * kaybetmek, kopya gostermekten kotudur.
+ *
+ * Ayni kaynagin birbirine benzeyen adaylari zaten kaynak basina tavana
+ * takiliyor, yani o tarafta da sinir var.
+ *
+ * @param list<array<string,mixed>> $adaylar Puana gore sirali
+ * @return array{0:list<array<string,mixed>>,1:int} Kalanlar ve elenen sayisi
+ */
+function ayni_olayi_ele(array $adaylar): array
+{
+    /** @var list<array{kume:array<string,bool>,kaynak:string}> */
+    $kumeler = [];
+    $tekil   = [];
+    $elenen  = 0;
+
+    foreach ($adaylar as $aday) {
+        $kume   = baslik_kumesi((string) $aday['girdi']['baslik']);
+        $kaynak = (string) ($aday['kaynak']['ad'] ?? '');
+        $ayni   = false;
+
+        foreach ($kumeler as $onceki) {
+            if ($onceki['kaynak'] === $kaynak) {
+                continue;
+            }
+
+            if (baslik_benzer($kume, $onceki['kume'])) {
+                $ayni = true;
+                break;
+            }
+        }
+
+        if ($ayni) {
+            $elenen++;
+            continue;
+        }
+
+        if ($kume !== []) {
+            $kumeler[] = ['kume' => $kume, 'kaynak' => $kaynak];
+        }
+
+        $tekil[] = $aday;
+    }
+
+    return [$tekil, $elenen];
+}
+
 // --- 2 ve 3. Beslemeleri oku, ön elemeden geçir ---------------------------
 
 $adaylar = [];
@@ -669,7 +798,36 @@ foreach ($adaylar as $aday) {
 }
 
 $tavanaTakilan = count($adaylar) - count($secilen);
-$adaylar       = array_slice($secilen, 0, $enFazlaAday);
+
+[$tekil, $kopyaElenen] = ayni_olayi_ele($secilen);
+
+if ($kopyaElenen > 0) {
+    gunluk('  ' . $kopyaElenen . ' aday aynı olayın başka kaynaktaki '
+         . 'kopyası olduğu için elendi.');
+}
+
+/*
+ * Paylar esit degil: site vergi odakli. Her turda 3 vergi, 2 mevzuat,
+ * 2 standart, 1 ekonomi aliniyor.
+ */
+$konuPaylari = ['vergi' => 3, 'mevzuat' => 2, 'standart' => 2, 'ekonomi' => 1];
+$adaylar     = konu_kontenjani($tekil, $konuPaylari, $enFazlaAday, $suzgec);
+
+$konuOzeti = [];
+
+foreach (array_keys($konuPaylari) as $konu) {
+    $adet = count(array_filter(
+        $adaylar,
+        static fn (array $a): bool => $suzgec->konu(
+            (string) $a['girdi']['baslik'],
+            (string) ($a['girdi']['ozet'] ?? '')
+        ) === $konu
+    ));
+
+    $konuOzeti[] = $konu . ': ' . $adet;
+}
+
+gunluk('  Konu dağılımı — ' . implode(', ', $konuOzeti) . '.');
 
 if ($tavanaTakilan > 0) {
     gunluk(

@@ -79,6 +79,72 @@ final class Suzgec
     ];
 
     /**
+     * Mevzuat değişikliği sinyali veren terimler.
+     *
+     * Ayri tutuluyorlar cunku bu basliklar puanlamada sistematik
+     * olarak dusuk kaliyor: "7530 sayili Kanun ile bazi kanunlarda
+     * degisiklik yapildi" cumlesi tek bir vergi terimi icermiyor ve
+     * esigin hemen ustunde, 2 puanla geciyor. Ayni anda "KDV tevkifat
+     * oranlarinda degisiklik" basligi 17 puan aliyor. Aday sayisi
+     * sinirli oldugu icin mevzuat haberleri listeye hic giremiyordu —
+     * oysa bir YMM sitesinde en degerli haber turu bu.
+     */
+    private const MEVZUAT = [
+        'kanun', 'kanun teklifi', 'kanun tasarısı', 'torba yasa',
+        'resmî gazete', 'resmi gazete', 'tebliğ', 'yönetmelik', 'sirküler',
+        'cumhurbaşkanı kararı', 'bakanlar kurulu kararı', 'genelge',
+        'yürürlüğe girdi', 'yürürlük tarihi', 'değişiklik yapılmasına dair',
+        'mevzuat değişikliği', 'düzenleme yürürlükte', 'kararname',
+        'regulation', 'directive', 'legislation', 'enacted', 'gazetted',
+    ];
+
+    /**
+     * Muhasebe ve denetim standartlarını işaret eden terimler.
+     *
+     * Bunlar da puanlamada dusuk kaliyor: "TMS 12 Gelir Vergileri
+     * standardinda guncelleme" 7 puan, "IASB issues amendments to
+     * IFRS 9" 4 puan aliyor ve vergi basliklarinin arkasinda kaliyor.
+     */
+    private const STANDART = [
+        'tms', 'tfrs', 'ufrs', 'ifrs', 'ias', 'bobi frs', 'kums frs', 'kgk',
+        'muhasebe standardı', 'raporlama standardı', 'denetim standardı',
+        'finansal raporlama', 'bağımsız denetim', 'finansal tablo',
+        'enflasyon muhasebesi', 'accounting standard', 'auditing standard',
+        'financial reporting', 'iasb', 'efrag',
+    ];
+
+    /**
+     * Girdinin hangi konu kümesine girdiğini söyler.
+     *
+     * Aday secimi bu kumeye gore kontenjan dagitiyor. Sira onemli:
+     * "VUK'ta degisiklik yapan kanun Resmi Gazete'de" basligi hem
+     * mevzuat hem vergi terimleri tasiyor ve MEVZUAT sayilmali —
+     * eksikligi hissedilen tur o.
+     *
+     * @return 'standart'|'mevzuat'|'vergi'|'ekonomi'
+     */
+    public function konu(string $baslik, string $ozet = ''): string
+    {
+        $metin = $this->normalize($baslik . ' ' . $ozet);
+
+        foreach (self::STANDART as $terim) {
+            if ($this->icerir($metin, $terim)) {
+                return 'standart';
+            }
+        }
+
+        foreach (self::MEVZUAT as $terim) {
+            if ($this->icerir($metin, $terim)) {
+                return 'mevzuat';
+            }
+        }
+
+        $puanlar = $this->puanlar($baslik, $ozet);
+
+        return $puanlar['vergi'] > 0 ? 'vergi' : 'ekonomi';
+    }
+
+    /**
      * Girdi vergi ya da ekonomi başlığına giriyor olabilir mi?
      */
     public function gecer(string $baslik, string $ozet = ''): bool

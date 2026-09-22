@@ -267,7 +267,8 @@ UPDATE kategoriler
 -- ---------------------------------------------------------------------------
 INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, aktif) VALUES
     -- Resmi kaynaklar: vergi haberciliginde birincil kaynak
-    ('Resmî Gazete',            'https://www.resmigazete.gov.tr',  'https://www.resmigazete.gov.tr/rss/Mukerrer.xml', 'resmi', 1),
+    -- Besleme adresi bilerek bos: asagidaki nota bakin (Mukerrer).
+    ('Resmî Gazete',            'https://www.resmigazete.gov.tr',  NULL, 'web', 1),
     ('Gelir İdaresi Başkanlığı','https://www.gib.gov.tr',          'https://www.gib.gov.tr/rss.xml',                   'resmi', 1),
     ('Hazine ve Maliye Bakanlığı','https://www.hmb.gov.tr',        'https://www.hmb.gov.tr/rss',                       'resmi', 1),
     ('KGK',                     'https://www.kgk.gov.tr',          'https://www.kgk.gov.tr/rss',                       'resmi', 1),
@@ -315,6 +316,23 @@ UPDATE kaynaklar SET liste_url = 'https://www.ismmmo.org.tr/Duyurular'
 
 UPDATE kaynaklar SET liste_url = 'https://www.resmigazete.gov.tr/'
  WHERE ad = 'Resmî Gazete' AND liste_url IS NULL;
+
+-- Resmi Gazete beslemesi YANLIS adresi gosteriyordu.
+--
+-- "rss/Mukerrer.xml" yalnizca MUKERRER sayilari duyuruyor. Mukerrer
+-- sayi, gun icinde acil bir konu icin cikarilan ek sayidir; gunluk
+-- Resmi Gazete'nin kendisi degil. Kanun degisiklikleri, teblig ve
+-- yonetmelikler normal sayida yayimlandigi icin bu besleme onlarin
+-- neredeyse hicbirini tasimiyordu. Sitede "kanun degisikligi haberi
+-- gelmiyor" sikayetinin kaynaklarindan biri buydu.
+--
+-- Dogru besleme adresi buradan dogrulanamadigi icin tahmin
+-- YAZILMIYOR; besleme bosaltiliyor ve kaynak liste_url uzerinden
+-- kazimayla okunuyor (o adres zaten tanimli). Panelden "Besleme bul"
+-- calistirilirsa dogru RSS bulundugunda kendiliginden kullanilir.
+UPDATE kaynaklar SET besleme_url = NULL, tur = 'web'
+ WHERE ad = 'Resmî Gazete'
+   AND besleme_url LIKE '%Mukerrer%';
 
 -- ---------------------------------------------------------------------------
 -- Ekonomi kaynaklari
