@@ -2089,3 +2089,131 @@ a.menu-oge.aktif::after,
     font-weight: 700;
     color: var(--metin);
 }
+
+/* --- Valentra Analiz ----------------------------------------------------- */
+
+.analiz {
+    margin: 0 0 26px;
+    padding: 20px 22px 6px;
+    border-radius: var(--yuvarlak);
+    background: var(--kart);
+    /* Sol kenardaki altin serit blogu haber metninden ayiriyor:
+       bu bizim degerlendirmemiz, kaynagin metni degil. */
+    border-left: 4px solid var(--altin);
+    box-shadow: var(--golge);
+}
+
+.analiz-baslik {
+    margin: 0 0 14px;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--altin-koyu);
+}
+
+.analiz-liste { margin: 0; }
+
+.analiz-oge {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 16px;
+    padding: 11px 0;
+    border-top: 1px solid var(--cizgi);
+}
+
+.analiz-oge:first-child { border-top: 0; }
+
+.analiz-oge dt {
+    font-size: .86rem;
+    font-weight: 700;
+    color: var(--metin);
+}
+
+.analiz-oge dd {
+    margin: 0;
+    font-size: .92rem;
+    line-height: 1.6;
+    color: var(--metin);
+}
+
+/* Dar ekranda soru ve cevap alt alta; 200px'lik sutun sigmiyor. */
+@media (max-width: 620px) {
+    .analiz-oge {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    .analiz-baslik { color: var(--altin); }
+}
+
+/* --- Ana sayfadaki Valentra Analiz kartlari ------------------------------ */
+
+.analiz-kartlari {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    margin-bottom: 34px;
+}
+
+@media (max-width: 1100px) { .analiz-kartlari { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px)  { .analiz-kartlari { grid-template-columns: 1fr; } }
+
+.analiz-kart {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    border-left: 4px solid var(--altin);
+    box-shadow: var(--golge);
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.analiz-kart:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(16, 20, 28, .08), 0 10px 24px rgba(16, 20, 28, .1);
+}
+
+.analiz-kart > a {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 18px 20px 16px;
+}
+
+.analiz-kart h3 {
+    margin: 10px 0 14px;
+    font-size: 1.02rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.analiz-ozet { margin: 0 0 14px; }
+
+.analiz-ozet > div + div { margin-top: 10px; }
+
+.analiz-ozet dt {
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--altin-koyu);
+}
+
+.analiz-ozet dd {
+    margin: 2px 0 0;
+    font-size: .86rem;
+    line-height: 1.5;
+    color: var(--metin-soluk);
+}
+
+.analiz-devam {
+    margin-top: auto;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--vurgu);
+}
+
+@media (prefers-color-scheme: dark) {
+    .analiz-ozet dt { color: var(--altin); }
+}

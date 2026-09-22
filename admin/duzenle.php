@@ -38,6 +38,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'etiketler'  => $_POST['etiketler'] ?? '',
             'one_cikan'   => $_POST['one_cikan'] ?? null,
             'kategori_id' => $_POST['kategori_id'] ?? '',
+
+            'analiz_degisen'   => $_POST['analiz_degisen'] ?? '',
+            'analiz_etkilenen' => $_POST['analiz_etkilenen'] ?? '',
+            'analiz_zaman'     => $_POST['analiz_zaman'] ?? '',
+            'analiz_islem'     => $_POST['analiz_islem'] ?? '',
         ]);
 
         // "Kaydet ve onayla" dugmesi
@@ -129,6 +134,39 @@ require __DIR__ . '/ust.php';
         <textarea id="icerik" name="icerik" required><?= e($haber['icerik']) ?></textarea>
         <div class="ipucu">Paragrafları boş satırla ayırın.</div>
     </div>
+
+    <?php /*
+        VALENTRA ANALIZ — editorun denetiminde.
+
+        "Hangi islem yapilmali" cevabi modelden geliyor ve yeminli
+        mali musavirlik imzasi tasiyan bir sayfada yayimlaniyor. Bu
+        yuzden onay ekraninda duzenlenebilir olmasi sart. Bos
+        birakilan alan sayfada hic gorunmez.
+    */ ?>
+    <fieldset class="alan analiz-alani">
+        <legend>Valentra Analiz</legend>
+        <div class="ipucu" style="margin-bottom:12px;">
+            Okuyucunun haberi kendi işine uyarlaması için. Boş bıraktığınız
+            alan sayfada görünmez. <strong>Özellikle son alanı kontrol edin:</strong>
+            kaynağın zorunlu kılmadığı bir işlem yazılmamalı.
+        </div>
+
+        <label for="analiz_degisen">Ne değişti?</label>
+        <textarea id="analiz_degisen" name="analiz_degisen" rows="2"
+                  maxlength="600"><?= e($haber['analiz_degisen'] ?? '') ?></textarea>
+
+        <label for="analiz_etkilenen">Kimleri etkiliyor?</label>
+        <textarea id="analiz_etkilenen" name="analiz_etkilenen" rows="2"
+                  maxlength="600"><?= e($haber['analiz_etkilenen'] ?? '') ?></textarea>
+
+        <label for="analiz_zaman">Ne zaman uygulanacak?</label>
+        <textarea id="analiz_zaman" name="analiz_zaman" rows="2"
+                  maxlength="600"><?= e($haber['analiz_zaman'] ?? '') ?></textarea>
+
+        <label for="analiz_islem">Hangi işlem yapılmalı?</label>
+        <textarea id="analiz_islem" name="analiz_islem" rows="2"
+                  maxlength="600"><?= e($haber['analiz_islem'] ?? '') ?></textarea>
+    </fieldset>
 
     <div class="alan">
         <label for="gorsel_url">Görsel adresi</label>

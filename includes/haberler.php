@@ -273,11 +273,13 @@ function haber_taslak_ekle(array $veri): array
         'INSERT INTO haberler
             (baslik, slug, ozet, icerik, gorsel_url, etiketler, durum, kategori_id,
              kaynak_id, kaynak_adi, kaynak_url, kaynak_parmak, url_parmak,
-             baslik_parmak, guven_skoru, ajan_notu)
+             baslik_parmak, guven_skoru, ajan_notu,
+             analiz_degisen, analiz_etkilenen, analiz_zaman, analiz_islem)
          VALUES
             (:baslik, :slug, :ozet, :icerik, :gorsel_url, :etiketler, :durum, :kategori_id,
              :kaynak_id, :kaynak_adi, :kaynak_url, :kaynak_parmak, :url_parmak,
-             :baslik_parmak, :guven_skoru, :ajan_notu)'
+             :baslik_parmak, :guven_skoru, :ajan_notu,
+             :analiz_degisen, :analiz_etkilenen, :analiz_zaman, :analiz_islem)'
     );
 
     $ifade->execute([
@@ -297,6 +299,16 @@ function haber_taslak_ekle(array $veri): array
         'baslik_parmak' => $baslikParmak !== '' ? $baslikParmak : null,
         'guven_skoru'   => max(0, min(100, (int) ($veri['guven_skoru'] ?? 0))),
         'ajan_notu'     => mb_substr(trim((string) ($veri['ajan_notu'] ?? '')), 0, 600, 'UTF-8'),
+
+        /*
+         * Valentra Analiz alanlari. Sutunlar 600 karakter; model kisa
+         * yazmasi soylenmis olsa da uzun bir cevap gelirse kirpilmali,
+         * yoksa INSERT tamamen duserdi.
+         */
+        'analiz_degisen'   => mb_substr(trim((string) ($veri['analiz_degisen'] ?? '')), 0, 600, 'UTF-8'),
+        'analiz_etkilenen' => mb_substr(trim((string) ($veri['analiz_etkilenen'] ?? '')), 0, 600, 'UTF-8'),
+        'analiz_zaman'     => mb_substr(trim((string) ($veri['analiz_zaman'] ?? '')), 0, 600, 'UTF-8'),
+        'analiz_islem'     => mb_substr(trim((string) ($veri['analiz_islem'] ?? '')), 0, 600, 'UTF-8'),
     ]);
 
     return ['durum' => 'eklendi', 'id' => (int) db()->lastInsertId()];
@@ -466,7 +478,11 @@ function haber_guncelle(int $id, array $veri): bool
                 iframe_url = :iframe_url,
                 etiketler = :etiketler,
                 one_cikan = :one_cikan,
-                kategori_id = :kategori_id
+                kategori_id = :kategori_id,
+                analiz_degisen = :analiz_degisen,
+                analiz_etkilenen = :analiz_etkilenen,
+                analiz_zaman = :analiz_zaman,
+                analiz_islem = :analiz_islem
           WHERE id = :id'
     );
 
@@ -484,6 +500,20 @@ function haber_guncelle(int $id, array $veri): bool
         'etiketler'  => mb_substr(trim((string) ($veri['etiketler'] ?? '')), 0, 400, 'UTF-8'),
         'one_cikan'  => !empty($veri['one_cikan']) ? 1 : 0,
         'kategori_id'=> ($veri['kategori_id'] ?? '') !== '' ? (int) $veri['kategori_id'] : null,
+
+        /*
+         * Valentra Analiz alanlari editorun denetiminde.
+         *
+         * "Hangi islem yapilmali" cevabi modelden geliyor ve YMM
+         * imzasi tasiyan bir sitede yayimlaniyor. Editorun onu
+         * duzeltebilmesi ya da tamamen silebilmesi sart; duzenleme
+         * formunda bos birakilan alan bos kaydediliyor ve sayfada hic
+         * gorunmuyor.
+         */
+        'analiz_degisen'   => mb_substr(trim((string) ($veri['analiz_degisen'] ?? '')), 0, 600, 'UTF-8'),
+        'analiz_etkilenen' => mb_substr(trim((string) ($veri['analiz_etkilenen'] ?? '')), 0, 600, 'UTF-8'),
+        'analiz_zaman'     => mb_substr(trim((string) ($veri['analiz_zaman'] ?? '')), 0, 600, 'UTF-8'),
+        'analiz_islem'     => mb_substr(trim((string) ($veri['analiz_islem'] ?? '')), 0, 600, 'UTF-8'),
         'id'         => $id,
     ]);
 }
@@ -726,6 +756,37 @@ function haber_onemli_duzenlemeler(int $limit = 5): array
     );
 
     $ifade->execute(array_merge([HABER_YAYINDA], $gruplar));
+
+    return $ifade->fetchAll();
+}
+
+/**
+ * Ana sayfadaki "Valentra Analiz" bölümü.
+ *
+ * Yalnizca degerlendirmesi DOLU haberler. Olcut olarak "ne degisti"
+ * ile "kimleri etkiliyor" birlikte araniyor: tek bir alani dolu olan
+ * haber analiz sayilmaz, kutu yarim gorunur.
+ *
+ * Bu bolum tarihe gore degil DEGERE gore secim yapiyor; ana kolondaki
+ * izgara zaten kronolojik akisi veriyor.
+ *
+ * @return list<array<string,mixed>>
+ */
+function haber_analizliler(int $limit = 3): array
+{
+    $ifade = db()->prepare(
+        'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
+           FROM haberler h
+           LEFT JOIN kategoriler k ON k.id = h.kategori_id
+          WHERE h.durum = :durum
+            AND h.analiz_degisen   <> \'\'
+            AND h.analiz_etkilenen <> \'\'
+          ORDER BY h.yayin_tarihi DESC
+          LIMIT :limit'
+    );
+    $ifade->bindValue('durum', HABER_YAYINDA);
+    $ifade->bindValue('limit', $limit, PDO::PARAM_INT);
+    $ifade->execute();
 
     return $ifade->fetchAll();
 }

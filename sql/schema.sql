@@ -991,3 +991,22 @@ INSERT IGNORE INTO vergi_takvimi (baslik, aciklama, tekrar, gun, aylar, kaynak_u
      'secili', 31, '3', 'https://www.gib.gov.tr/vergi-takvimi', 60),
     ('Kurumlar Vergisi Beyannamesi', 'Bir önceki hesap dönemine ait beyan',
      'secili', 30, '4', 'https://www.gib.gov.tr/vergi-takvimi', 70);
+
+-- ---------------------------------------------------------------------------
+-- Valentra Analiz: haberin "bana ne" karsiligi
+--
+-- Haber ne oldugunu anlatiyor; bu dort alan okuyucunun (mali musavir,
+-- muhasebe calisani, isletme yoneticisi) haberi kendi isine
+-- uyarlamasini kolaylastiriyor.
+--
+-- Alanlar BOS OLABILIR ve bos olmasi normaldir. Model bilgiyi
+-- kaynakta bulamazsa bos birakiyor; ozellikle analiz_islem, kaynak bir
+-- yukumluluk getirmiyorsa (faiz karari, enflasyon verisi) bos kaliyor.
+-- Yarim bilgiyle doldurmak, YMM imzasi tasiyan bir sitede yanlis
+-- yonlendirme olurdu.
+-- ---------------------------------------------------------------------------
+ALTER TABLE haberler
+    ADD COLUMN IF NOT EXISTS analiz_degisen   VARCHAR(600) NOT NULL DEFAULT '' AFTER ajan_notu,
+    ADD COLUMN IF NOT EXISTS analiz_etkilenen VARCHAR(600) NOT NULL DEFAULT '' AFTER analiz_degisen,
+    ADD COLUMN IF NOT EXISTS analiz_zaman     VARCHAR(600) NOT NULL DEFAULT '' AFTER analiz_etkilenen,
+    ADD COLUMN IF NOT EXISTS analiz_islem     VARCHAR(600) NOT NULL DEFAULT '' AFTER analiz_zaman;

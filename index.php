@@ -61,6 +61,54 @@ require __DIR__ . '/includes/sayfa_ust.php';
                      acilmaz gorunen, surekli degisen tek veri. */ ?>
             <?php require __DIR__ . '/includes/piyasa_serit.php'; ?>
 
+            <?php
+            /*
+             * VALENTRA ANALIZ bolumu — yalnizca ilk sayfada.
+             *
+             * Mansetin hemen altinda, haber izgarasinin ustunde: sitenin
+             * ozgun katkisi burasi. Baska kaynaklardan derlenen haber her
+             * yerde var; "bana ne" karsiligi yok.
+             *
+             * Degerlendirmesi dolu haber yoksa bolum hic basilmiyor; bos
+             * bir baslik siteyi eksik gosterir.
+             */
+            $analizliler = $sayfa === 1 ? haber_analizliler(3) : [];
+            ?>
+
+            <?php if ($analizliler !== []): ?>
+                <div class="bolum-basligi">
+                    <h2>Valentra Analiz</h2>
+                    <span class="cizgi"></span>
+                </div>
+
+                <div class="analiz-kartlari">
+                    <?php foreach ($analizliler as $analizHaber): ?>
+                        <article class="analiz-kart">
+                            <a href="<?= e(haber_yolu((string) $analizHaber['slug'])) ?>">
+                                <?php if (!empty($analizHaber['kategori_adi'])): ?>
+                                    <span class="etiket"><?= e($analizHaber['kategori_adi']) ?></span>
+                                <?php endif; ?>
+
+                                <h3><?= e($analizHaber['baslik']) ?></h3>
+
+                                <dl class="analiz-ozet">
+                                    <div>
+                                        <dt>Ne değişti?</dt>
+                                        <dd><?= e(kisalt((string) $analizHaber['analiz_degisen'], 150)) ?></dd>
+                                    </div>
+                                    <div>
+                                        <dt>Kimleri etkiliyor?</dt>
+                                        <dd><?= e(kisalt((string) $analizHaber['analiz_etkilenen'], 110)) ?></dd>
+                                    </div>
+                                </dl>
+
+                                <span class="analiz-devam">Tamamını okuyun &rarr;</span>
+                            </a>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
             <?php if ($haberler !== []): ?>
                 <div class="bolum-basligi">
                     <h2><?= $sayfa > 1 ? 'Haberler' : 'Son Haberler' ?></h2>

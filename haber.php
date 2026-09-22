@@ -103,6 +103,42 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <p class="spot"><?= e($haber['ozet']) ?></p>
     <?php endif; ?>
 
+    <?php
+    /*
+     * VALENTRA ANALIZ — haberin "bana ne" karsiligi.
+     *
+     * Metnin USTUNDE duruyor: okuyucu (mali musavir, muhasebe
+     * calisani, isletme yoneticisi) once kendi isini ilgilendiren
+     * kismi gormeli, haberin tamamini okumak isteyip istemedigine
+     * ondan sonra karar vermeli.
+     *
+     * BOS ALAN BASILMIYOR ve blok hic doldurulmamissa hic
+     * gorunmuyor. Dort basligi bos kutularla gostermek, bilgi varmis
+     * izlenimi verip vermemek olurdu.
+     */
+    $analiz = array_filter([
+        'Ne değişti?'            => trim((string) ($haber['analiz_degisen'] ?? '')),
+        'Kimleri etkiliyor?'     => trim((string) ($haber['analiz_etkilenen'] ?? '')),
+        'Ne zaman uygulanacak?'  => trim((string) ($haber['analiz_zaman'] ?? '')),
+        'Hangi işlem yapılmalı?' => trim((string) ($haber['analiz_islem'] ?? '')),
+    ], static fn (string $d): bool => $d !== '');
+    ?>
+
+    <?php if ($analiz !== []): ?>
+        <section class="analiz" aria-label="Valentra Analiz">
+            <h2 class="analiz-baslik">Valentra Analiz</h2>
+
+            <dl class="analiz-liste">
+                <?php foreach ($analiz as $soru => $cevap): ?>
+                    <div class="analiz-oge">
+                        <dt><?= e($soru) ?></dt>
+                        <dd><?= e($cevap) ?></dd>
+                    </div>
+                <?php endforeach; ?>
+            </dl>
+        </section>
+    <?php endif; ?>
+
     <div class="icerik">
         <?php foreach (preg_split('/\n\s*\n/u', trim($haber['icerik'])) ?: [] as $paragraf): ?>
             <p><?= nl2br(e(trim($paragraf))) ?></p>
