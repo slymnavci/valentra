@@ -47,8 +47,21 @@ if ($haberGorseli !== '') {
     $seoGorsel = $haberGorseli;
 }
 
+/*
+ * Okuma sayfasi: kap daraliyor.
+ *
+ * Kap 1880'e cikinca haber govdesindeki duz paragraf satiri 1550
+ * pikseli, yani ~190 karakteri buluyordu; goz bu uzunlukta satir
+ * basini kaybediyor. "okuma" sinifi kapi 1320'ye indiriyor, yan
+ * pencere de sag tarafi bos birakmadan dolduruyor.
+ */
+$govdeSinifi = 'okuma';
+
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
+
+<div class="ana-duzen">
+<div class="ana-kolon">
 
 <article class="detay">
     <?php if (!empty($haber['kategori_slug'])): ?>
@@ -64,8 +77,32 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
     <h1><?= e($haber['baslik']) ?></h1>
 
+    <?php
+    /*
+     * KUNYE: hazirlayan, yayin tarihi, guncelleme tarihi, kaynak.
+     *
+     * Google'in icerik rehberi yazar bilgisini ve acik kaynaklandirmayi
+     * guven olcutu sayiyor; ikisi de burada.
+     *
+     * GUNCELLEME TARIHI yalnizca GERCEKTEN degismisse basiliyor.
+     * guncellendi sutunu ON UPDATE CURRENT_TIMESTAMP tasidigi icin
+     * her kayit dokunusunda degisiyor — onay isleminin kendisi bile
+     * onu ileri atiyor. Her haberde "guncellendi" yazmak, okuyucuya
+     * yapilmamis bir revizyonu bildirmek olurdu. Bir dakikalik pay,
+     * ekleme ve onaylama arasindaki farki eliyor.
+     */
+    $yayin  = strtotime((string) $haber['yayin_tarihi']);
+    $guncel = strtotime((string) ($haber['guncellendi'] ?? ''));
+    $revize = $guncel && $yayin && ($guncel - $yayin) > 60;
+    ?>
     <div class="kunye">
-        <span><?= e(tarih_bicimle($haber['yayin_tarihi'])) ?></span>
+        <span class="hazirlayan">Valentra Yayın Kurulu</span>
+        <span>&middot; <?= e(tarih_bicimle($haber['yayin_tarihi'])) ?></span>
+
+        <?php if ($revize): ?>
+            <span>&middot; Güncelleme: <?= e(tarih_bicimle((string) $haber['guncellendi'])) ?></span>
+        <?php endif; ?>
+
         <?php if ($haber['kaynak_adi'] !== ''): ?>
             <span>&middot; Kaynak: <?= e($haber['kaynak_adi']) ?></span>
         <?php endif; ?>
@@ -77,6 +114,42 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
     <?php if ($haber['ozet'] !== ''): ?>
         <p class="spot"><?= e($haber['ozet']) ?></p>
+    <?php endif; ?>
+
+    <?php
+    /*
+     * VALENTRA ANALIZ — haberin "bana ne" karsiligi.
+     *
+     * Metnin USTUNDE duruyor: okuyucu (mali musavir, muhasebe
+     * calisani, isletme yoneticisi) once kendi isini ilgilendiren
+     * kismi gormeli, haberin tamamini okumak isteyip istemedigine
+     * ondan sonra karar vermeli.
+     *
+     * BOS ALAN BASILMIYOR ve blok hic doldurulmamissa hic
+     * gorunmuyor. Dort basligi bos kutularla gostermek, bilgi varmis
+     * izlenimi verip vermemek olurdu.
+     */
+    $analiz = array_filter([
+        'Ne değişti?'            => trim((string) ($haber['analiz_degisen'] ?? '')),
+        'Kimleri etkiliyor?'     => trim((string) ($haber['analiz_etkilenen'] ?? '')),
+        'Ne zaman uygulanacak?'  => trim((string) ($haber['analiz_zaman'] ?? '')),
+        'Hangi işlem yapılmalı?' => trim((string) ($haber['analiz_islem'] ?? '')),
+    ], static fn (string $d): bool => $d !== '');
+    ?>
+
+    <?php if ($analiz !== []): ?>
+        <section class="analiz" aria-label="Valentra Analiz">
+            <h2 class="analiz-baslik">Valentra Analiz</h2>
+
+            <dl class="analiz-liste">
+                <?php foreach ($analiz as $soru => $cevap): ?>
+                    <div class="analiz-oge">
+                        <dt><?= e($soru) ?></dt>
+                        <dd><?= e($cevap) ?></dd>
+                    </div>
+                <?php endforeach; ?>
+            </dl>
+        </section>
     <?php endif; ?>
 
     <div class="icerik">
@@ -118,5 +191,10 @@ require __DIR__ . '/includes/sayfa_ust.php';
         </div>
     <?php endif; ?>
 </article>
+
+</div>
+
+<?php require __DIR__ . '/includes/yan_pencere.php'; ?>
+</div>
 
 <?php require __DIR__ . '/includes/sayfa_alt.php'; ?>

@@ -96,6 +96,23 @@ function pratik_yolu(): string
     return temiz_adres_acik() ? '/pratik-bilgiler' : '/pratik-bilgiler.php';
 }
 
+/**
+ * Vergi takvimi sayfası.
+ *
+ * Yil verilmezse icinde bulundugumuz yil acilir; adreste yil
+ * gorunmez. Gecmis ve gelecek yil icin parametre ekleniyor.
+ */
+function takvim_yolu(?int $yil = null): string
+{
+    $taban = temiz_adres_acik() ? '/vergi-takvimi' : '/vergi-takvimi.php';
+
+    if ($yil === null || $yil === (int) date('Y')) {
+        return $taban;
+    }
+
+    return $taban . (temiz_adres_acik() ? '?yil=' : '&yil=') . $yil;
+}
+
 /** Tek bir pratik bilginin kendi sayfası. */
 function pratik_bilgi_yolu(string $anahtar): string
 {

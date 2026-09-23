@@ -1086,6 +1086,12 @@ foreach ($gruplar as $grupNo => $grup) {
             'kaynak_url'  => $girdi['baglanti'],
             'guven_skoru' => (int) ($sonuc['guven_skoru'] ?? 0),
             'ajan_notu'   => (string) ($sonuc['ajan_notu'] ?? ''),
+
+            // Valentra Analiz — dordu de bos olabilir, bos olmasi normal.
+            'analiz_degisen'   => (string) ($sonuc['analiz_degisen'] ?? ''),
+            'analiz_etkilenen' => (string) ($sonuc['analiz_etkilenen'] ?? ''),
+            'analiz_zaman'     => (string) ($sonuc['analiz_zaman'] ?? ''),
+            'analiz_islem'     => (string) ($sonuc['analiz_islem'] ?? ''),
             'gorsel_url'  => $gorseller[$sira] ?? '',
         ];
 

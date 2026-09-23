@@ -169,8 +169,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bildirim = $denenen . ' çalışmayan kaynak incelendi, ' . $bulunan . ' tanesinin beslemesi bulundu.';
 
     } elseif ($islem === 'hepsini_test') {
-        foreach (db()->query('SELECT id, besleme_url FROM kaynaklar WHERE aktif = 1')->fetchAll() as $k) {
-            $testSonuclari[(int) $k['id']] = besleme_dene((string) $k['besleme_url'], 10);
+        /*
+         * KAYNAGIN KENDI YOLU SINANIYOR, HERKESINKI BESLEME DEGIL.
+         *
+         * Once her kaynak icin besleme_dene cagriliyordu. Beslemesi
+         * olmayan kazima kaynaklarinda bu, bos bir adresi sinamak
+         * demekti ve panel "Adres http:// veya https:// ile
+         * baslamali" diyordu — adres alanlari dolu ve dogru oldugu
+         * halde.
+         *
+         * Sonuc yaniltici bir tabloydu: 82 kaynagin 15'i calistigi
+         * halde bozuk gorunuyordu ve listeye bakan kisi var olmayan
+         * bir adres hatasini duzeltmeye calisiyordu.
+         *
+         * Artik besleme adresi olan besleme olarak, olmayan kazima
+         * olarak sinaniyor. Ikisi de yoksa sorun gercekten kaynakta.
+         */
+        $sorgu = 'SELECT id, besleme_url, liste_url, liste_secici
+                    FROM kaynaklar WHERE aktif = 1';
+
+        foreach (db()->query($sorgu)->fetchAll() as $k) {
+            $besleme = trim((string) ($k['besleme_url'] ?? ''));
+            $liste   = trim((string) ($k['liste_url'] ?? ''));
+
+            if ($besleme !== '') {
+                $testSonuclari[(int) $k['id']] = besleme_dene($besleme, 10);
+                continue;
+            }
+
+            if ($liste !== '') {
+                $testSonuclari[(int) $k['id']] = kazima_sayfayi_dene(
+                    $liste,
+                    (string) ($k['liste_secici'] ?? ''),
+                    10
+                );
+                continue;
+            }
+
+            $testSonuclari[(int) $k['id']] = [
+                'tamam' => false,
+                'mesaj' => 'Kaynağın ne besleme ne de kazıma adresi tanımlı.',
+                'adet'  => 0,
+                'ornek' => '',
+            ];
         }
 
     } elseif ($islem === 'sil') {

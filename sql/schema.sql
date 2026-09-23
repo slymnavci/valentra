@@ -948,21 +948,105 @@ UPDATE kaynaklar
        tur         = 'web'
  WHERE ad = 'Bloomberg HT';
 
--- e-Belge (e-Fatura / e-Arşiv) duyurulari — 22.09.2026
+-- e-Belge (e-Fatura / e-Arşiv) — EKLENMEDI, gerekcesi asagida.
 --
--- Sinandi: ebelge.gib.gov.tr/duyurular.html 1072 baglantidan 10 haber
--- veriyor ve en kalabalik kalip /dosyalar/tebligler, yani e-belge
--- tebligleri. Bir YMM sitesi icin birinci sinif kaynak.
+-- ebelge.gib.gov.tr/duyurular.html sinandi ve teknik olarak
+-- "calisiyor" gorundu: 1072 baglantidan 10 haber, en kalabalik kalip
+-- /dosyalar/tebligler. Once eklendi, sonra kabul edilen baglantilara
+-- bakilinca iki ayri kusur cikti:
 --
--- ACIK RISK: tebligler PDF olabilir. Ajan HTML okuyor; oyleyse baslik
--- gelir ama sayfa metni bos kalir ve model yalnizca baslikla haber
--- yazmaya calisir. Ilk calismanin ciktisina bakilip karar verilecek;
--- yuzeysel haber uretirse panelden kapatilacak.
+--   1. HEPSI PDF.
+--      .../dosyalar/tebligler/462_Sira_Nolu_VUK_Genel_Tebligi.pdf
+--      Ajan HTML okuyor, PDF okumuyor: baslik gelir ama sayfa metni
+--      bos kalir ve model yalnizca baslikla yazmaya calisir. Sonuc
+--      yuzeysel haber olur.
 --
--- forum.efatura.gov.tr denendi, HTTP 503 donuyor; eklenmedi.
-INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) VALUES
-    ('GİB e-Belge Duyuruları',  'https://ebelge.gib.gov.tr',
-     NULL, 'https://ebelge.gib.gov.tr/duyurular.html', 'resmi', 1);
+--   2. GUNCEL DEGIL.
+--      462 ve 463 sira numarali tebligler 2015-2016'ya ait. Sayfa bir
+--      duyuru akisi degil, teblig arsivi. Ajanin geriye bakis
+--      penceresi ne olursa olsun buradan yeni haber cikmaz.
+--
+-- "Calisiyor" gorunen bir kaynagin gercekte ne getirdigine bakmadan
+-- eklenmemesi gerektigini gosteren ornek; tani araci bu yuzden artik
+-- kabul edilen baglantilari yaziyor.
+--
+-- forum.efatura.gov.tr de denendi, HTTP 503 donuyor.
+--
+-- e-Belge icin islevsel bir kaynak bulunursa buraya eklenecek.
+
+-- ---------------------------------------------------------------------------
+-- Vergi takvimi: yan penceredeki "Yaklasan Tarihler"
+--
+-- Beyan ve odeme sureleri her ay TEKRAR ettigi icin tek tek tarih
+-- yazmak yerine kural saklaniyor: "her ayin 26'si", "Subat/Mayis/
+-- Agustos/Kasim aylarinin 17'si". Yaklasan tarihler bu kuraldan
+-- hesaplaniyor; her yil listeyi elle yenilemek gerekmiyor.
+--
+-- DIKKAT — SORUMLULUK: buradaki gunler GIB'in yayimladigi standart
+-- vergi takvimine dayaniyor ama RESMI KAYNAK DEGILDIR. Sure sonu hafta
+-- sonuna ya da resmi tatile denk geldiginde ilk is gunune kayar; GIB
+-- ayrica sik sik sure uzatimi yayimlar. Bu yuzden her kaydin yaninda
+-- kaynak baglantisi duruyor ve sitede "resmi takvimden dogrulayin"
+-- uyarisi gosteriliyor.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS vergi_takvimi (
+    id          INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    baslik      VARCHAR(200)  NOT NULL,
+    aciklama    VARCHAR(400)  NOT NULL DEFAULT '',
+    -- 'aylik' : her ay, ayin `gun` gunu
+    -- 'secili': yalnizca `aylar` listesindeki aylarda
+    tekrar      ENUM('aylik','secili') NOT NULL DEFAULT 'aylik',
+    gun         TINYINT UNSIGNED NOT NULL,
+    -- Virgulle ayrilmis ay numaralari; tekrar='secili' ise kullanilir.
+    aylar       VARCHAR(40)   NOT NULL DEFAULT '',
+    kaynak_url  VARCHAR(500)  NOT NULL DEFAULT '',
+    sira        SMALLINT      NOT NULL DEFAULT 100,
+    aktif       TINYINT(1)    NOT NULL DEFAULT 1,
+    olusturuldu DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    guncellendi DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_takvim_aktif (aktif, sira)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO vergi_takvimi (baslik, aciklama, tekrar, gun, aylar, kaynak_url, sira) VALUES
+    ('Muhtasar ve Prim Hizmet Beyannamesi', 'Bir önceki aya ait beyan ve ödeme',
+     'aylik', 26, '', 'https://www.gib.gov.tr/vergi-takvimi', 10),
+    ('Damga Vergisi Beyannamesi', 'Bir önceki aya ait beyan ve ödeme',
+     'aylik', 26, '', 'https://www.gib.gov.tr/vergi-takvimi', 20),
+    ('KDV Beyannamesi', 'Bir önceki aya ait beyan ve ödeme',
+     'aylik', 28, '', 'https://www.gib.gov.tr/vergi-takvimi', 30),
+    ('Form Ba - Form Bs', 'Bir önceki aya ait bildirimler',
+     'aylik', 30, '', 'https://www.gib.gov.tr/vergi-takvimi', 40),
+    ('Geçici Vergi Beyannamesi', 'Üç aylık dönem beyanı ve ödemesi',
+     'secili', 17, '2,5,8,11', 'https://www.gib.gov.tr/vergi-takvimi', 50),
+    ('Yıllık Gelir Vergisi Beyannamesi', 'Bir önceki yıla ait beyan',
+     'secili', 31, '3', 'https://www.gib.gov.tr/vergi-takvimi', 60),
+    ('Kurumlar Vergisi Beyannamesi', 'Bir önceki hesap dönemine ait beyan',
+     'secili', 30, '4', 'https://www.gib.gov.tr/vergi-takvimi', 70);
+
+-- ---------------------------------------------------------------------------
+-- Valentra Analiz: haberin "bana ne" karsiligi
+--
+-- Haber ne oldugunu anlatiyor; bu dort alan okuyucunun (mali musavir,
+-- muhasebe calisani, isletme yoneticisi) haberi kendi isine
+-- uyarlamasini kolaylastiriyor.
+--
+-- Alanlar BOS OLABILIR ve bos olmasi normaldir. Model bilgiyi
+-- kaynakta bulamazsa bos birakiyor; ozellikle analiz_islem, kaynak bir
+-- yukumluluk getirmiyorsa (faiz karari, enflasyon verisi) bos kaliyor.
+-- Yarim bilgiyle doldurmak, YMM imzasi tasiyan bir sitede yanlis
+-- yonlendirme olurdu.
+-- ---------------------------------------------------------------------------
+ALTER TABLE haberler
+    ADD COLUMN IF NOT EXISTS analiz_degisen   VARCHAR(600) NOT NULL DEFAULT '' AFTER ajan_notu,
+    ADD COLUMN IF NOT EXISTS analiz_etkilenen VARCHAR(600) NOT NULL DEFAULT '' AFTER analiz_degisen,
+    ADD COLUMN IF NOT EXISTS analiz_zaman     VARCHAR(600) NOT NULL DEFAULT '' AFTER analiz_etkilenen,
+    ADD COLUMN IF NOT EXISTS analiz_islem     VARCHAR(600) NOT NULL DEFAULT '' AFTER analiz_zaman;
+
+-- Kayit daha once yayina gitmisti; INSERT satirini silmek canli
+-- veritabanindan kaldirmaz. Pasife cekiliyor.
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'GİB e-Belge Duyuruları';
+
 
 -- ---------------------------------------------------------------------------
 -- Ekonomik gostergeler: sayfa kazima yerine resmi API — 22.09.2026

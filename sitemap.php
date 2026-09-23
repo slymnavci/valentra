@@ -61,6 +61,12 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         <priority>0.7</priority>
     </url>
 
+    <url>
+        <loc><?= e($taban . takvim_yolu()) ?></loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+
     <?php
     /*
      * Her pratik bilginin kendi sayfasi haritaya giriyor.

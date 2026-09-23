@@ -63,8 +63,15 @@ function besleme_dene(string $url, int $zamanAsimi = 15): array
         return ['tamam' => false, 'mesaj' => 'Sunucu HTTP ' . $kod . ' döndü.', 'adet' => 0, 'ornek' => ''];
     }
 
+    /*
+     * NOCDATA: basliklar sik sik <![CDATA[...]]> icinde geliyor.
+     * Bayragi vermezsek SimpleXMLElement nesnesi donuyor ve
+     * (string) cevriminde bos kaliyor — besleme calisiyor ama
+     * panelde orneksiz gorunuyordu. Ajan tarafinda bu bayrak zaten
+     * kullaniliyordu.
+     */
     $onceki = libxml_use_internal_errors(true);
-    $xml = simplexml_load_string($govde);
+    $xml = simplexml_load_string($govde, 'SimpleXMLElement', LIBXML_NOCDATA);
     libxml_clear_errors();
     libxml_use_internal_errors($onceki);
 
@@ -77,17 +84,37 @@ function besleme_dene(string $url, int $zamanAsimi = 15): array
         ];
     }
 
+    /*
+     * UC BICIM DE DESTEKLENIYOR.
+     *
+     * Once yalnizca RSS 2.0 (channel->item) ve Atom (entry)
+     * araniyordu. RDF / RSS 1.0'da <item> ogeleri en ust seviyede,
+     * <channel>'in KARDESI olarak duruyor ve bu yuzden hic
+     * bulunmuyordu.
+     *
+     * Sonuc yanlis bir teshisti: DW'nin iki beslemesi panelde "icinde
+     * haber ogesi yok" diyordu, oysa ajan ayni adresten 15 girdi
+     * okuyor. Panel bozuk kaynagi degil kendi eksigini gosteriyordu.
+     */
     $ogeler = [];
 
-    if (isset($xml->channel->item)) {
+    if (isset($xml->channel->item)) {          // RSS 2.0
         foreach ($xml->channel->item as $oge) {
             $ogeler[] = trim((string) $oge->title);
         }
-    } elseif (isset($xml->entry)) {
+    } elseif (isset($xml->item)) {             // RDF / RSS 1.0
+        foreach ($xml->item as $oge) {
+            $ogeler[] = trim((string) $oge->title);
+        }
+    } elseif (isset($xml->entry)) {            // Atom
         foreach ($xml->entry as $oge) {
             $ogeler[] = trim((string) $oge->title);
         }
     }
+
+    // Basligi bos olan ogeler sayilmasin; "10 haber okundu" deyip
+    // ornek gosterememek kafa karistirir.
+    $ogeler = array_values(array_filter($ogeler, static fn (string $b): bool => $b !== ''));
 
     if ($ogeler === []) {
         return [

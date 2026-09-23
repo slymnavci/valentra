@@ -105,7 +105,17 @@ $menuAktif = static function (array $grup) use ($aktifKategori): bool {
              taninmayan sayfa Haberler sekmesine hic girmez. */ ?>
     <script type="application/ld+json"><?= $seoSema ?></script>
 </head>
-<body>
+<?php
+/*
+ * Sayfa kendi govde sinifini ekleyebilir. Su an tek kullanici haber
+ * detayi: "okuma" sinifi butun bantlari (ust bant, menu, ana kolon,
+ * alt bant) ayni dar kaba oturtuyor. Yalnizca <main>'i daraltmak
+ * logonun sayfanin en solunda, yazinin ise 280 piksel icerde
+ * baslamasi demekti; bantlar da birlikte daralinca hizalama bozulmuyor.
+ */
+$govdeSinifi = trim((string) ($govdeSinifi ?? ''));
+?>
+<body<?= $govdeSinifi !== '' ? ' class="' . e($govdeSinifi) . '"' : '' ?>>
     <header class="ust-bant">
         <div class="sinirli ust-satir">
             <a class="logo" href="/">
@@ -126,6 +136,9 @@ $menuAktif = static function (array $grup) use ($aktifKategori): bool {
 
                 <a class="menu-oge <?= ($aktifKategori ?? '') === 'pratik' ? 'aktif' : '' ?>"
                    href="<?= e(pratik_yolu()) ?>">Pratik Bilgiler</a>
+
+                <a class="menu-oge <?= ($aktifKategori ?? '') === 'takvim' ? 'aktif' : '' ?>"
+                   href="<?= e(takvim_yolu()) ?>">Vergi Takvimi</a>
 
                 <?php foreach ($menu as $grup): ?>
                     <?php if ($grup['altlar'] === []): ?>

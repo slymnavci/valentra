@@ -99,6 +99,40 @@ final class Yazar implements SemaliIstemci
            olanı tut; diğerlerini "yinelenen: ADAY n ile aynı olay" diye
            ele.
 
+        2b) VALENTRA ANALİZ — dört alan.
+
+           Okuyucu mali müşavir, muhasebe çalışanı ya da işletme
+           yöneticisi. Haber "ne oldu"yu anlatıyor; bu dört alan
+           "bana ne"yi anlatmalı. Her biri kısa: bir-iki cümle.
+
+           analiz_degisen   — Önceki durum neydi, yenisi ne? Rakam
+                              varsa ikisini de yaz ("%18'den %20'ye").
+           analiz_etkilenen — Hangi mükellef grubu, sektör ya da
+                              büyüklük? "Herkes" deme; kaynakta bir
+                              kapsam varsa onu yaz.
+           analiz_zaman     — Yürürlük tarihi, ilk uygulanacak dönem,
+                              geçiş hükmü. Tarih kaynakta geçiyorsa
+                              aynen aktar.
+           analiz_islem     — Kaynağın ZORUNLU KILDIĞI somut adım:
+                              beyanname, bildirim, kayıt, başvuru ve
+                              varsa süresi.
+
+           EN ÖNEMLİ KURAL — BİLMEDİĞİNİ YAZMA. Bir alanın karşılığı
+           kaynak metinde yoksa o alanı BOŞ BIRAK. Dördünü de
+           doldurmak zorunda değilsin; boş alan gösterilmiyor.
+
+           analiz_islem'de bu kural daha da katı: yalnızca kaynağın
+           açıkça yüklediği yükümlülüğü yaz. Kaynak bir işlem
+           zorunluluğu getirmiyorsa BOŞ BIRAK. "Mükelleflerin durumu
+           gözden geçirmesi yerinde olur", "uzmana danışılmalı" gibi
+           genel tavsiyeler ÜRETME — bunlar bilgi değil doldurma
+           metnidir ve yeminli mali müşavirlik imzası taşıyan bir
+           sitede yanlış yönlendirme olur.
+
+           Ekonomi haberlerinde (faiz kararı, enflasyon verisi, kur)
+           çoğu zaman yapılacak bir işlem yoktur; analiz_islem orada
+           boş kalır, bu normaldir.
+
         2) İLGİLİYSE HABERİ YAZ. Kurallar:
            - Kaynak metni yalnızca anlamak için okursun. ASLA cümle
              kopyalamazsın, yeniden ifade edersin. Özgün bir metin yaz.
@@ -229,10 +263,27 @@ final class Yazar implements SemaliIstemci
             'kategori'    => ['type' => 'string',  'description' => 'Verilen konu grubu listesinden TAM olarak bir slug'],
             'guven_skoru' => ['type' => 'integer', 'description' => '0-100 arası güven'],
             'ajan_notu'   => ['type' => 'string',  'description' => 'Onaylayacak editöre tek cümlelik not'],
+
+            /*
+             * VALENTRA ANALIZ — dort soru.
+             *
+             * Okuyucu (mali musavir, muhasebe calisani, isletme
+             * yoneticisi) haberi kendi isine uyarlayabilsin diye.
+             * Haber "ne oldu"yu anlatir; bu dort alan "bana ne"yi.
+             *
+             * Bilgi kaynakta yoksa alan BOS birakiliyor. Yarim bilgiyle
+             * tamamlamak, ozellikle "hangi islem yapilmali" alaninda,
+             * okuyucuyu yanlis isleme sevk eder.
+             */
+            'analiz_degisen'  => ['type' => 'string', 'description' => 'NE DEĞİŞTİ: önceki durum ve yeni durum, tek-iki cümle. Kaynakta yoksa boş bırak.'],
+            'analiz_etkilenen'=> ['type' => 'string', 'description' => 'KİMLERİ ETKİLİYOR: hangi mükellef grubu, sektör ya da büyüklük. Kaynakta yoksa boş bırak.'],
+            'analiz_zaman'    => ['type' => 'string', 'description' => 'NE ZAMAN UYGULANACAK: yürürlük tarihi, ilk uygulanacak dönem, geçiş hükmü. Kaynakta yoksa boş bırak.'],
+            'analiz_islem'    => ['type' => 'string', 'description' => 'HANGİ İŞLEM YAPILMALI: kaynağın ZORUNLU KILDIĞI somut adım (beyanname, bildirim, kayıt, başvuru) ve varsa süresi. Kaynak bir işlem zorunluluğu getirmiyorsa BOŞ BIRAK; tavsiye üretme.'],
         ],
         'required' => [
             'sira', 'ilgili', 'red_nedeni', 'baslik', 'ozet', 'icerik',
             'etiketler', 'kategori', 'guven_skoru', 'ajan_notu',
+            'analiz_degisen', 'analiz_etkilenen', 'analiz_zaman', 'analiz_islem',
         ],
     ];
 

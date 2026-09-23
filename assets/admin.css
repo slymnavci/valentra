@@ -564,3 +564,36 @@ code.anahtar {
 
 .tani-liste li { margin-bottom: 6px; }
 .tani-liste small { color: var(--metin-soluk); word-break: break-all; }
+
+/* --- Valentra Analiz alanlari (duzenleme formu) -------------------------- */
+
+.analiz-alani {
+    border: 1px solid #d8dde6;
+    border-left: 4px solid #c9a86a;
+    border-radius: 8px;
+    padding: 16px 18px 18px;
+}
+
+.analiz-alani legend {
+    padding: 0 8px;
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #a8854a;
+}
+
+.analiz-alani label {
+    display: block;
+    margin-top: 12px;
+    font-size: .86rem;
+    font-weight: 600;
+}
+
+.analiz-alani textarea {
+    width: 100%;
+    margin-top: 4px;
+    /* Dort kisa alan; haber metni gibi yuksek kutulara gerek yok. */
+    min-height: 0;
+    resize: vertical;
+}
