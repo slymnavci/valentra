@@ -1202,3 +1202,25 @@ UPDATE kaynaklar
        site_url    = 'https://www.ekonomigazetesi.com'
  WHERE ad = 'Ekonomi Gazetesi'
    AND besleme_url = 'https://www.ekonomigazetesi.com.tr/rss';
+
+-- Para Analiz — 23.09.2026, kaynak testi #113
+--
+-- /feed/ artik HTML donuyor; /rss, /rss.xml, /feed.xml denendi, ucu de 404.
+-- Kayitli liste (/kategori/ekonomi/) da eski duzenin adresi. Haberler
+-- /haberler/<baslik>, kategoriler /haberler/kategori/<ad> altinda; her haber
+-- adresi tekil oldugu icin kalip kurali kategori sayfalarini seciyordu.
+-- Dislamali yol suzgeciyle ekonomi sayfasindan 9 gercek haber geldi.
+-- Ana sayfa 27 veriyor ama siyaset haberleriyle karisik; ekonomi sayfasi secildi.
+UPDATE kaynaklar
+   SET besleme_url  = NULL,
+       liste_url    = 'https://www.paraanaliz.com/haberler/kategori/ekonomi',
+       liste_secici = 'yol:/haberler/ -/haberler/kategori/',
+       tur          = 'web'
+ WHERE ad = 'Para Analiz'
+   AND besleme_url = 'https://www.paraanaliz.com/feed/';
+
+-- ISMMMO bilincli olarak DEGISTIRILMEDI: sirkuler ve duyuru sayfalarinin
+-- uc farkli adresi de ayni 35 site menusu baglantisini veriyor (Uye
+-- islemleri, Staj, Buro kayit...). Liste sayfanin ham HTML'inde yok;
+-- buyuk olasilikla betikle sonradan yukleniyor. Kazimayla okunamaz,
+-- secici degistirmek sonuc vermez.
