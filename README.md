@@ -62,6 +62,33 @@ Yanıt: `{"durum":"tamam","eklenen":2,"yinelenen":0,"hatalar":[]}`
 Aynı `kaynak_url` ile gelen haber ikinci kez eklenmez (`yinelenen` sayılır),
 böylece ajan her gün çalışsa da kopya birikmez.
 
+## Ekonomik göstergeler
+
+Pratik bilgilerin sayısal olanları sayfa kazınarak değil, kaynağın kendi
+**makine okunur ucundan** alınır (`includes/ekonomi.php`). Hangi satırın hangi
+seriden okunacağı orada tanımlıdır; model bu yolda hiç devreye girmez.
+
+| Kaynak | Gösterge | Anahtar |
+|--------|----------|---------|
+| Dünya Bankası | GSYH, kişi başına gelir, büyüme | gerekmez |
+| IMF — World Economic Outlook | İşsizlik, kamu borcu / GSYH | gerekmez |
+| TCMB — EVDS | Politika faizi, TÜFE | **gerekli** |
+
+EVDS anahtarı ücretsizdir: [evds3.tcmb.gov.tr](https://evds3.tcmb.gov.tr/)
+adresinden üye olup *Profil → API Anahtarı* bölümünden alınır ve panelde
+**Pratik bilgiler** sayfasına yapıştırılır. Ortam değişkeni değil, ayar olarak
+tutulur: anahtarı girecek kişi mali müşavir, GitHub ayarlarına girmiyor.
+Anahtar girilene kadar politika faizi ve enflasyon eski yoldan, sayfa okunarak
+toplanmaya devam eder.
+
+İki nokta bilinçli:
+
+- **Onay şartı değişmiyor.** API'den gelen değer de ADAY olarak yazılır.
+  API'den gelmesi, doğru seriden ve doğru dönemden geldiğini kanıtlamaz.
+- **IMF tahminleri ayıklanır.** DataMapper gelecek yılların öngörülerini de
+  aynı dizide verir; içinde bulunulan yıldan sonrası atılır, cari yıl için de
+  "tahmin olabilir" uyarısı nota yazılır.
+
 ## Güvenlik notları
 
 - Veritabanı bilgileri repoda **yoktur**; deploy sırasında GitHub Secrets'tan

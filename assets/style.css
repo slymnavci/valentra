@@ -17,8 +17,9 @@
        Olculen sebep: 1680'lik kapak 1920px'lik ekranda iki yana
        120'ser piksel bos birakiyordu. 1880'de bu 20'ye iniyor ve
        ana kolon 1230'dan ~1420'ye cikiyor; dort kartin her biri
-       261 yerine ~340 piksel oluyor, yazilar kutulara sigmak icin
-       kucuk gorunmekten kurtuluyor.
+       261 yerine ~310 piksel oluyor. Yazinin kucuk GORUNMESININ
+       ikinci sebebi buydu; puntonun kendisi asagida ayrica
+       buyutuldu.
 
        Metin sayfalari bu genisligi KULLANMAZ: 1880'lik bir kapta
        duz paragraf satiri 190 karaktere ciktigi icin okunmuyordu.
@@ -41,24 +42,32 @@
 * { box-sizing: border-box; }
 
 /*
- * KOK PUNTO 16 -> 17.
+ * Punto olcegi.
  *
- * Kart sayisi satir basina ucten dorde cikinca her kart 390'dan
- * 261 piksele indi; punto ayni kalsa da yazi kutunun icinde
- * kuculmus gibi gorunuyordu. Tek tek onlarca kurali buyutmek
- * yerine kok punto buyutuldu: dosyadaki butun olculer rem, boslukla
- * ilgili olanlar ise px cinsinden — yani yazilar buyuyor, ic
- * bosluklar ve kirilma noktalari yerinde kaliyor.
+ * Sayfadaki kucuk yazilar okunmuyordu. Cozum her seyi ayni oranda
+ * buyutmek degildi: sorun genelde kucukluk degil, olcegin ALT ucuydu —
+ * rozetler, kunye satirlari ve ipuclari 11-12 piksele iniyordu. Bu
+ * yuzden olcek sikistirildi: en kucuk puntolar en cok buyudu, buyuk
+ * basliklar neredeyse sabit kaldi. Boylece okunabilirlik artarken
+ * baslik/metin hiyerarsisi korunuyor.
+ *
+ * Taban punto acikca yaziliyor (1rem = tarayicinin varsayilani,
+ * genelde 16px). Sabit bir px degeri VERILMEDI ve verilmemeli:
+ * ziyaretci tarayici ayarindan puntoyu buyutmusse — ki bu kitlede
+ * sik — o tercih gecerli kalmali. (Bu dalda bir ara html'e 17px
+ * yazilmisti; ayni sorunu cozuyordu ama ziyaretcinin ayarini
+ * eziyordu, o yuzden geri alindi.)
  */
-html { font-size: 17px; }
-
 body {
     margin: 0;
     background: var(--zemin);
     color: var(--metin);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
                  "Helvetica Neue", Arial, sans-serif;
-    line-height: 1.55;
+    font-size: 1rem;
+    /* Satir araligi da acildi: uzun mevzuat metinlerinde satir takibi
+       kolaylasiyor. */
+    line-height: 1.62;
     -webkit-font-smoothing: antialiased;
 }
 
@@ -151,7 +160,7 @@ body.okuma .sinirli { max-width: 1320px; }
 
 .logo .alt {
     margin-top: 6px;
-    font-size: .68rem;
+    font-size: .80rem;
     font-weight: 500;
     letter-spacing: .19em;
     text-indent: .19em;
@@ -168,7 +177,7 @@ body.okuma .sinirli { max-width: 1320px; }
 }
 
 .ust-bilgi {
-    font-size: .8rem;
+    font-size: .90rem;
     color: var(--metin-soluk);
 }
 
@@ -183,7 +192,7 @@ body.okuma .sinirli { max-width: 1320px; }
 
 .bolum-basligi h2 {
     margin: 0;
-    font-size: .82rem;
+    font-size: .94rem;
     font-weight: 700;
     letter-spacing: .12em;
     text-transform: uppercase;
@@ -352,14 +361,14 @@ body.okuma .sinirli { max-width: 1320px; }
 
 .kart h3 {
     margin: 0;
-    font-size: 1.06rem;
+    font-size: 1.08rem;
     font-weight: 700;
     line-height: 1.32;
 }
 
 .ozet {
     margin: 0;
-    font-size: .92rem;
+    font-size: .96rem;
     color: var(--metin-soluk);
 }
 
@@ -370,13 +379,13 @@ body.okuma .sinirli { max-width: 1320px; }
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
-    font-size: .74rem;
+    font-size: .86rem;
     color: var(--metin-soluk);
 }
 
 .etiket {
     display: inline-block;
-    font-size: .7rem;
+    font-size: .82rem;
     font-weight: 700;
     letter-spacing: .06em;
     text-transform: uppercase;
@@ -409,23 +418,26 @@ body.okuma .sinirli { max-width: 1320px; }
     padding-bottom: 18px;
     margin-bottom: 22px;
     border-bottom: 1px solid var(--cizgi);
-    font-size: .82rem;
+    font-size: .94rem;
     color: var(--metin-soluk);
 }
 
 .detay .spot {
-    font-size: 1.08rem;
+    font-size: 1.12rem;
     color: var(--metin-soluk);
     margin: 0 0 22px;
 }
 
 /*
- * Haber govdesi. Satir araligi govde varsayilanindan (1.55) yuksek:
- * uzun duz metinde satirlarin birbirinden ayrilmasi gerekiyor.
+ * Haber govdesi.
+ *
+ * Punto olcekten geliyor (govde 1rem); burada yalnizca satir araligi
+ * aciliyor. Govde varsayilani 1.62, uzun duz metin icin 1.75: haber
+ * sayfasi sitedeki en uzun kesintisiz metin ve satir takibi orada
+ * en cok zorlaniyor.
  */
 .detay .icerik {
-    font-size: 1.04rem;
-    line-height: 1.72;
+    line-height: 1.75;
 }
 
 .detay .icerik p { margin: 0 0 1.05em; }
@@ -464,7 +476,7 @@ body.okuma .sinirli { max-width: 1320px; }
     padding: 14px 16px;
     border: 1px solid var(--cizgi);
     border-radius: 8px;
-    font-size: .84rem;
+    font-size: .94rem;
     color: var(--metin-soluk);
 }
 
@@ -485,7 +497,7 @@ body.okuma .sinirli { max-width: 1320px; }
 .bos-durum strong {
     display: block;
     color: var(--metin);
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     margin-bottom: 6px;
 }
 
@@ -496,7 +508,7 @@ body.okuma .sinirli { max-width: 1320px; }
     padding: 28px 0;
     border-top: 1px solid var(--cizgi);
     background: var(--kart);
-    font-size: .82rem;
+    font-size: .94rem;
     color: var(--metin-soluk);
 }
 
@@ -559,7 +571,7 @@ body.okuma .sinirli { max-width: 1320px; }
     background: none;
     color: #c8d5e6;
     font-family: inherit;
-    font-size: .875rem;
+    font-size: .96rem;
     font-weight: 600;
     letter-spacing: .01em;
     white-space: nowrap;
@@ -630,7 +642,7 @@ a.menu-oge.aktif::after,
     padding: 9px 13px;
     border-radius: 6px;
     color: var(--metin);
-    font-size: .875rem;
+    font-size: .96rem;
     font-weight: 500;
     transition: background .12s ease, color .12s ease;
 }
@@ -644,7 +656,7 @@ a.menu-oge.aktif::after,
 }
 
 .menu-acilir .adet {
-    font-size: .72rem;
+    font-size: .82rem;
     font-weight: 600;
     color: var(--metin-soluk);
     background: var(--zemin);
@@ -671,7 +683,7 @@ a.menu-oge.aktif::after,
     }
 
     .menu-satir::-webkit-scrollbar { display: none; }
-    .menu-oge { padding: 0 14px; min-height: 44px; font-size: .82rem; }
+    .menu-oge { padding: 0 14px; min-height: 44px; font-size: .94rem; }
     .menu-acilir { position: fixed; left: 8px; right: 8px; min-width: 0; }
     .menu-grup:hover .menu-acilir { opacity: 0; visibility: hidden; }
     .menu-grup.acik .menu-acilir { opacity: 1; visibility: visible; }
@@ -817,7 +829,7 @@ a.menu-oge.aktif::after,
     align-self: flex-start;
     background: var(--altin);
     color: #14213a;
-    font-size: .7rem;
+    font-size: .82rem;
     font-weight: 700;
     letter-spacing: .06em;
     text-transform: uppercase;
@@ -862,7 +874,7 @@ a.menu-oge.aktif::after,
 }
 
 .kaydirak-govde .kunye {
-    font-size: .78rem;
+    font-size: .90rem;
     color: #9db0c9;
 }
 
@@ -876,7 +888,7 @@ a.menu-oge.aktif::after,
     border-radius: 50%;
     background: rgba(255, 255, 255, .16);
     color: #fff;
-    font-size: 1.2rem;
+    font-size: 1.26rem;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -904,7 +916,7 @@ a.menu-oge.aktif::after,
     border-radius: 50%;
     background: var(--kart);
     color: var(--metin-soluk);
-    font-size: .8rem;
+    font-size: .90rem;
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
@@ -993,7 +1005,7 @@ a.menu-oge.aktif::after,
 
 .pencere-baslik {
     margin: 0 0 12px;
-    font-size: .78rem;
+    font-size: .90rem;
     font-weight: 700;
     letter-spacing: .12em;
     text-transform: uppercase;
@@ -1008,7 +1020,7 @@ a.menu-oge.aktif::after,
 
 .pencere-metin {
     margin: 0;
-    font-size: .88rem;
+    font-size: .96rem;
     color: var(--metin-soluk);
 }
 
@@ -1042,7 +1054,7 @@ a.menu-oge.aktif::after,
 
 .sirali-liste .sira {
     flex: 0 0 22px;
-    font-size: 1.05rem;
+    font-size: 1.10rem;
     font-weight: 700;
     color: var(--altin-koyu);
     line-height: 1.3;
@@ -1050,7 +1062,7 @@ a.menu-oge.aktif::after,
 
 .sirali-liste .ad {
     display: block;
-    font-size: .9rem;
+    font-size: .98rem;
     font-weight: 600;
     line-height: 1.35;
 }
@@ -1060,7 +1072,7 @@ a.menu-oge.aktif::after,
 .ust-bilgi {
     display: block;
     margin-top: 3px;
-    font-size: .74rem;
+    font-size: .86rem;
     color: var(--metin-soluk);
 }
 
@@ -1081,14 +1093,14 @@ a.menu-oge.aktif::after,
     justify-content: space-between;
     gap: 10px;
     padding: 9px 0;
-    font-size: .89rem;
+    font-size: .97rem;
     font-weight: 600;
 }
 
 .konu-listesi a:hover { color: var(--vurgu); }
 
 .konu-listesi .adet {
-    font-size: .74rem;
+    font-size: .86rem;
     font-weight: 600;
     color: var(--metin-soluk);
     background: var(--zemin);
@@ -1106,7 +1118,7 @@ a.menu-oge.aktif::after,
 }
 
 .bulut-etiket {
-    font-size: .76rem;
+    font-size: .86rem;
     font-weight: 600;
     color: var(--lacivert);
     background: var(--zemin);
@@ -1132,7 +1144,7 @@ a.menu-oge.aktif::after,
     margin: 0 0 12px;
     padding-bottom: 10px;
     border-bottom: 2px solid var(--altin);
-    font-size: .8rem;
+    font-size: .90rem;
     font-weight: 700;
     letter-spacing: .1em;
     text-transform: uppercase;
@@ -1151,7 +1163,7 @@ a.menu-oge.aktif::after,
 }
 
 .blok-baslik .devam {
-    font-size: .68rem;
+    font-size: .80rem;
     letter-spacing: .04em;
     text-transform: none;
     color: var(--metin-soluk);
@@ -1178,7 +1190,7 @@ a.menu-oge.aktif::after,
 
 .blok-one-cikan p {
     margin: 0;
-    font-size: .84rem;
+    font-size: .94rem;
     color: var(--metin-soluk);
     line-height: 1.45;
 }
@@ -1198,7 +1210,7 @@ a.menu-oge.aktif::after,
 .blok-liste li:first-child { margin-top: 0; }
 
 .blok-liste a {
-    font-size: .87rem;
+    font-size: .96rem;
     font-weight: 600;
     line-height: 1.35;
     position: relative;
@@ -1266,21 +1278,21 @@ a.menu-oge.aktif::after,
 }
 
 .piyasa-oge .ad {
-    font-size: .68rem;
+    font-size: .80rem;
     font-weight: 700;
     letter-spacing: .1em;
     color: var(--altin);
 }
 
 .piyasa-oge .deger {
-    font-size: .98rem;
+    font-size: 1.04rem;
     font-weight: 700;
     color: #fff;
     font-variant-numeric: tabular-nums;
 }
 
 .piyasa-oge .degisim {
-    font-size: .76rem;
+    font-size: .86rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
 }
@@ -1299,7 +1311,7 @@ a.menu-oge.aktif::after,
 .piyasa-oge .degisim.bos { display: none; }
 
 .piyasa-zaman .deger {
-    font-size: .8rem;
+    font-size: .90rem;
     font-weight: 600;
     color: #b9c8dd;
 }
@@ -1383,14 +1395,14 @@ a.menu-oge.aktif::after,
 
 .kanun-ust h3 {
     margin: 0;
-    font-size: 1.02rem;
+    font-size: 1.08rem;
     line-height: 1.3;
 }
 
 .kanun:hover h3 { color: var(--vurgu); }
 
 .kanun-no {
-    font-size: .72rem;
+    font-size: .82rem;
     font-weight: 700;
     color: var(--metin-soluk);
     white-space: nowrap;
@@ -1398,13 +1410,13 @@ a.menu-oge.aktif::after,
 
 .kanun p {
     margin: 0 0 12px;
-    font-size: .87rem;
+    font-size: .96rem;
     color: var(--metin-soluk);
     line-height: 1.5;
 }
 
 .kanun-bag {
-    font-size: .78rem;
+    font-size: .90rem;
     font-weight: 700;
     color: var(--vurgu);
 }
@@ -1421,7 +1433,7 @@ a.menu-oge.aktif::after,
 }
 
 .kanun-basligi .geri {
-    font-size: .8rem;
+    font-size: .90rem;
     font-weight: 600;
     color: var(--metin-soluk);
 }
@@ -1436,14 +1448,14 @@ a.menu-oge.aktif::after,
 
 .kanun-basligi p {
     margin: 0;
-    font-size: .88rem;
+    font-size: .96rem;
     color: var(--metin-soluk);
 }
 
 .kanun-basligi .dis-bag {
     background: var(--lacivert);
     color: #fff;
-    font-size: .82rem;
+    font-size: .94rem;
     font-weight: 700;
     padding: 9px 16px;
     border-radius: 6px;
@@ -1459,7 +1471,7 @@ a.menu-oge.aktif::after,
     border-radius: var(--yuvarlak);
     padding: 14px 18px;
     margin-bottom: 14px;
-    font-size: .9rem;
+    font-size: .98rem;
 }
 
 .kanun-uyari a { text-decoration: underline; }
@@ -1484,7 +1496,7 @@ a.menu-oge.aktif::after,
     padding: 30px 34px;
     max-width: 78ch;
     margin: 0 auto;
-    font-size: .95rem;
+    font-size: 1.02rem;
     line-height: 1.7;
     overflow-wrap: break-word;
 }
@@ -1496,7 +1508,7 @@ a.menu-oge.aktif::after,
 .kanun-metin h3,
 .kanun-metin h4 {
     margin: 26px 0 10px;
-    font-size: 1.02rem;
+    font-size: 1.08rem;
     line-height: 1.35;
     color: var(--lacivert);
 }
@@ -1521,7 +1533,7 @@ a.menu-oge.aktif::after,
     width: 100%;
     border-collapse: collapse;
     margin: 0 0 16px;
-    font-size: .88rem;
+    font-size: .96rem;
     display: block;
     overflow-x: auto;
 }
@@ -1563,7 +1575,7 @@ a.menu-oge.aktif::after,
 
 .pratik-kart h3 {
     margin: 0 0 10px;
-    font-size: .98rem;
+    font-size: 1.04rem;
     line-height: 1.3;
 }
 
@@ -1575,7 +1587,7 @@ a.menu-oge.aktif::after,
 .pratik-deger {
     margin: 0 0 10px;
     font-family: inherit;
-    font-size: 1.02rem;
+    font-size: 1.08rem;
     font-weight: 700;
     line-height: 1.45;
     white-space: pre-wrap;
@@ -1596,7 +1608,7 @@ a.menu-oge.aktif::after,
     margin-top: auto;
     padding-top: 10px;
     border-top: 1px solid var(--cizgi);
-    font-size: .76rem;
+    font-size: .86rem;
 }
 
 .pratik-alt .donem {
@@ -1610,7 +1622,7 @@ a.menu-oge.aktif::after,
 .pratik-tarih {
     display: block;
     margin-top: 6px;
-    font-size: .72rem;
+    font-size: .82rem;
     color: var(--metin-soluk);
 }
 
@@ -1646,13 +1658,13 @@ a.menu-oge.aktif::after,
 
 .kanun-duser h2 {
     margin: 0 0 8px;
-    font-size: 1.22rem;
+    font-size: 1.28rem;
 }
 
 .kanun-duser > p {
     margin: 0 auto 20px;
     max-width: 56ch;
-    font-size: .92rem;
+    font-size: .99rem;
     line-height: 1.6;
     color: var(--metin-soluk);
 }
@@ -1665,7 +1677,7 @@ a.menu-oge.aktif::after,
 }
 
 .kanun-duser-yollar a {
-    font-size: .86rem;
+    font-size: .96rem;
     font-weight: 700;
     padding: 11px 20px;
     border-radius: 6px;
@@ -1689,7 +1701,7 @@ a.menu-oge.aktif::after,
 .kanun-duser-not {
     margin: 20px auto 0;
     max-width: 56ch;
-    font-size: .8rem;
+    font-size: .90rem;
     color: var(--metin-soluk);
 }
 
@@ -1701,7 +1713,7 @@ a.menu-oge.aktif::after,
     margin: 22px auto 0;
     max-width: 70ch;
     text-align: left;
-    font-size: .8rem;
+    font-size: .90rem;
     border: 1px dashed var(--cizgi);
     border-radius: 8px;
     padding: 10px 14px;
@@ -1734,7 +1746,7 @@ a.menu-oge.aktif::after,
 
 .kanun-tani-bag {
     margin-left: 8px;
-    font-size: 13px;
+    font-size: .9rem;
     opacity: .75;
 }
 
@@ -1783,14 +1795,14 @@ a.menu-oge.aktif::after,
 .pratik-liste-ad small {
     display: block;
     font-weight: 400;
-    font-size: .76rem;
+    font-size: .86rem;
     color: var(--metin-soluk);
     margin-top: 2px;
 }
 
 .pratik-liste-deger {
     color: var(--metin-soluk);
-    font-size: .88rem;
+    font-size: .96rem;
     text-align: right;
     white-space: nowrap;
     overflow: hidden;
@@ -1812,7 +1824,7 @@ a.menu-oge.aktif::after,
 }
 
 .pratik-detay .geri {
-    font-size: .8rem;
+    font-size: .90rem;
     font-weight: 600;
     color: var(--metin-soluk);
 }
@@ -1828,7 +1840,7 @@ a.menu-oge.aktif::after,
 .pratik-detay-aciklama {
     margin: 0 0 18px;
     color: var(--metin-soluk);
-    font-size: .92rem;
+    font-size: .99rem;
 }
 
 /* Degerin kendisi sayfanin ana konusu: buyuk ve okunakli. */
@@ -1841,7 +1853,7 @@ a.menu-oge.aktif::after,
 
 .pratik-deger-baslik {
     margin: 16px 0 8px;
-    font-size: .82rem;
+    font-size: .94rem;
     font-weight: 700;
     letter-spacing: .04em;
     text-transform: uppercase;
@@ -1852,7 +1864,7 @@ a.menu-oge.aktif::after,
 
 .pratik-deger-satir {
     margin: 0 0 6px;
-    font-size: 1.05rem;
+    font-size: 1.10rem;
     font-weight: 600;
     line-height: 1.5;
     color: var(--metin);
@@ -1869,7 +1881,7 @@ a.menu-oge.aktif::after,
 }
 
 .pratik-kunye dt {
-    font-size: .72rem;
+    font-size: .82rem;
     font-weight: 700;
     letter-spacing: .06em;
     text-transform: uppercase;
@@ -1879,7 +1891,7 @@ a.menu-oge.aktif::after,
 
 .pratik-kunye dd {
     margin: 0;
-    font-size: .9rem;
+    font-size: .98rem;
     color: var(--metin);
 }
 
@@ -1900,7 +1912,7 @@ a.menu-oge.aktif::after,
     border-radius: 8px;
     padding: 12px 16px;
     margin: 0 0 14px;
-    font-size: .88rem;
+    font-size: .96rem;
     line-height: 1.6;
     color: #6b5322;
 }

@@ -83,7 +83,7 @@ function pratik_aday_yaz(array $veri): array
     }
 
     $ifade = db()->prepare(
-        'SELECT id, deger FROM pratik_bilgiler WHERE anahtar = :a LIMIT 1'
+        'SELECT id, deger, seri FROM pratik_bilgiler WHERE anahtar = :a LIMIT 1'
     );
     $ifade->execute(['a' => $anahtar]);
     $mevcut = $ifade->fetch();
@@ -92,22 +92,59 @@ function pratik_aday_yaz(array $veri): array
         throw new InvalidArgumentException('Tanımsız bilgi anahtarı: ' . $anahtar);
     }
 
-    // Yayindaki degerin aynisi geldiyse onaya dusurmeye gerek yok;
-    // kullaniciyi bos onay isteriyle mesgul etmeyelim.
+    // Bozuk ya da eksik seri DEGERI dusurmuyor; yalnizca grafik gelmez.
+    $seri = pratik_seri_temizle($veri['seri'] ?? null);
+
     if (trim((string) $mevcut['deger']) === $deger) {
-        return ['durum' => 'degismedi'];
+        /*
+         * Deger ayni. Uc durum var:
+         *
+         * 1. Seri yok -> gercekten degisen bir sey yok.
+         *
+         * 2. Seri, yayindakinin DUZ UZANTISI -> yayindaki seri
+         *    onaysiz tazeleniyor. Politika faizi aylarca sabit kaliyor;
+         *    her hafta "degismedi" diye grafigin sagi eskimesin, ama her
+         *    hafta da ayni rakami onaylamak zorunda kalinmasin. Duz
+         *    uzanti yeni BILGI tasimiyor: eklenen her nokta zaten
+         *    onayli son degere esit.
+         *
+         * 3. Seri var ama yayinda seri yok ya da gecmis degismis ->
+         *    ONAYA dusuyor. Bu olmasaydi yayindaki %37 ile API'den
+         *    gelen %37 ayni oldugu icin grafik hic onaya gelmez, yani
+         *    hic gorunmezdi.
+         */
+        if ($seri === null) {
+            return ['durum' => 'degismedi'];
+        }
+
+        if (pratik_seri_duz_uzanti((string) ($mevcut['seri'] ?? ''), $seri)) {
+            db()->prepare('UPDATE pratik_bilgiler SET seri = :seri WHERE id = :id')
+                ->execute(['seri' => $seri, 'id' => (int) $mevcut['id']]);
+
+            return ['durum' => 'degismedi'];
+        }
+
+        $veri['not'] = trim('Değer aynı; grafik serisi onay bekliyor. '
+                          . (string) ($veri['not'] ?? ''));
     }
 
     db()->prepare(
         'UPDATE pratik_bilgiler
             SET aday_deger = :deger, aday_donem = :donem, aday_notu = :not,
-                aday_guven = :guven, aday_tarihi = NOW()
+                aday_guven = :guven, aday_tarihi = NOW(), aday_seri = :seri
           WHERE id = :id'
     )->execute([
         'deger' => $deger,
         'donem' => trim((string) ($veri['donem'] ?? '')) ?: null,
-        'not'   => trim((string) ($veri['not'] ?? '')) ?: null,
+        /*
+         * Not 500 karakterle sinirli (sutun boyle tanimli). Uzun bir
+         * not, siki kipteki MySQL'de butun kaydi dusururdu; yani
+         * saglam bir rakam yalnizca aciklamasi uzun diye kaybolurdu.
+         * Kirpilan not zarar vermiyor, kaybolan deger veriyor.
+         */
+        'not'   => mb_substr(trim((string) ($veri['not'] ?? '')), 0, 500, 'UTF-8') ?: null,
         'guven' => isset($veri['guven']) ? max(0, min(100, (int) $veri['guven'])) : null,
+        'seri'  => $seri,
         'id'    => (int) $mevcut['id'],
     ]);
 
@@ -122,8 +159,13 @@ function pratik_onayla(int $id): void
             SET deger = aday_deger,
                 donem = aday_donem,
                 onay_tarihi = NOW(),
+                -- Aday seri yoksa yayindaki KORUNUYOR: sayfa okunarak
+                -- gelen degerlerin serisi olmaz, onlari onaylamak mevcut
+                -- grafigi silmemeli.
+                seri = COALESCE(aday_seri, seri),
                 aday_deger = NULL, aday_donem = NULL,
-                aday_notu = NULL, aday_guven = NULL, aday_tarihi = NULL
+                aday_notu = NULL, aday_guven = NULL, aday_tarihi = NULL,
+                aday_seri = NULL
           WHERE id = :id AND aday_deger IS NOT NULL'
     )->execute(['id' => $id]);
 }
@@ -134,7 +176,8 @@ function pratik_reddet(int $id): void
     db()->prepare(
         'UPDATE pratik_bilgiler
             SET aday_deger = NULL, aday_donem = NULL,
-                aday_notu = NULL, aday_guven = NULL, aday_tarihi = NULL
+                aday_notu = NULL, aday_guven = NULL, aday_tarihi = NULL,
+                aday_seri = NULL
           WHERE id = :id'
     )->execute(['id' => $id]);
 }
@@ -145,8 +188,13 @@ function pratik_elle_yaz(int $id, string $deger, string $donem): void
     db()->prepare(
         'UPDATE pratik_bilgiler
             SET deger = :deger, donem = :donem, onay_tarihi = NOW(),
+                -- Elle yazilan deger kaynaktan gelmiyor; kaynaktan cizilen
+                -- grafik artik onunla celisebilir (grafik %37 derken sayfa
+                -- %40 der). Grafik kaldiriliyor, bir sonraki cekimle doner.
+                seri = NULL,
                 aday_deger = NULL, aday_donem = NULL,
-                aday_notu = NULL, aday_guven = NULL, aday_tarihi = NULL
+                aday_notu = NULL, aday_guven = NULL, aday_tarihi = NULL,
+                aday_seri = NULL
           WHERE id = :id'
     )->execute([
         'deger' => trim($deger) !== '' ? trim($deger) : null,
@@ -295,4 +343,130 @@ function pratik_deger_bolumleri(string $deger): array
     }
 
     return $bolumler;
+}
+
+/**
+ * Gelen grafik serisini denetler; saklanacak JSON'u ya da null döndürür.
+ *
+ * Seri ajandan geliyor. Ajan kimligini kanitlamis olsa da veri
+ * yapisina guvenilmiyor: grafik bu diziyi dogrudan cizecek ve bozuk
+ * bir nokta (gecersiz tarih, sonsuz sayi) sayfayi bozar.
+ *
+ * Kurallar: 2-1000 nokta, her nokta ["Y-m-d", sonlu sayi], tarihler
+ * artan ve tekrarsiz. Uymayan seri BUTUNUYLE reddediliyor — parca parca
+ * ayiklamak, eksik noktali ama dogru gorunen bir grafik uretirdi.
+ */
+function pratik_seri_temizle(mixed $seri): ?string
+{
+    if (!is_array($seri) || !array_is_list($seri)) {
+        return null;
+    }
+
+    $adet = count($seri);
+
+    if ($adet < 2 || $adet > 1000) {
+        return null;
+    }
+
+    $temiz  = [];
+    $onceki = '';
+
+    foreach ($seri as $nokta) {
+        if (!is_array($nokta) || count($nokta) !== 2
+            || !is_string($nokta[0] ?? null) || !is_numeric($nokta[1] ?? null)) {
+            return null;
+        }
+
+        $tarih = $nokta[0];
+        $deger = (float) $nokta[1];
+
+        if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $tarih, $e)
+            || !checkdate((int) $e[2], (int) $e[3], (int) $e[1])
+            || !is_finite($deger)
+            || $tarih <= $onceki) {
+            return null;
+        }
+
+        $temiz[] = [$tarih, round($deger, 4)];
+        $onceki  = $tarih;
+    }
+
+    $json = json_encode($temiz);
+
+    return is_string($json) ? $json : null;
+}
+
+/**
+ * Saklı seriyi diziye çevirir; bozuksa boş dizi.
+ *
+ * @return list<array{0:string,1:float}>
+ */
+function pratik_seri_oku(?string $json): array
+{
+    if ($json === null || $json === '') {
+        return [];
+    }
+
+    $seri = json_decode($json, true);
+
+    return is_array($seri) && pratik_seri_temizle($seri) !== null ? $seri : [];
+}
+
+/**
+ * Yeni seri, yayındakinin düz uzantısı mı?
+ *
+ * "Duz uzanti": yeni serinin yayindakiyle cakisan kismi AYNI, yayindaki
+ * son tarihten sonraki her noktasi da yayindaki SON DEGERE esit. Yani
+ * yeni seri hicbir yeni rakam tasimiyor, yalnizca sabit kalan degeri
+ * bugune kadar uzatiyor.
+ *
+ * Karsilastirma BASAMAK degeri uzerinden: yeni serinin her noktasi,
+ * yayindaki serinin o tarihte gecerli olan degeriyle (o tarihten onceki
+ * son nokta) karsilastiriliyor. Nokta nokta esitlik aranamaz, cunku
+ * pencere her cekimde bir hafta kayiyor ve ilk nokta her seferinde
+ * baska bir gun oluyor.
+ */
+function pratik_seri_duz_uzanti(string $yayindakiJson, string $yeniJson): bool
+{
+    $eski = pratik_seri_oku($yayindakiJson);
+    $yeni = pratik_seri_oku($yeniJson);
+
+    if ($eski === [] || $yeni === []) {
+        return false;
+    }
+
+    $eskiIlk  = $eski[0][0];
+    $eskiSon  = $eski[count($eski) - 1];
+    $esit     = static fn (float $a, float $b): bool => abs($a - $b) < 1e-6;
+
+    foreach ($yeni as [$tarih, $deger]) {
+        if ($tarih < $eskiIlk) {
+            // Yayindaki pencereden once: karsilastirilacak bir sey yok.
+            continue;
+        }
+
+        if ($tarih > $eskiSon[0]) {
+            if (!$esit((float) $deger, (float) $eskiSon[1])) {
+                return false;
+            }
+
+            continue;
+        }
+
+        $gecerli = null;
+
+        foreach ($eski as [$eTarih, $eDeger]) {
+            if ($eTarih > $tarih) {
+                break;
+            }
+
+            $gecerli = (float) $eDeger;
+        }
+
+        if ($gecerli === null || !$esit((float) $deger, $gecerli)) {
+            return false;
+        }
+    }
+
+    return true;
 }

@@ -1,0 +1,265 @@
+/*
+ * Zaman serisi grafigi (includes/grafik.php).
+ *
+ * Renkler sitenin --vurgu mavisinin birer basamak kaydirilmisi ve
+ * veri gorsellestirme dogrulayicisindan GECTI: acik temada beyaz,
+ * koyu temada #151f30 kart zemini uzerinde parlaklik bandi, doygunluk
+ * ve kontrast. --vurgu'nun kendisi kullanilmadi: acik temada bandin
+ * binde bir altinda (fazla koyu, siyah gibi okunuyor), koyu temada
+ * ustunde (zeminde yikanmis gorunuyor) kaliyordu.
+ */
+
+.grafik {
+    --grafik-renk:  #205698;
+    --grafik-zemin: var(--kart, #ffffff);
+    --grafik-izgara: var(--cizgi, #e2e6ec);
+    --grafik-yazi:  var(--metin-soluk, #5d6a80);
+
+    margin: 22px 0 6px;
+    padding: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+    .grafik { --grafik-renk: #5f93da; }
+}
+
+.grafik [hidden] { display: none !important; }
+
+.grafik-ust {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 12px;
+    margin: 0 0 14px;
+}
+
+.grafik-baslik {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--metin, #14213a);
+}
+
+.grafik-alt {
+    font-size: .86rem;
+    color: var(--grafik-yazi);
+}
+
+/* Tarih ortadan bolunmesin ("22 Eylul / 2026"). */
+.grafik-tarih { white-space: nowrap; }
+
+/*
+ * Govde: solda y etiketleri, sagda cizim; alt satirda x etiketleri.
+ * Yukseklik CIZIM icin sabit, eksen bandi ayri satirda: sabit
+ * yukseklige eksen yazilarini da sigdirmaya calismak kutunun icinde
+ * kucuk bir kaydirma cubuguna yol aciyordu.
+ */
+.grafik-govde {
+    display: grid;
+    grid-template-columns: 3.6em 1fr;
+    grid-template-rows: 220px auto;
+    /* Son noktanin yarisi ve halkasi cizim kutusunun disina tasiyor. */
+    padding-right: 8px;
+}
+
+.grafik-y {
+    position: relative;
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.grafik-y span {
+    position: absolute;
+    right: 10px;
+    transform: translateY(-50%);
+    font-size: .8rem;
+    line-height: 1;
+    color: var(--grafik-yazi);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.grafik-alan {
+    position: relative;
+    grid-column: 2;
+    grid-row: 1;
+    /* Dikey kaydirma parmakla calismaya devam etsin, yatay surukleme imleci tasisin. */
+    touch-action: pan-y;
+    cursor: crosshair;
+    outline: none;
+    border-radius: 4px;
+}
+
+.grafik-alan:focus-visible {
+    box-shadow: 0 0 0 2px var(--grafik-zemin), 0 0 0 4px var(--grafik-renk);
+}
+
+.grafik-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+/* Izgara: tek piksel, duz, geri planda. Kesikli cizgi "tahmin" gibi okunur. */
+.grafik-izgara line {
+    stroke: var(--grafik-izgara);
+    stroke-width: 1;
+}
+
+.grafik-dolgu {
+    fill: var(--grafik-renk);
+    opacity: .10;
+}
+
+.grafik-cizgi {
+    fill: none;
+    stroke: var(--grafik-renk);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+/* Isaret: 10px dolu daire + 2px zemin halkasi; cizginin ustunde okunur kalsin. */
+.grafik-nokta {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--grafik-renk);
+    box-shadow: 0 0 0 2px var(--grafik-zemin);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+/* Son deger: yazi rengi metin, veri rengi degil. */
+.grafik-son {
+    position: absolute;
+    transform: translate(calc(-100% - 10px), calc(-100% - 8px));
+    font-size: .92rem;
+    font-weight: 700;
+    color: var(--metin, #14213a);
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.grafik-son.altta { transform: translate(calc(-100% - 10px), 8px); }
+
+.grafik-imlec {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--grafik-yazi);
+    opacity: .55;
+    pointer-events: none;
+}
+
+.grafik-ipucu {
+    position: absolute;
+    z-index: 2;
+    transform: translate(14px, -50%);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    background: var(--grafik-zemin);
+    border: 1px solid var(--grafik-izgara);
+    box-shadow: 0 4px 14px rgba(20, 33, 58, .12);
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.grafik-ipucu.sola { transform: translate(calc(-100% - 14px), -50%); }
+
+/* Deger once ve guclu; tarih ikincil. */
+.grafik-ipucu strong {
+    font-size: 1rem;
+    color: var(--metin, #14213a);
+}
+
+.grafik-ipucu span {
+    font-size: .82rem;
+    color: var(--grafik-yazi);
+}
+
+.grafik-x {
+    position: relative;
+    grid-column: 2;
+    grid-row: 2;
+    height: 1.9em;
+}
+
+.grafik-x span {
+    position: absolute;
+    top: 8px;
+    transform: translateX(-50%);
+    font-size: .8rem;
+    color: var(--grafik-yazi);
+    white-space: nowrap;
+}
+
+/* Uclardaki etiket kutudan tasmasin. */
+.grafik-x span:first-child:not(:only-child) { transform: translateX(-15%); }
+.grafik-x span:last-child:not(:only-child)  { transform: translateX(-85%); }
+
+.grafik-tablo {
+    margin-top: 10px;
+    font-size: .9rem;
+}
+
+.grafik-tablo summary {
+    cursor: pointer;
+    color: var(--grafik-yazi);
+    font-weight: 600;
+}
+
+.grafik-tablo table {
+    width: 100%;
+    max-width: 420px;
+    margin-top: 10px;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+}
+
+.grafik-tablo caption {
+    caption-side: top;
+    text-align: left;
+    padding-bottom: 6px;
+    color: var(--grafik-yazi);
+    font-size: .84rem;
+}
+
+.grafik-tablo th,
+.grafik-tablo td {
+    text-align: left;
+    padding: 6px 10px 6px 0;
+    border-bottom: 1px solid var(--grafik-izgara);
+}
+
+.grafik-not {
+    color: var(--grafik-yazi);
+    font-size: .84rem;
+}
+
+.grafik-tablo td:last-child,
+.grafik-tablo th:last-child { text-align: right; }
+
+/*
+ * Dar ekran: x etiketlerinin yarisi; dort-alti etiket 360 piksele
+ * sigmiyor. Birinci, ucuncu, besinci... kaliyor.
+ *
+ * Son etiketi ZORLA tutmak denendi ve telefonda "Oca 2026" ile
+ * "Tem 2026" ust uste bindi: sona hizalanan etiket bir oncekiyle
+ * arasinda yer birakmiyor. Seyreltme duzenli olmali, istisnasiz.
+ */
+@media (max-width: 520px) {
+    .grafik-govde { grid-template-rows: 180px auto; }
+    .grafik-x span:nth-child(even) { display: none; }
+}
+
+@media (forced-colors: active) {
+    .grafik-cizgi { stroke: CanvasText; }
+    .grafik-nokta { background: CanvasText; }
+    .grafik-dolgu { opacity: 0; }
+}

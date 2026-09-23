@@ -344,20 +344,86 @@ function http_baglanti_hatasi_mi(int $hataNo, bool $baglandi = true): bool
 }
 
 /**
+ * Çağıranın başlıklarını ortak başlıklarla birleştirir.
+ *
+ * Ayni ada sahip baslikta CAGIRAN kazanir. Baslik adi buyuk/kucuk
+ * harfe duyarsiz oldugu icin karsilastirma kucuk harfle yapiliyor.
+ *
+ * @param list<string> $baslikar
+ * @return list<string>
+ */
+function http_basliklari_birlestir(array $baslikar): array
+{
+    $ad = static function (string $satir): string {
+        $yer = strpos($satir, ':');
+
+        return $yer === false ? strtolower(trim($satir)) : strtolower(trim(substr($satir, 0, $yer)));
+    };
+
+    $cagiranAdlari = array_map($ad, $baslikar);
+    $ortak         = http_ortak_secenekler()[CURLOPT_HTTPHEADER] ?? [];
+    $sonuc         = [];
+
+    foreach ($ortak as $satir) {
+        if (!in_array($ad((string) $satir), $cagiranAdlari, true)) {
+            $sonuc[] = (string) $satir;
+        }
+    }
+
+    return array_merge($sonuc, array_values($baslikar));
+}
+
+/**
  * Dış bir adresi indirir ve neden başarısız olduğunu da söyler.
  *
+ * $baslikar: cagiranin ekleyecegi HTTP basliklari. Kimlik isteyen
+ * makine okunur uclar icin gerekli — ornegin TCMB EVDS anahtari
+ * "key: ..." basligiyla gidiyor. Bos birakilirsa hicbir sey degismez.
+ *
+ * @param list<string> $baslikar
  * @return array{tamam:bool,govde:string,kod:int,hata:string,neden:string,
  *               hata_no:int,tur:string,sure:float,son_url:string,boyut:int}
  */
-function http_getir(string $url, int $zamanAsimi = 20, string $referer = ''): array
-{
+function http_getir(
+    string $url,
+    int $zamanAsimi = 20,
+    string $referer = '',
+    array $baslikar = []
+): array {
     $ch = curl_init($url);
     curl_setopt_array($ch, http_ortak_secenekler($zamanAsimi, 8, $referer));
 
-    $govde   = curl_exec($ch);
-    $hata    = curl_error($ch);
-    $hataNo  = curl_errno($ch);
-    $ayrinti = http_ayrinti($ch);
+    if ($baslikar !== []) {
+        /*
+         * BIRLESTIRILIYOR, uzerine yazilmiyor.
+         *
+         * CURLOPT_HTTPHEADER'i dogrudan set etmek ortak basliklarin
+         * (Accept-Language, Upgrade-Insecure-Requests) hepsini
+         * silerdi. Cagiranin ayni ada sahip basligi varsa ortak olan
+         * dusuyor; yoksa ikisi birden gider ve sunucu iki celisen
+         * Accept basligi gorurdu.
+         */
+        curl_setopt($ch, CURLOPT_HTTPHEADER, http_basliklari_birlestir($baslikar));
+
+        /*
+         * YONLENDIRME TAKIP EDILMIYOR.
+         *
+         * Cagiranin basliklari kimlik tasiyor (EVDS "key" basligi).
+         * curl yonlendirmede Authorization ve Cookie'yi baska hosta
+         * gonderirken siler, ama OZEL basliklari silmez: kaynak baska
+         * bir alan adina yonlendirirse anahtar oraya gider. Makine
+         * okunur bir uc yonlendirmemeli; yonlendiriyorsa bu zaten
+         * adresin degistigi anlamina geliyor ve asagida hedefiyle
+         * birlikte hata olarak raporlaniyor.
+         */
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
+    }
+
+    $govde    = curl_exec($ch);
+    $hata     = curl_error($ch);
+    $hataNo   = curl_errno($ch);
+    $ayrinti  = http_ayrinti($ch);
+    $yonlenen = (string) curl_getinfo($ch, CURLINFO_REDIRECT_URL);
     curl_close($ch);
 
     $temel = $ayrinti + ['hata_no' => $hataNo, 'hata' => $hata];
@@ -370,8 +436,14 @@ function http_getir(string $url, int $zamanAsimi = 20, string $referer = ''): ar
     $temel['boyut'] = strlen($govde);
 
     if ($ayrinti['kod'] < 200 || $ayrinti['kod'] >= 300) {
-        return ['tamam' => false, 'govde' => '',
-                'neden' => 'Sunucu HTTP ' . $ayrinti['kod'] . ' döndü.'] + $temel;
+        $neden = 'Sunucu HTTP ' . $ayrinti['kod'] . ' döndü.';
+
+        if ($yonlenen !== '') {
+            $neden .= ' Yönlendirdiği adres: ' . $yonlenen
+                    . ' (kimlik taşıyan istekte yönlendirme izlenmiyor).';
+        }
+
+        return ['tamam' => false, 'govde' => '', 'neden' => $neden] + $temel;
     }
 
     return ['tamam' => true, 'govde' => $govde, 'neden' => ''] + $temel;

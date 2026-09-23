@@ -137,26 +137,65 @@ final class Site
      * GIB, Hazine, TUIK, Alomaliye, ISMMMO vardi. Site Turkiye'de
      * barindigi icin ayni adreslere ulasabiliyor.
      */
+    /**
+     * Son hamGetir cagrisinin basarisizlik sebebi.
+     *
+     * Uc zaten sebebi soyluyor — 502 yanitinda "Guvenlik sertifikasi
+     * dogrulanamadi" ya da "Sunucu HTTP 403 dondu" yaziyor — ama bu
+     * bilgi eskiden burada atiliyordu: metot yalnizca null donuyordu.
+     * Ajan gunlugunde bu yuzden 29 kaynak icin tek ve ayni cumle
+     * goruluyordu: "okunamadi veya yeni girdi yok". Sebebi bilmeden
+     * hicbirini duzeltmek mumkun degil.
+     */
+    private string $sonHata = '';
+
+    public function sonHamHatasi(): string
+    {
+        return $this->sonHata;
+    }
+
     public function hamGetir(string $url): ?string
     {
+        $this->sonHata = '';
+
         [$kod, $govde] = $this->istek(
             'GET',
             '/api/getir.php?ham=1&url=' . rawurlencode($url)
         );
 
         if ($kod !== 200) {
+            $veri = json_decode($govde, true);
+
+            /*
+             * Ucun kendi acikladigi sebep varsa o kullaniliyor; yoksa
+             * en azindan HTTP kodu yaziliyor. 403 "adres tanimli
+             * kaynaklar arasinda degil", 502 "kaynak sunucuya
+             * ulasilamadi" demek ve ikisi bambaska islere bakar.
+             */
+            $this->sonHata = is_array($veri) && isset($veri['hata'])
+                ? 'site ucu: ' . (string) $veri['hata']
+                : 'site ucu HTTP ' . $kod . ' döndü';
+
             return null;
         }
 
         $veri = json_decode($govde, true);
 
         if (!is_array($veri) || !isset($veri['ham'])) {
+            $this->sonHata = 'site ucu beklenen yanıtı vermedi';
+
             return null;
         }
 
         $ham = base64_decode((string) $veri['ham'], true);
 
-        return is_string($ham) && $ham !== '' ? $ham : null;
+        if (!is_string($ham) || $ham === '') {
+            $this->sonHata = 'site ucu boş gövde döndü';
+
+            return null;
+        }
+
+        return $ham;
     }
 
     /**
@@ -226,8 +265,26 @@ final class Site
             throw new \RuntimeException('Bilgi listesi yanıtı çözümlenemedi.');
         }
 
+        /*
+         * EVDS anahtari da bu yanitla geliyor.
+         *
+         * Neden ortam degiskeni degil: anahtari giren kisi mali
+         * musavir, GitHub ayarlarina girmiyor. Panelde tek alana
+         * yaziliyor, uc de anahtarla korunuyor. Anahtar yoksa alan
+         * bos gelir ve EVDS'ye bagli bilgiler sessizce atlanir.
+         */
+        $this->evdsAnahtari = trim((string) ($veri['evds_anahtari'] ?? ''));
+
         return $veri['bilgiler'] ?? [];
     }
+
+    /** pratikBilgiler() cagrisinda gelen EVDS anahtari; yoksa bos. */
+    public function evdsAnahtari(): string
+    {
+        return $this->evdsAnahtari;
+    }
+
+    private string $evdsAnahtari = '';
 
     /**
      * Okunan değerleri ADAY olarak gönderir.

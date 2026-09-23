@@ -41,7 +41,7 @@ date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
 /** Komut satırı seçenekleri */
-$secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::', 'kaynakbasina::']);
+$secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::', 'sitetavani::', 'sitearaligi::', 'kaynakbasina::']);
 $kuruCalisma = isset($secenekler['kuru']);
 $saat        = max(1, (int) ($secenekler['saat'] ?? 36));
 $enFazlaAday = max(1, (int) ($secenekler['enfazla'] ?? 25));
@@ -206,7 +206,20 @@ if ($yapilandirmaKaynagi !== 'site') {
  * gelemediyse site kapalidir.
  */
 $siteyeUlasilir = $yapilandirmaKaynagi === 'site';
-$getirici = new Getirici($http, $siteyeUlasilir ? $site : null);
+/*
+ * Tavan ve aralik komut satirindan ayarlanabiliyor.
+ *
+ * Varsayilan degerler paylasimli hosting icin guvenli tarafta secildi;
+ * sunucu daha fazlasini kaldiriyorsa --sitetavani ile yukseltilebilir,
+ * guvenlik duvari tepki verirse dusurulebilir. Ayari denemeden
+ * degistirmek dogru degil: yasaklar bu yolun ilk acilisinda yasandi.
+ */
+$getirici = new Getirici(
+    $http,
+    $siteyeUlasilir ? $site : null,
+    max(1, (int) ($secenekler['sitetavani'] ?? 20)),
+    max(0.2, (float) ($secenekler['sitearaligi'] ?? 2.0))
+);
 $besleme  = new Besleme($getirici);
 $sayfa    = new Sayfa($getirici);
 $kazima   = new Kazima($getirici);
@@ -435,6 +448,231 @@ function baslik_benzer(array $a, array $b): bool
     return $ortak / $kisa >= 0.8;
 }
 
+/**
+ * Kaynakları tarama sırasına dizer.
+ *
+ * @param list<array<string,mixed>> $kaynaklar
+ * @return list<array<string,mixed>>
+ */
+function kaynaklari_sirala(array $kaynaklar, int $calismaNo): array
+{
+    if ($kaynaklar === []) {
+        return $kaynaklar;
+    }
+
+    /*
+     * MEVZUAT KAYNAKLARI EN ONDE.
+     *
+     * Bu grup Turk kamu siteleri ve mevzuatin birincil kaynagi. Ayri
+     * tutulmalarinin sebebi siralama degil, KIT BIR KAYNAGI paylasmak:
+     * bu siteler veri merkezi IP'lerini engelledigi icin ajan onlara
+     * ancak site sunucusu uzerinden ulasabiliyor ve o yolun bir
+     * calismada sinirli sayida istek hakki var (bkz. Getirici). Hak
+     * tarama sirasina gore harcandigi icin, listede sonra gelen
+     * mevzuat kaynaklari hakkin tukenmesinden sonra siraya giriyor ve
+     * HIC okunamiyordu.
+     *
+     * Hazine ve Maliye, ISMMMO, SGK, SPK, BDDK, Ticaret Bakanligi ve
+     * Rekabet Kurumu daha once bu listede degildi; mevzuatin buyuk
+     * kismi oralardan cikmasina ragmen genel kaynaklarla ayni siraya
+     * konmuslardi.
+     */
+    $mevzuatAdlari = [
+        'Resmî Gazete', 'Gelir İdaresi Başkanlığı', 'Hazine ve Maliye Bakanlığı',
+        'KGK', 'TÜRMOB', 'İSMMMO', 'SGK', 'SPK', 'BDDK',
+        'Ticaret Bakanlığı', 'Rekabet Kurumu', 'KOSGEB', 'TÜİK',
+    ];
+
+    // Ikinci halka: mesleki ve uluslararasi kaynaklar. Bunlar cogunlukla
+    // dogrudan erisilebiliyor, yani kit kaynagi tuketmiyorlar.
+    $cekirdekAdlar = [
+        'OECD Vergi', 'Avrupa Komisyonu Vergi', 'IFRS Foundation',
+        'IAS Plus', 'EFRAG', 'Deloitte Türkiye', 'PwC Türkiye',
+        'KPMG Türkiye', 'BDO Türkiye', 'EY Türkiye',
+        'Grant Thornton Türkiye', 'Tax Foundation', 'Accountancy Age',
+        'ICAEW', 'IFAC', 'Avrupa Merkez Bankası', 'Federal Reserve',
+    ];
+
+    $mevzuat   = [];
+    $cekirdek  = [];
+    $digerleri = [];
+
+    foreach ($kaynaklar as $kaynak) {
+        $ad = (string) $kaynak['ad'];
+
+        if (in_array($ad, $mevzuatAdlari, true)) {
+            $mevzuat[] = $kaynak;
+        } elseif (in_array($ad, $cekirdekAdlar, true)) {
+            $cekirdek[] = $kaynak;
+        } else {
+            $digerleri[] = $kaynak;
+        }
+    }
+
+    
+    /**
+     * Listeyi calisma numarasina gore kaydirir.
+     *
+     * Kaydirma rastgele degil saate bagli: ayni calisma iki kez
+     * tetiklenirse ayni sirayi izler, davranis ongorulebilir kalir.
+     */
+    $kaydir = static function (array $liste, int $calismaNo, int $bolen = 3): array {
+        if ($liste === []) {
+            return $liste;
+        }
+
+        $adim  = max(1, intdiv(count($liste), $bolen));
+        $kayma = ($calismaNo * $adim) % count($liste);
+
+        return array_merge(array_slice($liste, $kayma), array_slice($liste, 0, $kayma));
+    };
+
+    /*
+     * Mevzuat grubu da kaydiriliyor — ONCEKI HALINDE KAYDIRILMIYORDU.
+     *
+     * Site uzerinden istek hakki grubun tamamina yetmedigi icin hep
+     * ayni ilk birkac kaynak okunuyor, gerisi her calismada ayni yerde
+     * eleniyordu. Kaydirma ile hak sirayla dolasiyor: bir calismada
+     * okunamayan kaynak sonrakinde basa geciyor.
+     *
+     * Bolen 1: her calismada bir adim kayiyor, boylece dolasim yavas
+     * ve duzenli oluyor.
+     */
+    $mevzuat   = $kaydir($mevzuat, $calismaNo, max(1, count($mevzuat)));
+    $digerleri = $kaydir($digerleri, $calismaNo);
+
+    return array_merge($mevzuat, $cekirdek, $digerleri);
+}
+
+/**
+ * Kontenjanı konulara paylaştırarak aday seçer.
+ *
+ * Puana gore duz siralama bir konu turunu sistematik olarak aciz
+ * birakiyordu. Olculdu: "KDV tevkifat oranlarinda degisiklik" 17 puan
+ * alirken "7530 sayili Kanun ile bazi kanunlarda degisiklik yapildi"
+ * 2, "IASB issues amendments to IFRS 9" 4 puan aliyor. Vergi terimi
+ * yogun basliklar dogalari geregi daha cok terim barindirdigi icin
+ * listenin tamamini kapliyor; mevzuat ve standart haberleri kontenjana
+ * hic giremiyordu. Sitede TMS/TFRS ve kanun degisikligi haberlerinin
+ * cikmamasinin sebebi buydu.
+ *
+ * Cozum siralamayi bozmak degil, kontenjani konulara paylastirmak. Her
+ * turdan sirayla aliniyor; bir konuda aday kalmazsa payi otekilere
+ * geciyor, yani liste hicbir zaman bos yer birakmiyor.
+ *
+ * Adaylarin puana gore sirali geldigi varsayiliyor: her kovadan bastan
+ * alindigi icin konu icinde en iyi aday once seciliyor.
+ *
+ * @param list<array<string,mixed>>   $adaylar     Puana gore sirali
+ * @param array<string,int>           $paylar      Konu => tur basina pay
+ * @return list<array<string,mixed>>
+ */
+function konu_kontenjani(array $adaylar, array $paylar, int $enFazla, Suzgec $suzgec): array
+{
+    /** @var array<string,list<array<string,mixed>>> */
+    $kovalar = array_fill_keys(array_keys($paylar), []);
+
+    foreach ($adaylar as $aday) {
+        $konu = $suzgec->konu(
+            (string) $aday['girdi']['baslik'],
+            (string) ($aday['girdi']['ozet'] ?? '')
+        );
+
+        // Bilinmeyen bir konu gelirse aday kaybolmasin.
+        if (!isset($kovalar[$konu])) {
+            $konu = array_key_first($paylar);
+        }
+
+        $kovalar[$konu][] = $aday;
+    }
+
+    $secilen = [];
+
+    while (count($secilen) < $enFazla) {
+        $alindi = false;
+
+        foreach ($paylar as $konu => $pay) {
+            for ($i = 0; $i < $pay; $i++) {
+                if (count($secilen) >= $enFazla || $kovalar[$konu] === []) {
+                    break;
+                }
+
+                $secilen[] = array_shift($kovalar[$konu]);
+                $alindi    = true;
+            }
+        }
+
+        // Butun kovalar bosaldi: dongu kendini tekrar etmesin.
+        if (!$alindi) {
+            break;
+        }
+    }
+
+    return $secilen;
+}
+
+/**
+ * Aynı olayı anlatan adaylardan yalnızca en iyisini bırakır.
+ *
+ * Bilinen basliklara benzerlik zaten olculuyor ama o denetim GECMISE
+ * bakiyor: sitede olan bir haberin tekrarini yakaliyor. Ayni calismada
+ * BES FARKLI kaynagin ayni tebligi duyurmasini yakalamiyordu — besi de
+ * listeye giriyor ve kontenjanin bes katini yiyordu.
+ *
+ * Adaylar puana gore sirali geldigi icin her kumeden elde kalan en
+ * yuksek puanli aday tutuluyor.
+ *
+ * YALNIZCA FARKLI KAYNAKLAR arasinda eleme yapiliyor. Sebebi olculdu:
+ * kural kaynak ayrimi gozetmeden uygulandiginda Resmi Gazete'nin ayni
+ * gun yayimladigi bes AYRI teblig birbirinin kopyasi sayiliyordu —
+ * basliklari dogalari geregi birbirine cok benziyor ("... Genel
+ * Tebliginde Degisiklik Yapilmasina Dair Teblig"). Gercek haberi
+ * kaybetmek, kopya gostermekten kotudur.
+ *
+ * Ayni kaynagin birbirine benzeyen adaylari zaten kaynak basina tavana
+ * takiliyor, yani o tarafta da sinir var.
+ *
+ * @param list<array<string,mixed>> $adaylar Puana gore sirali
+ * @return array{0:list<array<string,mixed>>,1:int} Kalanlar ve elenen sayisi
+ */
+function ayni_olayi_ele(array $adaylar): array
+{
+    /** @var list<array{kume:array<string,bool>,kaynak:string}> */
+    $kumeler = [];
+    $tekil   = [];
+    $elenen  = 0;
+
+    foreach ($adaylar as $aday) {
+        $kume   = baslik_kumesi((string) $aday['girdi']['baslik']);
+        $kaynak = (string) ($aday['kaynak']['ad'] ?? '');
+        $ayni   = false;
+
+        foreach ($kumeler as $onceki) {
+            if ($onceki['kaynak'] === $kaynak) {
+                continue;
+            }
+
+            if (baslik_benzer($kume, $onceki['kume'])) {
+                $ayni = true;
+                break;
+            }
+        }
+
+        if ($ayni) {
+            $elenen++;
+            continue;
+        }
+
+        if ($kume !== []) {
+            $kumeler[] = ['kume' => $kume, 'kaynak' => $kaynak];
+        }
+
+        $tekil[] = $aday;
+    }
+
+    return [$tekil, $elenen];
+}
+
 // --- 2 ve 3. Beslemeleri oku, ön elemeden geçir ---------------------------
 
 $adaylar = [];
@@ -462,45 +700,7 @@ $taramaBaslangic = time();
 $taramaButcesi   = 8 * 60;
 $atlanan         = 0;
 
-if ($kaynaklar !== []) {
-    // Vergi, TMS/TFRS ve denetim kaynaklari sitenin ana omurgasi.
-    // Kaynak sayisi buyudugunde genel ekonomi siteleri bunlari zaman
-    // butcesinin disina itemesin diye once bu cekirdek grup taranir.
-    $oncelikliAdlar = [
-        'Resmî Gazete', 'Gelir İdaresi Başkanlığı', 'KGK', 'TÜRMOB',
-        'OECD Vergi', 'Avrupa Komisyonu Vergi', 'IFRS Foundation',
-        'IAS Plus', 'EFRAG', 'Deloitte Türkiye', 'PwC Türkiye',
-        'KPMG Türkiye', 'BDO Türkiye', 'EY Türkiye',
-        'Grant Thornton Türkiye', 'Tax Foundation', 'Accountancy Age',
-        'ICAEW', 'IFAC', 'Avrupa Merkez Bankası', 'Federal Reserve',
-    ];
-
-    $oncelikli = [];
-    $digerleri = [];
-
-    foreach ($kaynaklar as $kaynak) {
-        if (in_array((string) $kaynak['ad'], $oncelikliAdlar, true)) {
-            $oncelikli[] = $kaynak;
-        } else {
-            $digerleri[] = $kaynak;
-        }
-    }
-
-    // Diger kaynaklarda baslangic her calismada kayar; boylece listenin
-    // sonunda kalan yabanci ekonomi kaynaklari da duzenli olarak taranir.
-    if ($digerleri !== []) {
-        $adim      = max(1, intdiv(count($digerleri), 3));
-        $calismaNo = (int) floor(time() / 7200);
-        $kayma     = ($calismaNo * $adim) % count($digerleri);
-
-        $digerleri = array_merge(
-            array_slice($digerleri, $kayma),
-            array_slice($digerleri, 0, $kayma)
-        );
-    }
-
-    $kaynaklar = array_merge($oncelikli, $digerleri);
-}
+$kaynaklar = kaynaklari_sirala($kaynaklar, (int) floor(time() / 7200));
 
 foreach ($kaynaklar as $kaynak) {
     if (time() - $taramaBaslangic > $taramaButcesi) {
@@ -555,9 +755,30 @@ foreach ($kaynaklar as $kaynak) {
     }
 
     if ($girdiler === []) {
-        $neden = $beslemeUrl === '' && $listeUrl === ''
-            ? 'adres tanımlı değil'
-            : 'okunamadı veya yeni girdi yok';
+        /*
+         * SEBEBI YAZ, "okunamadi" deyip gecme.
+         *
+         * Gercek bir calismada 82 kaynagin 29'u bu satira dusuyordu ve
+         * hepsi ayni cumleyi yaziyordu — aralarinda GIB, Hazine ve
+         * Maliye, KGK, ISMMMO, SPK, BDDK gibi sitenin cekirdek mevzuat
+         * kaynaklari vardi. Tek bir cumleyle hangisinin sertifikadan,
+         * hangisinin 403'ten, hangisinin gercekten bos beslemeden
+         * dustugu anlasilamiyor ve hicbiri duzeltilemiyordu.
+         *
+         * Getirici site yolunu denediyse sebebi tutuyor; tutmadiysa
+         * dogrudan indirme calismis ama besleme bos gelmis demektir.
+         */
+        if ($beslemeUrl === '' && $listeUrl === '') {
+            $neden = 'adres tanımlı değil';
+        } else {
+            $sebep = $getirici->sonSebep($beslemeUrl !== '' ? $beslemeUrl : $listeUrl);
+
+            $neden = $sebep !== ''
+                ? 'alınamadı — ' . $sebep
+                : 'adrese ulaşıldı ama yeni girdi yok (besleme boş ya da '
+                  . 'girdiler zaman penceresinin dışında)';
+        }
+
         gunluk("  {$kaynak['ad']}: {$neden}");
         continue;
     }
@@ -669,7 +890,36 @@ foreach ($adaylar as $aday) {
 }
 
 $tavanaTakilan = count($adaylar) - count($secilen);
-$adaylar       = array_slice($secilen, 0, $enFazlaAday);
+
+[$tekil, $kopyaElenen] = ayni_olayi_ele($secilen);
+
+if ($kopyaElenen > 0) {
+    gunluk('  ' . $kopyaElenen . ' aday aynı olayın başka kaynaktaki '
+         . 'kopyası olduğu için elendi.');
+}
+
+/*
+ * Paylar esit degil: site vergi odakli. Her turda 3 vergi, 2 mevzuat,
+ * 2 standart, 1 ekonomi aliniyor.
+ */
+$konuPaylari = ['vergi' => 3, 'mevzuat' => 2, 'standart' => 2, 'ekonomi' => 1];
+$adaylar     = konu_kontenjani($tekil, $konuPaylari, $enFazlaAday, $suzgec);
+
+$konuOzeti = [];
+
+foreach (array_keys($konuPaylari) as $konu) {
+    $adet = count(array_filter(
+        $adaylar,
+        static fn (array $a): bool => $suzgec->konu(
+            (string) $a['girdi']['baslik'],
+            (string) ($a['girdi']['ozet'] ?? '')
+        ) === $konu
+    ));
+
+    $konuOzeti[] = $konu . ': ' . $adet;
+}
+
+gunluk('  Konu dağılımı — ' . implode(', ', $konuOzeti) . '.');
 
 if ($tavanaTakilan > 0) {
     gunluk(
