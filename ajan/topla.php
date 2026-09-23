@@ -547,6 +547,21 @@ function kaynaklari_sirala(array $kaynaklar, int $calismaNo): array
 }
 
 /**
+ * Kaynak Resmî Gazete mi?
+ *
+ * Ada degil alan adina bakiliyor: panelden ad degistirilse de kural
+ * bozulmasin.
+ *
+ * @param array<string,mixed> $kaynak
+ */
+function resmi_gazete_mi(array $kaynak): bool
+{
+    $host = strtolower((string) parse_url((string) ($kaynak['site_url'] ?? ''), PHP_URL_HOST));
+
+    return $host === 'www.resmigazete.gov.tr' || $host === 'resmigazete.gov.tr';
+}
+
+/**
  * Kontenjanı konulara paylaştırarak aday seçer.
  *
  * Puana gore duz siralama bir konu turunu sistematik olarak aciz
@@ -569,21 +584,6 @@ function kaynaklari_sirala(array $kaynaklar, int $calismaNo): array
  * @param array<string,int>           $paylar      Konu => tur basina pay
  * @return list<array<string,mixed>>
  */
-/**
- * Kaynak Resmî Gazete mi?
- *
- * Ada degil alan adina bakiliyor: panelden ad degistirilse de kural
- * bozulmasin.
- *
- * @param array<string,mixed> $kaynak
- */
-function resmi_gazete_mi(array $kaynak): bool
-{
-    $host = strtolower((string) parse_url((string) ($kaynak['site_url'] ?? ''), PHP_URL_HOST));
-
-    return $host === 'www.resmigazete.gov.tr' || $host === 'resmigazete.gov.tr';
-}
-
 function konu_kontenjani(array $adaylar, array $paylar, int $enFazla, Suzgec $suzgec): array
 {
     /** @var array<string,list<array<string,mixed>>> */
