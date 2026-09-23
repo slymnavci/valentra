@@ -22,6 +22,23 @@ declare(strict_types=1);
 const SEMA_IMZA_ANAHTAR  = 'sema_imza';
 const SEMA_KILIT_ANAHTAR = 'sema_kilit';
 
+/*
+ * Basarisiz imza ve zamani: "imza|unix_zamani".
+ *
+ * Imza yalnizca basarida yaziliyor; bu dogru, ama tek basina bir
+ * tuzak: sema bir ifadede KALICI olarak dusuyorsa (ornegin bir
+ * sunucunun tanimadigi sozdizimi) her iki dakikada bir istek butun
+ * semayi bastan kosturuyor. Tablolari kilitleyen ALTER'lar bu arada
+ * diger sayfalari bekletiyor ve site genelinde zaman asimi uretiyor.
+ *
+ * Ayni imza yakin zamanda dustuyse 15 dakika yeniden denenmiyor.
+ * Kurtarmayi geciktirmez: duzeltme dagitilinca dosya degisir, imza
+ * degisir ve yeni imza bu bekleme listesinde olmadigi icin hemen
+ * denenir.
+ */
+const SEMA_HATA_ANAHTAR  = 'sema_hata';
+const SEMA_HATA_BEKLEME  = 900;
+
 /** Şema dosyasının yolu. */
 function sema_dosyasi(): string
 {
@@ -71,6 +88,13 @@ function sema_otomatik_yukselt(): void
             return;
         }
 
+        // Bu imza yakin zamanda dustuyse bekle (yukaridaki aciklama).
+        [$hataImza, $hataZaman] = array_pad(explode('|', sema_ayar_oku(SEMA_HATA_ANAHTAR), 2), 2, '0');
+
+        if ($hataImza === $imza && (int) $hataZaman > time() - SEMA_HATA_BEKLEME) {
+            return;
+        }
+
         sema_ayar_yaz(SEMA_KILIT_ANAHTAR, (string) time());
 
         require_once __DIR__ . '/sema.php';
@@ -81,8 +105,10 @@ function sema_otomatik_yukselt(): void
         // sonraki istekte tekrar denenir.
         if ($sonuc['tamam']) {
             sema_ayar_yaz(SEMA_IMZA_ANAHTAR, $imza);
+            sema_ayar_sil(SEMA_HATA_ANAHTAR);
             error_log('[valentra] sema kendiliginden guncellendi (' . $sonuc['calisan'] . ' ifade).');
         } else {
+            sema_ayar_yaz(SEMA_HATA_ANAHTAR, $imza . '|' . time());
             error_log('[valentra] otomatik sema yukseltmesi basarisiz: ' . $sonuc['mesaj']);
         }
 
