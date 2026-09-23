@@ -25,18 +25,20 @@ require_once __DIR__ . '/src/Http.php';
 require_once __DIR__ . '/src/Getirici.php';
 require_once __DIR__ . '/src/Besleme.php';
 require_once __DIR__ . '/src/Kazima.php';
+require_once __DIR__ . '/src/Sayfa.php';
+require_once __DIR__ . '/src/ResmiGazete.php';
 require_once __DIR__ . '/src/Suzgec.php';
 require_once __DIR__ . '/src/TohumYapilandirma.php';
 require_once __DIR__ . '/src/Site.php';
 require_once __DIR__ . '/../includes/url.php';
 require_once __DIR__ . '/../includes/kazima.php';
 
-use Valentra\Ajan\{Besleme, Getirici, Http, Site, Suzgec, TohumYapilandirma};
+use Valentra\Ajan\{Besleme, Getirici, Http, Kodlama, ResmiGazete, Sayfa, Site, Suzgec, TohumYapilandirma};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
-$secenekler = getopt('', ['saat::', 'kaynak::', 'kanunlar', 'aday::']);
+$secenekler = getopt('', ['saat::', 'kaynak::', 'kanunlar', 'aday::', 'rg', 'metin::']);
 $saat       = max(1, (int) ($secenekler['saat'] ?? 36));
 $suzgu      = trim((string) ($secenekler['kaynak'] ?? ''));
 $kanunModu  = isset($secenekler['kanunlar']);
@@ -195,6 +197,57 @@ $http    = new Http();
 $getirici = new Getirici($http, $site, 10, 1.5);
 $dogrudan = new Getirici($http, null);
 $besleme = new Besleme($getirici);
+
+/*
+ * --rg: Resmi Gazete okuyucusunu GERCEK agda, ajanin kullandigi
+ * yoldan dener. Bugunun ve dunun fihristinden ne alindigini ve
+ * ozetini yazar; hicbir sey gondermez.
+ */
+if (isset($secenekler['rg'])) {
+    $rg = new ResmiGazete($getirici);
+    $girdiler = $rg->oku(2);
+
+    yaz('=== Resmî Gazete — bugün ve dün ===');
+    yaz(count($girdiler) . ' madde alındı (üniversite yönetmelikleri ve ilanlar ayıklandı).');
+    yaz();
+
+    foreach ($girdiler as $g) {
+        yaz('  ' . $g['baslik']);
+        yaz('     ' . $g['ozet'] . '  ' . $g['baglanti']);
+    }
+
+    exit($girdiler === [] ? 1 : 0);
+}
+
+/*
+ * --metin='adres, adres': ajanin sayfa okuyucusunun bu adreslerden
+ * modele NE GONDERECEGINI gosterir. "Sayfa metni alinamadi" diye
+ * elenen mevzuatin sebebini gormek icin: PDF mi, kodlama mi, bos mu.
+ */
+$metinGirdi = trim((string) ($secenekler['metin'] ?? ''));
+
+if ($metinGirdi !== '') {
+    $sayfa = new Sayfa($getirici);
+    $bos   = 0;
+
+    foreach (array_filter(array_map('trim', explode(',', $metinGirdi))) as $adres) {
+        $ham = $getirici->indir($adres, 12_000_000);
+        $tur = $ham === null ? 'İNDİRİLEMEDİ' : (Kodlama::pdfMi($ham) ? 'PDF' : (mb_check_encoding($ham, 'UTF-8') ? 'HTML (UTF-8)' : 'HTML (UTF-8 değil)'));
+        $metin = $sayfa->oku($adres, 30000)['metin'];
+
+        yaz('=== ' . $adres);
+        yaz('  Tür: ' . $tur . ($ham !== null ? ', ' . strlen($ham) . ' bayt' : ''));
+        yaz('  Modele gidecek metin: ' . mb_strlen($metin, 'UTF-8') . ' karakter');
+        yaz('  ' . str_replace("\n", "\n  ", mb_substr($metin, 0, 500, 'UTF-8')));
+        yaz();
+
+        if (mb_strlen($metin, 'UTF-8') < 400) {
+            $bos++;
+        }
+    }
+
+    exit($bos === 0 ? 0 : 1);
+}
 
 /**
  * Sitenin ana sayfasında ilan ettiği beslemeleri bulur.
@@ -379,6 +432,13 @@ if ($adayGirdi !== '') {
             $url = trim(substr($parca, $esit + 1));
         }
 
+        // 'Ad=adres|secici' — secici verilmisse kazima onunla sinaniyor.
+        $adaySecici = '';
+
+        if (str_contains($url, '|')) {
+            [$url, $adaySecici] = array_map('trim', explode('|', $url, 2));
+        }
+
         if ($ad === '') {
             $ad = (string) parse_url($url, PHP_URL_HOST);
         }
@@ -397,7 +457,7 @@ if ($adayGirdi !== '') {
                               . '://' . (string) parse_url($url, PHP_URL_HOST),
             'besleme_url'  => $url,
             'liste_url'    => $url,
-            'liste_secici' => '',
+            'liste_secici' => $adaySecici,
             'tur'          => 'aday',
         ];
     }
@@ -688,7 +748,11 @@ foreach ($kaynaklar as $kaynak) {
                  * oldugu gibi gosteriyor; uzantisindan dosya mi sayfa
                  * mi oldugu da buradan okunuyor.
                  */
-                $kabuller = kazima_haberleri_bul($yanit['govde'], $listeUrl, $secici, 3);
+                /*
+                 * Aday modunda 12 baglanti: uc ornek, menu baglantilariyla
+                 * gercek haberlerin karistigini gostermeye yetmiyordu.
+                 */
+                $kabuller = kazima_haberleri_bul($yanit['govde'], $listeUrl, $secici, $adayGirdi !== '' ? 12 : 3);
 
                 foreach ($kabuller as $kabul) {
                     yaz(sprintf(

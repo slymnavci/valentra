@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Valentra\Ajan;
 
+require_once __DIR__ . '/Kodlama.php';
+
 /**
  * Haber sayfasından okunabilir metni çıkarır.
  *
@@ -36,11 +38,34 @@ final class Sayfa
      */
     public function oku(string $url, int $enFazlaKarakter = 6000): array
     {
-        $html = $this->http->indir($url);
+        /*
+         * Sinir 2 MB'tan 12 MB'a cikti: Resmi Gazete'nin ekli tablolu
+         * PDF'leri birkac megabayti rahat asiyor ve kesilmis bir PDF
+         * okunamaz.
+         */
+        $html = $this->http->indir($url, 12_000_000);
 
         if ($html === null) {
             return ['metin' => '', 'gorsel' => ''];
         }
+
+        /*
+         * PDF ise etiket soymak anlamsiz; metin pdftotext ile cikiyor.
+         * Once bu adimda model "sayfa metni alinamadi" deyip Resmi
+         * Gazete'deki tablolu kararlari eliyordu.
+         */
+        if (Kodlama::pdfMi($html)) {
+            $metin = trim((string) preg_replace("/[ \t]+\n/u", "\n", Kodlama::pdfMetni($html)));
+            $metin = (string) preg_replace("/\n{3,}/u", "\n\n", $metin);
+
+            return [
+                'metin'  => mb_substr($metin, 0, $enFazlaKarakter, 'UTF-8'),
+                'gorsel' => '',
+            ];
+        }
+
+        // Windows-1254 sayfalarda Turkce karakterler bozuk geliyordu.
+        $html = Kodlama::utf8($html);
 
         $gorsel = $this->gorseliBul($html, $url);
 
