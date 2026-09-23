@@ -693,6 +693,9 @@ CREATE TABLE IF NOT EXISTS pratik_bilgiler (
     deger        TEXT         NULL,
     donem        VARCHAR(120) NULL,
     onay_tarihi  DATETIME     NULL,
+    -- Grafik serisi (JSON: [["Y-m-d", sayi], ...]). Degerle birlikte
+    -- onaylaniyor; onaylanmamis hicbir nokta cizilmiyor.
+    seri         MEDIUMTEXT   NULL,
 
     -- Ajanin getirdigi, onay bekleyen deger.
     aday_deger   TEXT         NULL,
@@ -700,6 +703,7 @@ CREATE TABLE IF NOT EXISTS pratik_bilgiler (
     aday_notu    VARCHAR(500) NULL,
     aday_guven   TINYINT UNSIGNED NULL,
     aday_tarihi  DATETIME     NULL,
+    aday_seri    MEDIUMTEXT   NULL,
 
     aktif        TINYINT(1)   NOT NULL DEFAULT 1,
     guncellendi  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

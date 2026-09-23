@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/pratik.php';
+require_once __DIR__ . '/includes/ekonomi.php';
+require_once __DIR__ . '/includes/grafik.php';
 
 $anahtar = trim((string) ($_GET['p'] ?? ''));
 $bilgi   = $anahtar !== '' ? pratik_bul($anahtar) : null;
@@ -37,6 +39,13 @@ if ($bilgi === null) {
 $bolumler = pratik_deger_bolumleri((string) $bilgi['deger']);
 $komsular = pratik_grup_komsulari((string) $bilgi['grup'], (string) $bilgi['anahtar']);
 $kaynak   = guvenli_url((string) ($bilgi['kaynak_url'] ?? ''));
+
+/*
+ * Grafik: yalnizca YAYINDAKI seriden. Aday seri burada hic okunmuyor;
+ * onaylanmamis bir nokta ziyaretciye gorunmemeli.
+ */
+$ekonomiSeri = ekonomi_serisi((string) $bilgi['anahtar']);
+$grafikSeri  = pratik_seri_oku($bilgi['seri'] ?? null);
 
 $aktifKategori = 'pratik';
 $sayfaBasligi  = $bilgi['baslik'] . ' — Valentra';
@@ -74,6 +83,16 @@ require __DIR__ . '/includes/sayfa_ust.php';
                     <?php endif; ?>
                 <?php endforeach; ?>
             </div>
+
+            <?php if (isset($ekonomiSeri['grafik']) && $grafikSeri !== []): ?>
+                <?= grafik_ciz($grafikSeri, [
+                    'tur'    => (string) $ekonomiSeri['grafik']['tur'],
+                    'baslik' => (string) $ekonomiSeri['grafik']['baslik'],
+                    'birim'  => (string) $ekonomiSeri['birim'],
+                    'kaynak' => (string) ($bilgi['kaynak_adi'] ?? ''),
+                    'ad'     => (string) $bilgi['baslik'],
+                ]) ?>
+            <?php endif; ?>
 
             <dl class="pratik-kunye">
                 <?php if (!empty($bilgi['donem'])): ?>

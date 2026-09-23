@@ -48,7 +48,16 @@ function ekonomi_seriler(): array
             'saglayici'  => 'evds',
             'seri'       => 'TP.APIFON4',
             'birim'      => 'yuzde',
-            'gerigit'    => 400,            // gun
+            // Grafik iki yili gosteriyor; pencere biraz genis tutuluyor
+            // ki ilk gun tatile denk gelse de baslangic degeri olsun.
+            'gerigit'    => 760,            // gun
+            /*
+             * BASAMAK: politika faizi karar gunleri arasinda sabit
+             * durur. Noktalari egik cizgiyle birlestirmek, iki karar
+             * arasinda faizin yavas yavas degistigini ima ederdi —
+             * oysa bir gece degisir.
+             */
+            'grafik'     => ['tur' => 'basamak', 'baslik' => 'Son iki yılın seyri'],
             'kaynak_adi' => 'TCMB — EVDS',
             'kaynak_url' => 'https://evds2.tcmb.gov.tr/',
             'aciklama'   => 'Bir hafta vadeli repo ihale faiz oranı',
@@ -62,7 +71,10 @@ function ekonomi_seriler(): array
             'seri'       => 'TP.FG.J0',
             'hesap'      => 'tufe',         // endeksten degisim hesapla
             'birim'      => 'yuzde',
-            'gerigit'    => 800,
+            // 24 aylik yillik degisim icin 36 aylik endeks gerekiyor:
+            // her ayin karsiligi bir yil oncesi.
+            'gerigit'    => 1130,
+            'grafik'     => ['tur' => 'cizgi', 'baslik' => 'Yıllık enflasyon, son 24 ay'],
             'kaynak_adi' => 'TÜİK — TCMB EVDS üzerinden',
             'kaynak_url' => 'https://evds2.tcmb.gov.tr/',
             'aciklama'   => 'Tüketici fiyat endeksi aylık ve yıllık değişimi',
@@ -286,18 +298,28 @@ function ekonomi_evds_cozumle(array $seri, array $veri): array
         }
 
         $sayi = ekonomi_sayiya((string) $ham);
+        $iso  = ekonomi_evds_tarih((string) ($satir['Tarih'] ?? ''));
 
-        if ($sayi === null) {
+        // Tarihi okunamayan gozlem zaman ekseninde yerlestirilemez ve
+        // tarihe dayali karsilastirmada yanlis aya eslenebilir.
+        if ($sayi === null || $iso === null) {
             continue;
         }
 
-        $dizi[] = ['tarih' => (string) ($satir['Tarih'] ?? ''), 'deger' => $sayi];
+        $dizi[] = ['tarih' => (string) $satir['Tarih'], 'iso' => $iso, 'deger' => $sayi];
     }
 
     if ($dizi === []) {
         return $bos + ['hata' => 'EVDS seride dolu gözlem döndürmedi ('
                                . $seri['seri'] . ').'];
     }
+
+    /*
+     * Siralama TARIHE gore yapiliyor, gelis sirasina guvenilmiyor.
+     * "Son gozlem" dizinin sonu kabul ediliyor; EVDS bir gun farkli
+     * sirayla donerse eski bir deger guncelmis gibi yayimlanirdi.
+     */
+    usort($dizi, static fn (array $a, array $b): int => strcmp($a['iso'], $b['iso']));
 
     if ((string) ($seri['hesap'] ?? '') === 'tufe') {
         return ekonomi_tufe_hesapla($dizi);
@@ -311,7 +333,59 @@ function ekonomi_evds_cozumle(array $seri, array $veri): array
         'donem' => ekonomi_evds_donem($son['tarih']),
         'not'   => 'TCMB EVDS ' . $seri['seri'] . ' serisinin son gözlemi.',
         'hata'  => '',
+        'seri'  => ekonomi_basamaklar($dizi),
     ];
+}
+
+/**
+ * EVDS tarihini Y-m-d biçimine çevirir; okunamazsa null.
+ *
+ * Gunluk seriler "23-09-2026", aylik seriler "2026-9" biciminde
+ * geliyor. Aylik gozlem ayin ilk gunune yerlestiriliyor.
+ */
+function ekonomi_evds_tarih(string $tarih): ?string
+{
+    $tarih = trim($tarih);
+
+    if (preg_match('/^(\d{1,2})-(\d{1,2})-(\d{4})$/', $tarih, $e)) {
+        [$gun, $ay, $yil] = [(int) $e[1], (int) $e[2], (int) $e[3]];
+    } elseif (preg_match('/^(\d{4})-(\d{1,2})$/', $tarih, $e)) {
+        [$gun, $ay, $yil] = [1, (int) $e[2], (int) $e[1]];
+    } else {
+        return null;
+    }
+
+    return checkdate($ay, $gun, $yil) ? sprintf('%04d-%02d-%02d', $yil, $ay, $gun) : null;
+}
+
+/**
+ * Seriyi değişim noktalarına indirger (basamak grafiği için).
+ *
+ * Politika faizi yuzlerce gunluk gozlemden olusuyor ama yilda bir iki
+ * kez degisiyor. Her gunu saklamak ayni sayiyi yuzlerce kez yazmak
+ * olurdu. Tutulanlar: ilk gozlem, degerin degistigi her gun ve son
+ * gozlem — son gozlem degismemis olsa da tutuluyor, cunku grafigin
+ * nerede bittigini o belirliyor.
+ *
+ * @param list<array{iso:string,deger:float}> $dizi tarihe gore sirali
+ * @return list<array{0:string,1:float}>
+ */
+function ekonomi_basamaklar(array $dizi): array
+{
+    $sonuc = [];
+    $adet  = count($dizi);
+
+    foreach ($dizi as $i => $gozlem) {
+        $ilk     = $i === 0;
+        $sonMu   = $i === $adet - 1;
+        $degisti = !$ilk && abs($gozlem['deger'] - $dizi[$i - 1]['deger']) > 1e-9;
+
+        if ($ilk || $sonMu || $degisti) {
+            $sonuc[] = [$gozlem['iso'], round($gozlem['deger'], 4)];
+        }
+    }
+
+    return $sonuc;
 }
 
 /**
@@ -323,26 +397,45 @@ function ekonomi_evds_cozumle(array $seri, array $veri): array
  * yaziyor — onaylayan kisi rakami TUIK bulteniyle bire bir
  * karsilastirabiliyor.
  *
- * @param list<array{tarih:string,deger:float}> $dizi
+ * KARSILASTIRMA AYI TARIHLE BULUNUYOR, DIZIDEKI YERIYLE DEGIL. Ilk
+ * surum "gecen yilin ayni ayi"ni sondan 13. eleman sayiyordu. Bos
+ * gozlemler ayiklandigi icin arada tek bir ay eksik gelse o eleman 13
+ * ay oncesi olurdu ve yillik enflasyon sessizce yanlis hesaplanirdi.
+ * Simdi ay anahtariyla araniyor; ay yoksa hesap YAPILMIYOR.
+ *
+ * @param list<array{tarih:string,iso:string,deger:float}> $dizi tarihe gore sirali
  * @return array{tamam:bool,deger:string,donem:string,not:string,hata:string}
  */
 function ekonomi_tufe_hesapla(array $dizi): array
 {
-    $adet = count($dizi);
+    $bos = ['tamam' => false, 'deger' => '', 'donem' => '', 'not' => ''];
 
-    if ($adet < 13) {
-        return ['tamam' => false, 'deger' => '', 'donem' => '', 'not' => '',
-                'hata'  => 'Yıllık değişim için 13 aylık endeks gerekiyor, '
-                         . $adet . ' geldi.', 'tekrar' => false];
+    $ayGore = [];
+
+    foreach ($dizi as $gozlem) {
+        $ayGore[substr($gozlem['iso'], 0, 7)] = $gozlem;
     }
 
-    $son     = $dizi[$adet - 1];
-    $onceki  = $dizi[$adet - 2];
-    $gecenYil = $dizi[$adet - 13];
+    ksort($ayGore);
+
+    $sonAy      = (string) array_key_last($ayGore);
+    $oncekiAy   = ekonomi_ay_kaydir($sonAy, -1);
+    $gecenYilAy = ekonomi_ay_kaydir($sonAy, -12);
+
+    foreach ([$oncekiAy => 'bir önceki ay', $gecenYilAy => 'geçen yılın aynı ayı'] as $ay => $ad) {
+        if (!isset($ayGore[$ay])) {
+            return $bos + ['hata' => 'Karşılaştırma için ' . $ad . ' (' . $ay
+                                   . ') endeksi gelmedi; hesap yapılmadı.',
+                           'tekrar' => false];
+        }
+    }
+
+    $son      = $ayGore[$sonAy];
+    $onceki   = $ayGore[$oncekiAy];
+    $gecenYil = $ayGore[$gecenYilAy];
 
     if ($onceki['deger'] <= 0.0 || $gecenYil['deger'] <= 0.0) {
-        return ['tamam' => false, 'deger' => '', 'donem' => '', 'not' => '',
-                'hata'  => 'Karşılaştırma endeksi sıfır ya da eksi; hesaplanamaz.'];
+        return $bos + ['hata' => 'Karşılaştırma endeksi sıfır ya da eksi; hesaplanamaz.'];
     }
 
     $aylik  = ($son['deger'] / $onceki['deger'] - 1) * 100;
@@ -360,7 +453,42 @@ function ekonomi_tufe_hesapla(array $dizi): array
                  . number_format($gecenYil['deger'], 2, ',', '.')
                  . '. TÜİK bülteniyle karşılaştırın.',
         'hata'  => '',
+        'seri'  => ekonomi_yillik_degisim_serisi($ayGore, 24),
     ];
+}
+
+/**
+ * Her ay için bir yıl önceye göre değişim serisi (grafik için).
+ *
+ * Karsiligi olmayan ay ATLANIYOR, tahmin edilmiyor. Grafikte o ay bos
+ * kalir; uydurulmus bir nokta cizmekten iyidir.
+ *
+ * @param array<string,array{iso:string,deger:float}> $ayGore 'Y-m' => gozlem, sirali
+ * @return list<array{0:string,1:float}>
+ */
+function ekonomi_yillik_degisim_serisi(array $ayGore, int $enFazla): array
+{
+    $seri = [];
+
+    foreach ($ayGore as $ay => $gozlem) {
+        $karsilik = $ayGore[ekonomi_ay_kaydir((string) $ay, -12)] ?? null;
+
+        if ($karsilik === null || $karsilik['deger'] <= 0.0) {
+            continue;
+        }
+
+        $seri[] = [$ay . '-01', round(($gozlem['deger'] / $karsilik['deger'] - 1) * 100, 4)];
+    }
+
+    return array_slice($seri, -$enFazla);
+}
+
+/** 'Y-m' biçimindeki ayı verilen kadar kaydırır. */
+function ekonomi_ay_kaydir(string $ay, int $kac): string
+{
+    // Ayin ilk gunu uzerinden: 31 Mart'tan bir ay geri gitmek PHP'de
+    // 3 Mart verir, 1 Mart'tan gitmek 1 Subat.
+    return date('Y-m', (int) strtotime($ay . '-01 ' . ($kac >= 0 ? '+' : '') . $kac . ' months'));
 }
 
 /**

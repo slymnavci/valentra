@@ -250,6 +250,11 @@ function sema_yukselt(array &$hatalar = []): array
     // CREATE TABLE onu eklemez; mevcut kurulumlara boyle iniyor.
     $sutunEkle('ziyaretler', 'ip', "VARCHAR(45) NOT NULL DEFAULT '' AFTER ziyaretci");
 
+    // Ekonomik gostergelerin grafik serisi. Yayindaki ve aday ayri:
+    // seri de deger gibi onaydan geciyor.
+    $sutunEkle('pratik_bilgiler', 'seri', 'MEDIUMTEXT NULL AFTER onay_tarihi');
+    $sutunEkle('pratik_bilgiler', 'aday_seri', 'MEDIUMTEXT NULL AFTER aday_tarihi');
+
     // kaynaklar.besleme_url benzersiz olmali; yoksa sema her
     // calistirildiginda INSERT IGNORE kopya kayit uretir.
     $adim('kaynaklar benzersizlik kisiti', static function (): bool {
@@ -375,6 +380,10 @@ function sema_guncel_mi(): bool
             ['kategoriler', 'ust_id'],
             ['kaynaklar', 'liste_url'],
             ['kaynaklar', 'liste_secici'],
+            // pratik_aday_yaz bu sutunu dogrudan sorguluyor; yukseltme
+            // dustuyse panel "guncel" dememeli.
+            ['pratik_bilgiler', 'seri'],
+            ['pratik_bilgiler', 'aday_seri'],
         ];
 
         foreach ($beklenenSutunlar as [$tablo, $sutun]) {
