@@ -52,7 +52,14 @@ on:
         description: 'En fazla kac aday islensin'
         default: '25'
       aday:
-        description: 'kaynak-testi: DB disi aday adresler  (Ad=https://..., Ad=https://...)'
+        description: 'kaynak-testi: DB disi aday adresler  (Ad=https://..., Ad=https://...|yol:/bolum/)'
+        default: ''
+      rg:
+        description: 'kaynak-testi: Resmi Gazete okuyucusunu dene (bugun + dun)'
+        type: boolean
+        default: false
+      metin:
+        description: 'kaynak-testi: bu adreslerden modele gidecek metni goster (virgulle)'
         default: ''
 
 # Ayni anda iki ajan calismasin; ust uste binerse kopya istek olusur.
@@ -106,6 +113,20 @@ jobs:
         working-directory: ajan
         run: composer install --no-interaction --no-progress --prefer-dist
 
+      # PDF'ten metin cikarmak icin pdftotext (poppler).
+      #
+      # Resmi Gazete'de ekli tablolu Cumhurbaskani Kararlari ve bazi
+      # tebligler PDF. Arac yokken PDF'in metni bos cikiyor ve model
+      # "sayfa metni alinamadi" deyip tam da aranan mevzuati eliyordu.
+      # Kurulum basarisiz olursa is DURMUYOR: ajan araci bulamazsa o
+      # adaylari eskisi gibi baslik ve ozetle degerlendiriyor.
+      - name: PDF araci kur
+        if: inputs.mod != 'ag-tanisi' && inputs.mod != 'kanun-testi'
+        run: |
+          sudo apt-get install -y -q poppler-utils \
+            || (sudo apt-get update -q && sudo apt-get install -y -q poppler-utils) \
+            || echo "::warning::pdftotext kurulamadi; PDF mevzuat metni okunamayacak."
+
       # Kaynak testi model cagrisi yapmaz ve siteye hicbir sey yazmaz;
       # yalnizca hangi kaynagin okunabildigini raporlar. Testin burada
       # kosmasi onemli: paylasimli hostingin CA deposu eksik oldugu icin
@@ -137,14 +158,39 @@ jobs:
         env:
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+          # Girdiler ortam degiskeniyle geciyor, betige dogrudan
+          # yazilmiyor: adreslerdeki |, & gibi karakterler kabuk
+          # komutu olarak yorumlanmasin.
+          SAAT:  ${{ inputs.saat || '36' }}
+          ADAY:  ${{ inputs.aday }}
+          RG:    ${{ inputs.rg }}
+          METIN: ${{ inputs.metin }}
         # Aday adresleri once SINANIR, sonra schema.sql'e yazilir.
         # Tersi sira denendi ve listede 32 bozuk adres birikti.
+        #
+        # --rg ve --metin ayni calismada adaylarla birlikte istenebiliyor;
+        # hicbiri verilmezse eskisi gibi butun kaynaklar sinaniyor.
         run: |
-          if [ -n "${{ inputs.aday }}" ]; then
-            php kaynak_dene.php --saat=${{ inputs.saat || '36' }} --aday="${{ inputs.aday }}"
-          else
-            php kaynak_dene.php --saat=${{ inputs.saat || '36' }}
+          set +e
+          durum=0
+
+          if [ "$RG" = "true" ]; then
+            php kaynak_dene.php --rg || durum=1
           fi
+
+          if [ -n "$METIN" ]; then
+            php kaynak_dene.php --metin="$METIN" || durum=1
+          fi
+
+          if [ -n "$ADAY" ]; then
+            php kaynak_dene.php --saat="$SAAT" --aday="$ADAY" || durum=1
+          fi
+
+          if [ "$RG" != "true" ] && [ -z "$METIN" ] && [ -z "$ADAY" ]; then
+            php kaynak_dene.php --saat="$SAAT" || durum=1
+          fi
+
+          exit $durum
 
       # Pratik bilgiler nadiren (yilda birkac kez) degisiyor; haber
       # toplamayla ayni siklikta kosmasi anlamsiz olurdu. Haftada bir

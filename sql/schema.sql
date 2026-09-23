@@ -1172,3 +1172,55 @@ UPDATE pratik_bilgiler
 UPDATE pratik_bilgiler
    SET kaynak_adi = 'TÜİK — TCMB EVDS üzerinden'
  WHERE anahtar = 'enflasyon-orani';
+
+-- ---------------------------------------------------------------------------
+-- Iki kirik kaynagin calisan adresi — 23.09.2026
+--
+-- Ikisi de 22.09'daki ajan calismasinda "bos donen 29 kaynak" arasindaydi.
+-- Adresler GitHub Actions'tan kaynak testiyle SINANDI (calisma #110):
+--
+--   Grant Thornton: /tr/icgorulerimiz/ hicbir sey vermiyordu. Sirkulerler
+--   /vergi-sirkuleri/ altinda; yol suzgeciyle 6 gercek sirkuler geldi
+--   ("2026 2. gecici vergi donemi yeniden degerleme orani" gibi). Suzgec
+--   olmadan kalip kurali menudeki hizmet sayfalarini seciyordu.
+--
+--   Ekonomi Gazetesi: kayitli besleme .com.tr uzerindeydi ve bos donuyordu.
+--   Yayin .com alan adina tasinmis; /rss.xml 25 girdi verdi.
+--
+-- Guncellemeler ESKI BOZUK DEGERE KOSULLU: panelden elle degistirilmis bir
+-- kaynagin uzerine yazilmasin.
+-- ---------------------------------------------------------------------------
+
+UPDATE kaynaklar
+   SET liste_url    = 'https://www.grantthornton.com.tr/vergi-sirkuleri/',
+       liste_secici = 'yol:/vergi-sirkuleri/'
+ WHERE ad = 'Grant Thornton Türkiye'
+   AND liste_url = 'https://www.grantthornton.com.tr/tr/icgorulerimiz/';
+
+UPDATE kaynaklar
+   SET besleme_url = 'https://www.ekonomigazetesi.com/rss.xml',
+       site_url    = 'https://www.ekonomigazetesi.com'
+ WHERE ad = 'Ekonomi Gazetesi'
+   AND besleme_url = 'https://www.ekonomigazetesi.com.tr/rss';
+
+-- Para Analiz — 23.09.2026, kaynak testi #113
+--
+-- /feed/ artik HTML donuyor; /rss, /rss.xml, /feed.xml denendi, ucu de 404.
+-- Kayitli liste (/kategori/ekonomi/) da eski duzenin adresi. Haberler
+-- /haberler/<baslik>, kategoriler /haberler/kategori/<ad> altinda; her haber
+-- adresi tekil oldugu icin kalip kurali kategori sayfalarini seciyordu.
+-- Dislamali yol suzgeciyle ekonomi sayfasindan 9 gercek haber geldi.
+-- Ana sayfa 27 veriyor ama siyaset haberleriyle karisik; ekonomi sayfasi secildi.
+UPDATE kaynaklar
+   SET besleme_url  = NULL,
+       liste_url    = 'https://www.paraanaliz.com/haberler/kategori/ekonomi',
+       liste_secici = 'yol:/haberler/ -/haberler/kategori/',
+       tur          = 'web'
+ WHERE ad = 'Para Analiz'
+   AND besleme_url = 'https://www.paraanaliz.com/feed/';
+
+-- ISMMMO bilincli olarak DEGISTIRILMEDI: sirkuler ve duyuru sayfalarinin
+-- uc farkli adresi de ayni 35 site menusu baglantisini veriyor (Uye
+-- islemleri, Staj, Buro kayit...). Liste sayfanin ham HTML'inde yok;
+-- buyuk olasilikla betikle sonradan yukleniyor. Kazimayla okunamaz,
+-- secici degistirmek sonuc vermez.

@@ -116,6 +116,45 @@ function kazima_adaylari_topla(string $html, string $tabanUrl, string $secici = 
     $xpath = new DOMXPath($belge);
     $kapsam = null;
 
+    /*
+     * YOL SUZGECI: "yol:/vergi-sirkuleri/"
+     *
+     * CSS secici sayfanin DOM'unu bilmeyi gerektiriyor; bazi sitelerde
+     * bilinmiyor ya da sik degisiyor. Oysa haber adresleri cogu zaman
+     * sabit bir yol altinda: Grant Thornton sirkulerleri
+     * /vergi-sirkuleri/ altinda. Genel kalip kurali o sayfada
+     * sirkulerleri degil menudeki hizmet sayfalarini seciyordu
+     * ("Danismanlik Hizmetleri", 19 bağlantı) — cunku menu daha
+     * kalabalikti. Yol suzgeci yalnizca bu yolun ALTINDAKI
+     * baglantilari aliyor; listeleme sayfasinin kendisini degil.
+     */
+    $yolSuzgeci = '';
+    $dislanan   = [];
+
+    if (str_starts_with($secici, 'yol:')) {
+        /*
+         * DISLAMA: "yol:/haberler/ -/haberler/kategori/"
+         *
+         * Bosluktan sonra "-" ile baslayan parca o yolu disarida
+         * birakir. Para Analiz'de haberler /haberler/<baslik>,
+         * kategoriler /haberler/kategori/<ad> altinda; her haberin
+         * adresi farkli oldugu icin en kalabalik kalip kategoriler
+         * cikiyor ve kalip kurali haber yerine kategori sayfalarini
+         * seciyordu. Tek parcali eski bicim ("yol:/vergi-sirkuleri/")
+         * aynen calisiyor.
+         */
+        $parcalar   = preg_split('/\s+/', trim(substr($secici, 4))) ?: [];
+        $secici     = '';
+
+        foreach ($parcalar as $parca) {
+            if (str_starts_with($parca, '-') && strlen($parca) > 1) {
+                $dislanan[] = substr($parca, 1);
+            } elseif ($yolSuzgeci === '' && $parca !== '') {
+                $yolSuzgeci = $parca;
+            }
+        }
+    }
+
     if ($secici !== '') {
         $ifade = kazima_secici_xpath($secici);
 
@@ -175,6 +214,26 @@ function kazima_adaylari_topla(string $html, string $tabanUrl, string $secici = 
             continue;
         }
 
+        if ($yolSuzgeci !== '') {
+            $yol     = rtrim((string) parse_url($mutlak, PHP_URL_PATH), '/');
+            $tabanYol = rtrim((string) parse_url($tabanUrl, PHP_URL_PATH), '/');
+            $konum   = strpos($yol . '/', $yolSuzgeci);
+
+            // Yolun altinda olmali; listeleme sayfasi ya da onun ustu degil.
+            if ($konum === false
+                || strlen($yol . '/') <= $konum + strlen($yolSuzgeci)
+                || $yol === $tabanYol
+                || str_starts_with($tabanYol . '/', $yol . '/')) {
+                continue;
+            }
+
+            foreach ($dislanan as $disari) {
+                if (str_contains($yol . '/', $disari)) {
+                    continue 2;
+                }
+            }
+        }
+
         // Ayni adres birden cok kez gecebilir (gorsel + baslik baglantisi).
         $anahtar = strtok($mutlak, '#');
 
@@ -191,7 +250,8 @@ function kazima_adaylari_topla(string $html, string $tabanUrl, string $secici = 
 
     return [
         'toplam_a'   => count($baglantilar),
-        'kapsam_var' => $kapsam !== null,
+        // Yol suzgeci de kapsami daraltir: kalip kuraliyla yeniden elenmesin.
+        'kapsam_var' => $kapsam !== null || $yolSuzgeci !== '',
         'adaylar'    => $adaylar,
     ];
 }
