@@ -36,6 +36,7 @@
                 <a href="istatistik.php">Ziyaretçiler</a>
                 <a href="ajan.php">Ajan</a>
                 <a href="pratik.php">Pratik bilgiler</a>
+                <a href="grafikler.php">Grafikler</a>
                 <a href="kaynaklar.php">Kaynaklar</a>
                 <a href="kanunlar.php">Kanun metinleri</a>
                 <a href="seo.php">Arama motoru</a>

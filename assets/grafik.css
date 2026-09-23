@@ -10,6 +10,9 @@
  */
 
 .grafik {
+    /* Etiket seyreltmesi ekrana degil GRAFIGIN genisligine bakiyor. */
+    container-type: inline-size;
+
     --grafik-renk:  #205698;
     --grafik-zemin: var(--kart, #ffffff);
     --grafik-izgara: var(--cizgi, #e2e6ec);
@@ -253,13 +256,59 @@
  * "Tem 2026" ust uste bindi: sona hizalanan etiket bir oncekiyle
  * arasinda yer birakmiyor. Seyreltme duzenli olmali, istisnasiz.
  */
+@container (max-width: 520px) {
+    .grafik-x span:nth-child(even) { display: none; }
+}
+
+/*
+ * Kural once ekran genisligine (@media) bagliydi. Ana sayfada kartlar iki
+ * sutunda dar ama ekran genis oldugu icin seyreltme calismiyor, "Oca 2025"
+ * ile "Tem 2025" masaustunde ust uste biniyordu. Grafigin kendi genisligi
+ * olculuyor artik. Container query'yi bilmeyen eski tarayicida butun
+ * etiketler gorunur — eski davranis.
+ */
 @media (max-width: 520px) {
     .grafik-govde { grid-template-rows: 180px auto; }
-    .grafik-x span:nth-child(even) { display: none; }
 }
 
 @media (forced-colors: active) {
     .grafik-cizgi { stroke: CanvasText; }
     .grafik-nokta { background: CanvasText; }
     .grafik-dolgu { opacity: 0; }
+}
+
+/* --- Ana sayfa bolumu (includes/ana_grafikler.php) ---------------------- */
+
+.ana-grafikler { margin: 0 0 8px; }
+
+/* Genis ekranda iki sutun; dar ekranda alt alta. */
+.ana-grafikler-izgara {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+@media (max-width: 900px) {
+    .ana-grafikler-izgara { grid-template-columns: 1fr; }
+}
+
+.ana-grafik-kart {
+    background: var(--kart, #ffffff);
+    border-radius: var(--yuvarlak, 10px);
+    box-shadow: var(--golge);
+    padding: 18px 20px 14px;
+    min-width: 0;
+}
+
+.ana-grafik-kart h3 {
+    margin: 0;
+    font-size: 1.05rem;
+}
+
+.ana-grafik-kart .grafik { margin-top: 8px; }
+.ana-grafik-kart .grafik-ust { margin-bottom: 10px; }
+.ana-grafik-kart .grafik-govde { grid-template-rows: 170px auto; }
+
+@media (max-width: 520px) {
+    .ana-grafik-kart .grafik-govde { grid-template-rows: 150px auto; }
 }

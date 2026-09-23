@@ -243,3 +243,23 @@ jobs:
           fi
 
           php topla.php $BAYRAKLAR
+
+      # Panelden yayina alinan grafiklerin verisini tazele.
+      #
+      # Veriyi SITE cekiyor (api/grafik-tazele.php): EVDS anahtari sitede
+      # kayitli ve site Turkiye'de barindigi icin TCMB'ye ulasiyor. Ajan
+      # yalnizca durtuyor. Haber toplama dussa bile grafikler eskimesin diye
+      # !cancelled(); istek basarisiz olursa is kirmizi olmuyor, uyari
+      # yaziliyor — grafiklerin son iyi verisi zaten sitede duruyor.
+      - name: Grafikleri tazele
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'topla') }}
+        env:
+          VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: |
+          curl -sS --max-time 120 -X POST \
+            -H "X-Valentra-Key: $VALENTRA_AGENT_KEY" \
+            -H "Authorization: Bearer $VALENTRA_AGENT_KEY" \
+            "${VALENTRA_SITE_URL%/}/api/grafik-tazele.php" \
+            || echo "::warning::Grafik tazeleme istegi basarisiz; grafiklerin son iyi verisi korunuyor."
+          echo

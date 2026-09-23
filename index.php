@@ -63,6 +63,10 @@ require __DIR__ . '/includes/sayfa_ust.php';
                      acilmaz gorunen, surekli degisen tek veri. */ ?>
             <?php require __DIR__ . '/includes/piyasa_serit.php'; ?>
 
+            <?php /* Panelden yayina alinan grafikler: seridin hemen altinda,
+                     yalnizca ilk sayfada. Yayinda grafik yoksa hic basilmaz. */ ?>
+            <?php require __DIR__ . '/includes/ana_grafikler.php'; ?>
+
             <?php
             /*
              * VALENTRA ANALIZ bolumu — yalnizca ilk sayfada.
