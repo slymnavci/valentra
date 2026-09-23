@@ -129,10 +129,30 @@ function kazima_adaylari_topla(string $html, string $tabanUrl, string $secici = 
      * baglantilari aliyor; listeleme sayfasinin kendisini degil.
      */
     $yolSuzgeci = '';
+    $dislanan   = [];
 
     if (str_starts_with($secici, 'yol:')) {
-        $yolSuzgeci = trim(substr($secici, 4));
+        /*
+         * DISLAMA: "yol:/haberler/ -/haberler/kategori/"
+         *
+         * Bosluktan sonra "-" ile baslayan parca o yolu disarida
+         * birakir. Para Analiz'de haberler /haberler/<baslik>,
+         * kategoriler /haberler/kategori/<ad> altinda; her haberin
+         * adresi farkli oldugu icin en kalabalik kalip kategoriler
+         * cikiyor ve kalip kurali haber yerine kategori sayfalarini
+         * seciyordu. Tek parcali eski bicim ("yol:/vergi-sirkuleri/")
+         * aynen calisiyor.
+         */
+        $parcalar   = preg_split('/\s+/', trim(substr($secici, 4))) ?: [];
         $secici     = '';
+
+        foreach ($parcalar as $parca) {
+            if (str_starts_with($parca, '-') && strlen($parca) > 1) {
+                $dislanan[] = substr($parca, 1);
+            } elseif ($yolSuzgeci === '' && $parca !== '') {
+                $yolSuzgeci = $parca;
+            }
+        }
     }
 
     if ($secici !== '') {
@@ -205,6 +225,12 @@ function kazima_adaylari_topla(string $html, string $tabanUrl, string $secici = 
                 || $yol === $tabanYol
                 || str_starts_with($tabanYol . '/', $yol . '/')) {
                 continue;
+            }
+
+            foreach ($dislanan as $disari) {
+                if (str_contains($yol . '/', $disari)) {
+                    continue 2;
+                }
             }
         }
 
