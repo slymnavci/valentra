@@ -110,7 +110,18 @@ function takvim_yolu(?int $yil = null): string
         return $taban;
     }
 
-    return $taban . (temiz_adres_acik() ? '?yil=' : '&yil=') . $yil;
+    /*
+     * Her iki bicimde de '?'.
+     *
+     * Burada bir ara (temiz_adres_acik() ? '?yil=' : '&yil=') yaziliyordu.
+     * Temiz adresler KAPALIYKEN — ki deponun belgeledigi varsayilan bu —
+     * $taban '/vergi-takvimi.php' oluyor ve sorgu dizesi HIC yok; basina
+     * '&' koymak '/vergi-takvimi.php&yil=2025' uretiyordu. Sunucu bunu
+     * sorgu degil YOL parcasi sayar, $_GET['yil'] hic dolmaz ve
+     * takvimdeki onceki/sonraki yil baglantilarinin ikisi de calismazdi.
+     * Iki bicimde de $taban sorgusuz oldugu icin dogrusu '?'.
+     */
+    return $taban . '?yil=' . $yil;
 }
 
 /** Tek bir pratik bilginin kendi sayfası. */

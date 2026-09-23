@@ -18,6 +18,14 @@ $bildirim = '';
 /** @var array<int,array{tamam:bool,mesaj:string,adet:int,ornek:string}> */
 $testSonuclari = [];
 
+/**
+ * Toplu testte kalinan yer.
+ *
+ * null ise devam edilecek bir sey yok. Sayi ise "Kaldigi yerden devam
+ * et" dugmesi o sirasal konumdan surduruyor.
+ */
+$testDevam = null;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_dogrula($_POST['csrf'] ?? null);
 
@@ -185,33 +193,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
          * Artik besleme adresi olan besleme olarak, olmayan kazima
          * olarak sinaniyor. Ikisi de yoksa sorun gercekten kaynakta.
          */
-        $sorgu = 'SELECT id, besleme_url, liste_url, liste_secici
-                    FROM kaynaklar WHERE aktif = 1';
+        /*
+         * SURE BUTCESI — sayfanin zaman asimina ugramamasi icin.
+         *
+         * Yukaridaki duzeltme kazima kaynaklarini da GERCEKTEN
+         * sinamaya basladi. Dogrusu buydu, ama maliyeti gorulmedi:
+         * 81 aktif kaynagin 31'i kazima ve her biri artik tam bir HTML
+         * sayfasi indiriyor. Oncesinde bu 31'i adres bos diye aninda
+         * duser, aga hic cikmazdi.
+         *
+         * En kotu durum 81 x 10sn = 810 saniye. Paylasimli barindirmada
+         * baglanti zaman asimi bunun cok altinda: panel "Request
+         * Timeout" veriyor ve HICBIR sonuc gorunmuyordu.
+         *
+         * Cozum, isi tek istege sigdirmaya calismak degil: butce
+         * dolunca durup kaldigi yeri bildirmek. Kullanici "Devam et"
+         * ile sonrakini sinar, birikmis sonuclar oturumda korunur.
+         * Tamamini tek seferde taramak icin zaten ajanin
+         * "kaynak-testi" modu var; o bir web istegi degil.
+         */
+        $butce   = 25;   // saniye
+        $basla   = max(0, (int) ($_POST['basla'] ?? 0));
+        $bitti   = microtime(true) + $butce;
+        $sinanan = 0;
 
-        foreach (db()->query($sorgu)->fetchAll() as $k) {
+        $sorgu = 'SELECT id, besleme_url, liste_url, liste_secici
+                    FROM kaynaklar WHERE aktif = 1 ORDER BY id';
+
+        $hepsi  = db()->query($sorgu)->fetchAll();
+        $toplam = count($hepsi);
+
+        // Onceki turlarin sonuclari korunuyor; aksi halde her "Devam et"
+        // tabloyu sifirlar ve kullanici hicbir zaman butunu goremezdi.
+        $birikmis = $basla > 0 ? (array) ($_SESSION['kaynak_testi'] ?? []) : [];
+
+        for ($i = $basla; $i < $toplam; $i++) {
+            if ($i > $basla && microtime(true) >= $bitti) {
+                break;
+            }
+
+            $k       = $hepsi[$i];
             $besleme = trim((string) ($k['besleme_url'] ?? ''));
             $liste   = trim((string) ($k['liste_url'] ?? ''));
 
             if ($besleme !== '') {
-                $testSonuclari[(int) $k['id']] = besleme_dene($besleme, 10);
-                continue;
-            }
-
-            if ($liste !== '') {
-                $testSonuclari[(int) $k['id']] = kazima_sayfayi_dene(
+                $birikmis[(int) $k['id']] = besleme_dene($besleme, 8);
+            } elseif ($liste !== '') {
+                $birikmis[(int) $k['id']] = kazima_sayfayi_dene(
                     $liste,
                     (string) ($k['liste_secici'] ?? ''),
-                    10
+                    8
                 );
-                continue;
+            } else {
+                $birikmis[(int) $k['id']] = [
+                    'tamam' => false,
+                    'mesaj' => 'Kaynağın ne besleme ne de kazıma adresi tanımlı.',
+                    'adet'  => 0,
+                    'ornek' => '',
+                ];
             }
 
-            $testSonuclari[(int) $k['id']] = [
-                'tamam' => false,
-                'mesaj' => 'Kaynağın ne besleme ne de kazıma adresi tanımlı.',
-                'adet'  => 0,
-                'ornek' => '',
-            ];
+            $sinanan++;
+        }
+
+        $_SESSION['kaynak_testi'] = $birikmis;
+        $testSonuclari = $birikmis;
+
+        $sonrakiBasla = $basla + $sinanan;
+
+        if ($sonrakiBasla < $toplam) {
+            $testDevam = $sonrakiBasla;
+            $bildirim  = $sonrakiBasla . ' / ' . $toplam . ' kaynak sınandı. '
+                       . 'Kalanlar için "Kaldığı yerden devam et".';
+        } else {
+            unset($_SESSION['kaynak_testi']);
+            $bildirim = $toplam . ' kaynağın tamamı sınandı.';
         }
 
     } elseif ($islem === 'sil') {
@@ -311,6 +367,16 @@ require __DIR__ . '/ust.php';
                     <input type="hidden" name="islem" value="hepsini_test">
                     <button type="submit" class="dugme">Hepsini test et</button>
                 </form>
+
+                <?php /* Butce dolduysa kaldigi yerden surdurmek icin. */ ?>
+                <?php if ($testDevam !== null): ?>
+                    <form method="post" action="kaynaklar.php">
+                        <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                        <input type="hidden" name="islem" value="hepsini_test">
+                        <input type="hidden" name="basla" value="<?= (int) $testDevam ?>">
+                        <button type="submit" class="dugme dugme-ana">Kaldığı yerden devam et</button>
+                    </form>
+                <?php endif; ?>
 
                 <form method="post" action="kaynaklar.php">
                     <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
