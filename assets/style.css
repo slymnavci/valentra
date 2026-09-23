@@ -931,6 +931,37 @@ a.menu-oge.aktif::after,
     color: #fff;
 }
 
+/*
+ * Dar ekranda on dugme tek satira sigmali.
+ *
+ * Manset 10 habere cikinca dugmeler 10 x 30px + 9 x 7px = 363 piksel
+ * istiyor; .sinirli iki yandan 24'er piksel aliyor. 411 pikselin
+ * altindaki her telefonda (390, 375, 360, 320 olculdu) bir iki dugme
+ * ikinci satira dusuyor ve secici egri gorunuyordu.
+ *
+ * Kucuk ekranda dugme 26px, aralik 4px: 296 piksel, 360'lik ekrana
+ * (312 piksel yer) rahat sigiyor. Satir kirilmiyor; daha da dar
+ * ekranlarda (320) dugmeler 22 piksele kadar kuculuyor ve
+ * aspect-ratio sayesinde yuvarlak kaliyor. Gezinme icin iki yandaki
+ * oklar da duruyor.
+ */
+@media (max-width: 480px) {
+    .kaydirak-sayfalar {
+        flex-wrap: nowrap;
+        gap: 4px;
+    }
+
+    .kaydirak-sayfalar button {
+        flex: 0 1 26px;
+        width: auto;
+        min-width: 22px;
+        height: auto;
+        aspect-ratio: 1;
+        padding: 0;
+        font-size: .8rem;
+    }
+}
+
 /* --- Kategori basligi ---------------------------------------------------- */
 
 .kategori-basligi {

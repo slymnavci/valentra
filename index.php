@@ -19,11 +19,13 @@ $sayfa = max(1, (int) ($_GET['sayfa'] ?? 1));
  */
 $adet       = 12;   // izgaradaki kart sayisi
 /*
- * On slayt cok: kimse onuncu slayta kadar gelmiyor ve numaralar
- * seridi kalabaliklastiriyor. Bes secilmis haber mansetin isini
- * goruyor; gerisi zaten hemen altindaki izgarada.
+ * Manset 10 haber.
+ *
+ * Tasarim turunda besle sinirlanmisti; site sahibi 10'a geri
+ * aldirdi. Kaydirak tukettigi haberleri izgaradan dusuyor, yani
+ * ilk sayfadaki izgara 11. haberden basliyor.
  */
-$mansetAdet = 5;    // kaydiraktaki haber sayisi
+$mansetAdet = 10;   // kaydiraktaki haber sayisi
 
 $toplam = haber_yayinda_sayisi();
 
