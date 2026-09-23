@@ -404,12 +404,26 @@ function http_getir(
          * Accept basligi gorurdu.
          */
         curl_setopt($ch, CURLOPT_HTTPHEADER, http_basliklari_birlestir($baslikar));
+
+        /*
+         * YONLENDIRME TAKIP EDILMIYOR.
+         *
+         * Cagiranin basliklari kimlik tasiyor (EVDS "key" basligi).
+         * curl yonlendirmede Authorization ve Cookie'yi baska hosta
+         * gonderirken siler, ama OZEL basliklari silmez: kaynak baska
+         * bir alan adina yonlendirirse anahtar oraya gider. Makine
+         * okunur bir uc yonlendirmemeli; yonlendiriyorsa bu zaten
+         * adresin degistigi anlamina geliyor ve asagida hedefiyle
+         * birlikte hata olarak raporlaniyor.
+         */
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
     }
 
-    $govde   = curl_exec($ch);
-    $hata    = curl_error($ch);
-    $hataNo  = curl_errno($ch);
-    $ayrinti = http_ayrinti($ch);
+    $govde    = curl_exec($ch);
+    $hata     = curl_error($ch);
+    $hataNo   = curl_errno($ch);
+    $ayrinti  = http_ayrinti($ch);
+    $yonlenen = (string) curl_getinfo($ch, CURLINFO_REDIRECT_URL);
     curl_close($ch);
 
     $temel = $ayrinti + ['hata_no' => $hataNo, 'hata' => $hata];
@@ -422,8 +436,14 @@ function http_getir(
     $temel['boyut'] = strlen($govde);
 
     if ($ayrinti['kod'] < 200 || $ayrinti['kod'] >= 300) {
-        return ['tamam' => false, 'govde' => '',
-                'neden' => 'Sunucu HTTP ' . $ayrinti['kod'] . ' döndü.'] + $temel;
+        $neden = 'Sunucu HTTP ' . $ayrinti['kod'] . ' döndü.';
+
+        if ($yonlenen !== '') {
+            $neden .= ' Yönlendirdiği adres: ' . $yonlenen
+                    . ' (kimlik taşıyan istekte yönlendirme izlenmiyor).';
+        }
+
+        return ['tamam' => false, 'govde' => '', 'neden' => $neden] + $temel;
     }
 
     return ['tamam' => true, 'govde' => $govde, 'neden' => ''] + $temel;

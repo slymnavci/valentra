@@ -59,7 +59,7 @@ function ekonomi_seriler(): array
              */
             'grafik'     => ['tur' => 'basamak', 'baslik' => 'Son iki yılın seyri'],
             'kaynak_adi' => 'TCMB — EVDS',
-            'kaynak_url' => 'https://evds2.tcmb.gov.tr/',
+            'kaynak_url' => 'https://evds3.tcmb.gov.tr/',
             'aciklama'   => 'Bir hafta vadeli repo ihale faiz oranı',
             // API duserse satirin kendi sayfasi okunsun: bu rakam
             // Turkce derleme sayfalarinda da yaziyor.
@@ -76,7 +76,7 @@ function ekonomi_seriler(): array
             'gerigit'    => 1130,
             'grafik'     => ['tur' => 'cizgi', 'baslik' => 'Yıllık enflasyon, son 24 ay'],
             'kaynak_adi' => 'TÜİK — TCMB EVDS üzerinden',
-            'kaynak_url' => 'https://evds2.tcmb.gov.tr/',
+            'kaynak_url' => 'https://evds3.tcmb.gov.tr/',
             'aciklama'   => 'Tüketici fiyat endeksi aylık ve yıllık değişimi',
             'yedek_kazima' => true,
         ],
@@ -174,12 +174,26 @@ function ekonomi_anahtar_ister(string $saglayici): bool
  *
  * @param array<string,mixed> $seri
  */
-function ekonomi_adres(array $seri, string $evdsAnahtari = ''): string
+function ekonomi_adres(array $seri): string
 {
     $kod = (string) $seri['seri'];
 
     return match ((string) $seri['saglayici']) {
-        'evds' => 'https://evds2.tcmb.gov.tr/service/evds/'
+        /*
+         * EVDS3 veri ucu.
+         *
+         * Eski adres (evds2.tcmb.gov.tr/service/evds/) artik veri
+         * degil EVDS'nin yeni web arayuzunu donduruyor; canlida ilk
+         * denemede "Yanit JSON degil: <!DOCTYPE html>" ile goruldu.
+         * Yeni uc bakimi suren evds kutuphanesinin kaynak kodundan
+         * teyit edildi: taban adres, parametreler yolun sonuna "?"
+         * olmadan ekleniyor, anahtar YALNIZCA "key" basligiyla.
+         *
+         * Anahtar URL'de GONDERILMIYOR: Nisan 2024'ten beri kabul
+         * edilmiyor, ustelik adresteki anahtar sunucu ve vekil
+         * gunluklerine yaziliyor.
+         */
+        'evds' => 'https://evds3.tcmb.gov.tr/igmevdsms-dis/'
                 . 'series=' . rawurlencode($kod)
                 . '&startDate=' . date('d-m-Y', strtotime('-' . (int) ($seri['gerigit'] ?? 400) . ' days'))
                 . '&endDate=' . date('d-m-Y')
@@ -188,8 +202,7 @@ function ekonomi_adres(array $seri, string $evdsAnahtari = ''): string
                 // EVDS'ye hesaplatmak yerine kendimiz hesapliyoruz;
                 // boylece hangi iki donemin karsilastirildigi belli
                 // oluyor ve onaylayan kisi rakami denetleyebiliyor.
-                . '&formulas=0'
-                . ($evdsAnahtari !== '' ? '&key=' . rawurlencode($evdsAnahtari) : ''),
+                . '&formulas=0',
 
         'dunya_bankasi' => 'https://api.worldbank.org/v2/country/TUR/indicator/'
                          . rawurlencode($kod)
@@ -214,16 +227,10 @@ function ekonomi_basliklar(array $seri, string $evdsAnahtari = ''): array
 {
     if ((string) $seri['saglayici'] === 'evds' && $evdsAnahtari !== '') {
         /*
-         * Anahtar hem "key" basligiyla hem sorgu dizesinde
-         * gonderiliyor (bkz. ekonomi_adres). Ikisi birden, cunku
-         * dogrudan istekte baslik kesin calisiyor; site uzerinden
-         * yapilan YEDEK istekte ise baslik tasinmiyor ve geriye
-         * yalnizca sorgu dizesi kaliyor. Fazladan baslik zarar
-         * vermiyor.
-         *
-         * EVDS sorgu dizesindeki anahtari kabul etmezse yedek yol
-         * calismaz; o durumda panel dugmesi (site->EVDS, baslikli)
-         * gecerli yoldur.
+         * EVDS anahtari YALNIZCA bu baslikla kabul ediyor. Site
+         * uzerinden yapilan yedek istekte baslik ajandan gelmiyor;
+         * api/getir.php EVDS adresini gorunce sitede kayitli anahtari
+         * kendisi ekliyor.
          */
         return ['key: ' . $evdsAnahtari];
     }
@@ -244,8 +251,18 @@ function ekonomi_cozumle(array $seri, string $govde): array
     $veri = json_decode($govde, true);
 
     if (!is_array($veri)) {
-        return $bos + ['hata' => 'Yanıt JSON değil: '
-                               . ekonomi_kirp($govde)];
+        /*
+         * HTML geldiyse bunu ACIKCA soyle. "JSON degil" dogru ama
+         * yetersizdi: EVDS adresini degistirdiginde tam olarak bu
+         * mesaj goruldu ve sebebin adres degisikligi oldugu ancak
+         * yanitin icine bakinca anlasildi.
+         */
+        $html = (bool) preg_match('/^\s*(<!doctype html|<html)/i', $govde);
+
+        return $bos + ['hata' => ($html
+            ? 'Kaynak veri yerine bir web sayfası döndürdü; adres değişmiş ya da '
+            . 'istek engellenmiş olabilir. Yanıtın başı: '
+            : 'Yanıt JSON değil: ') . ekonomi_kirp($govde)];
     }
 
     return match ((string) $seri['saglayici']) {
@@ -776,8 +793,9 @@ function ekonomi_kirp(string $govde, int $sinir = 160): string
  */
 function ekonomi_oku(array $seri, string $evdsAnahtari = ''): array
 {
-    $adres = ekonomi_adres($seri, $evdsAnahtari);
-    $kunye = ['adres' => $adres, 'kod' => 0, 'boyut' => 0, 'ham' => ''];
+    $adres = ekonomi_adres($seri);
+    $kunye = ['adres' => $adres, 'kod' => 0, 'boyut' => 0, 'ham' => '',
+              'son_url' => '', 'tur' => ''];
 
     if ($adres === '') {
         return ['tamam' => false, 'deger' => '', 'donem' => '', 'not' => '',
@@ -794,6 +812,14 @@ function ekonomi_oku(array $seri, string $evdsAnahtari = ''): array
 
     $kunye['kod']   = (int) ($yanit['kod'] ?? 0);
     $kunye['boyut'] = (int) ($yanit['boyut'] ?? 0);
+    /*
+     * Yonlendirilen SON adres ve icerik turu da tutuluyor. EVDS eski
+     * adresten web arayuzune yonlendirdiginde panel yalnizca istenen
+     * adresi gosteriyordu; son adres gorunseydi sorun ilk bakista
+     * anlasilirdi.
+     */
+    $kunye['son_url'] = (string) ($yanit['son_url'] ?? '');
+    $kunye['tur']     = (string) ($yanit['tur'] ?? '');
     $kunye['ham']   = ekonomi_kirp((string) ($yanit['govde'] ?? ''), 400);
 
     if (!$yanit['tamam']) {

@@ -132,7 +132,7 @@ foreach ($bilgiler as $bilgi) {
      * api/getir.php bu uc alan adina sabit izin listesiyle geciyor.
      */
     if (ekonomi_tekrar_denenir($okuma)) {
-        $adres = ekonomi_adres($seri, $evdsAnahtari);
+        $adres = ekonomi_adres($seri);
         $ham   = $adres !== '' ? $site->hamGetir($adres) : null;
 
         if ($ham !== null) {
