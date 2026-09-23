@@ -44,27 +44,21 @@ function ekonomi_seriler(): array
     return [
         /* ---- TCMB EVDS (anahtar ister) --------------------------------- */
 
-        'politika-faizi' => [
-            'saglayici'  => 'evds',
-            'seri'       => 'TP.APIFON4',
-            'birim'      => 'yuzde',
-            // Grafik iki yili gosteriyor; pencere biraz genis tutuluyor
-            // ki ilk gun tatile denk gelse de baslangic degeri olsun.
-            'gerigit'    => 760,            // gun
-            /*
-             * BASAMAK: politika faizi karar gunleri arasinda sabit
-             * durur. Noktalari egik cizgiyle birlestirmek, iki karar
-             * arasinda faizin yavas yavas degistigini ima ederdi —
-             * oysa bir gece degisir.
-             */
-            'grafik'     => ['tur' => 'basamak', 'baslik' => 'Son iki yılın seyri'],
-            'kaynak_adi' => 'TCMB — EVDS',
-            'kaynak_url' => 'https://evds3.tcmb.gov.tr/',
-            'aciklama'   => 'Bir hafta vadeli repo ihale faiz oranı',
-            // API duserse satirin kendi sayfasi okunsun: bu rakam
-            // Turkce derleme sayfalarinda da yaziyor.
-            'yedek_kazima' => true,
-        ],
+        /*
+         * POLITIKA FAIZI BURADA YOK — bilincli.
+         *
+         * Ilk surumde TP.APIFON4 serisinden okunuyordu. O seri politika
+         * faizi (bir hafta vadeli repo) DEGIL, "TCMB agirlikli ortalama
+         * fonlama maliyeti". Ikisi cogu donem ayni ama ayrisabiliyor
+         * (TCMB fonlamayi gecelik borc verme faizinden yaptiginda
+         * maliyet politika faizinin ustune cikiyor). Bir mali musavirlik
+         * sitesinde "politika faizi" etiketiyle baska bir oran
+         * yayimlanamaz.
+         *
+         * Politika faizinin EVDS kodu dogrulanana kadar deger eskisi gibi
+         * TCMB'nin kendi sayfasi okunarak toplaniyor. Fonlama maliyeti
+         * ise kendi adiyla grafik olusturucuda secilebilir.
+         */
 
         'enflasyon-orani' => [
             'saglayici'  => 'evds',
@@ -284,6 +278,47 @@ function ekonomi_evds_cozumle(array $seri, array $veri): array
 {
     $bos = ['tamam' => false, 'deger' => '', 'donem' => '', 'not' => ''];
 
+    $okuma = ekonomi_evds_gozlemler($veri, (string) $seri['seri']);
+
+    if (!$okuma['tamam']) {
+        return $bos + ['hata' => $okuma['hata'], 'tekrar' => $okuma['tekrar']];
+    }
+
+    $dizi = $okuma['gozlemler'];
+
+    if ((string) ($seri['hesap'] ?? '') === 'tufe') {
+        return ekonomi_tufe_hesapla($dizi);
+    }
+
+    $son = $dizi[count($dizi) - 1];
+
+    return [
+        'tamam' => true,
+        'deger' => ekonomi_bicimle($son['deger'], (string) $seri['birim']),
+        'donem' => ekonomi_evds_donem($son['tarih']),
+        'not'   => 'TCMB EVDS ' . $seri['seri'] . ' serisinin son gözlemi.',
+        'hata'  => '',
+        'seri'  => ekonomi_basamaklar($dizi),
+    ];
+}
+
+/**
+ * EVDS yanıtındaki bir serinin TÜM gözlemleri, tarihe göre sıralı.
+ *
+ * Ayri fonksiyon cunku iki kullanici var ve farkli seyler istiyorlar:
+ * pratik bilgi son degeri istiyor, grafik olusturucu butun gozlemleri.
+ * Grafik icin basamaklara indirgenmis seri kullanilamaz: cizgi grafik
+ * iki degisim noktasini dogrudan birlestirir ve aradaki duz donemi
+ * egik gosterirdi.
+ *
+ * @param array<mixed> $veri json_decode edilmis EVDS yaniti
+ * @return array{tamam:bool,gozlemler:list<array{tarih:string,iso:string,deger:float}>,
+ *               hata:string,tekrar:bool}
+ */
+function ekonomi_evds_gozlemler(array $veri, string $kod): array
+{
+    $bos = ['tamam' => false, 'gozlemler' => []];
+
     if (!isset($veri['items']) || !is_array($veri['items'])) {
         // EVDS hatayi da JSON olarak doner; mesaji aynen tasiyoruz,
         // "anahtar gecersiz" ile "seri yok" bambaska islere bakar.
@@ -300,7 +335,7 @@ function ekonomi_evds_cozumle(array $seri, array $veri): array
             'tekrar' => $mesaj === ''];
     }
 
-    $sutun = str_replace('.', '_', (string) $seri['seri']);
+    $sutun = str_replace('.', '_', $kod);
     $dizi  = [];
 
     foreach ($veri['items'] as $satir) {
@@ -327,8 +362,14 @@ function ekonomi_evds_cozumle(array $seri, array $veri): array
     }
 
     if ($dizi === []) {
-        return $bos + ['hata' => 'EVDS seride dolu gözlem döndürmedi ('
-                               . $seri['seri'] . ').'];
+        /*
+         * Tekrar DENENMIYOR: yanit ulasti, seri bos. Cogu zaman seri
+         * kodu yanlis yazilmistir; EVDS tanimadigi kod icin hata degil
+         * bos liste donuyor.
+         */
+        return $bos + ['hata' => 'EVDS seride dolu gözlem döndürmedi (' . $kod
+                               . '). Seri kodunu kontrol edin.',
+                       'tekrar' => false];
     }
 
     /*
@@ -338,20 +379,7 @@ function ekonomi_evds_cozumle(array $seri, array $veri): array
      */
     usort($dizi, static fn (array $a, array $b): int => strcmp($a['iso'], $b['iso']));
 
-    if ((string) ($seri['hesap'] ?? '') === 'tufe') {
-        return ekonomi_tufe_hesapla($dizi);
-    }
-
-    $son = $dizi[count($dizi) - 1];
-
-    return [
-        'tamam' => true,
-        'deger' => ekonomi_bicimle($son['deger'], (string) $seri['birim']),
-        'donem' => ekonomi_evds_donem($son['tarih']),
-        'not'   => 'TCMB EVDS ' . $seri['seri'] . ' serisinin son gözlemi.',
-        'hata'  => '',
-        'seri'  => ekonomi_basamaklar($dizi),
-    ];
+    return ['tamam' => true, 'gozlemler' => $dizi, 'hata' => '', 'tekrar' => false];
 }
 
 /**
@@ -477,18 +505,30 @@ function ekonomi_tufe_hesapla(array $dizi): array
 /**
  * Her ay için bir yıl önceye göre değişim serisi (grafik için).
  *
- * Karsiligi olmayan ay ATLANIYOR, tahmin edilmiyor. Grafikte o ay bos
- * kalir; uydurulmus bir nokta cizmekten iyidir.
- *
  * @param array<string,array{iso:string,deger:float}> $ayGore 'Y-m' => gozlem, sirali
  * @return list<array{0:string,1:float}>
  */
 function ekonomi_yillik_degisim_serisi(array $ayGore, int $enFazla): array
 {
+    return ekonomi_degisim_serisi($ayGore, 12, $enFazla);
+}
+
+/**
+ * Her ay için N ay önceye göre yüzde değişim serisi.
+ *
+ * Karsiligi olmayan ay ATLANIYOR, tahmin edilmiyor. Grafikte o ay bos
+ * kalir; uydurulmus bir nokta cizmekten iyidir. Karsilik TARIHLE
+ * aranir, dizideki yeriyle degil (bkz. ekonomi_tufe_hesapla).
+ *
+ * @param array<string,array{iso:string,deger:float}> $ayGore 'Y-m' => gozlem, sirali
+ * @return list<array{0:string,1:float}>
+ */
+function ekonomi_degisim_serisi(array $ayGore, int $gecikme, int $enFazla): array
+{
     $seri = [];
 
     foreach ($ayGore as $ay => $gozlem) {
-        $karsilik = $ayGore[ekonomi_ay_kaydir((string) $ay, -12)] ?? null;
+        $karsilik = $ayGore[ekonomi_ay_kaydir((string) $ay, -$gecikme)] ?? null;
 
         if ($karsilik === null || $karsilik['deger'] <= 0.0) {
             continue;
@@ -498,6 +538,32 @@ function ekonomi_yillik_degisim_serisi(array $ayGore, int $enFazla): array
     }
 
     return array_slice($seri, -$enFazla);
+}
+
+/**
+ * Gözlemleri aya indirger: her ayın SON gözlemi.
+ *
+ * Gunluk bir seriden (kur gibi) yillik degisim hesaplamak icin her ayin
+ * tek bir degeri gerekiyor. "Ay sonu" secildi, ortalama degil: ortalama
+ * kaynagin yayimladigi hicbir rakama karsilik gelmez ve onaylayan kisi
+ * onu hicbir yerde dogrulayamaz. Aylik serilerde (TUFE) zaten ayda tek
+ * gozlem var, deger degismez.
+ *
+ * @param list<array{iso:string,deger:float}> $gozlemler tarihe gore sirali
+ * @return array<string,array{iso:string,deger:float}> 'Y-m' => gozlem
+ */
+function ekonomi_ay_sonlari(array $gozlemler): array
+{
+    $ayGore = [];
+
+    foreach ($gozlemler as $gozlem) {
+        // Sirali oldugu icin ayni aya ait son yazan kazanir = ay sonu.
+        $ayGore[substr($gozlem['iso'], 0, 7)] = $gozlem;
+    }
+
+    ksort($ayGore);
+
+    return $ayGore;
 }
 
 /** 'Y-m' biçimindeki ayı verilen kadar kaydırır. */

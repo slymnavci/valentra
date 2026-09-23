@@ -1152,12 +1152,22 @@ INSERT IGNORE INTO pratik_bilgiler (anahtar, baslik, aciklama, grup, sira, kayna
      'https://www.imf.org/external/datamapper/profile/TUR', 'IMF — World Economic Outlook',
      'Türkiye''de genel yönetim brüt borç stokunun GSYH''ye oranı.');
 
--- Politika faizi ve enflasyon artik once EVDS'den okunuyor; kaynak adi
--- da onu soylemeli. Sayfa okuma YEDEK olarak duruyor, bu yuzden
--- kaynak_url degistirilmiyor.
+-- Enflasyon artik once EVDS'den okunuyor; kaynak adi da onu soylemeli.
+-- Sayfa okuma YEDEK olarak duruyor, bu yuzden kaynak_url degistirilmiyor.
+--
+-- Politika faizi icin ayni sey yapilmisti ve GERI ALINDI: kullanilan
+-- EVDS serisi (TP.APIFON4) politika faizi degil, agirlikli ortalama
+-- fonlama maliyetiymis. Deger yine TCMB'nin 1 hafta repo sayfasindan
+-- okunuyor; kaynak adi da ona donuyor. Onaylanmamis bir EVDS adayi
+-- kaldiysa o da siliniyor — yanlis seriden geldi.
 UPDATE pratik_bilgiler
-   SET kaynak_adi = 'TCMB — EVDS'
- WHERE anahtar = 'politika-faizi';
+   SET kaynak_adi = 'TCMB'
+ WHERE anahtar = 'politika-faizi' AND kaynak_adi = 'TCMB — EVDS';
+
+UPDATE pratik_bilgiler
+   SET aday_deger = NULL, aday_donem = NULL, aday_notu = NULL,
+       aday_guven = NULL, aday_tarihi = NULL, aday_seri = NULL
+ WHERE anahtar = 'politika-faizi' AND aday_notu LIKE '%TP.APIFON4%';
 
 UPDATE pratik_bilgiler
    SET kaynak_adi = 'TÜİK — TCMB EVDS üzerinden'
