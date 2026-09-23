@@ -14,6 +14,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/pratik.php';
 require_once __DIR__ . '/../includes/ayarlar.php';
 require_once __DIR__ . '/../includes/ekonomi.php';
+require_once __DIR__ . '/../includes/grafik.php';
 
 giris_zorunlu();
 
@@ -80,6 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'donem'   => $apiDeneme['donem'],
                         'not'     => $apiDeneme['not'] . ' (panelden çekildi)',
                         'guven'   => 95,
+                        'seri'    => $apiDeneme['seri'] ?? null,
                     ]);
 
                     /*
@@ -263,6 +265,25 @@ foreach ($satirlar as $satir):
                         <p class="ipucu" style="margin:8px 0 0;">
                             Ajan notu: <?= e((string) $satir['aday_notu']) ?>
                         </p>
+                    <?php endif; ?>
+
+                    <?php
+                    /*
+                     * Onaylanacak grafik ONCEDEN gosteriliyor. Seri degerle
+                     * birlikte yayina giriyor; gorulmeden onaylanan bir
+                     * grafik, rakami gorulmeden onaylanan bir deger kadar
+                     * risklidir.
+                     */
+                    $adaySeri = pratik_seri_oku($satir['aday_seri'] ?? null);
+                    ?>
+                    <?php if ($satirSeri !== null && isset($satirSeri['grafik']) && $adaySeri !== []): ?>
+                        <?= grafik_ciz($adaySeri, [
+                            'tur'    => (string) $satirSeri['grafik']['tur'],
+                            'baslik' => 'Onaylanınca yayına girecek grafik',
+                            'birim'  => (string) $satirSeri['birim'],
+                            'kaynak' => (string) ($satir['kaynak_adi'] ?? ''),
+                            'ad'     => (string) $satir['baslik'],
+                        ]) ?>
                     <?php endif; ?>
 
                     <div class="pratik-dugmeler">

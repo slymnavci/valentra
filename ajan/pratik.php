@@ -158,6 +158,9 @@ foreach ($bilgiler as $bilgi) {
              * veriyi revize etmedigini bu katman bilemez.
              */
             'guven'   => 95,
+            // Grafik serisi (varsa). Site denetleyip degerle birlikte
+            // onaya koyuyor; bozuk seri degeri dusurmuyor.
+            'seri'    => $okuma['seri'] ?? null,
         ];
 
         gunluk(sprintf(
