@@ -1020,7 +1020,16 @@ CREATE TABLE IF NOT EXISTS vergi_takvimi (
     -- kez daha ekleniyordu. Yerelde uc kez uygulandiginda her satir
     -- ucer kopya olmustu; ziyaretci "Yaklasan Tarihler"de ayni
     -- beyannameyi uc kez gorurdu.
-    UNIQUE KEY uk_takvim_kural (baslik, tekrar, gun, aylar),
+    --
+    -- baslik ONEKLE (100) giriyor. Sebep bayt butcesi: utf8mb4'te her
+    -- karakter 4 bayt, yani VARCHAR(200) tek basina 800 bayt eder ve
+    -- dort sutun 962 bayta cikardi. Eski InnoDB yapilandirmalarinda
+    -- (innodb_large_prefix kapali ya da COMPACT satir bicimi) anahtar
+    -- siniri 767 bayt; orada CREATE TABLE dogrudan duserdi, mevcut
+    -- kurulumlarda da ALTER reddedilir ve kopya korumasi hic
+    -- kurulmazdi. Onekle toplam 562 bayt. Yanlis eslesme riski yok:
+    -- en uzun baslik 35 karakter, 100 fazlasiyla ayirt ediyor.
+    UNIQUE KEY uk_takvim_kural (baslik(100), tekrar, gun, aylar),
     KEY idx_takvim_aktif (aktif, sira)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

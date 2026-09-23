@@ -257,6 +257,11 @@ function sema_yukselt(array &$hatalar = []): array
      * Silme ve ALTER ayni adimda: anahtari kopyali bir tabloya eklemek
      * duser, o yuzden once temizlik. schema.sql'e yazilamazdi cunku o
      * dosyanin veri ifadeleri bu fonksiyondan SONRA kosuyor.
+     *
+     * baslik onekle (100) giriyor; gerekcesi schema.sql'deki tanimin
+     * yaninda yaziyor (utf8mb4 bayt butcesi / 767 baytlik eski InnoDB
+     * anahtar siniri). Iki taniminin AYNI kalmasi sart: farklilarsa
+     * yeni kurulumla mevcut kurulum farkli anahtar tasir.
      */
     $adim('vergi_takvimi.uk_takvim_kural indeksi', static function (): bool {
         if (!sema_sutun_var('vergi_takvimi', 'baslik')
@@ -274,7 +279,7 @@ function sema_yukselt(array &$hatalar = []): array
 
         db()->exec(
             'ALTER TABLE vergi_takvimi
-               ADD UNIQUE KEY uk_takvim_kural (baslik, tekrar, gun, aylar)'
+               ADD UNIQUE KEY uk_takvim_kural (baslik(100), tekrar, gun, aylar)'
         );
 
         return true;
@@ -437,6 +442,16 @@ function sema_guncel_mi(): bool
             // dustuyse panel "guncel" dememeli.
             ['pratik_bilgiler', 'seri'],
             ['pratik_bilgiler', 'aday_seri'],
+            // Ayni gerekce: bu sutunlar yoksa haber_taslak_ekle() ve
+            // haber_analizliler() "unknown column" ile duser. Listede
+            // olmazlarsa ALTER basarisiz oldugunda sema_kur() yine
+            // tamam doner, sema_otomatik_yukselt() yeni imzayi
+            // kaydeder ve bir daha HIC denemez — site kalici olarak
+            // bozuk kalirdi.
+            ['haberler', 'analiz_degisen'],
+            ['haberler', 'analiz_etkilenen'],
+            ['haberler', 'analiz_zaman'],
+            ['haberler', 'analiz_islem'],
         ];
 
         foreach ($beklenenSutunlar as [$tablo, $sutun]) {

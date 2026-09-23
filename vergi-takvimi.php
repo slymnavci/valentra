@@ -33,8 +33,17 @@ $buGun    = (int) date('j');
 
 $aktifKategori = 'takvim';
 $sayfaBasligi  = $yil . ' Vergi Takvimi — Beyan ve Ödeme Tarihleri | Valentra';
+/*
+ * ACIKLAMA TAKVIMLE AYNI SEYI SOYLEMELI.
+ *
+ * Burada "Form Ba-Bs" yaziyordu. O bildirim 565 sira no'lu VUK Genel
+ * Tebligi ile kaldirildi ve takvim tohumundan da cikarildi; aciklama
+ * geride kalinca sayfanin meta description'i, Open Graph ve Twitter
+ * etiketleri — yani Google sonucu ve paylasim onizlemesi — artik var
+ * olmayan bir yukumlulugu duyurmaya devam ediyordu.
+ */
 $sayfaAciklama = $yil . ' yılı beyan ve ödeme süreleri: muhtasar, KDV, damga vergisi, '
-               . 'geçici vergi, Form Ba-Bs ve yıllık beyannameler ay ay.';
+               . 'geçici vergi ve yıllık beyannameler ay ay.';
 
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
