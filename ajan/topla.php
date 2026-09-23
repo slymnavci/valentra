@@ -29,13 +29,14 @@ require_once __DIR__ . '/src/TohumYapilandirma.php';
 require_once __DIR__ . '/src/Besleme.php';
 require_once __DIR__ . '/src/Sayfa.php';
 require_once __DIR__ . '/src/Kazima.php';
+require_once __DIR__ . '/src/ResmiGazete.php';
 require_once __DIR__ . '/src/Suzgec.php';
 require_once __DIR__ . '/src/Site.php';
 require_once __DIR__ . '/src/KotaBittiException.php';
 require_once __DIR__ . '/src/SemaliIstemci.php';
 require_once __DIR__ . '/src/Yazar.php';
 
-use Valentra\Ajan\{Besleme, Depo, Getirici, Http, Kazima, KotaBittiException, Sayfa, Site, Suzgec, TohumYapilandirma, Yazar};
+use Valentra\Ajan\{Besleme, Depo, Getirici, Http, Kazima, KotaBittiException, ResmiGazete, Sayfa, Site, Suzgec, TohumYapilandirma, Yazar};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
@@ -223,6 +224,7 @@ $getirici = new Getirici(
 $besleme  = new Besleme($getirici);
 $sayfa    = new Sayfa($getirici);
 $kazima   = new Kazima($getirici);
+$resmiGazete = new ResmiGazete($getirici);
 
 if (!$siteyeUlasilir) {
     gunluk('Site sunucusu üzerinden indirme bu çalışmada kapalı; '
@@ -567,6 +569,21 @@ function kaynaklari_sirala(array $kaynaklar, int $calismaNo): array
  * @param array<string,int>           $paylar      Konu => tur basina pay
  * @return list<array<string,mixed>>
  */
+/**
+ * Kaynak Resmî Gazete mi?
+ *
+ * Ada degil alan adina bakiliyor: panelden ad degistirilse de kural
+ * bozulmasin.
+ *
+ * @param array<string,mixed> $kaynak
+ */
+function resmi_gazete_mi(array $kaynak): bool
+{
+    $host = strtolower((string) parse_url((string) ($kaynak['site_url'] ?? ''), PHP_URL_HOST));
+
+    return $host === 'www.resmigazete.gov.tr' || $host === 'resmigazete.gov.tr';
+}
+
 function konu_kontenjani(array $adaylar, array $paylar, int $enFazla, Suzgec $suzgec): array
 {
     /** @var array<string,list<array<string,mixed>>> */
@@ -697,6 +714,35 @@ $adaylar = [];
  * sirayi izler, davranis ongorulebilir kalir.
  */
 $taramaBaslangic = time();
+/*
+ * ELENENLERIN HAFIZASI.
+ *
+ * Model bir adayi "ilgili degil" diye eledikten sonra ajan bunu
+ * unutuyordu. 30 saatlik geriye bakis penceresinde ayni aday her
+ * calismada yeniden listeye giriyor ve yeniden modele soruluyordu.
+ * Olculdu: 23.09 sabah calismasinda modele giden 40 adayin 28'i, 10
+ * saat onceki calismada zaten elenmis olanlardi ("Ispanyol ciftciler"
+ * uc calismada ust uste gitti). Ozellikle kurumsal tanitim sayfalari
+ * vergi terimleriyle dolu oldugu icin puan siralamasinda hep ustte
+ * cikiyor ve kontenjani her seferinde yiyordu. Yeni gelen 12 adayin
+ * 7'si kabul edilmisti — yani sorun elemenin sertligi degil, bosa
+ * giden kapasiteydi.
+ *
+ * Adres parmak izi => elenme zamani. 48 saat tutuluyor; geriye bakis
+ * penceresinden (30 saat) uzun olmasi yeterli.
+ */
+const ELENEN_SURESI = 48 * 3600;
+
+$elenenler = [];
+
+foreach ((array) ($depo->oku('elenenler', 3) ?? []) as $parmak => $zaman) {
+    if (is_string($parmak) && (int) $zaman > time() - ELENEN_SURESI) {
+        $elenenler[$parmak] = (int) $zaman;
+    }
+}
+
+$oncedenElenen = 0;
+
 $taramaButcesi   = 8 * 60;
 $atlanan         = 0;
 
@@ -732,8 +778,20 @@ foreach ($kaynaklar as $kaynak) {
      * gunluge yaziliyor ki sorun gizlenmesin, kaynak da atlaniyor.
      */
     try {
+        /*
+         * Resmi Gazete: gunluk fihrist, bugun ve dun.
+         *
+         * Ana sayfa yalnizca bugunu gosteriyor; gece yarisindan sonraki
+         * ilk calisma gecikirse dunun mevzuati hic okunmuyordu. Fihrist
+         * bos donerse (site erisilemezse) asagidaki genel yol deneniyor.
+         */
+        if (resmi_gazete_mi($kaynak)) {
+            $girdiler = $resmiGazete->oku(2);
+            $yontem   = 'günlük fihrist';
+        }
+
         // Once RSS: varsa ve haber veriyorsa en guvenilir yol.
-        if ($beslemeUrl !== '') {
+        if ($girdiler === [] && $beslemeUrl !== '') {
             $girdiler = $besleme->oku($beslemeUrl, $saat);
             $yontem   = 'besleme';
         }
@@ -796,6 +854,12 @@ foreach ($kaynaklar as $kaynak) {
             || isset($bilinenUrl[url_parmak($girdi['baglanti'])])
             || isset($bilinenBaslik[baslik_parmak($girdi['baslik'])])) {
             $zatenVar++;
+            continue;
+        }
+
+        // Model bunu yakin zamanda okuyup eledi; yeniden sormak bosa kontenjan.
+        if (isset($elenenler[url_parmak($girdi['baglanti'])])) {
+            $oncedenElenen++;
             continue;
         }
 
@@ -878,7 +942,32 @@ $kaynakBasinaTavan = max(1, (int) ($secenekler['kaynakbasina'] ?? 4));
 $kaynakSayaci      = [];
 $secilen           = [];
 
+/*
+ * RESMI GAZETE ONCE VE TAVANSIZ.
+ *
+ * Mevzuatin birincil kaynagi Resmi Gazete. Kaynak basina 4 tavani
+ * onu da kesiyordu: bir gunde 9 madde varsa 5'i modele hic
+ * gitmiyordu. Konu kontenjani da ayni isi yapiyordu. Artik
+ * Resmi Gazete maddeleri once ve tavansiz aliniyor; universite
+ * yonetmelikleri ve ilanlar okuyucuda zaten ayiklaniyor.
+ *
+ * Yine de ust sinir var: yil sonu gibi olagandisi gunlerde yuzlerce
+ * madde cikabiliyor ve modele giden kontenjanin tamamini yemesin.
+ *
+ * Kaynak siralamasinda da once geliyorlar: ayni tebligi baska bir
+ * kaynak da duyurduysa kopya elemesi ilk geleni tutuyor, yani asil
+ * metin kalip ikinci el haber dusuyor.
+ */
+const RESMI_GAZETE_TAVANI = 25;
+
+$rgAdaylar = [];
+
 foreach ($adaylar as $aday) {
+    if (resmi_gazete_mi($aday['kaynak']) && count($rgAdaylar) < RESMI_GAZETE_TAVANI) {
+        $rgAdaylar[] = $aday;
+        continue;
+    }
+
     $ad = (string) $aday['kaynak']['ad'];
     $kaynakSayaci[$ad] = ($kaynakSayaci[$ad] ?? 0) + 1;
 
@@ -889,9 +978,13 @@ foreach ($adaylar as $aday) {
     $secilen[] = $aday;
 }
 
-$tavanaTakilan = count($adaylar) - count($secilen);
+$tavanaTakilan = count($adaylar) - count($secilen) - count($rgAdaylar);
 
-[$tekil, $kopyaElenen] = ayni_olayi_ele($secilen);
+[$tekil, $kopyaElenen] = ayni_olayi_ele(array_merge($rgAdaylar, $secilen));
+
+// Kopya elemesinden sonra RG maddelerini ayir; kontenjana girmeyecekler.
+$rgTekil    = array_values(array_filter($tekil, static fn (array $a): bool => resmi_gazete_mi($a['kaynak'])));
+$digerTekil = array_values(array_filter($tekil, static fn (array $a): bool => !resmi_gazete_mi($a['kaynak'])));
 
 if ($kopyaElenen > 0) {
     gunluk('  ' . $kopyaElenen . ' aday aynı olayın başka kaynaktaki '
@@ -903,7 +996,14 @@ if ($kopyaElenen > 0) {
  * 2 standart, 1 ekonomi aliniyor.
  */
 $konuPaylari = ['vergi' => 3, 'mevzuat' => 2, 'standart' => 2, 'ekonomi' => 1];
-$adaylar     = konu_kontenjani($tekil, $konuPaylari, $enFazlaAday, $suzgec);
+$adaylar     = array_merge(
+    $rgTekil,
+    konu_kontenjani($digerTekil, $konuPaylari, max(0, $enFazlaAday - count($rgTekil)), $suzgec)
+);
+
+if ($rgTekil !== []) {
+    gunluk('  Resmî Gazete: ' . count($rgTekil) . ' madde öncelikli ve kaynak tavanı dışında modele gidiyor.');
+}
 
 $konuOzeti = [];
 
@@ -936,6 +1036,11 @@ if ($getirici->siteyleGelenSayisi() > 0) {
 if ($getirici->siteTavaniDoldu()) {
     gunluk('  Site üzerinden getirme tavanı doldu; kalan adresler yalnızca '
         . 'doğrudan denendi. Sunucuyu yormamak için konulmuş bir sınır.');
+}
+
+if ($oncedenElenen > 0) {
+    gunluk('  ' . $oncedenElenen . ' aday son 48 saatte model tarafından okunup '
+        . 'elendiği için yeniden sorulmadı.');
 }
 
 gunluk(count($adaylar) . ' aday modele gönderilecek.');
@@ -1056,6 +1161,21 @@ foreach ($gruplar as $grupNo => $grup) {
             $neden = trim((string) ($sonuc['red_nedeni'] ?? 'belirtilmedi'));
 
             /*
+             * Yalnizca model METNI GORMUSSE hatirlaniyor.
+             *
+             * Sayfa okunamadiysa model yalnizca basliga bakip "icerik
+             * yok" diyor; bu bir karar degil, eksik veri. Resmi
+             * Gazete'deki tebligler tam olarak boyle eleniyordu. O aday
+             * sonraki calismada yeniden denenmeli — belki sayfa o zaman
+             * acilir.
+             */
+            $gorulenMetin = (string) ($modelAdaylari[$sira]['sayfaMetni'] ?? '');
+
+            if (mb_strlen(trim($gorulenMetin), 'UTF-8') >= 400) {
+                $elenenler[url_parmak($girdi['baglanti'])] = time();
+            }
+
+            /*
              * Yinelenen ile "vergi disi" ayri sayiliyor.
              *
              * Ikisi de eleme ama anlamlari bambaska: biri kopya
@@ -1110,6 +1230,11 @@ foreach ($gruplar as $grupNo => $grup) {
 
         gunluk("  kabul (%{$sonuc['guven_skoru']}, {$sonuc['kategori']}) — {$sonuc['baslik']}");
     }
+}
+
+// Kuru calisma durum degistirmez; hafiza yalnizca gercek calismada yaziliyor.
+if (!$kuruCalisma) {
+    $depo->yaz('elenenler', $elenenler);
 }
 
 // --- 5. Siteye gönder ------------------------------------------------------
