@@ -96,7 +96,7 @@ $izinli = false;
  * burada yalnizca uc alan adi var ve ucu de resmi istatistik ucu.
  */
 const VERI_UCLARI = [
-    'evds2.tcmb.gov.tr',   // TCMB EVDS
+    'evds3.tcmb.gov.tr',   // TCMB EVDS
     'api.worldbank.org',   // Dunya Bankasi
     'www.imf.org',         // IMF DataMapper
 ];
@@ -134,7 +134,30 @@ if (!$izinli) {
     ]);
 }
 
-$indirme = http_getir($url, 25);
+/*
+ * EVDS anahtari: SITE ekliyor, ajan gondermiyor.
+ *
+ * EVDS anahtari yalnizca "key" basligiyla kabul ediyor ve bu uc
+ * ajanin basliklarini kaynaga tasimiyor. Anahtar zaten sitede kayitli
+ * (panelde girildi); EVDS adresi istendiginde site kendisi ekliyor.
+ * Boylece anahtar ne URL'ye ne ajan gunlugune yaziliyor.
+ *
+ * Yalnizca EVDS sunucusuna gidiyor: baska bir hosta gonderilseydi
+ * anahtar ucuncu bir tarafa sizardi.
+ */
+$basliklar = [];
+
+if ($sunucu === 'evds3.tcmb.gov.tr') {
+    require_once __DIR__ . '/../includes/ayarlar.php';
+
+    $evdsAnahtari = ayar_oku('evds_anahtari');
+
+    if ($evdsAnahtari !== '') {
+        $basliklar[] = 'key: ' . $evdsAnahtari;
+    }
+}
+
+$indirme = http_getir($url, 25, '', $basliklar);
 
 if (!$indirme['tamam']) {
     ajan_json(502, [

@@ -74,7 +74,7 @@ seriden okunacağı orada tanımlıdır; model bu yolda hiç devreye girmez.
 | IMF — World Economic Outlook | İşsizlik, kamu borcu / GSYH | gerekmez |
 | TCMB — EVDS | Politika faizi, TÜFE | **gerekli** |
 
-EVDS anahtarı ücretsizdir: [evds2.tcmb.gov.tr](https://evds2.tcmb.gov.tr/index.php?/evds/login)
+EVDS anahtarı ücretsizdir: [evds3.tcmb.gov.tr](https://evds3.tcmb.gov.tr/)
 adresinden üye olup *Profil → API Anahtarı* bölümünden alınır ve panelde
 **Pratik bilgiler** sayfasına yapıştırılır. Ortam değişkeni değil, ayar olarak
 tutulur: anahtarı girecek kişi mali müşavir, GitHub ayarlarına girmiyor.

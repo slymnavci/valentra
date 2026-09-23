@@ -178,8 +178,8 @@ require __DIR__ . '/ust.php';
 
     <p class="ipucu" style="margin:0 0 10px;">
         EVDS anahtarı ücretsizdir:
-        <a href="https://evds2.tcmb.gov.tr/index.php?/evds/login" target="_blank"
-           rel="noopener">evds2.tcmb.gov.tr</a> adresinden üye olun, giriş
+        <a href="https://evds3.tcmb.gov.tr/" target="_blank"
+           rel="noopener">evds3.tcmb.gov.tr</a> adresinden üye olun, giriş
         yaptıktan sonra <em>Profil &rarr; API Anahtarı</em> bölümünden kopyalayıp
         buraya yapıştırın. Anahtar girilene kadar politika faizi ve enflasyon
         eski yoldan, sayfa okunarak toplanmaya devam eder.
@@ -345,8 +345,16 @@ foreach ($satirlar as $satir):
                                 <tr><td>Adres</td>
                                     <td style="word-break:break-all;"><?=
                                         e(ekonomi_adres_gizle((string) $satirDeneme['adres'])) ?></td></tr>
+                                <?php if (($satirDeneme['son_url'] ?? '') !== ''
+                                          && $satirDeneme['son_url'] !== $satirDeneme['adres']): ?>
+                                    <tr><td>Yönlendirilen adres</td>
+                                        <td style="word-break:break-all;"><?=
+                                            e(ekonomi_adres_gizle((string) $satirDeneme['son_url'])) ?></td></tr>
+                                <?php endif; ?>
                                 <tr><td>HTTP durumu</td>
                                     <td><?= (int) $satirDeneme['kod'] ?></td></tr>
+                                <tr><td>İçerik türü</td>
+                                    <td><?= e((string) ($satirDeneme['tur'] ?? '')) ?: '—' ?></td></tr>
                                 <tr><td>Yanıt boyutu</td>
                                     <td><?= number_format((int) $satirDeneme['boyut']) ?> bayt</td></tr>
                                 <tr><td>Yanıtın başı</td>
