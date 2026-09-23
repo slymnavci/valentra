@@ -227,6 +227,59 @@ function sema_yukselt(array &$hatalar = []): array
      */
     $sutunEkle('haberler', 'url_parmak', 'CHAR(64) NULL AFTER kaynak_parmak');
     $sutunEkle('haberler', 'baslik_parmak', 'CHAR(64) NULL AFTER url_parmak');
+    /*
+     * Valentra Analiz alanlari.
+     *
+     * Bunlar bir ara schema.sql icinde "ALTER TABLE ... ADD COLUMN IF
+     * NOT EXISTS" ile ekleniyordu. O sozdizimi MariaDB'ye ozgu; MySQL
+     * onu sozdizimi hatasi sayar ve tek bir hata sema kosusunun
+     * tamamini dusururdu — sutunlar hic olusmaz, ardindan
+     * haber_analizliler() ve haber_taslak_ekle() "unknown column" ile
+     * patlardi. Buradaki yol INFORMATION_SCHEMA'ya bakiyor, yani iki
+     * sunucuda da ayni calisiyor.
+     */
+    foreach (['analiz_degisen'   => 'ajan_notu',
+              'analiz_etkilenen' => 'analiz_degisen',
+              'analiz_zaman'     => 'analiz_etkilenen',
+              'analiz_islem'     => 'analiz_zaman'] as $sutun => $once) {
+        $sutunEkle('haberler', $sutun, "VARCHAR(600) NOT NULL DEFAULT '' AFTER " . $once);
+    }
+
+    /*
+     * Vergi takvimi kurallarina benzersizlik anahtari.
+     *
+     * Tohum INSERT IGNORE ile yaziliyor; IGNORE ancak bir benzersizlik
+     * ihlali varsa devreye girer. Anahtar olmadan sema imzasi her
+     * degistiginde tohum yeniden kosuyor ve yedi kaydin hepsi bir kez
+     * daha ekleniyordu — yerelde uc uygulamada her satir ucer kopya
+     * olmustu.
+     *
+     * Silme ve ALTER ayni adimda: anahtari kopyali bir tabloya eklemek
+     * duser, o yuzden once temizlik. schema.sql'e yazilamazdi cunku o
+     * dosyanin veri ifadeleri bu fonksiyondan SONRA kosuyor.
+     */
+    $adim('vergi_takvimi.uk_takvim_kural indeksi', static function (): bool {
+        if (!sema_sutun_var('vergi_takvimi', 'baslik')
+            || sema_indeks_var('vergi_takvimi', 'uk_takvim_kural')) {
+            return false;
+        }
+
+        db()->exec(
+            'DELETE t FROM vergi_takvimi t
+               JOIN vergi_takvimi d
+                 ON d.baslik = t.baslik AND d.tekrar = t.tekrar
+                AND d.gun = t.gun AND d.aylar = t.aylar
+                AND d.id < t.id'
+        );
+
+        db()->exec(
+            'ALTER TABLE vergi_takvimi
+               ADD UNIQUE KEY uk_takvim_kural (baslik, tekrar, gun, aylar)'
+        );
+
+        return true;
+    });
+
     $sutunEkle('kategoriler', 'ust_id', 'INT UNSIGNED NULL AFTER aciklama');
     $sutunEkle('kaynaklar', 'liste_url', 'VARCHAR(500) NULL AFTER besleme_url');
     $sutunEkle('kaynaklar', 'liste_secici', 'VARCHAR(200) NULL AFTER besleme_url');

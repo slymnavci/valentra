@@ -97,6 +97,14 @@ CREATE TABLE IF NOT EXISTS haberler (
     guven_skoru     TINYINT UNSIGNED NOT NULL DEFAULT 0,
     ajan_notu       VARCHAR(600)  NOT NULL DEFAULT '',
 
+    -- Valentra Analiz: haberin "bana ne" karsiligi. Bos olabilir ve
+    -- bos olmasi normaldir; model bilgiyi kaynakta bulamazsa
+    -- doldurmuyor. Mevcut kurulumlara sema_yukselt() uzerinden iniyor.
+    analiz_degisen   VARCHAR(600) NOT NULL DEFAULT '',
+    analiz_etkilenen VARCHAR(600) NOT NULL DEFAULT '',
+    analiz_zaman     VARCHAR(600) NOT NULL DEFAULT '',
+    analiz_islem     VARCHAR(600) NOT NULL DEFAULT '',
+
     onaylayan_id    INT UNSIGNED  NULL,
     onay_tarihi     DATETIME      NULL,
     yayin_tarihi    DATETIME      NULL,
@@ -1005,8 +1013,46 @@ CREATE TABLE IF NOT EXISTS vergi_takvimi (
     olusturuldu DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     guncellendi DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
+    -- KURAL BENZERSIZ OLMALI. Asagidaki tohum INSERT IGNORE ile
+    -- yaziliyor ve IGNORE ancak bir benzersizlik ihlali varsa devreye
+    -- girer. Bu anahtar olmadan sema imzasi her degistiginde — yani
+    -- her dagitimla — tohum yeniden kosuyor ve yedi kaydin hepsi bir
+    -- kez daha ekleniyordu. Yerelde uc kez uygulandiginda her satir
+    -- ucer kopya olmustu; ziyaretci "Yaklasan Tarihler"de ayni
+    -- beyannameyi uc kez gorurdu.
+    UNIQUE KEY uk_takvim_kural (baslik, tekrar, gun, aylar),
     KEY idx_takvim_aktif (aktif, sira)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Zaten kurulu bir veritabaninda yukaridaki UNIQUE KEY kendiliginden
+-- EKLENMEZ (tablo CREATE TABLE IF NOT EXISTS ile kuruluyor). Kopya
+-- temizligi ve anahtarin eklenmesi includes/sema.php icinde, TEK
+-- ADIMDA ve dogru sirada yapiliyor: once kopyalar silinir, sonra
+-- anahtar eklenir. Buraya yazilamazdi cunku bu dosyadaki veri
+-- ifadeleri sema_yukselt()'ten SONRA kosuyor; anahtar o sirada
+-- kopyali tabloya eklenmeye calisilir ve duserdi.
+
+-- Form Ba / Form Bs KALDIRILDI.
+--
+-- 565 sira no'lu Vergi Usul Kanunu Genel Tebligi (25.09.2024 tarihli,
+-- 32673 sayili Resmi Gazete) Form Ba ve Form Bs bildirimi verme
+-- uygulamasina son verdi: Eylul 2024 donemi ve sonrasi icin bildirim
+-- VERILMIYOR. Tohumda her ayin 30'u olarak duruyordu, yani her ay var
+-- olmayan bir yukumluluk gosteriliyordu.
+--
+-- Kayit bir kez yayina cikti; INSERT satirini silmek onu canli
+-- veritabanindan dusurmez, bu yuzden ayrica siliniyor.
+DELETE FROM vergi_takvimi WHERE baslik = 'Form Ba - Form Bs';
+
+-- Gecici verginin ESKI kaydini da dusur.
+--
+-- Benzersiz anahtar `aylar` sutununu da kapsiyor, yani '2,5,8,11' ile
+-- '5,8,11' AYRI iki kural sayiliyor: asagidaki INSERT IGNORE yenisini
+-- ekler ama eskisini kaldirmaz ve takvimde Subat 17 gorunmeye devam
+-- ederdi. Bu satir olmadan duzeltme canliya inmiyor.
+DELETE FROM vergi_takvimi
+ WHERE baslik = 'Geçici Vergi Beyannamesi' AND aylar = '2,5,8,11';
+
 
 INSERT IGNORE INTO vergi_takvimi (baslik, aciklama, tekrar, gun, aylar, kaynak_url, sira) VALUES
     ('Muhtasar ve Prim Hizmet Beyannamesi', 'Bir önceki aya ait beyan ve ödeme',
@@ -1015,10 +1061,13 @@ INSERT IGNORE INTO vergi_takvimi (baslik, aciklama, tekrar, gun, aylar, kaynak_u
      'aylik', 26, '', 'https://www.gib.gov.tr/vergi-takvimi', 20),
     ('KDV Beyannamesi', 'Bir önceki aya ait beyan ve ödeme',
      'aylik', 28, '', 'https://www.gib.gov.tr/vergi-takvimi', 30),
-    ('Form Ba - Form Bs', 'Bir önceki aya ait bildirimler',
-     'aylik', 30, '', 'https://www.gib.gov.tr/vergi-takvimi', 40),
+    -- Aylar 2,5,8,11 DEGIL 5,8,11. Dorduncu donem (Ekim-Aralik) gecici
+    -- vergi beyannamesi 7338 sayili Kanunla kaldirildi ve son kez 2021
+    -- yili icin verildi; 2022 vergilendirme doneminden itibaren yil
+    -- yalnizca uc gecici vergi donemi tasiyor. Subat 17 artik var
+    -- olmayan bir yukumluluktu.
     ('Geçici Vergi Beyannamesi', 'Üç aylık dönem beyanı ve ödemesi',
-     'secili', 17, '2,5,8,11', 'https://www.gib.gov.tr/vergi-takvimi', 50),
+     'secili', 17, '5,8,11', 'https://www.gib.gov.tr/vergi-takvimi', 50),
     ('Yıllık Gelir Vergisi Beyannamesi', 'Bir önceki yıla ait beyan',
      'secili', 31, '3', 'https://www.gib.gov.tr/vergi-takvimi', 60),
     ('Kurumlar Vergisi Beyannamesi', 'Bir önceki hesap dönemine ait beyan',
@@ -1037,11 +1086,12 @@ INSERT IGNORE INTO vergi_takvimi (baslik, aciklama, tekrar, gun, aylar, kaynak_u
 -- Yarim bilgiyle doldurmak, YMM imzasi tasiyan bir sitede yanlis
 -- yonlendirme olurdu.
 -- ---------------------------------------------------------------------------
-ALTER TABLE haberler
-    ADD COLUMN IF NOT EXISTS analiz_degisen   VARCHAR(600) NOT NULL DEFAULT '' AFTER ajan_notu,
-    ADD COLUMN IF NOT EXISTS analiz_etkilenen VARCHAR(600) NOT NULL DEFAULT '' AFTER analiz_degisen,
-    ADD COLUMN IF NOT EXISTS analiz_zaman     VARCHAR(600) NOT NULL DEFAULT '' AFTER analiz_etkilenen,
-    ADD COLUMN IF NOT EXISTS analiz_islem     VARCHAR(600) NOT NULL DEFAULT '' AFTER analiz_zaman;
+-- Sutunlar BURADA EKLENMIYOR. "ADD COLUMN IF NOT EXISTS" MariaDB'ye
+-- ozgu; MySQL bunu sozdizimi hatasi sayar ve o sunucularda sema
+-- kosusunun tamami duserdi. Projenin kendi yukselticisi zaten var ve
+-- varligi INFORMATION_SCHEMA'dan kontrol ediyor: bkz. includes/sema.php
+-- icindeki sutunEkle('haberler', 'analiz_...'). Yeni kurulumlar icin
+-- alanlar yukaridaki CREATE TABLE haberler tanimina eklendi.
 
 -- Kayit daha once yayina gitmisti; INSERT satirini silmek canli
 -- veritabanindan kaldirmaz. Pasife cekiliyor.
