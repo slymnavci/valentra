@@ -40,7 +40,7 @@ const GRAFIK_BOY  = 300;
  * Seriyi çizer; gösterilecek HTML'i döndürür.
  *
  * @param list<array{0:string,1:float}> $seri    tarihe gore sirali ["Y-m-d", deger]
- * @param array{tur?:string,birim?:string,baslik?:string,kaynak?:string,ad?:string} $ayar
+ * @param array{tur?:string,birim?:string,baslik?:string,kaynak?:string,ad?:string,sifirdan?:bool} $ayar
  */
 function grafik_ciz(array $seri, array $ayar = []): string
 {
@@ -53,7 +53,19 @@ function grafik_ciz(array $seri, array $ayar = []): string
     $baslik  = (string) ($ayar['baslik'] ?? '');
     $kaynak  = (string) ($ayar['kaynak'] ?? '');
     $ad      = (string) ($ayar['ad'] ?? 'Değer');
-    $gunluk  = $tur === 'basamak';
+    $basamak = $tur === 'basamak';
+    /*
+     * Y ekseni sifirdan mi baslasin?
+     *
+     * Oran ve degisim serilerinde EVET: alan dolgusu buyukluk ima eder
+     * ve sifir disindaki taban farki oldugundan buyuk gosterir. Kur gibi
+     * DUZEY serilerinde HAYIR: 0-42 TL ekseninde kur duz bir cizgi olur,
+     * okuyucunun gormek istedigi hareket kaybolur. O durumda alan dolgusu
+     * da cizilmiyor — dolgu olmadan dar eksen yaniltici degil.
+     */
+    $sifirdan = (bool) ($ayar['sifirdan'] ?? true);
+    // TCMB kurlari dort haneyle yayimliyor; oranlar iki haneyle.
+    $hane     = $birim === 'tl' ? 4 : 2;
 
     // --- olcekler ----------------------------------------------------------
 
@@ -72,7 +84,15 @@ function grafik_ciz(array $seri, array $ayar = []): string
     }
 
     $degerler = array_column($noktalar, 'd');
-    $olcek    = grafik_y_olcegi(min($degerler), max($degerler));
+    $olcek    = grafik_y_olcegi(min($degerler), max($degerler), $sifirdan);
+
+    /*
+     * Tarih inceligi VERIDEN: basamak grafiginde her zaman gun (karar
+     * gunu onemli); aksi halde noktalar ay baslarinda ve aylik araliktaysa
+     * ay, degilse gun. Once bu tur'e bagliydi ve gunluk kur cizgisinde
+     * imlec "17 Eylul" yerine yalnizca "Eylul 2026" gosterirdi.
+     */
+    $gunlu = $basamak || !grafik_aylik_mi($noktalar);
 
     $x = static fn (int $t): float => ($t - $t0) / ($t1 - $t0) * GRAFIK_EN;
     $y = static fn (float $d): float
@@ -91,7 +111,7 @@ function grafik_ciz(array $seri, array $ayar = []): string
 
         if ($i === 0) {
             $yol .= 'M' . $px . ' ' . $py;
-        } elseif ($gunluk) {
+        } elseif ($basamak) {
             // Once yatay (onceki deger bu tarihe kadar gecerli), sonra dikey.
             $yol .= ' H' . $px . ' V' . $py;
         } else {
@@ -102,8 +122,10 @@ function grafik_ciz(array $seri, array $ayar = []): string
     // Alan sifirdan baslar: alanin yuksekligi buyukluk ima eder ve sifir
     // disindaki bir tabandan cizmek farki oldugundan buyuk gosterirdi.
     $taban = grafik_sayi($y(max($olcek['alt'], min(0.0, $olcek['ust']))));
-    $dolgu = $yol . ' L' . grafik_sayi($x($t1)) . ' ' . $taban
-           . ' L' . grafik_sayi($x($t0)) . ' ' . $taban . ' Z';
+    $dolgu = $sifirdan
+        ? $yol . ' L' . grafik_sayi($x($t1)) . ' ' . $taban
+          . ' L' . grafik_sayi($x($t0)) . ' ' . $taban . ' Z'
+        : '';
 
     $izgara = '';
 
@@ -115,16 +137,40 @@ function grafik_ciz(array $seri, array $ayar = []): string
 
     // --- son deger etiketi ---------------------------------------------------
 
-    $son    = $noktalar[count($noktalar) - 1];
-    $onceki = $noktalar[count($noktalar) - 2];
-    $sonY   = $y($son['d']) / GRAFIK_BOY * 100;
+    $son  = $noktalar[count($noktalar) - 1];
+    $sonY = $y($son['d']) / GRAFIK_BOY * 100;
 
     /*
-     * Etiket cizginin gelmedigi tarafa: son noktaya soldan gelen cizgi
-     * yukaridan iniyorsa etiket altta, asagidan cikiyorsa ustte durur.
-     * Kenara cok yakinsa kutudan tasmasin diye ters tarafa alinir.
+     * Etiket cizginin GELMEDIGI tarafa.
+     *
+     * Etiket son noktanin solunda, yatayda grafigin yaklasik son
+     * dortte birini kapliyor. O dilimde cizgi son degerin USTUNE
+     * cikiyorsa etiket altta durur, cikmiyorsa ustte.
+     *
+     * Yalnizca bir onceki noktaya bakmak yetmedi: basamak grafiginde
+     * son iki nokta ayni degerde (son karar + son gozlem) oldugu icin
+     * etiket uste konuyor, hemen soldaki daha yuksek basamaklarin
+     * uzerine biniyordu.
      */
-    $altta = $onceki['d'] > $son['d'];
+    $dilimBasi   = $t1 - ($t1 - $t0) * 0.28;
+    $dilimEnCok  = $son['d'];
+    $dilimOncesi = $noktalar[0]['d'];
+
+    foreach ($noktalar as $n) {
+        if ($n['t'] < $dilimBasi) {
+            // Basamakta dilime giren deger, dilimden onceki son degerdir.
+            $dilimOncesi = $n['d'];
+            continue;
+        }
+
+        $dilimEnCok = max($dilimEnCok, $n['d']);
+    }
+
+    if ($basamak) {
+        $dilimEnCok = max($dilimEnCok, $dilimOncesi);
+    }
+
+    $altta = $dilimEnCok > $son['d'] + ($olcek['ust'] - $olcek['alt']) * 0.01;
 
     if ($sonY < 18) {
         $altta = true;
@@ -136,6 +182,8 @@ function grafik_ciz(array $seri, array $ayar = []): string
 
     $betikVerisi = [
         'tur'   => $tur,
+        'gun'   => $gunlu,
+        'hane'  => $hane,
         'birim' => $birim,
         'alt'   => $olcek['alt'],
         'ust'   => $olcek['ust'],
@@ -144,7 +192,7 @@ function grafik_ciz(array $seri, array $ayar = []): string
         'n'     => array_map(static fn (array $n): array => [$n['t'] * 1000, $n['d']], $noktalar),
     ];
 
-    $ozet = grafik_ozet($noktalar, $birim, $ad, $gunluk);
+    $ozet = grafik_ozet($noktalar, $birim, $ad, $gunlu, $hane);
 
     // --- HTML ----------------------------------------------------------------
 
@@ -158,7 +206,7 @@ function grafik_ciz(array $seri, array $ayar = []): string
             <?php endif; ?>
             <span class="grafik-alt">
                 <?= $kaynak !== '' ? 'Kaynak: ' . e($kaynak) . ' · ' : '' ?><span
-                    class="grafik-tarih">son gözlem <?= e(grafik_tarih_uzun($son['tarih'], $gunluk)) ?></span>
+                    class="grafik-tarih">son gözlem <?= e(grafik_tarih_uzun($son['tarih'], $gunlu)) ?></span>
             </span>
         </figcaption>
     <?php endif; ?>
@@ -177,14 +225,16 @@ function grafik_ciz(array $seri, array $ayar = []): string
             <svg class="grafik-svg" viewBox="0 0 <?= GRAFIK_EN ?> <?= GRAFIK_BOY ?>"
                  preserveAspectRatio="none" aria-hidden="true" focusable="false">
                 <g class="grafik-izgara"><?= $izgara ?></g>
-                <path class="grafik-dolgu" d="<?= $dolgu ?>"/>
+                <?php if ($dolgu !== ''): ?>
+                    <path class="grafik-dolgu" d="<?= $dolgu ?>"/>
+                <?php endif; ?>
                 <path class="grafik-cizgi" d="<?= $yol ?>" vector-effect="non-scaling-stroke"/>
             </svg>
 
             <span class="grafik-nokta" style="left:100%;top:<?= grafik_sayi($sonY) ?>%"></span>
             <span class="grafik-son <?= $altta ? 'altta' : '' ?>"
                   style="left:100%;top:<?= grafik_sayi($sonY) ?>%"><?=
-                e(grafik_deger($son['d'], $birim, 2)) ?></span>
+                e(grafik_deger($son['d'], $birim, $hane)) ?></span>
 
             <span class="grafik-imlec" hidden></span>
             <span class="grafik-nokta grafik-imlec-nokta" hidden></span>
@@ -198,7 +248,7 @@ function grafik_ciz(array $seri, array $ayar = []): string
         </div>
     </div>
 
-    <?= grafik_tablo($noktalar, $birim, $ad, $gunluk) ?>
+    <?= grafik_tablo($noktalar, $birim, $ad, $basamak, $gunlu, $hane) ?>
 </figure>
     <?php
 
@@ -214,13 +264,16 @@ function grafik_ciz(array $seri, array $ayar = []): string
  *
  * @return array{alt:float,ust:float,adimlar:list<float>,hane:int}
  */
-function grafik_y_olcegi(float $enAz, float $enCok): array
+function grafik_y_olcegi(float $enAz, float $enCok, bool $sifirdan = true): array
 {
-    $alt = min(0.0, $enAz);
-    $ust = max(0.0, $enCok);
+    $alt = $sifirdan ? min(0.0, $enAz) : $enAz;
+    $ust = $sifirdan ? max(0.0, $enCok) : $enCok;
 
     if ($ust - $alt < 1e-9) {
-        $ust = $alt + 1.0;
+        // Sabit seri: bos olcek olmasin, degerin iki yanina pay birak.
+        $pay = max(abs($ust) * 0.05, 1.0);
+        $alt = $sifirdan ? min(0.0, $alt) : $alt - $pay;
+        $ust = $ust + $pay;
     }
 
     $adim = grafik_guzel_adim($ust - $alt);
@@ -314,20 +367,38 @@ function grafik_x_isaretleri(int $t0, int $t1): array
  * "su tarihten itibaren su oran". Son gozlem, bir onceki degerle
  * ayniysa listeye girmiyor; yoksa o gun bir karar alinmis gibi okunurdu.
  *
+ * Gunluk ve uzun serilerde (bes yillik kur gibi) tablo yuzlerce satira
+ * cikiyordu; o durumda AY SONU degerleri listeleniyor ve baslik bunu
+ * soyluyor. Butun gozlemler grafikte ve imlecte duruyor.
+ *
  * @param list<array{t:int,tarih:string,d:float}> $noktalar
  */
-function grafik_tablo(array $noktalar, string $birim, string $ad, bool $gunluk): string
+function grafik_tablo(array $noktalar, string $birim, string $ad, bool $basamak,
+                      bool $gunlu, int $hane = 2): string
 {
     $satirlar = [];
 
     foreach ($noktalar as $i => $n) {
         $sonMu = $i === count($noktalar) - 1;
 
-        if ($gunluk && $sonMu && $i > 0 && abs($n['d'] - $noktalar[$i - 1]['d']) < 1e-9) {
+        if ($basamak && $sonMu && $i > 0 && abs($n['d'] - $noktalar[$i - 1]['d']) < 1e-9) {
             continue;
         }
 
         $satirlar[] = $n;
+    }
+
+    $aySonu = false;
+
+    if (!$basamak && count($satirlar) > 120) {
+        $ayGore = [];
+
+        foreach ($satirlar as $n) {
+            $ayGore[substr($n['tarih'], 0, 7)] = $n;
+        }
+
+        $satirlar = array_values($ayGore);
+        $aySonu   = true;
     }
 
     // En yeni ustte: okuyan once guncel degeri arar.
@@ -338,27 +409,29 @@ function grafik_tablo(array $noktalar, string $birim, string $ad, bool $gunluk):
     <details class="grafik-tablo">
         <summary>Tablo olarak göster</summary>
         <table>
-            <?php if ($gunluk): ?>
+            <?php if ($basamak): ?>
                 <caption>Değerin değiştiği tarihler; her değer bir sonrakine kadar geçerlidir.</caption>
+            <?php elseif ($aySonu): ?>
+                <caption>Ay sonu değerleri; bütün gözlemler grafikte.</caption>
             <?php endif; ?>
             <thead>
                 <tr>
-                    <th scope="col"><?= $gunluk ? 'Geçerlilik başlangıcı' : 'Dönem' ?></th>
+                    <th scope="col"><?= $basamak ? 'Geçerlilik başlangıcı' : ($gunlu && !$aySonu ? 'Tarih' : 'Dönem') ?></th>
                     <th scope="col"><?= e($ad) ?></th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($satirlar as $n): ?>
                     <tr>
-                        <td><?= e(grafik_tarih_uzun($n['tarih'], $gunluk)) ?><?php
+                        <td><?= e(grafik_tarih_uzun($n['tarih'], $gunlu && !$aySonu)) ?><?php
                             /*
                              * Basamakta ilk satir bir karar degil, grafigin
                              * basladigi gun. Isaretlenmezse o gun faiz
                              * degismis gibi okunuyordu.
                              */
-                            if ($gunluk && $n['t'] === $noktalar[0]['t']): ?>
+                            if ($basamak && $n['t'] === $noktalar[0]['t']): ?>
                                 <span class="grafik-not">(dönem başı)</span><?php endif; ?></td>
-                        <td><?= e(grafik_deger($n['d'], $birim, 2)) ?></td>
+                        <td><?= e(grafik_deger($n['d'], $birim, $hane)) ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -370,30 +443,58 @@ function grafik_tablo(array $noktalar, string $birim, string $ad, bool $gunluk):
 }
 
 /**
+ * Noktalar aylık mı? (Hepsi ay başında ve aralar aylık.)
+ *
+ * @param list<array{t:int,tarih:string,d:float}> $noktalar
+ */
+function grafik_aylik_mi(array $noktalar): bool
+{
+    $adet = count($noktalar);
+
+    if ($adet < 2) {
+        return false;
+    }
+
+    foreach ($noktalar as $n) {
+        if (!str_ends_with($n['tarih'], '-01')) {
+            return false;
+        }
+    }
+
+    $ortalamaAralik = ($noktalar[$adet - 1]['t'] - $noktalar[0]['t']) / ($adet - 1);
+
+    return $ortalamaAralik >= 25 * 86400;
+}
+
+/**
  * Ekran okuyucu için tek cümlelik özet.
  *
  * @param list<array{t:int,tarih:string,d:float}> $noktalar
  */
-function grafik_ozet(array $noktalar, string $birim, string $ad, bool $gunluk): string
+function grafik_ozet(array $noktalar, string $birim, string $ad, bool $gunlu, int $hane = 2): string
 {
     $ilk      = $noktalar[0];
     $son      = $noktalar[count($noktalar) - 1];
     $degerler = array_column($noktalar, 'd');
 
-    return $ad . ': ' . grafik_tarih_uzun($ilk['tarih'], $gunluk) . ' tarihinde '
-         . grafik_deger($ilk['d'], $birim, 2) . ', '
-         . grafik_tarih_uzun($son['tarih'], $gunluk) . ' tarihinde '
-         . grafik_deger($son['d'], $birim, 2) . '. En yüksek '
-         . grafik_deger(max($degerler), $birim, 2) . ', en düşük '
-         . grafik_deger(min($degerler), $birim, 2) . '. Tüm değerler tablo görünümünde.';
+    return $ad . ': ' . grafik_tarih_uzun($ilk['tarih'], $gunlu) . ' tarihinde '
+         . grafik_deger($ilk['d'], $birim, $hane) . ', '
+         . grafik_tarih_uzun($son['tarih'], $gunlu) . ' tarihinde '
+         . grafik_deger($son['d'], $birim, $hane) . '. En yüksek '
+         . grafik_deger(max($degerler), $birim, $hane) . ', en düşük '
+         . grafik_deger(min($degerler), $birim, $hane) . '. Tüm değerler tablo görünümünde.';
 }
 
-/** Değeri Türkçe biçimde yazar ("%37,00"). */
+/** Değeri Türkçe biçimde yazar ("%37,00", "41,2345 TL"). */
 function grafik_deger(float $deger, string $birim, int $hane): string
 {
     $metin = number_format($deger, $hane, ',', '.');
 
-    return $birim === 'yuzde' ? '%' . $metin : $metin;
+    return match ($birim) {
+        'yuzde' => '%' . $metin,
+        'tl'    => $metin . ' TL',
+        default => $metin,
+    };
 }
 
 /** "2026-09-17" -> "17 Eylül 2026" (günlük) ya da "Eylül 2026" (aylık). */
@@ -463,11 +564,17 @@ const GRAFIK_BETIK = <<<'JS'
     var ayBicim  = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
     var gunBicim = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
-    function bicimle(d, birim) {
-        var s = d.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        return birim === 'yuzde' ? '%' + s : s;
+    function bicimle(d, birim, hane) {
+        var s = d.toLocaleString('tr-TR', { minimumFractionDigits: hane, maximumFractionDigits: hane });
+        return birim === 'yuzde' ? '%' + s : (birim === 'tl' ? s + ' TL' : s);
     }
 
+    /*
+     * Sayfa YUKLENINCE baslat. Betik ilk grafigin hemen arkasina basiliyor;
+     * aninda calissaydi yalnizca o grafigi bulurdu ve ana sayfadaki ikinci,
+     * ucuncu grafik imlecsiz kalirdi.
+     */
+    function baslat() {
     document.querySelectorAll('.grafik-alan[data-grafik]').forEach(function (alan) {
         var v;
 
@@ -493,8 +600,8 @@ const GRAFIK_BETIK = <<<'JS'
             ipucu.style.top  = Math.min(85, Math.max(15, py)) + '%';
             ipucu.classList.toggle('sola', px > 60);
 
-            ipDeger.textContent = bicimle(d, v.birim);
-            ipTarih.textContent = (basamak ? gunBicim : ayBicim).format(new Date(t));
+            ipDeger.textContent = bicimle(d, v.birim, v.hane || 2);
+            ipTarih.textContent = (v.gun ? gunBicim : ayBicim).format(new Date(t));
 
             imlec.hidden = nokta.hidden = ipucu.hidden = false;
         }
@@ -545,5 +652,12 @@ const GRAFIK_BETIK = <<<'JS'
             noktaya(Math.min(n.length - 1, Math.max(0, yeni)));
         });
     });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', baslat);
+    } else {
+        baslat();
+    }
 })();
 JS;

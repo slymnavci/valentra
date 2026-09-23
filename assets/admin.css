@@ -597,3 +597,65 @@ code.anahtar {
     min-height: 0;
     resize: vertical;
 }
+
+/* --- Grafik olusturucu (admin/grafikler.php) --------------------------- */
+
+.grafik-kart-ust {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.grafik-kart-ust code,
+.grafik-form code {
+    background: var(--zemin);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: .88rem;
+}
+
+/* Son deger buyuk: yanlis seriyi en hizli bilinen bir rakam ele verir. */
+.grafik-son-deger {
+    margin: 14px 0 0;
+    font-size: 1rem;
+}
+
+.grafik-son-deger strong { font-size: 1.15rem; }
+
+.grafik-kart-dugmeler {
+    display: flex;
+    flex-wrap: wrap;
+    /* Bag (<a>) ile form dugmesi ayni boyda dursun. */
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.grafik-kart-dugmeler form { margin: 0; }
+
+.grafik-form select,
+.grafik-form input[type="number"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--cizgi);
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: .92rem;
+    background: var(--kart);
+    color: var(--metin);
+}
+
+.grafik-form-izgara {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0 16px;
+}
+
+.grafik-onay {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    margin-top: 4px;
+}

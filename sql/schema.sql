@@ -1224,3 +1224,44 @@ UPDATE kaynaklar
 -- islemleri, Staj, Buro kayit...). Liste sayfanin ham HTML'inde yok;
 -- buyuk olasilikla betikle sonradan yukleniyor. Kazimayla okunamaz,
 -- secici degistirmek sonuc vermez.
+
+-- ---------------------------------------------------------------------------
+-- Grafik olusturucu — 23.09.2026
+--
+-- Yonetici panelden grafik tanimliyor: hangi EVDS serisi, nasil gosterilecek
+-- (deger / yillik degisim / aylik degisim), hangi donem, ana sayfada mi.
+--
+-- ONAY NEREDE: grafigin TANIMI onayli — yonetici seriyi secip onizlemede
+-- gordukten sonra yayina aliyor. Veri ise ayni resmi seriden kendiliginden
+-- tazeleniyor (piyasa seridindeki kur gibi). Her gunluk kur noktasini tek
+-- tek onaylamak anlamsiz olurdu; seri kimligini dogrulamak ise onizlemede
+-- bir kez yapiliyor.
+--
+-- Tazeleme basarisiz olursa SON IYI VERI korunuyor, hata ayri sutunda.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS grafikler (
+    id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    baslik       VARCHAR(160) NOT NULL,
+    seri_kodu    VARCHAR(120) NOT NULL,
+    donusum      VARCHAR(20)  NOT NULL DEFAULT 'duzey',
+    birim        VARCHAR(20)  NOT NULL DEFAULT '',
+    tur          VARCHAR(20)  NOT NULL DEFAULT 'cizgi',
+    donem_ay     SMALLINT UNSIGNED NOT NULL DEFAULT 24,
+    kaynak_adi   VARCHAR(160) NULL,
+    ana_sayfa    TINYINT(1)   NOT NULL DEFAULT 1,
+    sira         INT          NOT NULL DEFAULT 100,
+    yayinda      TINYINT(1)   NOT NULL DEFAULT 0,
+
+    -- Son iyi veri (JSON: [["Y-m-d", sayi], ...]) ve ne zaman alindigi.
+    seri         MEDIUMTEXT   NULL,
+    seri_tarihi  DATETIME     NULL,
+
+    -- Son deneme ve varsa hatasi. Basarili denemede hata temizleniyor.
+    son_deneme   DATETIME     NULL,
+    son_hata     VARCHAR(500) NULL,
+
+    olusturuldu  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    KEY ix_grafik_yayin (yayinda, ana_sayfa, sira)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
