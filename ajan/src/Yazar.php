@@ -85,6 +85,18 @@ final class Yazar implements SemaliIstemci
            durumu, tanıtım ve reklam içerikleri, içeriği olmayan
            "şu yayına katılacak" türü duyurular.
 
+           YAZAR MAKALESİ HABER DEĞİLDİR. Bir kişinin imzasını taşıyan
+           makale, köşe yazısı, görüş yazısı ya da uzman değerlendirmesi
+           (sayfada yazar adı, unvanı ya da fotoğrafı var; "yazarlar",
+           "makaleler", "köşe yazıları" bölümünden geliyor; "bu yazımızda
+           ... ele alacağız" diye başlıyor) başkasının özgün emeğidir.
+           Valentra onu yeniden yazıp kendi haberi gibi yayımlamaz —
+           konusu vergiyle ne kadar ilgili olursa olsun. ilgili=false
+           yap ve red_nedeni'ni "yazar makalesi: " ile başlat. Valentra'nın
+           kendi yorum yazıları ayrı bir bölümde, kendi kaleminden yazılıyor.
+           Bir kurumun resmî duyurusu ya da haber sitesinin muhabir
+           haberi yazar makalesi sayılmaz.
+
            Emin değilsen ilgili sayma. B grubunda ölçüt SOMUTLUKTUR:
            - Beklenti ve tahmin haberini, kaynağı belliyse (kurum, anket,
              adı verilen banka ya da ekonomist) ve somut bir rakam ya da
