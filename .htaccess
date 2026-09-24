@@ -58,6 +58,12 @@
     RewriteCond %{THE_REQUEST} \s/vergi-takvimi\.php[\s?] [NC]
     RewriteRule ^ /vergi-takvimi? [R=301,L]
 
+    RewriteCond %{THE_REQUEST} \s/resmi-gazete\.php\?tarih=([0-9]{4}-[0-9]{2}-[0-9]{2}) [NC]
+    RewriteRule ^ /resmi-gazete/%1? [R=301,L]
+
+    RewriteCond %{THE_REQUEST} \s/resmi-gazete\.php[\s?] [NC]
+    RewriteRule ^ /resmi-gazete? [R=301,L]
+
     RewriteCond %{THE_REQUEST} \s/index\.php[\s?] [NC]
     RewriteRule ^ /? [R=301,L]
 
@@ -95,4 +101,12 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^pratik/([^/]+)/?$ pratik-bilgi.php?p=$1 [L,QSA]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^resmi-gazete/?$ resmi-gazete.php [L,QSA]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^resmi-gazete/([0-9]{4}-[0-9]{2}-[0-9]{2})/?$ resmi-gazete.php?tarih=$1 [L,QSA]
 </IfModule>

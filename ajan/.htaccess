@@ -1,0 +1,13 @@
+# Bu dizindeki dosyalara tarayicidan dogrudan erisim kapalidir.
+#
+# Deploy ajan/ dizinini de sunucuya yukluyor: site ajan/src altindaki
+# ortak siniflari (Resmi Gazete ayristiricisi) dosya olarak okuyor. Bu
+# kural o okumayi etkilemez; yalnizca GitHub'da komut satirindan
+# calismak icin yazilmis betiklerin tarayicidan acilmasini engeller.
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+</IfModule>

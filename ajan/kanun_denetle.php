@@ -15,6 +15,13 @@ declare(strict_types=1);
  *   php ajan/kanun_denetle.php
  */
 
+// Yalnizca komut satirindan: sunucuya yuklenen kopya tarayicidan calismasin
+// (ajan/.htaccess de kapatiyor; bu ikinci kilit).
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit;
+}
+
 require_once __DIR__ . '/../includes/kanunlar.php';
 
 $hata = 0;

@@ -27,15 +27,20 @@ $adet       = 12;   // izgaradaki kart sayisi
  */
 $mansetAdet = 10;   // kaydiraktaki haber sayisi
 
-$toplam = haber_yayinda_sayisi();
+/*
+ * Resmi Gazete kaynakli haberler ana sayfa akisinda yok; kendi
+ * sayfalarinda (resmi-gazete.php). Sayi, manset, izgara ve analiz ayni
+ * kosulu kullaniyor ki sayfalama tutarli kalsin.
+ */
+$toplam = haber_yayinda_sayisi(true);
 
 // Kaydirak yalnizca ilk sayfada; tukettigi haberler izgarada tekrarlanmaz.
 // Iki sorgu da ayni siralamayi (one_cikan, yayin_tarihi) kullandigi icin
 // kaydiragin tukettigi kadar atlamak yeterli.
-$mansetler = $sayfa === 1 ? haber_manset($mansetAdet) : [];
+$mansetler = $sayfa === 1 ? haber_manset($mansetAdet, true) : [];
 $tuketilen = min($mansetAdet, $toplam);
 
-$haberler = haber_yayindakiler($adet, $tuketilen + ($sayfa - 1) * $adet);
+$haberler = haber_yayindakiler($adet, $tuketilen + ($sayfa - 1) * $adet, true);
 
 $kalan    = max(0, $toplam - $tuketilen);
 $sonSayfa = max(1, (int) ceil($kalan / $adet));
@@ -78,7 +83,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
              * Degerlendirmesi dolu haber yoksa bolum hic basilmiyor; bos
              * bir baslik siteyi eksik gosterir.
              */
-            $analizliler = $sayfa === 1 ? haber_analizliler(3) : [];
+            $analizliler = $sayfa === 1 ? haber_analizliler(3, true) : [];
             ?>
 
             <?php if ($analizliler !== []): ?>

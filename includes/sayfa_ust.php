@@ -140,6 +140,9 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
                 <a class="menu-oge <?= ($aktifKategori ?? '') === 'takvim' ? 'aktif' : '' ?>"
                    href="<?= e(takvim_yolu()) ?>">Vergi Takvimi</a>
 
+                <a class="menu-oge <?= ($aktifKategori ?? '') === 'resmi-gazete' ? 'aktif' : '' ?>"
+                   href="<?= e(rg_yolu()) ?>">Resmî Gazete</a>
+
                 <?php foreach ($menu as $grup): ?>
                     <?php if ($grup['altlar'] === []): ?>
                         <a class="menu-oge <?= $menuAktif($grup) ? 'aktif' : '' ?>"

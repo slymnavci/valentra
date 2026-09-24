@@ -455,6 +455,7 @@ function sema_guncel_mi(): bool
             // Grafik olusturucu tablosu. CREATE TABLE dustuyse panelin
             // grafik sayfasi calismaz; ana sayfa ise bolumu atlar.
             ['grafikler', 'seri'],
+            ['resmi_gazete', 'url'],
         ];
 
         foreach ($beklenenSutunlar as [$tablo, $sutun]) {

@@ -131,3 +131,22 @@ function pratik_bilgi_yolu(string $anahtar): string
         ? '/pratik/' . rawurlencode($anahtar)
         : '/pratik-bilgi.php?p=' . rawurlencode($anahtar);
 }
+
+/**
+ * Resmî Gazete sayfası.
+ *
+ * Tarih verilmezse en son kayitli sayi acilir; adreste tarih gorunmez.
+ * Temiz adreste tarih yolun parcasi (/resmi-gazete/2026-09-24): her gunun
+ * sayisi kendi basina bir sayfa. Sorgulu bicimde '?' — takvim_yolu()'ndaki
+ * '&' hatasinin aynisina dusmemek icin.
+ */
+function rg_yolu(string $tarih = ''): string
+{
+    if ($tarih === '') {
+        return temiz_adres_acik() ? '/resmi-gazete' : '/resmi-gazete.php';
+    }
+
+    return temiz_adres_acik()
+        ? '/resmi-gazete/' . rawurlencode($tarih)
+        : '/resmi-gazete.php?tarih=' . rawurlencode($tarih);
+}

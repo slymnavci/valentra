@@ -20,6 +20,13 @@ declare(strict_types=1);
  *   php ajan/kaynak_dene.php [--saat=36] [--kaynak=ad-parcasi]
  */
 
+// Yalnizca komut satirindan: sunucuya yuklenen kopya tarayicidan calismasin
+// (ajan/.htaccess de kapatiyor; bu ikinci kilit).
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit;
+}
+
 require_once __DIR__ . '/src/Indirici.php';
 require_once __DIR__ . '/src/Http.php';
 require_once __DIR__ . '/src/Getirici.php';
@@ -214,6 +221,33 @@ if (isset($secenekler['rg'])) {
     foreach ($girdiler as $g) {
         yaz('  ' . $g['baslik']);
         yaz('     ' . $g['ozet'] . '  ' . $g['baglanti']);
+        // Sitenin Resmi Gazete sayfasinin kullandigi ayri alanlar.
+        yaz('     [üst bölüm: ' . ($g['ust_bolum'] ?? '?') . ' | bölüm: ' . ($g['bolum'] ?? '?')
+            . ' | mükerrer: ' . ($g['mukerrer'] ?? '?') . ']');
+    }
+
+    // Sayi numarasi fihristin basliginda; sayfa ozeti bunu gosteriyor.
+    $bugun = new DateTimeImmutable('now', new DateTimeZone('Europe/Istanbul'));
+
+    foreach ([$bugun, $bugun->modify('-1 day')] as $gun) {
+        $html = $getirici->indir($rg->fihristAdresleri($gun)[0]);
+        $sayi = $html === null ? null : ResmiGazete::sayiBul(Kodlama::utf8($html));
+        $yer  = 'fihrist';
+
+        // Fihristte yoksa sitenin yaptigi gibi ilk HTML maddeye bak.
+        if ($sayi === null) {
+            foreach ($girdiler as $g) {
+                if (($g['mukerrer'] ?? 0) === 0 && str_contains($g['baglanti'], $gun->format('Ymd') . '-')
+                    && preg_match('#\.html?$#i', $g['baglanti'])) {
+                    $madde = $getirici->indir($g['baglanti']);
+                    $sayi  = $madde === null ? null : ResmiGazete::sayiBul(Kodlama::utf8($madde));
+                    $yer   = 'ilk madde';
+                    break;
+                }
+            }
+        }
+
+        yaz('  Sayı (' . $gun->format('Y-m-d') . '): ' . ($sayi ?? 'BULUNAMADI') . ' [' . $yer . ']');
     }
 
     exit($girdiler === [] ? 1 : 0);

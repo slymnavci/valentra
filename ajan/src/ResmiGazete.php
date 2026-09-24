@@ -125,7 +125,7 @@ final class ResmiGazete
      *
      * @return list<string>
      */
-    public function fihristAdresleri(\DateTimeImmutable $tarih): array
+    public static function fihristAdresleri(\DateTimeImmutable $tarih): array
     {
         $yol = self::ANA_ADRES . '/eskiler/' . $tarih->format('Y') . '/' . $tarih->format('m')
              . '/' . $tarih->format('Ymd');
@@ -229,6 +229,14 @@ final class ResmiGazete
                 'ozet'     => self::ozetYaz($gun ?: null, $m[4] ?? '', $bolum),
                 'tarih'    => $gun ? $gun->format('Y-m-d H:i:s') : null,
                 'gorsel'   => '',
+                /*
+                 * Sitenin "Resmi Gazete" sayfasi icin ayri alanlar. Ajan
+                 * modele yalnizca baslik, baglanti ve ozeti gonderiyor;
+                 * bunlar orada kullanilmiyor.
+                 */
+                'bolum'     => $bolum !== '' ? (self::BOLUM_ADLARI[$bolum] ?? $bolum) : '',
+                'ust_bolum' => $ustBolum !== '' ? self::ustBolumAdi($ustBolum) : '',
+                'mukerrer'  => ($m[4] ?? '') !== '' ? (int) substr((string) $m[4], 1) : 0,
             ];
         }
 
@@ -246,6 +254,34 @@ final class ResmiGazete
 
         return ($host === 'www.resmigazete.gov.tr' || $host === 'resmigazete.gov.tr')
             && preg_match(self::MADDE_KALIBI, (string) parse_url($url, PHP_URL_PATH)) === 1;
+    }
+
+    /**
+     * Sayfadaki sayı numarası ("Sayı : 33379"); bulunamazsa null.
+     *
+     * Canli sinamada FIHRISTTE bulunamadi; numara madde sayfalarinin
+     * basliginda duruyor. Cagiran taraf fihristte yoksa o gunun ilk HTML
+     * maddesine bakiyor. Bosluk olarak &nbsp; de gelebildigi icin U+00A0
+     * acikca ekli.
+     */
+    public static function sayiBul(string $html): ?int
+    {
+        $metin = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return preg_match('/Say[ıiI]\s*[\s\x{00A0}]*:[\s\x{00A0}]*(\d{4,6})/iu', $metin, $e)
+            ? (int) $e[1]
+            : null;
+    }
+
+    /** Üst bölümün okunur adı ("YÜRÜTME VE İDARE BÖLÜMÜ" -> "Yürütme ve İdare Bölümü"). */
+    private static function ustBolumAdi(string $ad): string
+    {
+        return match ($ad) {
+            'YÜRÜTME VE İDARE BÖLÜMÜ' => 'Yürütme ve İdare Bölümü',
+            'YASAMA BÖLÜMÜ'           => 'Yasama Bölümü',
+            'YARGI BÖLÜMÜ'            => 'Yargı Bölümü',
+            default                   => $ad,
+        };
     }
 
     private static function baslikTemizle(string $ham): string

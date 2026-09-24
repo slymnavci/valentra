@@ -13,6 +13,17 @@ const HABER_TASLAK      = 'taslak';
 const HABER_YAYINDA     = 'yayinda';
 const HABER_REDDEDILDI  = 'reddedildi';
 
+/*
+ * Resmi Gazete kaynakli haber: ajan haberi Resmi Gazete'nin KENDI
+ * metninden yazmis (kaynak adresi resmigazete.gov.tr).
+ *
+ * Bunlar ana sayfa akisina girmiyor; sitenin "Resmi Gazete" sayfasinda
+ * gunun fihristiyle birlikte listeleniyor (yonetici karari: vergi
+ * haberleri ana sayfada, Resmi Gazete haberleri kendi bagi altinda).
+ * Baska bir sitenin ayni teblig hakkindaki haberi bu kosula girmez.
+ */
+const HABER_RG_KOSULU = "COALESCE(h.kaynak_url, '') LIKE '%resmigazete.gov.tr%'";
+
 /**
  * Ayni haberin iki kez girmesini engelleyen parmak izi.
  * Kaynak URL varsa onu, yoksa basligi esas alir.
@@ -383,13 +394,13 @@ function haber_yayinda_bul(string $slug): ?array
 /**
  * Ana sayfa listesi: sadece yayinda olanlar, yeniden eskiye.
  */
-function haber_yayindakiler(int $limit = 20, int $atla = 0): array
+function haber_yayindakiler(int $limit = 20, int $atla = 0, bool $rgHaric = false): array
 {
     $ifade = db()->prepare(
         'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
            FROM haberler h
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
-          WHERE h.durum = :durum
+          WHERE h.durum = :durum' . ($rgHaric ? ' AND NOT (' . HABER_RG_KOSULU . ')' : '') . '
           ORDER BY h.one_cikan DESC, h.yayin_tarihi DESC
           LIMIT :limit OFFSET :atla'
     );
@@ -401,9 +412,14 @@ function haber_yayindakiler(int $limit = 20, int $atla = 0): array
     return $ifade->fetchAll();
 }
 
-function haber_yayinda_sayisi(): int
+function haber_yayinda_sayisi(bool $rgHaric = false): int
 {
-    $ifade = db()->prepare('SELECT COUNT(*) FROM haberler WHERE durum = :durum');
+    // Sayfalama ana sayfa listesiyle AYNI kosulu kullanmali; yoksa son
+    // sayfalar bos cikar.
+    $ifade = db()->prepare(
+        'SELECT COUNT(*) FROM haberler h WHERE h.durum = :durum'
+        . ($rgHaric ? ' AND NOT (' . HABER_RG_KOSULU . ')' : '')
+    );
     $ifade->execute(['durum' => HABER_YAYINDA]);
 
     return (int) $ifade->fetchColumn();
@@ -692,13 +708,13 @@ function haber_kategoride_sayi(int $kategoriId): int
 /**
  * Mansette kayacak haberler (en yeni, one cikanlar once).
  */
-function haber_manset(int $limit = 8): array
+function haber_manset(int $limit = 8, bool $rgHaric = false): array
 {
     $ifade = db()->prepare(
         'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
            FROM haberler h
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
-          WHERE h.durum = :durum
+          WHERE h.durum = :durum' . ($rgHaric ? ' AND NOT (' . HABER_RG_KOSULU . ')' : '') . '
           ORDER BY h.one_cikan DESC, h.yayin_tarihi DESC
           LIMIT :limit'
     );
@@ -772,7 +788,7 @@ function haber_onemli_duzenlemeler(int $limit = 5): array
  *
  * @return list<array<string,mixed>>
  */
-function haber_analizliler(int $limit = 3): array
+function haber_analizliler(int $limit = 3, bool $rgHaric = false): array
 {
     $ifade = db()->prepare(
         'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
@@ -780,7 +796,7 @@ function haber_analizliler(int $limit = 3): array
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
           WHERE h.durum = :durum
             AND h.analiz_degisen   <> \'\'
-            AND h.analiz_etkilenen <> \'\'
+            AND h.analiz_etkilenen <> \'\'' . ($rgHaric ? ' AND NOT (' . HABER_RG_KOSULU . ')' : '') . '
           ORDER BY h.yayin_tarihi DESC
           LIMIT :limit'
     );
