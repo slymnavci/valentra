@@ -2436,3 +2436,206 @@ a.rg-madde:hover { color: var(--vurgu); }
     .rg-uyari { color: var(--altin); }
     .rg-gunler a.aktif { background: var(--vurgu); border-color: var(--vurgu); color: #0d1522; }
 }
+
+/* --- Valentra Diyor ki... (kose yazilari) -------------------------------- */
+
+/*
+ * Ana sayfada manset ile ayni sira: manset solda daraliyor, kutu onunla
+ * yan pencere arasinda. Kutu kisaysa mansetin boyuna uzuyor (stretch),
+ * "Tum yazilar" en altta kaliyor. Uzunsa kirpilmiyor, kendi boyunu
+ * aliyor: bir yazi basligini gizlemek, mansetin altinda kalan birkac
+ * santimlik bosluktan kotu. Dort yazili gunde ozetler gizleniyor ki
+ * kutu mansetle ayni boyda kalsin. 1200 pikselin altinda kutu mansetin
+ * altina iniyor.
+ */
+.manset-sirasi {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 20px;
+    align-items: stretch;
+    margin-bottom: 10px;
+}
+
+.manset-sirasi-sol { min-width: 0; }
+
+.kose-kutu-liste .kose-baslik {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.manset-sirasi .kaydirak { margin-bottom: 10px; }
+
+.kose-kutu {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    border-top: 3px solid var(--altin);
+    padding: 16px 18px 14px;
+}
+
+.kose-kutu-ust {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--altin);
+}
+
+.kose-kutu-ust h2 {
+    margin: 0;
+    font-size: .9rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--lacivert);
+}
+
+.kose-kutu-ust span {
+    font-size: .8rem;
+    color: var(--metin-soluk);
+    white-space: nowrap;
+}
+
+.kose-kutu-liste {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.kose-kutu-liste li + li { border-top: 1px solid var(--cizgi); }
+
+.kose-kutu-liste a,
+.kose-liste a {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 0;
+}
+
+.kose-gundem {
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--altin-koyu);
+}
+
+.kose-baslik {
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--metin);
+}
+
+.kose-kutu-liste .kose-baslik { font-size: .98rem; }
+
+.kose-kutu-liste a:hover .kose-baslik,
+.kose-liste a:hover .kose-baslik { color: var(--vurgu); }
+
+.kose-ozet {
+    font-size: .86rem;
+    line-height: 1.45;
+    color: var(--metin-soluk);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.kose-kutu-sik .kose-ozet { display: none; }
+
+.kose-kutu-tumu {
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid var(--cizgi);
+    font-size: .88rem;
+    font-weight: 700;
+    color: var(--vurgu);
+}
+
+.kose-kutu-tumu:hover { text-decoration: underline; }
+
+@media (max-width: 1200px) {
+    .manset-sirasi { grid-template-columns: 1fr; }
+    .kose-kutu { margin-bottom: 18px; }
+}
+
+/* Tum yazilar listesi ve "gunun diger yazilari" */
+.kose-liste {
+    list-style: none;
+    margin: 0 0 26px;
+    padding: 0 18px;
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+}
+
+.kose-liste li + li { border-top: 1px solid var(--cizgi); }
+
+.kose-liste a { padding: 14px 0; }
+
+.kose-liste .kose-ozet { -webkit-line-clamp: 3; font-size: .92rem; }
+
+/* Yazi sayfasi */
+.kose-ust-etiket {
+    display: inline-block;
+    margin-bottom: 12px;
+    font-size: .82rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--altin-koyu);
+}
+
+.kose-detay .icerik h2 {
+    margin: 1.6em 0 .6em;
+    font-size: 1.25rem;
+    font-weight: 800;
+    line-height: 1.3;
+}
+
+.kose-detay .icerik ul { margin: 0 0 1.05em; padding-left: 1.3em; }
+
+.kose-detay .icerik li { margin-bottom: .35em; }
+
+.kose-dayanak {
+    margin-top: 28px;
+    padding: 16px 20px;
+    border-radius: 8px;
+    background: var(--zemin);
+}
+
+.kose-dayanak h2 {
+    margin: 0 0 8px;
+    font-size: .92rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--metin-soluk);
+}
+
+.kose-dayanak ul { margin: 0; padding-left: 1.2em; }
+
+.kose-dayanak li { margin: 4px 0; }
+
+.kose-dayanak a { color: var(--vurgu); text-decoration: underline; }
+
+.kose-dayanak span { color: var(--metin-soluk); font-size: .9rem; }
+
+.kose-not {
+    margin: 22px 0 0;
+    font-size: .88rem;
+    color: var(--metin-soluk);
+    font-style: italic;
+}
+
+@media (prefers-color-scheme: dark) {
+    .kose-kutu-ust h2 { color: var(--metin); }
+    .kose-gundem,
+    .kose-ust-etiket { color: var(--altin); }
+}

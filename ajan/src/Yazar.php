@@ -5,7 +5,8 @@ namespace Valentra\Ajan;
 
 /**
  * Aday haberi Gemini'ye verip iki soruyu birden yanıtlatır:
- * vergiyle ilgili mi, ve ilgiliyse haber metni nasıl yazılmalı.
+ * vergi/mevzuat ya da ekonomi gündemine giriyor mu, ve giriyorsa haber
+ * metni nasıl yazılmalı.
  *
  * Telif: modele kaynak metin YALNIZCA anlaması için verilir. Çıktının
  * özgün olması, kaynaktan cümle kopyalanmaması ve kaynağa atıf verilmesi
@@ -56,21 +57,47 @@ final class Yazar implements SemaliIstemci
               vergi cezaları ve incelemeleri, yapılandırma ve af
               düzenlemeleri, muhasebe ve denetim yükümlülükleri.
 
-           B) EKONOMİ GÜNDEMİ (ikincil). Mükellefleri ve şirketleri
-              ilgilendiren makroekonomik gelişmeler: enflasyon ve TÜFE
-              verileri, Merkez Bankası faiz kararları, kur ve piyasa
-              hareketleri, büyüme ve istihdam verileri, bütçe ve kamu
-              maliyesi, teşvik ve destek programları, asgari ücret,
-              sektörel ekonomik düzenlemeler.
+           B) EKONOMİ GÜNDEMİ. Site bir ekonomi sayfası gözüyle de
+              bakar; yalnızca muhasebe değildir. Şunların hepsi bu gruba
+              girer:
+              - Makro veri ve kararlar: enflasyon, faiz kararları, büyüme,
+                istihdam, bütçe ve kamu maliyesi, cari denge, asgari
+                ücret, memur ve emekli zamları.
+              - Hükümetin ekonomi politikası: alınan ya da alınması
+                planlanan önlemler (enflasyonla mücadele, tasarruf,
+                teşvik ve destek paketleri, Orta Vadeli Program), bunların
+                beklenen etkileri.
+              - Piyasalar: borsa, döviz, altın, petrol ve emtia, tahvil,
+                kredi notu ve CDS; piyasayı hareket ettiren gelişmeler.
+              - Beklentiler: piyasa katılımcıları anketi, kurum ve banka
+                tahminleri, enflasyon ve kur beklentileri.
+              - Dünya ekonomisi: Fed ve ECB kararları, ABD-Çin ticaret
+                ilişkileri ve gümrük tarifeleri, petrol ve enerji
+                fiyatları, büyük ekonomilerin verileri — Türkiye'ye ya da
+                küresel piyasalara etkisi olan gelişmeler.
+              - Şirketler ve yatırımcılar: büyük şirketlerin sonuçları,
+                halka arz, birleşme ve satın almalar, iflas ve
+                konkordatolar, yatırımcıları geniş ölçekte etkileyen
+                olaylar (ör. yatırım fonlarının tasfiyesi).
 
-           Şunlar İKİSİ DE DEĞİLDİR ve ilgili sayılmaz: siyaset, magazin,
-           spor, kültür-sanat, asayiş, hava durumu, tanıtım ve reklam
-           içerikleri, yalnızca bir bakanın katıldığı etkinlik duyuruları,
-           içeriği olmayan "şu yayına katılacak" türü duyurular.
+           Şunlar İKİSİ DE DEĞİLDİR ve ilgili sayılmaz: ekonomik boyutu
+           olmayan siyaset, magazin, spor, kültür-sanat, asayiş, hava
+           durumu, tanıtım ve reklam içerikleri, içeriği olmayan
+           "şu yayına katılacak" türü duyurular.
 
-           Emin değilsen ilgili sayma. A grubuna girenler daha değerli;
-           B grubunda yalnızca somut veri ya da karar içeren haberleri al,
-           yorum ve beklenti yazılarını alma.
+           Emin değilsen ilgili sayma. B grubunda ölçüt SOMUTLUKTUR:
+           - Beklenti ve tahmin haberini, kaynağı belliyse (kurum, anket,
+             adı verilen banka ya da ekonomist) ve somut bir rakam ya da
+             gerekçe içeriyorsa al. Kaynaksız, tık tuzağı başlıklı
+             tahminleri ("şok zam geliyor!") alma.
+           - Toplantı ve görüşme haberini, geniş kesimi etkileyen bir
+             sorunla ilgili somut bir süreç ya da rakam içeriyorsa al
+             (ör. yüz binlerce yatırımcıyı ilgilendiren fon tasfiyesi
+             için ödeme takvimi). Yalnızca "toplantı yapılacak" diyen,
+             içeriği olmayan duyuruyu alma.
+           - Yabancı ülke verisini, küresel piyasaları ya da Türkiye'yi
+             etkileyecek ölçekteyse al (Fed kararı, ABD enflasyonu, Çin
+             büyümesi); küçük ve yerel etkili yabancı veriyi alma.
 
            AYNI OLAY İKİNCİ KEZ YAZILMAZ. İstemde "DAHA ÖNCE
            YAYIMLANANLAR" başlığı altında başlıklar verilmişse, bunlardan
@@ -250,7 +277,7 @@ final class Yazar implements SemaliIstemci
         'type' => 'object',
         'properties' => [
             'sira'        => ['type' => 'integer', 'description' => 'Adayin kullanici mesajindaki sira numarasi'],
-            'ilgili'      => ['type' => 'boolean', 'description' => 'Haber vergiyle ilgili mi'],
+            'ilgili'      => ['type' => 'boolean', 'description' => 'Haber A (vergi ve mali mevzuat) ya da B (ekonomi gündemi) grubuna giriyor mu'],
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
             'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı, en fazla 90 karakter'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
@@ -258,7 +285,7 @@ final class Yazar implements SemaliIstemci
             'etiketler'   => [
                 'type'  => 'array',
                 'items' => ['type' => 'string'],
-                'description' => '2-4 vergi terimi',
+                'description' => '2-4 konu terimi (vergi haberinde vergi terimi; ekonomi haberinde ör. altın, borsa, enflasyon beklentisi, Fed)',
             ],
             'kategori'    => ['type' => 'string',  'description' => 'Verilen konu grubu listesinden TAM olarak bir slug'],
             'guven_skoru' => ['type' => 'integer', 'description' => '0-100 arası güven'],
@@ -291,7 +318,7 @@ final class Yazar implements SemaliIstemci
     private const SEMA = [
         'type' => 'object',
         'properties' => [
-            'ilgili'      => ['type' => 'boolean', 'description' => 'Haber vergiyle ilgili mi'],
+            'ilgili'      => ['type' => 'boolean', 'description' => 'Haber A (vergi ve mali mevzuat) ya da B (ekonomi gündemi) grubuna giriyor mu'],
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
             'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı, en fazla 90 karakter'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
@@ -299,7 +326,7 @@ final class Yazar implements SemaliIstemci
             'etiketler'   => [
                 'type'  => 'array',
                 'items' => ['type' => 'string'],
-                'description' => '2-4 vergi terimi',
+                'description' => '2-4 konu terimi (vergi haberinde vergi terimi; ekonomi haberinde ör. altın, borsa, enflasyon beklentisi, Fed)',
             ],
             'kategori'    => ['type' => 'string',  'description' => 'Verilen konu grubu listesinden TAM olarak bir slug'],
             'guven_skoru' => ['type' => 'integer', 'description' => '0-100 arası güven'],
@@ -695,7 +722,7 @@ final class Yazar implements SemaliIstemci
         Aşağıda {$adet} haber adayı var. HER BİRİNİ ayrı ayrı değerlendir
         ve "sonuclar" dizisinde {$adet} sonuç döndür. Her sonucun "sira"
         alanına ilgili adayın numarasını yaz (1'den {$adet}'e kadar).
-        Hiçbir adayı atlama; vergiyle ilgili olmayanlar için de ilgili
+        Hiçbir adayı atlama; A ya da B grubuna girmeyenler için de ilgili
         değerini false yapıp red_nedeni'ni doldur.
 
         {$adayMetni}
@@ -839,8 +866,8 @@ final class Yazar implements SemaliIstemci
         {$metin}
         ---
 
-        Bu haberi sınıflandır; vergiyle ilgiliyse Valentra için özgün bir
-        haber metni yaz.
+        Bu haberi sınıflandır; A ya da B grubuna giriyorsa Valentra için
+        özgün bir haber metni yaz.
         METIN;
     }
 }

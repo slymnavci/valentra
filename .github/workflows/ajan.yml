@@ -38,6 +38,7 @@ on:
         options:
           - topla
           - pratik-bilgiler
+          - kose-yazisi
           - kaynak-testi
           - kanun-testi
           - ag-tanisi
@@ -243,6 +244,35 @@ jobs:
           fi
 
           php topla.php $BAYRAKLAR
+
+      # "Valentra Diyor ki..." kose yazilari.
+      #
+      # Zamanli calismalarda her seferinde deneniyor ama gunde bir kez
+      # yaziyor: saat 12'den once ya da bugunun yazilari zaten varsa
+      # model cagrilmadan cikiyor (--zamanli). GitHub zamanli calismalarin
+      # bir kismini dusurdugu icin tek bir saate baglanmadi. Haber
+      # toplamadan SONRA: gunun yeni haberleri malzemeye girsin.
+      # Yazilar taslak olarak gidiyor; yayina alma panelde.
+      - name: Kose yazilarini yaz
+        if: ${{ !cancelled() && ((github.event_name == 'schedule' && github.event.schedule != '40 4 * * 1') || inputs.mod == 'kose-yazisi') }}
+        working-directory: ajan
+        env:
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: |
+          BAYRAKLAR=""
+
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            BAYRAKLAR="--zamanli"
+          fi
+
+          if [ "${{ inputs.kuru }}" = "true" ]; then
+            BAYRAKLAR="$BAYRAKLAR --kuru"
+          fi
+
+          php kose.php $BAYRAKLAR
 
       # Panelden yayina alinan grafiklerin verisini tazele.
       #

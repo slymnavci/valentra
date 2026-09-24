@@ -7,6 +7,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/includes/bootstrap.php';
+require_once __DIR__ . '/includes/kose.php';
 
 $sayfa = max(1, (int) ($_GET['sayfa'] ?? 1));
 
@@ -62,7 +63,29 @@ require __DIR__ . '/includes/sayfa_ust.php';
     <?php /* Ana kolon + yan pencere. Yan pencere mobilde ana kolonun altina duser. */ ?>
     <div class="ana-duzen">
         <div class="ana-kolon">
-            <?php require __DIR__ . '/includes/kaydirak.php'; ?>
+            <?php
+            /*
+             * Manset ve "Valentra Diyor ki…" ayni sirada: manset solda
+             * daraliyor, kose yazilari kutusu onunla yan pencere arasinda.
+             * Yayinda yazi yoksa manset tam genislikte kalir.
+             */
+            $koseYazilari = [];
+
+            if ($sayfa === 1) {
+                try {
+                    $koseYazilari = kose_son_gun();
+                } catch (PDOException $e) {
+                    error_log('[valentra] kose yazilari okunamadi: ' . $e->getMessage());
+                }
+            }
+            ?>
+            <div class="<?= $koseYazilari !== [] ? 'manset-sirasi' : '' ?>">
+                <div class="manset-sirasi-sol">
+                    <?php require __DIR__ . '/includes/kaydirak.php'; ?>
+                </div>
+
+                <?php require __DIR__ . '/includes/kose_kutu.php'; ?>
+            </div>
 
             <?php /* Piyasa seridi kaydiragin hemen altinda: sayfa acilir
                      acilmaz gorunen, surekli degisen tek veri. */ ?>

@@ -48,10 +48,11 @@ final class Suzgec
     /**
      * Ekonomi gündemi terimleri.
      *
-     * Site vergi odakli ama ekonomi de izleniyor. Bu liste kasten dar:
-     * somut veri ya da karar iceren haberleri yakalamak icin. "Ekonomi",
-     * "piyasa" gibi genel kelimeler yok, cunku her ekonomi haberi degerli
-     * degil.
+     * Site vergi odakli ama ekonomi gundemi de sitenin asli bir parcasi:
+     * makro veri ve kararlarin yaninda piyasalar, beklentiler, dunya
+     * ekonomisi ve sirket haberleri de aliniyor. "Ekonomi", "piyasa" gibi
+     * TEK BASINA genel kelimeler yine yok; her haberi aday yapar ve
+     * kontenjani doldururdu. Son karari model veriyor.
      */
     private const EKONOMI = [
         'enflasyon', 'tüfe', 'üfe', 'merkez bankası', 'tcmb', 'politika faizi',
@@ -62,6 +63,30 @@ final class Suzgec
         'kapasite kullanım', 'tüketici güven', 'dış ticaret açığı',
         'ihracat rakamları', 'ithalat rakamları', 'teşvik paketi',
         'destek paketi', 'kredi garanti', 'yeniden değerleme oranı',
+        // Piyasalar, beklentiler, dunya ekonomisi ve sirketler (24.09.2026).
+        //
+        // Site "ekonomi sayfasi gozuyle" de bakiyor: borsa, doviz, altin,
+        // petrol, beklenti anketleri, Fed/ECB, ABD-Cin ticareti, sirket
+        // sonuclari. Eski dar liste bu haberleri modele hic gondermiyordu.
+        // Belirsiz kisa kelimeler kasten yok: "altın" tek basina
+        // "altında"yi, "Çin" ve "ABD" tek basina siyaset haberlerini
+        // yakalardi; bu yuzden ikili ifadeler kullaniliyor.
+        'borsa', 'bist', 'hisse senedi', 'hisseler', 'endeks',
+        'dolar', 'döviz', 'avro', 'euro/tl', 'dolar/tl', 'kur farkı',
+        'ons altın', 'gram altın', 'çeyrek altın', 'altın fiyat', 'altın piyasa',
+        'petrol', 'brent', 'doğalgaz fiyat', 'emtia', 'opec',
+        'akaryakıt', 'elektrik zammı', 'doğalgaz zammı',
+        'tahvil', 'eurobond', 'kredi notu', 'cds', 'rezerv', 'swap',
+        'yatırım fonu', 'fonların', 'fon tasfiye', 'yatırımcı',
+        'halka arz', 'temettü', 'bilanço', 'net kar', 'net kâr', 'konkordato', 'iflas',
+        'birleşme', 'satın alma',
+        'piyasa beklenti', 'piyasa katılımcı', 'piyasalarda', 'küresel piyasa',
+        'beklenti anketi', 'enflasyon beklenti', 'dezenflasyon',
+        'orta vadeli program', 'ovp', 'kamu harcama', 'tasarruf tedbir',
+        'fed', 'federal reserve', 'ecb', 'avrupa merkez bankası',
+        'ticaret savaş', 'gümrük tarife', 'ek gümrük', 'abd-çin', 'çin ekonomi', 'abd ekonomi',
+        'konut fiyat', 'konut satış', 'kira artış',
+        'memur zammı', 'emekli zammı', 'maaş zammı',
         // Ingilizce ekonomi terimleri.
         'inflation', 'interest rate', 'policy rate', 'rate cut',
         'rate hike', 'central bank', 'unemployment rate', 'gdp',
@@ -69,6 +94,10 @@ final class Suzgec
         'consumer price', 'producer price', 'industrial production',
         'economic growth', 'recession', 'fiscal policy', 'monetary policy',
         'sovereign rating', 'credit rating',
+        'stock market', 'stocks', 'equities', 'wall street', 'bond yield',
+        'treasury yield', 'oil price', 'crude', 'gold price', 'commodit',
+        'currency', 'tariff', 'trade war', 'earnings', 'ipo', 'merger',
+        'acquisition', 'federal reserve', 'opec',
     ];
 
     /** Tek başına zayıf; yalnızca bir başkasıyla birlikte sayılır. */

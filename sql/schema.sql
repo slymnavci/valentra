@@ -1293,3 +1293,44 @@ CREATE TABLE IF NOT EXISTS resmi_gazete (
     UNIQUE KEY uq_rg_url (url),
     KEY ix_rg_tarih (tarih, mukerrer, sira)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Kose yazilari ("Valentra Diyor ki...") — 24.09.2026
+--
+-- Ajan her gun gundemden 3-4 madde seciyor ve her biri icin ayri bir yazi
+-- yaziyor. Yazilar HER ZAMAN taslak olarak giriyor; yayina alma yetkisi
+-- yalnizca panelde (haberlerle ayni kural).
+--
+-- gun: yazinin ait oldugu gun (TR saati). haber_idleri: yazinin dayandigi
+-- haberler, virgullu; sayfadaki "Dayandigi haberler" listesini ve ertesi
+-- gun ayni haberin yeniden secilmemesini besliyor.
+--
+-- ajan_notu: onaylayacak editore, dogrulanmasi gereken noktalar.
+--
+-- parmak: gun + baslik. Ajan gonderimi yarida kalip tekrarlarsa ayni
+-- yazi ikinci kez girmesin diye.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS kose_yazilari (
+    id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    gun           DATE          NOT NULL,
+    sira          TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    gundem        VARCHAR(200)  NOT NULL DEFAULT '',
+    baslik        VARCHAR(300)  NOT NULL,
+    slug          VARCHAR(320)  NOT NULL,
+    ozet          VARCHAR(600)  NOT NULL DEFAULT '',
+    icerik        MEDIUMTEXT    NOT NULL,
+    haber_idleri  VARCHAR(400)  NOT NULL DEFAULT '',
+    ajan_notu     VARCHAR(600)  NOT NULL DEFAULT '',
+    parmak        CHAR(64)      NOT NULL,
+    durum         ENUM('taslak','yayinda','reddedildi') NOT NULL DEFAULT 'taslak',
+    onaylayan_id  INT UNSIGNED  NULL,
+    yayin_tarihi  DATETIME      NULL,
+    olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    guncellendi   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_kose_slug (slug),
+    UNIQUE KEY uq_kose_parmak (parmak),
+    KEY ix_kose_durum_gun (durum, gun, sira),
+    CONSTRAINT fk_kose_onaylayan FOREIGN KEY (onaylayan_id) REFERENCES yoneticiler (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
