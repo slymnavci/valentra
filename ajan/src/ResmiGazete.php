@@ -257,13 +257,20 @@ final class ResmiGazete
     }
 
     /**
-     * Fihristteki sayı numarası ("Sayı : 33379"); bulunamazsa null.
+     * Sayfadaki sayı numarası ("Sayı : 33379"); bulunamazsa null.
+     *
+     * Canli sinamada FIHRISTTE bulunamadi; numara madde sayfalarinin
+     * basliginda duruyor. Cagiran taraf fihristte yoksa o gunun ilk HTML
+     * maddesine bakiyor. Bosluk olarak &nbsp; de gelebildigi icin U+00A0
+     * acikca ekli.
      */
     public static function sayiBul(string $html): ?int
     {
         $metin = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-        return preg_match('/Say[ıi]\s*:\s*(\d{4,6})/u', $metin, $e) ? (int) $e[1] : null;
+        return preg_match('/Say[ıiI]\s*[\s\x{00A0}]*:[\s\x{00A0}]*(\d{4,6})/iu', $metin, $e)
+            ? (int) $e[1]
+            : null;
     }
 
     /** Üst bölümün okunur adı ("YÜRÜTME VE İDARE BÖLÜMÜ" -> "Yürütme ve İdare Bölümü"). */

@@ -224,8 +224,23 @@ if (isset($secenekler['rg'])) {
 
     foreach ([$bugun, $bugun->modify('-1 day')] as $gun) {
         $html = $getirici->indir($rg->fihristAdresleri($gun)[0]);
-        yaz('  Sayı (' . $gun->format('Y-m-d') . '): '
-            . ($html === null ? 'fihrist alınamadı' : (ResmiGazete::sayiBul(Kodlama::utf8($html)) ?? 'BULUNAMADI')));
+        $sayi = $html === null ? null : ResmiGazete::sayiBul(Kodlama::utf8($html));
+        $yer  = 'fihrist';
+
+        // Fihristte yoksa sitenin yaptigi gibi ilk HTML maddeye bak.
+        if ($sayi === null) {
+            foreach ($girdiler as $g) {
+                if (($g['mukerrer'] ?? 0) === 0 && str_contains($g['baglanti'], $gun->format('Ymd') . '-')
+                    && preg_match('#\.html?$#i', $g['baglanti'])) {
+                    $madde = $getirici->indir($g['baglanti']);
+                    $sayi  = $madde === null ? null : ResmiGazete::sayiBul(Kodlama::utf8($madde));
+                    $yer   = 'ilk madde';
+                    break;
+                }
+            }
+        }
+
+        yaz('  Sayı (' . $gun->format('Y-m-d') . '): ' . ($sayi ?? 'BULUNAMADI') . ' [' . $yer . ']');
     }
 
     exit($girdiler === [] ? 1 : 0);
