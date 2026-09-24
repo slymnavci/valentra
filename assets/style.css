@@ -2462,6 +2462,65 @@ a.rg-madde:hover { color: var(--vurgu); }
     display: flex;
     flex-direction: column;
     min-width: 0;
+
+    /* Yuksekligi manset belirliyor: kutu kendi boyunu siraya
+       dayatmiyor, stretch ile mansetin boyuna uzuyor. Sigmayan yazilar
+       kose_kutu.php'deki betikle gizleniyor (yarim kesilmiyor). */
+    contain: size;
+    overflow: hidden;
+}
+
+.kose-kutu-baslik {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.kose-kutu-baslik span {
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--metin-soluk);
+    white-space: nowrap;
+}
+
+.kose-kutu .sirali-liste {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* .sirali-liste li'nin display:flex'i hidden niteligini ezerdi. */
+.kose-kutu .sirali-liste li[hidden] { display: none; }
+
+/* Baslik en fazla iki, konu tek satir, aralik biraz daha sik: dort yazi
+   1440x900 ekranda mansetin boyuna (444 piksel) sigsin. */
+.kose-kutu .pencere-baslik { margin-bottom: 8px; }
+
+.kose-kutu .sirali-liste li { padding: 8px 0; }
+
+.kose-kutu .sirali-liste li:first-child { padding-top: 2px; }
+
+/* Baglanti flex ogesi: min-width olmadan daralmiyor ve uzun basliklar
+   satir kirmak yerine kutunun sag kenarindan tasip kesiliyordu. */
+.kose-kutu .sirali-liste a { min-width: 0; flex: 1 1 auto; }
+
+.kose-kutu .ad {
+    font-size: .94rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.kose-kutu .ust-bilgi {
+    margin-top: 1px;
+    font-size: .8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .kose-kutu-tumu {
@@ -2506,7 +2565,8 @@ a.rg-madde:hover { color: var(--vurgu); }
 
 @media (max-width: 1200px) {
     .manset-sirasi { grid-template-columns: 1fr; }
-    .kose-kutu { margin-bottom: 18px; }
+    .kose-kutu { margin-bottom: 18px; contain: none; }
+    .kose-kutu .sirali-liste { overflow: visible; }
 }
 
 /* Tum yazilar listesi ve "gunun diger yazilari" */
