@@ -229,6 +229,14 @@ final class ResmiGazete
                 'ozet'     => self::ozetYaz($gun ?: null, $m[4] ?? '', $bolum),
                 'tarih'    => $gun ? $gun->format('Y-m-d H:i:s') : null,
                 'gorsel'   => '',
+                /*
+                 * Sitenin "Resmi Gazete" sayfasi icin ayri alanlar. Ajan
+                 * modele yalnizca baslik, baglanti ve ozeti gonderiyor;
+                 * bunlar orada kullanilmiyor.
+                 */
+                'bolum'     => $bolum !== '' ? (self::BOLUM_ADLARI[$bolum] ?? $bolum) : '',
+                'ust_bolum' => $ustBolum !== '' ? self::ustBolumAdi($ustBolum) : '',
+                'mukerrer'  => ($m[4] ?? '') !== '' ? (int) substr((string) $m[4], 1) : 0,
             ];
         }
 
@@ -246,6 +254,27 @@ final class ResmiGazete
 
         return ($host === 'www.resmigazete.gov.tr' || $host === 'resmigazete.gov.tr')
             && preg_match(self::MADDE_KALIBI, (string) parse_url($url, PHP_URL_PATH)) === 1;
+    }
+
+    /**
+     * Fihristteki sayı numarası ("Sayı : 33379"); bulunamazsa null.
+     */
+    public static function sayiBul(string $html): ?int
+    {
+        $metin = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return preg_match('/Say[ıi]\s*:\s*(\d{4,6})/u', $metin, $e) ? (int) $e[1] : null;
+    }
+
+    /** Üst bölümün okunur adı ("YÜRÜTME VE İDARE BÖLÜMÜ" -> "Yürütme ve İdare Bölümü"). */
+    private static function ustBolumAdi(string $ad): string
+    {
+        return match ($ad) {
+            'YÜRÜTME VE İDARE BÖLÜMÜ' => 'Yürütme ve İdare Bölümü',
+            'YASAMA BÖLÜMÜ'           => 'Yasama Bölümü',
+            'YARGI BÖLÜMÜ'            => 'Yargı Bölümü',
+            default                   => $ad,
+        };
     }
 
     private static function baslikTemizle(string $ham): string

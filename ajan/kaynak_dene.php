@@ -214,6 +214,18 @@ if (isset($secenekler['rg'])) {
     foreach ($girdiler as $g) {
         yaz('  ' . $g['baslik']);
         yaz('     ' . $g['ozet'] . '  ' . $g['baglanti']);
+        // Sitenin Resmi Gazete sayfasinin kullandigi ayri alanlar.
+        yaz('     [üst bölüm: ' . ($g['ust_bolum'] ?? '?') . ' | bölüm: ' . ($g['bolum'] ?? '?')
+            . ' | mükerrer: ' . ($g['mukerrer'] ?? '?') . ']');
+    }
+
+    // Sayi numarasi fihristin basliginda; sayfa ozeti bunu gosteriyor.
+    $bugun = new DateTimeImmutable('now', new DateTimeZone('Europe/Istanbul'));
+
+    foreach ([$bugun, $bugun->modify('-1 day')] as $gun) {
+        $html = $getirici->indir($rg->fihristAdresleri($gun)[0]);
+        yaz('  Sayı (' . $gun->format('Y-m-d') . '): '
+            . ($html === null ? 'fihrist alınamadı' : (ResmiGazete::sayiBul(Kodlama::utf8($html)) ?? 'BULUNAMADI')));
     }
 
     exit($girdiler === [] ? 1 : 0);
