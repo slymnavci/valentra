@@ -561,6 +561,36 @@ function kaynaklari_sirala(array $kaynaklar, int $calismaNo): array
  *
  * @param array<string,mixed> $kaynak
  */
+/**
+ * Adres bir yazarın imzalı makalesine mi ait?
+ *
+ * YAZAR MAKALESI HABER DEGIL (24.09.2026). MuhasebeTR gibi kaynaklarin
+ * beslemesinde haberle yazar makaleleri karisik geliyor ve ajan bir
+ * yazarin makalesini "haber" diye yeniden yazip yazarin fotografiyla
+ * yayimlamisti. Bu, baskasinin ozgun emegini Valentra'nin haberi gibi
+ * sunmak demek. Valentra'nin kendi yorum yazilari ayri: "Valentra Diyor
+ * ki..." (ajan/kose.php).
+ *
+ * Iki katman var: bu adres kalibi modele gitmeden ayikliyor (para
+ * harcanmiyor); kalibi tutmayan makaleyi model yonergesi eliyor.
+ */
+function yazar_makalesi_mi(string $url): bool
+{
+    $yol = mb_strtolower((string) parse_url($url, PHP_URL_PATH), 'UTF-8');
+
+    foreach ([
+        '/yazarlar/', '/yazarlarimiz/', '/yazar/', '/author/', '/authors/',
+        '/makale/', '/makaleler/', '/kose-yazisi', '/kose-yazilari', '/koseyazisi',
+        '/koseyazilari', '/kose-yazarlari', '/columnists/', '/opinion/', '/commentisfree/', '/gorus/',
+    ] as $kalip) {
+        if (str_contains($yol . '/', $kalip)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function resmi_gazete_mi(array $kaynak): bool
 {
     $host = strtolower((string) parse_url((string) ($kaynak['site_url'] ?? ''), PHP_URL_HOST));
@@ -749,6 +779,7 @@ foreach ((array) ($depo->oku('elenenler', 3) ?? []) as $parmak => $zaman) {
 }
 
 $oncedenElenen = 0;
+$makaleElenen  = 0;
 
 $taramaButcesi   = 8 * 60;
 $atlanan         = 0;
@@ -853,6 +884,12 @@ foreach ($kaynaklar as $kaynak) {
 
     foreach ($girdiler as $girdi) {
         if (!$suzgec->gecer($girdi['baslik'], $girdi['ozet'])) {
+            continue;
+        }
+
+        // Yazar makalesi haber olarak yeniden yazilmaz (bkz. yazar_makalesi_mi).
+        if (yazar_makalesi_mi((string) $girdi['baglanti'])) {
+            $makaleElenen++;
             continue;
         }
 
@@ -1052,6 +1089,11 @@ if ($getirici->siteTavaniDoldu()) {
 if ($oncedenElenen > 0) {
     gunluk('  ' . $oncedenElenen . ' aday son 48 saatte model tarafından okunup '
         . 'elendiği için yeniden sorulmadı.');
+}
+
+if ($makaleElenen > 0) {
+    gunluk('  ' . $makaleElenen . ' girdi yazar makalesi olduğu için alınmadı '
+        . '(başkasının imzalı yazısı haber olarak yeniden yazılmıyor).');
 }
 
 gunluk(count($adaylar) . ' aday modele gönderilecek.');
