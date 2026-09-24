@@ -150,3 +150,19 @@ function rg_yolu(string $tarih = ''): string
         ? '/resmi-gazete/' . rawurlencode($tarih)
         : '/resmi-gazete.php?tarih=' . rawurlencode($tarih);
 }
+
+/** Köşe yazısı ("Valentra Diyor ki…") sayfası. */
+function kose_yolu(string $slug): string
+{
+    return temiz_adres_acik()
+        ? '/valentra-diyor-ki/' . rawurlencode($slug)
+        : '/kose-yazisi.php?y=' . rawurlencode($slug);
+}
+
+/** Tüm köşe yazıları, günlere göre. Sayfa numarası her iki biçimde sorguda. */
+function kose_liste_yolu(int $sayfa = 1): string
+{
+    $yol = temiz_adres_acik() ? '/valentra-diyor-ki' : '/kose-yazilari.php';
+
+    return $sayfa > 1 ? $yol . '?sayfa=' . $sayfa : $yol;
+}

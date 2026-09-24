@@ -93,6 +93,35 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         <?php endforeach; ?>
     <?php endforeach; ?>
 
+    <url>
+        <loc><?= e($taban . kose_liste_yolu()) ?></loc>
+        <changefreq>daily</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <?php
+    /*
+     * Kose yazilari: yalnizca yayindakiler. Tablo henuz yoksa (sema
+     * yukseltmesi dustuyse) harita yine uretilsin.
+     */
+    try {
+        $koseler = db()->query(
+            "SELECT slug, COALESCE(guncellendi, yayin_tarihi) AS son FROM kose_yazilari
+              WHERE durum = 'yayinda' ORDER BY gun DESC LIMIT 1000"
+        )->fetchAll();
+    } catch (PDOException $e) {
+        $koseler = [];
+    }
+
+    foreach ($koseler as $kose): ?>
+        <url>
+            <loc><?= e($taban . kose_yolu((string) $kose['slug'])) ?></loc>
+            <lastmod><?= e($zaman((string) $kose['son'])) ?></lastmod>
+            <changefreq>monthly</changefreq>
+            <priority>0.7</priority>
+        </url>
+    <?php endforeach; ?>
+
     <?php foreach ($kategoriler as $kategori): ?>
         <url>
             <loc><?= e($taban . kategori_yolu((string) $kategori['slug'])) ?></loc>

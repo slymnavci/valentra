@@ -34,6 +34,7 @@
             <nav>
                 <a href="/" target="_blank" rel="noopener">Siteyi gör</a>
                 <a href="istatistik.php">Ziyaretçiler</a>
+                <a href="kose-yazilari.php">Köşe yazıları</a>
                 <a href="ajan.php">Ajan</a>
                 <a href="pratik.php">Pratik bilgiler</a>
                 <a href="grafikler.php">Grafikler</a>

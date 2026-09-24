@@ -318,6 +318,62 @@ final class Site
     }
 
     /**
+     * Köşe yazısı malzemesi: son saatlerin haberleri, son günlerin yazıları
+     * ve bugün kaç yazı olduğu.
+     *
+     * @return array{bugun:string,bugun_sayisi:int,gunluk_tavan:int,haberler:list<array<string,mixed>>,onceki:list<array<string,mixed>>}
+     */
+    public function koseMalzeme(int $saat = 36): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/kose.php?saat=' . max(6, $saat));
+
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException(
+                'Yazı malzemesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde)
+            );
+        }
+
+        return [
+            'bugun'        => (string) ($veri['bugun'] ?? date('Y-m-d')),
+            'bugun_sayisi' => (int) ($veri['bugun_sayisi'] ?? 0),
+            'gunluk_tavan' => (int) ($veri['gunluk_tavan'] ?? 4),
+            'haberler'     => array_values((array) ($veri['haberler'] ?? [])),
+            'onceki'       => array_values((array) ($veri['onceki'] ?? [])),
+        ];
+    }
+
+    /**
+     * Köşe yazılarını TASLAK olarak gönderir; yayına alma panelde.
+     *
+     * @param list<array<string,mixed>> $yazilar
+     * @return array<string,mixed>
+     */
+    public function koseGonder(array $yazilar): array
+    {
+        if ($yazilar === []) {
+            return ['eklenen' => 0, 'yinelenen' => 0, 'hatalar' => []];
+        }
+
+        [$kod, $govde] = $this->istek(
+            'POST',
+            '/api/kose.php',
+            json_encode(['yazilar' => $yazilar], JSON_UNESCAPED_UNICODE)
+        );
+
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException(
+                'Gönderim başarısız (HTTP ' . $kod . '): ' . $this->hatayiOku($govde)
+            );
+        }
+
+        return $veri;
+    }
+
+    /**
      * Sunucunun JSON hata yanıtını okunur hâle getirir.
      *
      * Uç, sorunun ne olduğunu ve nasıl çözüleceğini "detay" alanında

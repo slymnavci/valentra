@@ -456,6 +456,7 @@ function sema_guncel_mi(): bool
             // grafik sayfasi calismaz; ana sayfa ise bolumu atlar.
             ['grafikler', 'seri'],
             ['resmi_gazete', 'url'],
+            ['kose_yazilari', 'parmak'],
         ];
 
         foreach ($beklenenSutunlar as [$tablo, $sutun]) {
