@@ -2440,13 +2440,11 @@ a.rg-madde:hover { color: var(--vurgu); }
 /* --- Valentra Diyor ki... (kose yazilari) -------------------------------- */
 
 /*
- * Ana sayfada manset ile ayni sira: manset solda daraliyor, kutu onunla
- * yan pencere arasinda. Kutu kisaysa mansetin boyuna uzuyor (stretch),
- * "Tum yazilar" en altta kaliyor. Uzunsa kirpilmiyor, kendi boyunu
- * aliyor: bir yazi basligini gizlemek, mansetin altinda kalan birkac
- * santimlik bosluktan kotu. Dort yazili gunde ozetler gizleniyor ki
- * kutu mansetle ayni boyda kalsin. 1200 pikselin altinda kutu mansetin
- * altina iniyor.
+ * Ana sayfada manset ile ayni sira: manset solda daraliyor, "Valentra
+ * Diyor ki..." kutusu onunla yan pencere arasinda. Kutu yan penceredeki
+ * pencerelerle ayni gorunumde (.pencere + .sirali-liste). Kisaysa
+ * mansetin boyuna uzuyor ve "Tum yazilar" en altta kaliyor; uzunsa
+ * kirpilmiyor. 1200 pikselin altinda kutu mansetin altina iniyor.
  */
 .manset-sirasi {
     display: grid;
@@ -2458,65 +2456,27 @@ a.rg-madde:hover { color: var(--vurgu); }
 
 .manset-sirasi-sol { min-width: 0; }
 
-.kose-kutu-liste .kose-baslik {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
 .manset-sirasi .kaydirak { margin-bottom: 10px; }
 
 .kose-kutu {
     display: flex;
     flex-direction: column;
-    min-height: 0;
-    background: var(--kart);
-    border-radius: var(--yuvarlak);
-    box-shadow: var(--golge);
-    border-top: 3px solid var(--altin);
-    padding: 16px 18px 14px;
+    min-width: 0;
 }
 
-.kose-kutu-ust {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 10px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid var(--altin);
-}
-
-.kose-kutu-ust h2 {
-    margin: 0;
-    font-size: .9rem;
-    font-weight: 800;
-    letter-spacing: .12em;
-    text-transform: uppercase;
-    color: var(--lacivert);
-}
-
-.kose-kutu-ust span {
+.kose-kutu-tumu {
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid var(--cizgi);
     font-size: .8rem;
-    color: var(--metin-soluk);
-    white-space: nowrap;
 }
 
-.kose-kutu-liste {
-    list-style: none;
-    margin: 0;
-    padding: 0;
+.kose-kutu-tumu a {
+    font-weight: 700;
+    color: var(--vurgu);
 }
 
-.kose-kutu-liste li + li { border-top: 1px solid var(--cizgi); }
-
-.kose-kutu-liste a,
-.kose-liste a {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    padding: 10px 0;
-}
+.kose-kutu-tumu a:hover { text-decoration: underline; }
 
 .kose-gundem {
     font-size: .72rem;
@@ -2532,9 +2492,6 @@ a.rg-madde:hover { color: var(--vurgu); }
     color: var(--metin);
 }
 
-.kose-kutu-liste .kose-baslik { font-size: .98rem; }
-
-.kose-kutu-liste a:hover .kose-baslik,
 .kose-liste a:hover .kose-baslik { color: var(--vurgu); }
 
 .kose-ozet {
@@ -2546,19 +2503,6 @@ a.rg-madde:hover { color: var(--vurgu); }
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
-
-.kose-kutu-sik .kose-ozet { display: none; }
-
-.kose-kutu-tumu {
-    margin-top: auto;
-    padding-top: 10px;
-    border-top: 1px solid var(--cizgi);
-    font-size: .88rem;
-    font-weight: 700;
-    color: var(--vurgu);
-}
-
-.kose-kutu-tumu:hover { text-decoration: underline; }
 
 @media (max-width: 1200px) {
     .manset-sirasi { grid-template-columns: 1fr; }
@@ -2635,7 +2579,6 @@ a.rg-madde:hover { color: var(--vurgu); }
 }
 
 @media (prefers-color-scheme: dark) {
-    .kose-kutu-ust h2 { color: var(--metin); }
     .kose-gundem,
     .kose-ust-etiket { color: var(--altin); }
 }
