@@ -20,6 +20,13 @@ declare(strict_types=1);
  *                      [--kaynakbasina=4]
  */
 
+// Yalnizca komut satirindan: sunucuya yuklenen kopya tarayicidan calismasin
+// (ajan/.htaccess de kapatiyor; bu ikinci kilit).
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit;
+}
+
 require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/src/Indirici.php';
 require_once __DIR__ . '/src/Http.php';

@@ -20,6 +20,13 @@ declare(strict_types=1);
  *   php ajan/ag_tani.php
  */
 
+// Yalnizca komut satirindan: sunucuya yuklenen kopya tarayicidan calismasin
+// (ajan/.htaccess de kapatiyor; bu ikinci kilit).
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit;
+}
+
 date_default_timezone_set('Europe/Istanbul');
 
 function yaz(string $s = ''): void
