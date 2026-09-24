@@ -57,7 +57,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
     <h1><?= e((string) $yazi['baslik']) ?></h1>
 
     <div class="kunye">
-        <span class="hazirlayan">Valentra</span>
+        <span class="hazirlayan">Valentra Yayın Kurulu</span>
         <span>&middot; <?= e(tarih_bicimle((string) $yazi['gun'], false)) ?></span>
         <?php if ((string) $yazi['gundem'] !== ''): ?>
             <span>&middot; <?= e((string) $yazi['gundem']) ?></span>

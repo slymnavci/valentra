@@ -676,7 +676,9 @@ foreach ($kaynaklar as $kaynak) {
             if ($girdiler !== []) {
                 yaz('       Ön elemeden geçen: ' . $gecen);
 
-                foreach (array_slice($girdiler, 0, 3) as $girdi) {
+                // Adres de yaziliyor: yazar makalesi gibi adres kalibiyla
+                // ayiklanacak girdileri gormek icin.
+                foreach (array_slice($girdiler, 0, 12) as $girdi) {
                     $p = $suzgec->puanlar($girdi['baslik'], $girdi['ozet']);
                     yaz(sprintf(
                         '       [v:%d e:%d] %s',
@@ -684,6 +686,7 @@ foreach ($kaynaklar as $kaynak) {
                         $p['ekonomi'],
                         mb_substr($girdi['baslik'], 0, 90)
                     ));
+                    yaz('              ' . $girdi['baglanti']);
                 }
             }
         }
