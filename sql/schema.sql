@@ -1265,3 +1265,31 @@ CREATE TABLE IF NOT EXISTS grafikler (
     PRIMARY KEY (id),
     KEY ix_grafik_yayin (yayinda, ana_sayfa, sira)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Resmi Gazete gunluk fihristi — 24.09.2026
+--
+-- Sitenin "Resmi Gazete" sayfasi gunun BUTUN maddelerini listeliyor (model
+-- elemesi olmadan). Satirlar resmi fihristten aynen aliniyor: baslik ve
+-- adres Resmi Gazete'nin kendi yazdigi. Universite yonetmelikleri ve ilan
+-- bolumu ayiklaniyor (ajanin ayristiricisiyla ayni kural).
+--
+-- Adres tekil: ayni fihrist gun icinde defalarca okunuyor; mukerrer sayi
+-- sonradan eklenebildigi icin okuma tekrarlaniyor.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS resmi_gazete (
+    id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    tarih      DATE         NOT NULL,
+    sayi       INT UNSIGNED NULL,
+    mukerrer   TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    ust_bolum  VARCHAR(60)  NOT NULL DEFAULT '',
+    bolum      VARCHAR(80)  NOT NULL DEFAULT '',
+    sira       SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    baslik     VARCHAR(700) NOT NULL,
+    url        VARCHAR(190) NOT NULL,
+    eklendi    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_rg_url (url),
+    KEY ix_rg_tarih (tarih, mukerrer, sira)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

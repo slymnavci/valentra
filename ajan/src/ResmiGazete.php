@@ -125,7 +125,7 @@ final class ResmiGazete
      *
      * @return list<string>
      */
-    public function fihristAdresleri(\DateTimeImmutable $tarih): array
+    public static function fihristAdresleri(\DateTimeImmutable $tarih): array
     {
         $yol = self::ANA_ADRES . '/eskiler/' . $tarih->format('Y') . '/' . $tarih->format('m')
              . '/' . $tarih->format('Ymd');

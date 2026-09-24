@@ -67,6 +67,12 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         <priority>0.8</priority>
     </url>
 
+    <url>
+        <loc><?= e($taban . rg_yolu()) ?></loc>
+        <changefreq>daily</changefreq>
+        <priority>0.8</priority>
+    </url>
+
     <?php
     /*
      * Her pratik bilginin kendi sayfasi haritaya giriyor.

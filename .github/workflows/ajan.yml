@@ -263,3 +263,18 @@ jobs:
             "${VALENTRA_SITE_URL%/}/api/grafik-tazele.php" \
             || echo "::warning::Grafik tazeleme istegi basarisiz; grafiklerin son iyi verisi korunuyor."
           echo
+
+      # Sitenin Resmi Gazete sayfasi. Fihristi site cekiyor (Turkiye'den
+      # dogrudan erisim); ajan yalnizca durtuyor.
+      - name: Resmi Gazete fihristini tazele
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'topla') }}
+        env:
+          VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: |
+          curl -sS --max-time 120 -X POST \
+            -H "X-Valentra-Key: $VALENTRA_AGENT_KEY" \
+            -H "Authorization: Bearer $VALENTRA_AGENT_KEY" \
+            "${VALENTRA_SITE_URL%/}/api/resmi-gazete-tazele.php" \
+            || echo "::warning::Resmi Gazete tazeleme istegi basarisiz; sayfa acilista kendini tazeler."
+          echo
