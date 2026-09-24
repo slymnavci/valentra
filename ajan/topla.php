@@ -999,10 +999,14 @@ if ($kopyaElenen > 0) {
 }
 
 /*
- * Paylar esit degil: site vergi odakli. Her turda 3 vergi, 2 mevzuat,
- * 2 standart, 1 ekonomi aliniyor.
+ * Paylar: her turda 3 vergi, 2 mevzuat, 1 standart, 3 ekonomi.
+ *
+ * Ekonominin payi 1'den 3'e cikti (24.09.2026): site "yalnizca muhasebe"
+ * degil, ekonomi sayfasi gozuyle de bakiyor — piyasalar, beklentiler,
+ * dunya ekonomisi, sirketler. Standart haberi seyrek geliyor; payi
+ * 2'den 1'e indi, kullanilmayan pay zaten digerlerine kaliyor.
  */
-$konuPaylari = ['vergi' => 3, 'mevzuat' => 2, 'standart' => 2, 'ekonomi' => 1];
+$konuPaylari = ['vergi' => 3, 'mevzuat' => 2, 'standart' => 1, 'ekonomi' => 3];
 $adaylar     = array_merge(
     $rgTekil,
     konu_kontenjani($digerTekil, $konuPaylari, max(0, $enFazlaAday - count($rgTekil)), $suzgec)
@@ -1194,7 +1198,7 @@ foreach ($gruplar as $grupNo => $grup) {
                 $yinelenen++;
                 gunluk("  yinelenen — {$kisaBaslik} ({$neden})");
             } else {
-                gunluk("  vergi dışı — {$kisaBaslik} ({$neden})");
+                gunluk("  konu dışı — {$kisaBaslik} ({$neden})");
             }
 
             continue;
