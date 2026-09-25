@@ -31,23 +31,72 @@
 
     <div class="sinirli">
             <a class="logo" href="index.php" style="color:#fff;display:flex;align-items:center;gap:10px;"><img src="/assets/logo.svg" alt="" width="30" height="26" style="background:#fff;border-radius:4px;padding:2px;">VALENTRA</a>
-            <nav>
-                <a href="/" target="_blank" rel="noopener">Siteyi gör</a>
-                <a href="istatistik.php">Ziyaretçiler</a>
-                <a href="kose-yazilari.php">Köşe yazıları</a>
-                <a href="rehberler.php">Rehberler</a>
-                <a href="egitim.php">Eğitim</a>
-                <a href="ajan.php">Ajan</a>
-                <a href="pratik.php">Pratik bilgiler</a>
-                <a href="grafikler.php">Grafikler</a>
-                <a href="kaynaklar.php">Kaynaklar</a>
-                <a href="kanunlar.php">Kanun metinleri</a>
-                <a href="google.php">Google görünürlüğü</a>
-                <a href="seo.php">Arama motoru</a>
-                <a href="veritabani.php">Veritabanı</a>
-                <a href="anahtarlar.php">Ajan anahtarları</a>
-                <a href="cikis.php"><?= e(aktif_yonetici_ad()) ?> — Çıkış</a>
+            <?php
+            /*
+             * Menu gruplari. Tek tek 15 baglanti iki satira tasiyordu;
+             * ilgili sayfalar acilir listelerde toplandi. Bulunulan
+             * sayfanin grubu isaretleniyor.
+             */
+            $panelMenu = [
+                'Haberler'      => 'index.php',
+                'İçerik'        => [
+                    'Köşe yazıları'   => 'kose-yazilari.php',
+                    'Rehberler'       => 'rehberler.php',
+                    'Pratik bilgiler' => 'pratik.php',
+                    'Grafikler'       => 'grafikler.php',
+                    'Kanun metinleri' => 'kanunlar.php',
+                ],
+                'Eğitim'        => 'egitim.php',
+                'Ajan ve aktarım' => [
+                    'Ajan'             => 'ajan.php',
+                    'Kaynaklar'        => 'kaynaklar.php',
+                    'Ajan anahtarları' => 'anahtarlar.php',
+                    'Eğitim aktarımı'  => 'egitim.php',
+                ],
+                'Arama motorları' => [
+                    'Google görünürlüğü'       => 'google.php',
+                    'Arama motoru ayarları'    => 'seo.php',
+                ],
+                'Site'          => [
+                    'Ziyaretçiler' => 'istatistik.php',
+                    'Veritabanı'   => 'veritabani.php',
+                    'Siteyi gör ↗' => '/',
+                ],
+            ];
+            $panelSayfa = basename($_SERVER['SCRIPT_NAME'] ?? '');
+            ?>
+            <nav class="panel-menu">
+                <?php foreach ($panelMenu as $ad => $hedef): ?>
+                    <?php if (is_string($hedef)): ?>
+                        <a href="<?= e($hedef) ?>" class="<?= $panelSayfa === $hedef ? 'aktif' : '' ?>"><?= e($ad) ?></a>
+                    <?php else: ?>
+                        <details class="panel-grup <?= in_array($panelSayfa, $hedef, true) ? 'aktif' : '' ?>">
+                            <summary><?= e($ad) ?></summary>
+                            <div class="panel-acilir">
+                                <?php foreach ($hedef as $altAd => $altHedef): ?>
+                                    <a href="<?= e($altHedef) ?>" class="<?= $panelSayfa === $altHedef ? 'aktif' : '' ?>"
+                                       <?= $altHedef === '/' ? 'target="_blank" rel="noopener"' : '' ?>><?= e($altAd) ?></a>
+                                <?php endforeach; ?>
+                            </div>
+                        </details>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+                <a href="cikis.php" class="panel-cikis"><?= e(aktif_yonetici_ad()) ?> — Çıkış</a>
             </nav>
+            <script>
+            // Ayni anda tek acilir liste; disari tiklayinca kapanir.
+            (function () {
+                var gruplar = document.querySelectorAll('.panel-grup');
+                gruplar.forEach(function (g) {
+                    g.addEventListener('toggle', function () {
+                        if (g.open) { gruplar.forEach(function (d) { if (d !== g) { d.open = false; } }); }
+                    });
+                });
+                document.addEventListener('click', function (o) {
+                    if (!o.target.closest('.panel-grup')) { gruplar.forEach(function (d) { d.open = false; }); }
+                });
+            })();
+            </script>
         </div>
     </header>
 
