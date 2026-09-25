@@ -312,3 +312,19 @@
 @media (max-width: 520px) {
     .ana-grafik-kart .grafik-govde { grid-template-rows: 150px auto; }
 }
+
+/* Guncel olmayan veri: okuyucuya acikca soyleniyor (bkz. grafik_guncellik). */
+.grafik-bayat {
+    margin: 10px 0 0;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border-left: 3px solid #b45309;
+    background: rgba(180, 83, 9, .08);
+    font-size: .82rem;
+    line-height: 1.45;
+    color: #7c2d12;
+}
+
+@media (prefers-color-scheme: dark) {
+    .grafik-bayat { color: #fdba74; background: rgba(251, 146, 60, .12); border-left-color: #fb923c; }
+}

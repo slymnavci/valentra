@@ -62,6 +62,9 @@ on:
       metin:
         description: 'kaynak-testi: bu adreslerden modele gidecek metni goster (virgulle)'
         default: ''
+      evds:
+        description: 'kaynak-testi: EVDS sorgusu, site uzerinden (yol ; yol)'
+        default: ''
 
 # Ayni anda iki ajan calismasin; ust uste binerse kopya istek olusur.
 concurrency:
@@ -166,6 +169,7 @@ jobs:
           ADAY:  ${{ inputs.aday }}
           RG:    ${{ inputs.rg }}
           METIN: ${{ inputs.metin }}
+          EVDS:  ${{ inputs.evds }}
         # Aday adresleri once SINANIR, sonra schema.sql'e yazilir.
         # Tersi sira denendi ve listede 32 bozuk adres birikti.
         #
@@ -187,7 +191,11 @@ jobs:
             php kaynak_dene.php --saat="$SAAT" --aday="$ADAY" || durum=1
           fi
 
-          if [ "$RG" != "true" ] && [ -z "$METIN" ] && [ -z "$ADAY" ]; then
+          if [ -n "$EVDS" ]; then
+            php kaynak_dene.php --evds="$EVDS" || durum=1
+          fi
+
+          if [ "$RG" != "true" ] && [ -z "$METIN" ] && [ -z "$ADAY" ] && [ -z "$EVDS" ]; then
             php kaynak_dene.php --saat="$SAAT" || durum=1
           fi
 

@@ -44,7 +44,16 @@ if ($anaGrafikler === []) {
                  */
                 echo grafik_ciz(pratik_seri_oku((string) $anaGrafik['seri']),
                                 grafik_ciz_ayari($anaGrafik));
+
+                /*
+                 * Guncellik ACIKCA soyleniyor: eski bir veriyi guncelmis
+                 * gibi gostermek, hic gostermemekten kotu.
+                 */
+                $guncellik = grafik_guncellik($anaGrafik);
                 ?>
+                <?php if (!$guncellik['guncel']): ?>
+                    <p class="grafik-bayat" role="note"><?= e($guncellik['mesaj']) ?></p>
+                <?php endif; ?>
             </article>
         <?php endforeach; ?>
     </div>

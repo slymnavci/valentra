@@ -37,8 +37,8 @@ final class KoseYazari
     public const ASGARI_METIN = 800;
 
     private const ORTAK = <<<'METIN'
-        Valentra bir yeminli mali müşavirlik kuruluşunun vergi ve ekonomi
-        haberleri sitesidir. Okuyucuları mali müşavirler, muhasebeciler,
+        Valentra vergi, muhasebe ve finans alanında yayın yapan bir
+        haber ve analiz sitesidir. Okuyucuları mali müşavirler, muhasebeciler,
         şirketlerin mali işler birimleri, işletme sahipleri ve
         mükelleflerdir. Sitenin "Valentra Diyor ki…" köşesinde her gün
         gündemin en önemli 3-4 konusu ayrı ayrı yazılarla ele alınır.

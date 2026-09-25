@@ -166,3 +166,9 @@ function kose_liste_yolu(int $sayfa = 1): string
 
     return $sayfa > 1 ? $yol . '?sayfa=' . $sayfa : $yol;
 }
+
+/** Hesaplama araçları sayfası. */
+function araclar_yolu(): string
+{
+    return temiz_adres_acik() ? '/araclar' : '/araclar.php';
+}

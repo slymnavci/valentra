@@ -122,7 +122,7 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
                 <img class="marka" src="/assets/logo.svg" alt="" width="40" height="35">
                 <span class="yazi">
                     <span class="ad">VALENTRA</span>
-                    <span class="alt">YEMİNLİ MALİ MÜŞAVİRLİK</span>
+                    <span class="alt">VERGİ, MUHASEBE VE FİNANS</span>
                 </span>
             </a>
             <div class="ust-bilgi"><?= e(tarih_bicimle(date('Y-m-d H:i:s'), false)) ?> &middot; Vergi Gündemi</div>
@@ -139,6 +139,9 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
 
                 <a class="menu-oge <?= ($aktifKategori ?? '') === 'takvim' ? 'aktif' : '' ?>"
                    href="<?= e(takvim_yolu()) ?>">Vergi Takvimi</a>
+
+                <a class="menu-oge <?= ($aktifKategori ?? '') === 'araclar' ? 'aktif' : '' ?>"
+                   href="<?= e(araclar_yolu()) ?>">Araçlar</a>
 
                 <a class="menu-oge <?= ($aktifKategori ?? '') === 'resmi-gazete' ? 'aktif' : '' ?>"
                    href="<?= e(rg_yolu()) ?>">Resmî Gazete</a>
