@@ -6,8 +6,9 @@ declare(strict_types=1);
  *
  * Aktarim bu sayfadaki betikle adim adim yuruyor (bkz.
  * includes/egitim_aktarim.php). Eski sitenin yonetici oturumu ve
- * uygulama anahtari yalnizca PHP oturumunda tutuluyor; veritabanina
- * yazilan tek sey uygulama anahtari (egitim platformu onu kullaniyor).
+ * uygulama anahtari (girildiyse) yalnizca PHP oturumunda tutuluyor.
+ * Egitimin kendi uygulama anahtari yoksa aktarimda Valentra uretiyor
+ * (asagidaki durum kutusunda gosteriliyor).
  */
 
 require_once __DIR__ . '/../includes/bootstrap.php';
@@ -51,9 +52,14 @@ if ($adim !== '') {
 
         $_SESSION['egitim_aktarim'] = ['adres' => $adres, 'anahtar' => $anahtar, 'token' => $sonuc['token']];
 
-        // Egitim platformu artik bu anahtarla calisiyor: yonetici eski
-        // sitede kullandigi anahtari aynen kullanmaya devam eder.
-        ayar_yaz('egitim_app_anahtari', $anahtar);
+        // Egitimin uygulama anahtari: eski sitedeki girildiyse o (yonetici
+        // aliskanligini degistirmesin), yoksa ve daha once de yoksa yeni
+        // rastgele bir anahtar.
+        if ($anahtar !== '') {
+            ayar_yaz('egitim_app_anahtari', $anahtar);
+        } elseif (ayar_oku('egitim_app_anahtari') === '') {
+            ayar_yaz('egitim_app_anahtari', bin2hex(random_bytes(20)));
+        }
 
         $cevap(['tamam' => true, 'ozet' => $sonuc['ozet']]);
     }
@@ -114,7 +120,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['islem'] ?? '') === 'kilit'
 
 /* ---------------- Sayfa ---------------- */
 
-$anahtarVar  = ayar_oku('egitim_app_anahtari') !== '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['islem'] ?? '') === 'anahtar_uret') {
+    csrf_dogrula($_POST['csrf'] ?? null);
+    ayar_yaz('egitim_app_anahtari', bin2hex(random_bytes(20)));
+    $bildirim = 'Yeni uygulama anahtarı üretildi. Eğitimde Yönetim → Pratik Sistemi Bağlantısı\'na bu anahtarı girin.';
+}
+
+$uygulamaAnahtari = ayar_oku('egitim_app_anahtari');
+$anahtarVar  = $uygulamaAnahtari !== '';
 $sonAktarim  = ayar_oku('egitim_aktarim_tarihi');
 $sonOzet     = json_decode(ayar_oku('egitim_aktarim_ozeti'), true) ?: [];
 $icerikVar   = is_file(EGITIM_KOK . '/content/dersler.json');
@@ -141,7 +154,20 @@ require __DIR__ . '/ust.php';
         <em>Yönetim</em> ekranından yönetilir. Bu sayfa yalnızca durum ve ilk aktarım içindir.
     </p>
     <ul style="line-height:1.8;margin:0;">
-        <li>Uygulama anahtarı: <?= $anahtarVar ? '<strong style="color:var(--yesil);">tanımlı</strong>' : '<strong style="color:var(--kirmizi);">yok</strong> — aktarım sırasında eski sitedeki anahtar kullanılacak' ?></li>
+        <li>Uygulama anahtarı:
+            <?php if ($anahtarVar): ?>
+                <code style="user-select:all;"><?= e($uygulamaAnahtari) ?></code>
+                <span class="ipucu">— eğitimde Yönetim → Pratik Sistemi Bağlantısı'na bunu girin (ders/soru düzenleme ve üye yönetimi için).</span>
+            <?php else: ?>
+                <strong style="color:var(--kirmizi);">yok</strong> — aktarımda otomatik üretilecek
+            <?php endif; ?>
+            <form method="post" action="egitim.php" style="display:inline;margin-left:8px;">
+                <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                <input type="hidden" name="islem" value="anahtar_uret">
+                <button type="submit" class="dugme" style="padding:2px 10px;font-size:.85rem;"
+                        <?= $anahtarVar ? 'onclick="return confirm(\'Yeni anahtar üretilsin mi? Eskisi geçersiz olur.\')"' : '' ?>>Yeni anahtar üret</button>
+            </form>
+        </li>
         <li>İçerik (dersler/sorular): <?= $icerikVar ? '<strong style="color:var(--yesil);">var</strong>' : '<strong style="color:var(--kirmizi);">yok</strong>' ?></li>
         <li>Üye sayısı: <?= $uyeSayisi === null ? '—' : '<strong>' . $uyeSayisi . '</strong>' ?></li>
         <li>Son aktarım: <?= $sonAktarim !== '' ? e(tarih_bicimle($sonAktarim)) : 'yapılmadı' ?></li>
@@ -230,9 +256,9 @@ require __DIR__ . '/ust.php';
                 <input type="password" id="sifre" required>
             </div>
             <div class="alan">
-                <label for="anahtar">Uygulama anahtarı</label>
-                <input type="password" id="anahtar" required>
-                <div class="ipucu">Eski sitede Yönetim → Pratik Sistemi Bağlantısı'na girdiğiniz anahtar.</div>
+                <label for="anahtar">Uygulama anahtarı (isteğe bağlı)</label>
+                <input type="password" id="anahtar">
+                <div class="ipucu">Bilmiyorsanız boş bırakın; Valentra yenisini üretir.</div>
             </div>
         </div>
         <button type="submit" class="dugme dugme-ana" id="aktarDugme">Aktarımı başlat</button>
