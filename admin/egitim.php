@@ -84,6 +84,28 @@ if ($adim !== '') {
     $cevap(['tamam' => false, 'hata' => 'Bilinmeyen adım.']);
 }
 
+/* ---------------- Egitim yoneticisi (form) ---------------- */
+
+$bildirim = '';
+$hata     = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['islem'] ?? '') === 'yonetici') {
+    csrf_dogrula($_POST['csrf'] ?? null);
+
+    $sonuc = egitim_yonetici_kaydet(
+        (string) ($_POST['kullanici_adi'] ?? ''),
+        (string) ($_POST['ad'] ?? ''),
+        (string) ($_POST['eposta'] ?? ''),
+        (string) ($_POST['sifre'] ?? '')
+    );
+
+    if ($sonuc['tamam']) {
+        $bildirim = $sonuc['mesaj'];
+    } else {
+        $hata = $sonuc['mesaj'];
+    }
+}
+
 /* ---------------- Sayfa ---------------- */
 
 $anahtarVar  = ayar_oku('egitim_app_anahtari') !== '';
@@ -93,8 +115,12 @@ $icerikVar   = is_file(EGITIM_KOK . '/content/dersler.json');
 
 try {
     $uyeSayisi = (int) db()->query('SELECT COUNT(*) FROM kullanici_hesap')->fetchColumn();
+    $yoneticiler = db()->query(
+        "SELECT kullanici_adi, ad, son_giris FROM kullanici_hesap WHERE rol = 'yonetici' ORDER BY kullanici_adi"
+    )->fetchAll();
 } catch (PDOException $e) {
     $uyeSayisi = null;
+    $yoneticiler = [];
 }
 
 $panelBasligi = 'Eğitim';
@@ -114,6 +140,56 @@ require __DIR__ . '/ust.php';
         <li>Üye sayısı: <?= $uyeSayisi === null ? '—' : '<strong>' . $uyeSayisi . '</strong>' ?></li>
         <li>Son aktarım: <?= $sonAktarim !== '' ? e(tarih_bicimle($sonAktarim)) : 'yapılmadı' ?></li>
     </ul>
+</div>
+
+<?php if ($bildirim !== ''): ?>
+    <div class="uyari uyari-basari" style="margin-top:20px;"><?= e($bildirim) ?></div>
+<?php endif; ?>
+<?php if ($hata !== ''): ?>
+    <div class="uyari uyari-hata" style="margin-top:20px;"><?= e($hata) ?></div>
+<?php endif; ?>
+
+<div class="kutu" style="margin-top:20px;" id="yonetici">
+    <h2 style="margin-top:0;">Eğitim yöneticisi</h2>
+    <p class="ipucu">
+        Eğitim platformunun kendi Yönetim ekranına (üyeler, dersler, sorular) girecek hesap.
+        Kullanıcı adı zaten varsa şifresi ve rolü güncellenir; yoksa yönetici olarak açılır.
+        Şifre yalnızca şifrelenmiş (bcrypt) hâliyle saklanır.
+    </p>
+
+    <?php if ($yoneticiler !== []): ?>
+        <p>Mevcut yöneticiler:
+            <?php foreach ($yoneticiler as $y): ?>
+                <strong><?= e((string) $y['kullanici_adi']) ?></strong> (<?= e((string) $y['ad']) ?>)<?= $y !== end($yoneticiler) ? ',' : '' ?>
+            <?php endforeach; ?>
+        </p>
+    <?php else: ?>
+        <p><strong style="color:var(--kirmizi);">Eğitimde henüz yönetici yok.</strong> Aşağıdan oluşturun ya da eski siteden aktarın.</p>
+    <?php endif; ?>
+
+    <form method="post" action="egitim.php#yonetici" autocomplete="off">
+        <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+        <input type="hidden" name="islem" value="yonetici">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+            <div class="alan">
+                <label for="y_kullanici">Kullanıcı adı</label>
+                <input type="text" id="y_kullanici" name="kullanici_adi" value="savci" required>
+            </div>
+            <div class="alan">
+                <label for="y_ad">Ad soyad</label>
+                <input type="text" id="y_ad" name="ad" value="Süleyman Avcı" required>
+            </div>
+            <div class="alan">
+                <label for="y_eposta">E-posta (isteğe bağlı)</label>
+                <input type="email" id="y_eposta" name="eposta">
+            </div>
+            <div class="alan">
+                <label for="y_sifre">Şifre</label>
+                <input type="password" id="y_sifre" name="sifre" required minlength="8" autocomplete="new-password">
+            </div>
+        </div>
+        <button type="submit" class="dugme dugme-ana">Yöneticiyi kaydet</button>
+    </form>
 </div>
 
 <div class="kutu" style="margin-top:20px;">

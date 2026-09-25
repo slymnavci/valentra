@@ -24,6 +24,12 @@ if (!is_file($valentraAyar)) {
 
 require_once $valentraAyar;
 
+// Valentra panelinden bir fonksiyon icinde yuklendiginde (bkz.
+// includes/egitim_aktarim.php) baglanti yerel kapsamda degil, globalde.
+if (!isset($pdo) && isset($GLOBALS['pdo'])) {
+    $pdo = $GLOBALS['pdo'];
+}
+
 if (!isset($pdo) || !$pdo instanceof PDO) {
     http_response_code(503);
     header('Content-Type: application/json; charset=utf-8');

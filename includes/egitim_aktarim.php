@@ -218,3 +218,62 @@ function egitim_dosya_aktar(string $adres, string $anahtar, string $token, strin
 
     return ['tamam' => true, 'hata' => '', 'atlandi' => false];
 }
+
+/**
+ * Egitim platformunda yonetici hesabi olusturur ya da (varsa) sifresini
+ * ve rolunu gunceller. Tablolar yoksa egitim platformunun kendi sema
+ * kurulumu calistiriliyor (egitim/api/db.php).
+ *
+ * Sabit sifreli varsayilan hesap YOK (depo herkese acik); sifreyi
+ * Valentra yoneticisi panelde kendisi yaziyor.
+ *
+ * @return array{tamam:bool,mesaj:string}
+ */
+function egitim_yonetici_kaydet(string $kullaniciAdi, string $ad, string $eposta, string $sifre): array
+{
+    $kullaniciAdi = strtolower(trim($kullaniciAdi));
+    $ad = trim($ad);
+    $eposta = strtolower(trim($eposta));
+
+    if (preg_match('/^[a-z0-9_.]{3,40}$/', $kullaniciAdi) !== 1) {
+        return ['tamam' => false, 'mesaj' => 'Kullanıcı adı 3–40 karakter; küçük harf, rakam, nokta, alt çizgi.'];
+    }
+
+    if ($ad === '') {
+        return ['tamam' => false, 'mesaj' => 'Ad soyad boş olamaz.'];
+    }
+
+    if ($eposta !== '' && filter_var($eposta, FILTER_VALIDATE_EMAIL) === false) {
+        return ['tamam' => false, 'mesaj' => 'E-posta geçerli değil.'];
+    }
+
+    if (strlen($sifre) < 8) {
+        return ['tamam' => false, 'mesaj' => 'Şifre en az 8 karakter olmalı.'];
+    }
+
+    // Egitim tablolarini (kullanici_hesap dahil) platformun kendi
+    // kurulumuyla olustur.
+    require_once EGITIM_KOK . '/api/db.php';
+    ppBaglan();
+
+    $hash = password_hash($sifre, PASSWORD_DEFAULT);
+    $var  = db()->prepare('SELECT 1 FROM kullanici_hesap WHERE kullanici_adi = ?');
+    $var->execute([$kullaniciAdi]);
+
+    if ($var->fetchColumn()) {
+        db()->prepare(
+            "UPDATE kullanici_hesap SET ad = ?, sifre_hash = ?, rol = 'yonetici',
+                    eposta = COALESCE(NULLIF(?, ''), eposta)
+              WHERE kullanici_adi = ?"
+        )->execute([$ad, $hash, $eposta, $kullaniciAdi]);
+
+        return ['tamam' => true, 'mesaj' => $kullaniciAdi . ' güncellendi: yönetici, yeni şifresiyle giriş yapabilir.'];
+    }
+
+    db()->prepare(
+        "INSERT INTO kullanici_hesap (kullanici_adi, ad, eposta, sifre_hash, rol, kayit_tarihi)
+         VALUES (?, ?, NULLIF(?, ''), ?, 'yonetici', ?)"
+    )->execute([$kullaniciAdi, $ad, $eposta, $hash, gmdate('Y-m-d H:i:s')]);
+
+    return ['tamam' => true, 'mesaj' => $kullaniciAdi . ' yönetici olarak oluşturuldu. valentra.com.tr/egitim adresinden giriş yapabilirsiniz.'];
+}
