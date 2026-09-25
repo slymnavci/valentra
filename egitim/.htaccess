@@ -1,0 +1,8 @@
+# Sayfanin kendisi onbellege alinmasin: JS/CSS dosyalari surum
+# numarasiyla (?v=) yenileniyor, ama tarayici eski index.html'i
+# tutarsa yeni surum numaralarini hic gormuyor.
+<IfModule mod_headers.c>
+    <FilesMatch "^(index\.html)?$">
+        Header set Cache-Control "no-cache, must-revalidate"
+    </FilesMatch>
+</IfModule>

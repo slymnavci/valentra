@@ -106,6 +106,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['islem'] ?? '') === 'yoneti
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['islem'] ?? '') === 'kilit') {
+    csrf_dogrula($_POST['csrf'] ?? null);
+    $silinen  = egitim_kilitleri_temizle();
+    $bildirim = 'Giriş kilitleri temizlendi (' . $silinen . ' hatalı deneme kaydı silindi).';
+}
+
 /* ---------------- Sayfa ---------------- */
 
 $anahtarVar  = ayar_oku('egitim_app_anahtari') !== '';
@@ -189,6 +195,13 @@ require __DIR__ . '/ust.php';
             </div>
         </div>
         <button type="submit" class="dugme dugme-ana">Yöneticiyi kaydet</button>
+    </form>
+
+    <form method="post" action="egitim.php#yonetici" style="margin-top:12px;">
+        <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+        <input type="hidden" name="islem" value="kilit">
+        <button type="submit" class="dugme">Giriş kilitlerini temizle</button>
+        <span class="ipucu">Aynı bağlantıdan 15 dakikada 10 hatalı girişte eğitim girişi geçici olarak kilitlenir.</span>
     </form>
 </div>
 
