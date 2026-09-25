@@ -21,15 +21,15 @@ $sayfa = max(1, (int) ($_GET['sayfa'] ?? 1));
  */
 $adet       = 12;   // izgaradaki kart sayisi
 /*
- * Manset 3 haber.
+ * Manset 10 haber — SITE SAHIBININ KARARI, degistirmeyin.
  *
- * Once 10'du; site sahibi ilk ekrani "3 manset + Bugun bilmeniz
- * gerekenler" olarak istedi (Eylul 2026). Oncelik panelde "One cikar"
- * ile isaretlenenlerde (haber_manset siralamasi). Kaydirak tukettigi
- * haberleri izgaradan dusuyor, yani ilk sayfadaki izgara 4. haberden
- * basliyor.
+ * Iki kez dusuruldu (tasarim turunda 5'e, Eylul 2026'daki ana sayfa
+ * duzeninde 3'e) ve ikisinde de site sahibi 10'a geri aldirdi. "Bugun
+ * bilmeniz gerekenler" kutusu mansetle birlikte duruyor; manset sayisini
+ * azaltmayi gerektirmiyor. Kaydirak tukettigi haberleri izgaradan
+ * dusuyor, yani ilk sayfadaki izgara 11. haberden basliyor.
  */
-$mansetAdet = 3;    // kaydiraktaki haber sayisi
+$mansetAdet = 10;   // kaydiraktaki haber sayisi
 
 /*
  * Resmi Gazete kaynakli haberler ana sayfa akisinda yok; kendi
