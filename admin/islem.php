@@ -42,6 +42,16 @@ switch ($islem) {
         $bildirim = 'geri';
         break;
 
+    case 'one_cikar':
+        haber_one_cikar($id, true);
+        $bildirim = 'one_cikti';
+        break;
+
+    case 'one_cikarma':
+        haber_one_cikar($id, false);
+        $bildirim = 'one_kalkti';
+        break;
+
     case 'sil':
         haber_sil($id);
         $bildirim = 'silindi';
@@ -54,6 +64,12 @@ switch ($islem) {
 
 if ($donus === 'duzenle' && $islem !== 'sil') {
     yonlendir('duzenle.php?id=' . $id . '&bildirim=' . $bildirim);
+}
+
+// Öne çıkarma durumu değiştirmez; kullanıcı baktığı sekmede kalsın.
+if ($islem === 'one_cikar' || $islem === 'one_cikarma') {
+    $haber = haber_bul($id);
+    yonlendir('index.php?durum=' . rawurlencode((string) ($haber['durum'] ?? HABER_TASLAK)) . '&bildirim=' . $bildirim);
 }
 
 $durumSekmesi = match ($islem) {

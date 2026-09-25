@@ -43,6 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'analiz_etkilenen' => $_POST['analiz_etkilenen'] ?? '',
             'analiz_zaman'     => $_POST['analiz_zaman'] ?? '',
             'analiz_islem'     => $_POST['analiz_islem'] ?? '',
+            'isletme_etkisi'   => $_POST['isletme_etkisi'] ?? '',
+            'uygulama_ornegi'  => $_POST['uygulama_ornegi'] ?? '',
+            'resmi_dayanak'    => $_POST['resmi_dayanak'] ?? '',
         ]);
 
         // "Kaydet ve onayla" dugmesi
@@ -155,7 +158,7 @@ require __DIR__ . '/ust.php';
         <textarea id="analiz_degisen" name="analiz_degisen" rows="2"
                   maxlength="600"><?= e($haber['analiz_degisen'] ?? '') ?></textarea>
 
-        <label for="analiz_etkilenen">Kimleri etkiliyor?</label>
+        <label for="analiz_etkilenen">Kimleri ilgilendiriyor?</label>
         <textarea id="analiz_etkilenen" name="analiz_etkilenen" rows="2"
                   maxlength="600"><?= e($haber['analiz_etkilenen'] ?? '') ?></textarea>
 
@@ -163,9 +166,25 @@ require __DIR__ . '/ust.php';
         <textarea id="analiz_zaman" name="analiz_zaman" rows="2"
                   maxlength="600"><?= e($haber['analiz_zaman'] ?? '') ?></textarea>
 
-        <label for="analiz_islem">Hangi işlem yapılmalı?</label>
-        <textarea id="analiz_islem" name="analiz_islem" rows="2"
+        <label for="analiz_islem">Ne yapılmalı? <span class="ipucu">(kontrol listesi: her madde "- " ile ayrı satırda)</span></label>
+        <textarea id="analiz_islem" name="analiz_islem" rows="3"
                   maxlength="600"><?= e($haber['analiz_islem'] ?? '') ?></textarea>
+
+        <label for="isletme_etkisi">İşletmeye etkisi</label>
+        <textarea id="isletme_etkisi" name="isletme_etkisi" rows="3"
+                  maxlength="800"><?= e($haber['isletme_etkisi'] ?? '') ?></textarea>
+
+        <label for="uygulama_ornegi">Uygulama örneği <span class="ipucu">(hesaplama ya da muhasebe kaydı; rakamlar varsayımsal olmalı)</span></label>
+        <textarea id="uygulama_ornegi" name="uygulama_ornegi" rows="7"
+                  maxlength="6000"><?= e($haber['uygulama_ornegi'] ?? '') ?></textarea>
+        <div class="ipucu" style="margin:-4px 0 10px;">
+            <strong>Hesabı ve kaydı mutlaka kontrol edin:</strong> bot oranı
+            kaynaktan alır ama hesabı kendisi yapar. Borç ve alacak toplamı eşit mi?
+        </div>
+
+        <label for="resmi_dayanak">Resmî dayanak <span class="ipucu">(kanun/madde, tebliğ sıra no, Resmî Gazete tarih ve sayısı)</span></label>
+        <input type="text" id="resmi_dayanak" name="resmi_dayanak" maxlength="400"
+               value="<?= e($haber['resmi_dayanak'] ?? '') ?>">
     </fieldset>
 
     <div class="alan">

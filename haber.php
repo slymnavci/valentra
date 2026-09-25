@@ -130,11 +130,14 @@ require __DIR__ . '/includes/sayfa_ust.php';
      * izlenimi verip vermemek olurdu.
      */
     $analiz = array_filter([
-        'Ne değişti?'            => trim((string) ($haber['analiz_degisen'] ?? '')),
-        'Kimleri etkiliyor?'     => trim((string) ($haber['analiz_etkilenen'] ?? '')),
-        'Ne zaman uygulanacak?'  => trim((string) ($haber['analiz_zaman'] ?? '')),
-        'Hangi işlem yapılmalı?' => trim((string) ($haber['analiz_islem'] ?? '')),
+        'Kimleri ilgilendiriyor?' => trim((string) ($haber['analiz_etkilenen'] ?? '')),
+        'Ne değişti?'             => trim((string) ($haber['analiz_degisen'] ?? '')),
+        'İşletmeye etkisi'        => trim((string) ($haber['isletme_etkisi'] ?? '')),
+        'Ne zaman uygulanacak?'   => trim((string) ($haber['analiz_zaman'] ?? '')),
+        'Ne yapılmalı?'           => trim((string) ($haber['analiz_islem'] ?? '')),
     ], static fn (string $d): bool => $d !== '');
+
+    $uygulamaOrnegi = trim((string) ($haber['uygulama_ornegi'] ?? ''));
     ?>
 
     <?php if ($analiz !== []): ?>
@@ -145,10 +148,30 @@ require __DIR__ . '/includes/sayfa_ust.php';
                 <?php foreach ($analiz as $soru => $cevap): ?>
                     <div class="analiz-oge">
                         <dt><?= e($soru) ?></dt>
-                        <dd><?= e($cevap) ?></dd>
+                        <?php /* "Ne yapilmali?" kontrol listesi olabilir ("- " satirlari). */ ?>
+                        <dd><?= bicimli_metin_html($cevap) ?></dd>
                     </div>
                 <?php endforeach; ?>
             </dl>
+        </section>
+    <?php endif; ?>
+
+    <?php
+    /*
+     * UYGULAMA ORNEGI — hesaplama ya da muhasebe kaydi.
+     *
+     * Oran ve kural haberin konusu olan duzenlemeden; rakamlar
+     * varsayimsal. Okuyucu bunu kendi rakami sanmasin diye not sabit.
+     */
+    ?>
+    <?php if ($uygulamaOrnegi !== ''): ?>
+        <section class="uygulama-ornegi" aria-label="Uygulama örneği">
+            <h2>Uygulama örneği</h2>
+            <?= bicimli_metin_html($uygulamaOrnegi) ?>
+            <p class="uygulama-not">
+                Rakamlar örnek amaçlı ve varsayımsaldır; oran ve kurallar habere
+                konu düzenlemeden alınmıştır.
+            </p>
         </section>
     <?php endif; ?>
 
@@ -172,16 +195,44 @@ require __DIR__ . '/includes/sayfa_ust.php';
         </div>
     <?php endif; ?>
 
-    <?php if ($haber['kaynak_url'] !== ''): ?>
-        <div class="kaynak-kutusu">
-            Bu haber,
-            <?= $haber['kaynak_adi'] !== ''
-                    ? '<strong>' . e($haber['kaynak_adi']) . '</strong> kaynağında'
-                    : 'kaynağında' ?>
-            yayımlanan içerikten derlenmiştir.
-            <a href="<?= e(guvenli_url($haber['kaynak_url'])) ?>" target="_blank" rel="noopener nofollow ugc">Orijinal habere git</a>
-        </div>
-    <?php endif; ?>
+    <?php
+    /*
+     * KAYNAK VE TARIHLER — resmi dayanak, yururluk ve yayim tarihleri
+     * tek yerde. Okuyucu dayanaga ve tarihe bakmak icin metni taramasin.
+     */
+    $kaynakUrl    = guvenli_url((string) $haber['kaynak_url']);
+    $resmiDayanak = trim((string) ($haber['resmi_dayanak'] ?? ''));
+    $yururluk     = trim((string) ($haber['analiz_zaman'] ?? ''));
+    ?>
+    <section class="kaynak-tarih" aria-label="Kaynak ve tarihler">
+        <h2>Kaynak ve tarihler</h2>
+        <dl>
+            <?php if ($haber['kaynak_adi'] !== '' || $kaynakUrl !== ''): ?>
+                <div>
+                    <dt>Kaynak</dt>
+                    <dd>
+                        <?= e($haber['kaynak_adi'] !== '' ? $haber['kaynak_adi'] : 'Kaynak') ?>
+                        <?php if ($kaynakUrl !== ''): ?>
+                            &middot; <a href="<?= e($kaynakUrl) ?>" target="_blank" rel="noopener nofollow ugc">Orijinal metne git</a>
+                        <?php endif; ?>
+                    </dd>
+                </div>
+            <?php endif; ?>
+            <?php if ($resmiDayanak !== ''): ?>
+                <div><dt>Resmî dayanak</dt><dd><?= e($resmiDayanak) ?></dd></div>
+            <?php endif; ?>
+            <?php if ($yururluk !== ''): ?>
+                <div><dt>Yürürlük</dt><dd><?= e($yururluk) ?></dd></div>
+            <?php endif; ?>
+            <div><dt>Valentra'da yayım</dt><dd><?= e(tarih_bicimle($haber['yayin_tarihi'])) ?></dd></div>
+        </dl>
+        <?php if ($kaynakUrl !== ''): ?>
+            <p class="kaynak-tarih-not">
+                Bu haber, kaynağında yayımlanan içerikten derlenmiştir. Bağlayıcı
+                olan resmî metindir.
+            </p>
+        <?php endif; ?>
+    </section>
 
     <?php if ($etiketler !== []): ?>
         <div class="kart-alt" style="margin-top:20px;">
