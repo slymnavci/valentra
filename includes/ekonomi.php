@@ -62,7 +62,9 @@ function ekonomi_seriler(): array
 
         'enflasyon-orani' => [
             'saglayici'  => 'evds',
-            'seri'       => 'TP.FG.J0',
+            // 2025=100 bazli genel endeks. TP.FG.J0 (2003=100) Ocak 2026'da
+            // arsive alindi; yeni serinin gecmisi 2005'e uzaniyor.
+            'seri'       => 'TP.TUKFIY2025.GENEL',
             'hesap'      => 'tufe',         // endeksten degisim hesapla
             'birim'      => 'yuzde',
             // 24 aylik yillik degisim icin 36 aylik endeks gerekiyor:
@@ -288,12 +290,13 @@ function ekonomi_evds_cozumle(array $seri, array $veri): array
     $devam = ['not' => '', 'uyari' => ''];
 
     /*
-     * Baz yili degisen seride yeni bazli devam da aliniyor. Anahtar
-     * yalnizca ekonomi_oku() uzerinden geliyor; ajanin site yedegi
-     * (ham govdeyle) eskisi gibi tek seriyi cozer.
+     * Baz yili degisen seride yeni bazli devam da aliniyor: ya
+     * ekonomi_oku() anahtarla kendisi cekiyor ya da ajanin site yedegi
+     * devam serisinin ham govdesini veriyor ('devam_govde').
      */
-    if (($seri['evds_anahtari'] ?? '') !== '') {
-        $devam = ekonomi_evds_devam_ekle($dizi, $seri, (string) $seri['evds_anahtari']);
+    if (($seri['evds_anahtari'] ?? '') !== '' || isset($seri['devam_govde'])) {
+        $devam = ekonomi_evds_devam_ekle($dizi, $seri, (string) ($seri['evds_anahtari'] ?? ''),
+                                         15, isset($seri['devam_govde']) ? (string) $seri['devam_govde'] : null);
         $dizi  = $devam['gozlemler'];
     }
 
@@ -408,10 +411,11 @@ function ekonomi_evds_gozlemler(array $veri, string $kod): array
  * grafikler) yeni seriyi KENDILIGINDEN ekliyor; panelde hicbir tanimi
  * degistirmek gerekmiyor.
  *
- * YENI KOD CANLIDA DOGRULANMADI (gelistirme ortami EVDS'e ulasamiyor).
- * Yanlissa zarar yok: devam serisi alinamazsa eski seri eskisi gibi
- * cizilir ve sebebi panelde/gunlukte yazar. Kod yanlis cikarsa yalnizca
- * buradaki degeri duzeltmek yetiyor.
+ * Kod EVDS'in kendi listesinden dogrulandi (25 Eylul 2026, site
+ * uzerinden): bie_tukfiy2025 grubu, "Genel Endeks", 2005-01'den beri.
+ * TP.FG.J0'in listedeki adi "(Arsiv)", bitis tarihi 01-01-2026.
+ * Devam serisi bir gun alinamazsa eski seri eskisi gibi cizilir ve
+ * sebebi panelde/gunlukte yazar.
  *
  * @return array<string,string>
  */
@@ -511,18 +515,28 @@ function ekonomi_evds_zincirle(array $eski, array $yeni): array
  * @return array{gozlemler:list<array{tarih:string,iso:string,deger:float}>,uyari:string,not:string}
  */
 function ekonomi_evds_devam_ekle(array $gozlemler, array $tanim, string $evdsAnahtari,
-                                 int $zamanAsimi = 15): array
+                                 int $zamanAsimi = 15, ?string $hazirGovde = null): array
 {
     $devam = ekonomi_evds_devami((string) $tanim['seri']);
 
-    if ($devam === null || (string) $tanim['saglayici'] !== 'evds' || $evdsAnahtari === '') {
+    if ($devam === null || (string) $tanim['saglayici'] !== 'evds'
+        || ($evdsAnahtari === '' && $hazirGovde === null)) {
         return ['gozlemler' => $gozlemler, 'uyari' => '', 'not' => ''];
     }
 
-    $devamTanim = ['seri' => $devam] + $tanim;
-    $yanit      = http_getir(ekonomi_adres($devamTanim), $zamanAsimi, '',
-                             ekonomi_basliklar($devamTanim, $evdsAnahtari));
-    $okuma      = ['tamam' => false, 'hata' => (string) ($yanit['neden'] ?? 'istek başarısız')];
+    /*
+     * $hazirGovde: ajanin site yedegi devam serisini de site uzerinden
+     * cekip ham govdeyi veriyor (GitHub IP'si EVDS'e ulasamadiginda).
+     */
+    if ($hazirGovde !== null) {
+        $yanit = ['tamam' => true, 'govde' => $hazirGovde];
+    } else {
+        $devamTanim = ['seri' => $devam] + $tanim;
+        $yanit      = http_getir(ekonomi_adres($devamTanim), $zamanAsimi, '',
+                                 ekonomi_basliklar($devamTanim, $evdsAnahtari));
+    }
+
+    $okuma = ['tamam' => false, 'hata' => (string) ($yanit['neden'] ?? 'istek başarısız')];
 
     if ($yanit['tamam']) {
         $veri  = json_decode((string) $yanit['govde'], true);

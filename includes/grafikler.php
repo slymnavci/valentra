@@ -39,7 +39,10 @@ const GRAFIK_EN_FAZLA_NOKTA = 400;
 function grafik_katalogu(): array
 {
     return [
-        'TP.FG.J0' => [
+        // 2025=100 bazli TUFE. Eski TP.FG.J0 (2003=100) Ocak 2026'da
+        // arsive alindi; onunla tanimli grafikler yeni seriyle kendiliginden
+        // zincirleniyor (ekonomi_evds_devamlari).
+        'TP.TUKFIY2025.GENEL' => [
             'ad'      => 'Enflasyon (TÜFE)',
             'birim'   => 'yuzde',
             'donusum' => 'yillik',
@@ -525,4 +528,65 @@ function grafik_bayatlari_tazele(int $saat = 3, int $enFazla = 8, int $sureButce
     }
 
     return $ozet;
+}
+
+/*
+ * Ana sayfa açılışında tazeleme: iki deneme arası en az bu kadar (saniye).
+ * Ayni anda gelen ziyaretcilerin hepsi EVDS'e istek atmasin; EVDS dustuyse
+ * de her ziyaret yeniden denemesin.
+ */
+const GRAFIK_SAYFA_DENEME_ARALIGI = 900;
+
+/**
+ * Ana sayfa açılışında bayat grafikleri YANIT GÖNDERİLDİKTEN SONRA tazeler.
+ *
+ * NEDEN: tazeleme yalnizca ajanin durtmesine bagliydi ve GitHub'dan siteye
+ * baglanti ara ara hic kurulamiyor (IHS 443'te zaman asimi). 25 Eylul
+ * 15:31 calismasinda istek "Connection timed out after 120001 ms" ile
+ * dustu; dolar grafigi gunlerce 18 Eylul'de kaldi. Site Turkiye'de ve
+ * EVDS'e dogrudan ulasiyor: ajan ulasamasa da ziyaretci geldikce grafikler
+ * tazeleniyor.
+ *
+ * ZIYARETCI BEKLEMEZ: sayfa once gonderiliyor (fastcgi_finish_request /
+ * litespeed_finish_request), cekim ondan sonra. Bu iki islevden biri yoksa
+ * HICBIR SEY YAPILMIYOR: ana sayfayi dis bir istek yuzunden bekletmek
+ * bayat grafikten kotu. ASLA HATA FIRLATMAZ.
+ */
+function grafik_sayfa_sonunda_tazele(): void
+{
+    $bitir = function_exists('fastcgi_finish_request') ? 'fastcgi_finish_request'
+           : (function_exists('litespeed_finish_request') ? 'litespeed_finish_request' : null);
+
+    if ($bitir === null) {
+        return;
+    }
+
+    register_shutdown_function(static function () use ($bitir): void {
+        try {
+            if (time() - (int) ayar_oku('grafik_sayfa_son_deneme', '0') < GRAFIK_SAYFA_DENEME_ARALIGI) {
+                return;
+            }
+
+            // Once isaretle, sonra cek: yavas cekim surerken gelen
+            // ziyaretciler ayni isi ikinci kez baslatmasin.
+            ayar_yaz('grafik_sayfa_son_deneme', (string) time());
+
+            ignore_user_abort(true);
+
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_write_close();
+            }
+
+            $bitir();
+            @set_time_limit(90);
+
+            $ozet = grafik_bayatlari_tazele(3, 8, 40);
+
+            foreach (array_merge($ozet['hatalar'], $ozet['uyarilar']) as $not) {
+                error_log('[valentra] grafik tazeleme (sayfa): ' . $not);
+            }
+        } catch (Throwable $e) {
+            error_log('[valentra] grafik tazeleme (sayfa) düştü: ' . $e->getMessage());
+        }
+    });
 }
