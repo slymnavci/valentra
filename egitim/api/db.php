@@ -235,6 +235,70 @@ function ppMysqlIndeksKur(PDO $pdo, string $tablo, string $indeksAdi, string $su
 }
 
 /** İstek gövdesini JSON olarak okur, hatalıysa 400 döner ve sonlandırır. */
+/**
+ * Herkese açık uçlarda (giriş, kayıt) kaba kuvvet ve toplu kayıt
+ * koruması: aynı IP'den belirli sürede en fazla $limit deneme.
+ * Aşılırsa 429 döner ve süreci sonlandırır. $kaydet=false yalnızca
+ * sınırı denetler (başarılı girişler sayılmasın diye).
+ */
+function ppDenemeSiniri(PDO $pdo, string $tur, int $limit, int $dakika, bool $kaydet = true): void {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS giris_deneme (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        tur VARCHAR(20) NOT NULL,
+        ip VARCHAR(64) NOT NULL,
+        zaman DATETIME NOT NULL,
+        KEY ix_deneme (tur, ip, zaman)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    $ip = hash('sha256', (string)($_SERVER['REMOTE_ADDR'] ?? ''));
+    $sinir = gmdate('Y-m-d H:i:s', time() - $dakika * 60);
+
+    $pdo->prepare('DELETE FROM giris_deneme WHERE zaman < ?')->execute([gmdate('Y-m-d H:i:s', time() - 86400)]);
+
+    $q = $pdo->prepare('SELECT COUNT(*) n FROM giris_deneme WHERE tur = ? AND ip = ? AND zaman > ?');
+    $q->execute([$tur, $ip, $sinir]);
+
+    if ((int)$q->fetch()['n'] >= $limit) {
+        ppJsonYanit(['ok' => false, 'hata' => 'Çok fazla deneme yapıldı. Lütfen ' . $dakika . ' dakika sonra tekrar deneyin.'], 429);
+    }
+
+    if ($kaydet) {
+        $pdo->prepare('INSERT INTO giris_deneme (tur, ip, zaman) VALUES (?, ?, ?)')->execute([$tur, $ip, gmdate('Y-m-d H:i:s')]);
+    }
+}
+
+/**
+ * Hesap için oturum jetonu üretir ve istemciye dönecek kullanıcı
+ * bilgisini hazırlar (giriş ve kayıt aynı yanıtı verir).
+ */
+function ppOturumAc(PDO $pdo, array $hesap): array {
+    $simdi = gmdate('Y-m-d H:i:s');
+    $pdo->prepare('UPDATE kullanici_hesap SET son_giris = ? WHERE kullanici_adi = ?')->execute([$simdi, $hesap['kullanici_adi']]);
+    $pdo->prepare('DELETE FROM kullanici_oturum WHERE sona_erme < ?')->execute([$simdi]);
+
+    $token = bin2hex(random_bytes(32));
+    $sonaErme = gmdate('Y-m-d H:i:s', time() + 30 * 24 * 60 * 60);
+    $pdo->prepare('INSERT INTO kullanici_oturum (token_hash, kullanici_adi, olusturma_tarihi, sona_erme) VALUES (?, ?, ?, ?)')
+        ->execute([hash('sha256', $token), $hesap['kullanici_adi'], $simdi, $sonaErme]);
+
+    $menuIzin = null;
+    if (($hesap['menu_izin'] ?? null) !== null && $hesap['menu_izin'] !== '') {
+        $d = json_decode((string)$hesap['menu_izin'], true);
+        $menuIzin = is_array($d) ? $d : null;
+    }
+
+    return [
+        'kullaniciAdi' => $hesap['kullanici_adi'],
+        'ad' => $hesap['ad'],
+        'eposta' => $hesap['eposta'],
+        'rol' => $hesap['rol'],
+        'kayitTarihi' => $hesap['kayit_tarihi'],
+        'sonGiris' => $simdi,
+        'token' => $token,
+        'menuIzin' => $menuIzin,
+    ];
+}
+
 function ppGovdeOku(): array {
     $ham = file_get_contents('php://input');
     $veri = json_decode($ham, true);
