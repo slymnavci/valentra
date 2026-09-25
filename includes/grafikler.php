@@ -305,12 +305,12 @@ function grafik_yayin(int $id, bool $yayinda): array
  * Grafiğin verisini EVDS'den çeker ve dönüştürür. VERİTABANINA YAZMAZ.
  *
  * @param array<string,mixed> $grafik
- * @return array{tamam:bool,seri:list<array{0:string,1:float}>,hata:string,
+ * @return array{tamam:bool,seri:list<array{0:string,1:float}>,hata:string,uyari:string,
  *               son_deger:?float,son_tarih:string,adres:string,kod:int,ham:string}
  */
 function grafik_veri_cek(array $grafik, string $evdsAnahtari): array
 {
-    $sonuc = ['tamam' => false, 'seri' => [], 'hata' => '', 'son_deger' => null,
+    $sonuc = ['tamam' => false, 'seri' => [], 'hata' => '', 'uyari' => '', 'son_deger' => null,
               'son_tarih' => '', 'adres' => '', 'kod' => 0, 'ham' => ''];
 
     if ($evdsAnahtari === '') {
@@ -351,7 +351,12 @@ function grafik_veri_cek(array $grafik, string $evdsAnahtari): array
         return ['hata' => $okuma['hata']] + $sonuc;
     }
 
-    $seri = grafik_donustur($okuma['gozlemler'], $donusum, (string) $grafik['tur'], $donem);
+    // Baz yili degisen seride (TUFE) yeni bazli devam da ekleniyor;
+    // alinamazsa eski seri aynen kullaniliyor, sebep uyarida.
+    $devam = ekonomi_evds_devam_ekle($okuma['gozlemler'], $tanim, $evdsAnahtari);
+    $sonuc['uyari'] = $devam['uyari'];
+
+    $seri = grafik_donustur($devam['gozlemler'], $donusum, (string) $grafik['tur'], $donem);
 
     if (count($seri) < 2) {
         return ['hata' => 'Seçilen dönemde çizilecek kadar gözlem yok ('
@@ -426,7 +431,7 @@ function grafik_seyrelt(array $seri): array
 /**
  * Veriyi çeker ve saklar. Başarısızsa SON İYİ VERİ korunur.
  *
- * @return array{tamam:bool,mesaj:string}
+ * @return array{tamam:bool,mesaj:string,uyari?:string}
  */
 function grafik_tazele(int $id): array
 {
@@ -460,7 +465,18 @@ function grafik_tazele(int $id): array
           WHERE id = :id'
     )->execute(['s' => $json, 'id' => $id]);
 
-    return ['tamam' => true, 'mesaj' => count($cekim['seri']) . ' nokta alındı.'];
+    /*
+     * Son gozlem mesajda: panelde "Veriyi simdi cek" denince serinin
+     * nerede bittigi hemen goruluyor. Seri durmussa (baz yili degisimi
+     * gibi) cekim "basarili" olsa da tarih bunu ele veriyor.
+     */
+    $mesaj = count($cekim['seri']) . ' nokta alındı, son gözlem ' . $cekim['son_tarih'] . '.';
+
+    if ($cekim['uyari'] !== '') {
+        $mesaj .= ' Uyarı: ' . $cekim['uyari'];
+    }
+
+    return ['tamam' => true, 'mesaj' => $mesaj, 'uyari' => $cekim['uyari']];
 }
 
 /**
@@ -471,7 +487,7 @@ function grafik_tazele(int $id): array
  * en fazla $enFazla grafik ve $sureButcesi saniye; kalanlar bir sonraki
  * turda (en eskiler once) aliniyor.
  *
- * @return array{tazelenen:int,basarisiz:int,atlanan:int,hatalar:list<string>}
+ * @return array{tazelenen:int,basarisiz:int,atlanan:int,hatalar:list<string>,uyarilar:list<string>}
  */
 function grafik_bayatlari_tazele(int $saat = 3, int $enFazla = 8, int $sureButcesi = 40): array
 {
@@ -486,7 +502,7 @@ function grafik_bayatlari_tazele(int $saat = 3, int $enFazla = 8, int $sureButce
     $bayatlar = $ifade->fetchAll();
 
     $ozet = ['tazelenen' => 0, 'basarisiz' => 0, 'atlanan' => max(0, count($bayatlar) - $enFazla),
-             'hatalar' => []];
+             'hatalar' => [], 'uyarilar' => []];
 
     foreach (array_slice($bayatlar, 0, $enFazla) as $sira => $grafik) {
         if (time() - $baslangic >= $sureButcesi) {
@@ -498,6 +514,10 @@ function grafik_bayatlari_tazele(int $saat = 3, int $enFazla = 8, int $sureButce
 
         if ($sonuc['tamam']) {
             $ozet['tazelenen']++;
+
+            if (($sonuc['uyari'] ?? '') !== '') {
+                $ozet['uyarilar'][] = $grafik['baslik'] . ': ' . $sonuc['uyari'];
+            }
         } else {
             $ozet['basarisiz']++;
             $ozet['hatalar'][] = $grafik['baslik'] . ': ' . $sonuc['mesaj'];

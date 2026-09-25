@@ -286,13 +286,25 @@ jobs:
         env:
           VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}
+        #
+        # --fail-with-body: once HTTP 401/500 yanitlari da "basarili"
+        # sayiliyordu ve grafikler gunlerce tazelenmeden kaldigi halde is
+        # yesil gorunuyordu. Simdi hem istek hatasi hem de sitenin
+        # bildirdigi basarisiz/uyarili grafikler Actions'ta uyari olarak
+        # cikiyor.
         run: |
-          curl -sS --max-time 120 -X POST \
+          if ! yanit=$(curl -sS --fail-with-body --max-time 120 -X POST \
             -H "X-Valentra-Key: $VALENTRA_AGENT_KEY" \
             -H "Authorization: Bearer $VALENTRA_AGENT_KEY" \
-            "${VALENTRA_SITE_URL%/}/api/grafik-tazele.php" \
-            || echo "::warning::Grafik tazeleme istegi basarisiz; grafiklerin son iyi verisi korunuyor."
-          echo
+            "${VALENTRA_SITE_URL%/}/api/grafik-tazele.php"); then
+            echo "$yanit"
+            echo "::warning::Grafik tazeleme istegi basarisiz; grafiklerin son iyi verisi korunuyor."
+            exit 0
+          fi
+
+          echo "$yanit"
+          echo "$yanit" | jq -r '(.hatalar // [])[] | "::warning::Grafik tazelenemedi — \(.)"' 2>/dev/null || true
+          echo "$yanit" | jq -r '(.uyarilar // [])[] | "::warning::Grafik uyarisi — \(.)"' 2>/dev/null || true
 
       # Sitenin Resmi Gazete sayfasi. Fihristi site cekiyor (Turkiye'den
       # dogrudan erisim); ajan yalnizca durtuyor.
