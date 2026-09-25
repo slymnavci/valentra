@@ -230,7 +230,7 @@ UPDATE kategoriler SET ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHER
 UPDATE kategoriler SET ad = 'TMS/TFRS', aktif = 1, ust_id = NULL, sira = 40 WHERE slug = 'tms-tfrs';
 UPDATE kategoriler SET aktif = 1, ust_id = (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'muhasebe-denetim') AS t), sira = 20 WHERE slug = 'denetim';
 
-UPDATE kategoriler SET ad = 'Diğer', aktif = 1, ust_id = NULL, sira = 50 WHERE slug = 'genel';
+UPDATE kategoriler SET ad = 'Genel Gündem', aktif = 1, ust_id = NULL, sira = 50 WHERE slug = 'genel';
 
 -- ---------------------------------------------------------------------------
 -- Eski kurulumlarin menu yapisini tasima
@@ -266,9 +266,9 @@ UPDATE kategoriler SET ust_id = NULL, sira = 10 WHERE slug = 'vergi-kanunlari';
 UPDATE kategoriler SET ust_id = NULL, sira = 20 WHERE slug = 'muhasebe-denetim';
 UPDATE kategoriler SET ad = 'Ekonomik Gündem', aktif = 1, ust_id = NULL, sira = 30 WHERE slug = 'ekonomi';
 
--- "Genel" -> "Diger", en sonda.
+-- "Genel" -> "Genel Gundem" (menude Gundem altinda), en sonda.
 UPDATE kategoriler
-   SET ad = 'Diğer', aciklama = 'Diğer vergi ve mali gündem', sira = 900
+   SET ad = 'Genel Gündem', aciklama = 'Diğer vergi ve mali gündem', sira = 900
  WHERE slug = 'genel';
 
 -- ---------------------------------------------------------------------------
@@ -616,7 +616,7 @@ UPDATE kategoriler SET aciklama = 'Piyasalar, enflasyon, faiz ve makroekonomik g
 -- Temel menu ve yabanci kaynak adreslerini eski kurulumlarda da duzelt.
 UPDATE kategoriler SET ad = 'TMS/TFRS', aktif = 1, ust_id = NULL, sira = 40
  WHERE slug = 'tms-tfrs';
-UPDATE kategoriler SET ad = 'Diğer', aktif = 1, ust_id = NULL, sira = 50
+UPDATE kategoriler SET ad = 'Genel Gündem', aktif = 1, ust_id = NULL, sira = 50
  WHERE slug = 'genel';
 UPDATE kategoriler SET ad = 'Ekonomik Gündem', aktif = 1, ust_id = NULL, sira = 30
  WHERE slug = 'ekonomi';

@@ -2668,7 +2668,12 @@ a.rg-madde:hover { color: var(--vurgu); }
 
 .kose-liste li + li { border-top: 1px solid var(--cizgi); }
 
-.kose-liste a { padding: 14px 0; }
+.kose-liste a {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 14px 0;
+}
 
 .kose-liste .kose-ozet { -webkit-line-clamp: 3; font-size: .92rem; }
 
@@ -2832,3 +2837,262 @@ a.rg-madde:hover { color: var(--vurgu); }
 
 .arac-not { margin: 12px 0 0; font-size: .8rem; line-height: 1.5; color: var(--metin-soluk); }
 
+
+/* --- Ust bant: tarih + arama --------------------------------------------- */
+
+.gizli-etiket {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.ust-sag {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: auto;
+}
+
+.ust-sag .ust-bilgi { margin: 0; white-space: nowrap; }
+
+.ust-arama {
+    display: flex;
+    align-items: center;
+    width: min(340px, 100%);
+    border: 1px solid var(--cizgi);
+    border-radius: 999px;
+    background: var(--zemin);
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.ust-arama:focus-within {
+    border-color: var(--vurgu);
+    box-shadow: 0 0 0 3px rgba(27, 79, 143, .12);
+}
+
+.ust-arama input {
+    flex: 1;
+    min-width: 0;
+    height: 38px;
+    padding: 0 4px 0 16px;
+    border: 0;
+    background: transparent;
+    color: var(--metin);
+    font: inherit;
+    font-size: .92rem;
+    outline: none;
+}
+
+.ust-arama input::-webkit-search-cancel-button { display: none; }
+
+.ust-arama button {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 38px;
+    border: 0;
+    background: transparent;
+    color: var(--metin-soluk);
+    cursor: pointer;
+}
+
+.ust-arama button:hover { color: var(--vurgu); }
+
+@media (max-width: 760px) {
+    .ust-sag { width: 100%; margin: 0 0 12px; }
+    .ust-sag .ust-bilgi { display: none; }
+    .ust-arama { width: 100%; }
+}
+
+/* --- Arama sayfasi ------------------------------------------------------- */
+
+.arama-buyuk {
+    display: flex;
+    gap: 8px;
+    max-width: 720px;
+    margin: 16px 0 6px;
+}
+
+.arama-buyuk input {
+    flex: 1;
+    min-width: 0;
+    height: 48px;
+    padding: 0 16px;
+    border: 1px solid var(--cizgi);
+    border-radius: var(--yuvarlak);
+    background: var(--kart);
+    color: var(--metin);
+    font: inherit;
+    font-size: 1.02rem;
+}
+
+.arama-buyuk input:focus { outline: 2px solid var(--vurgu); outline-offset: 1px; }
+
+.arama-buyuk button {
+    padding: 0 22px;
+    border: 0;
+    border-radius: var(--yuvarlak);
+    background: var(--lacivert);
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.arama-sonuclari { max-width: 980px; margin-bottom: 40px; }
+
+/* --- Belge turu rozeti (Onemli Duzenlemeler) ----------------------------- */
+
+.belge-turu {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 1px 7px;
+    border-radius: 4px;
+    background: rgba(201, 168, 106, .20);
+    color: var(--altin-koyu);
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    vertical-align: 1px;
+}
+
+.belge-turu.notr {
+    background: rgba(93, 106, 128, .12);
+    color: var(--metin-soluk);
+}
+
+@media (prefers-color-scheme: dark) {
+    .belge-turu { color: var(--altin); }
+}
+
+/* --- Bugun bilmeniz gerekenler + kisayollar ------------------------------ */
+
+.bugun-bant {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 250px;
+    gap: 22px;
+    align-items: center;
+    margin: 18px 0 4px;
+    padding: 16px 18px;
+    background: var(--kart);
+    border: 1px solid var(--cizgi);
+    border-left: 4px solid var(--altin);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+}
+
+.bugun-bant.yalniz-kisayol { grid-template-columns: 1fr; }
+
+.bugun-baslik {
+    margin: 0 0 8px;
+    font-size: .86rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--lacivert);
+}
+
+@media (prefers-color-scheme: dark) {
+    .bugun-baslik { color: var(--altin); }
+}
+
+.bugun-liste ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.bugun-liste li + li { border-top: 1px dashed var(--cizgi); }
+
+.bugun-liste a {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 6px 0;
+    min-width: 0;
+}
+
+.bugun-etiket {
+    flex: 0 0 auto;
+    min-width: 92px;
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--altin-koyu);
+}
+
+.bugun-metin {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .95rem;
+    font-weight: 500;
+}
+
+.bugun-liste a:hover .bugun-metin { color: var(--vurgu); }
+
+.bugun-liste li.vurgu .bugun-etiket { color: #b3261e; }
+.bugun-liste li.vurgu .bugun-metin { font-weight: 700; }
+
+@media (prefers-color-scheme: dark) {
+    .bugun-etiket { color: var(--altin); }
+    .bugun-liste li.vurgu .bugun-etiket { color: #ff8a80; }
+}
+
+.kisayollar {
+    display: grid;
+    gap: 8px;
+}
+
+.bugun-bant.yalniz-kisayol .kisayollar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.kisayollar a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--cizgi);
+    border-radius: var(--yuvarlak);
+    background: var(--zemin);
+    color: var(--lacivert);
+    transition: border-color .15s ease, transform .15s ease;
+}
+
+.kisayollar a:hover { border-color: var(--altin); transform: translateY(-1px); }
+
+.kisayollar svg { flex: none; color: var(--altin-koyu); }
+
+.kisayollar span { display: flex; flex-direction: column; min-width: 0; }
+
+.kisayollar strong { font-size: .96rem; }
+
+.kisayollar small {
+    margin-top: 2px;
+    font-size: .80rem;
+    color: var(--metin-soluk);
+}
+
+@media (prefers-color-scheme: dark) {
+    .kisayollar a { color: var(--metin); }
+    .kisayollar svg { color: var(--altin); }
+}
+
+@media (max-width: 1100px) {
+    .bugun-bant { grid-template-columns: 1fr; }
+    .kisayollar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+    .kisayollar,
+    .bugun-bant.yalniz-kisayol .kisayollar { grid-template-columns: 1fr; }
+    .bugun-etiket { min-width: 0; }
+    .bugun-metin { white-space: normal; }
+    .bugun-liste a { flex-direction: column; gap: 2px; }
+}

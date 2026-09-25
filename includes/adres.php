@@ -172,3 +172,11 @@ function araclar_yolu(): string
 {
     return temiz_adres_acik() ? '/araclar' : '/araclar.php';
 }
+
+/** Site içi arama; sorgu verilirse ?q= ile. */
+function arama_yolu(string $sorgu = ''): string
+{
+    $yol = temiz_adres_acik() ? '/ara' : '/ara.php';
+
+    return $sorgu !== '' ? $yol . '?q=' . rawurlencode($sorgu) : $yol;
+}

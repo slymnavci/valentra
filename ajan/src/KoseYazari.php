@@ -114,9 +114,28 @@ final class KoseYazari
         - Son paragraf kısa bir değerlendirme ya da okuyucuya somut bir
           hatırlatma olsun.
 
+        ÖZGÜN ANALİZ — bu köşe haber özeti DEĞİLDİR.
+        Her yazıda şu üçü mutlaka bulunur:
+        - Somut yorum: Valentra'nın konuya dair açık bir görüşü. "Bizce",
+          "değerlendirmemize göre" gibi bir ifadeyle, tek cümlede
+          söylenebilecek netlikte (ör. "Bu düzenleme en çok ihracatçı
+          KOBİ'lerin nakit akışını rahatlatacak; büyük şirketler için
+          etkisi sınırlı kalacak."). "Etkileri zamanla görülecek" gibi
+          her konuya uyan genel cümleler yorum sayılmaz.
+        - Gerekçe: bu görüşe neden varıldığı; hangi olgu, hangi
+          mekanizma. Görüş ile gerekçe aynı ya da ardışık paragrafta.
+        - Uygulama örneği: okuyucunun kendi durumuna uyarlayabileceği
+          somut bir örnek. Oran, süre ve eşikler malzemeden gelir;
+          işletmenin cirosu ya da tutar gibi örnek değerler varsayımsal
+          olabilir ama "varsayalım", "örneğin … TL'lik bir satışta"
+          diye açıkça varsayım olduğu belli edilir ve hesap adım adım
+          gösterilir. Malzemede hesabı kuracak oran ya da kural yoksa
+          sayısal örnek UYDURMA; bunun yerine kimin, hangi durumda, ne
+          yapması gerektiğini somut bir senaryo olarak anlat.
+
         ÜSLUP
-        - Kurumsal ve sakin; yeminli mali müşavirin müşterisine yazdığı
-          bilgilendirme notunun açıklığında. Abartı, heyecan ve tık
+        - Kurumsal ve sakin; deneyimli bir mali müşavirin müşterisine
+          yazdığı bilgilendirme notunun açıklığında. Abartı, heyecan ve tık
           tuzağı yok ("şok", "flaş", "bomba" gibi).
         - Olgu ile değerlendirmeyi ayır: değerlendirme yaparken bunun
           bir değerlendirme olduğu cümleden anlaşılsın.

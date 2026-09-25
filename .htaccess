@@ -112,6 +112,10 @@
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ara/?$ ara.php [L,QSA]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^vergi-takvimi/?$ vergi-takvimi.php [L,QSA]
 
     RewriteCond %{REQUEST_FILENAME} !-f

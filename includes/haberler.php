@@ -645,7 +645,7 @@ function kategori_menusu(): array
             'muhasebe-denetim'  => ['ad' => 'Muhasebe ve Denetim', 'sira' => 20],
             'ekonomi'            => ['ad' => 'Ekonomik Gündem',     'sira' => 30],
             'tms-tfrs'           => ['ad' => 'TMS/TFRS',            'sira' => 40],
-            'genel'              => ['ad' => 'Diğer',               'sira' => 50],
+            'genel'              => ['ad' => 'Genel Gündem',        'sira' => 50],
         ];
 
         $slug = (string) $satir['slug'];
@@ -937,4 +937,70 @@ function haber_etiket_bulutu(int $limit = 12): array
     usort($sayimlar, static fn (array $a, array $b): int => $b['adet'] <=> $a['adet']);
 
     return array_slice($sayimlar, 0, $limit);
+}
+
+/**
+ * Haberin dayandigi belgenin turu: "Tebliğ", "Özelge", "Kanun" ...
+ *
+ * Onemli Duzenlemeler listesinde rozet olarak gorunuyor; okuyucu bir
+ * tebligi bir kanun teklifinden ya da GIB duyurusundan ilk bakista
+ * ayirabilsin. Once resmi dayanak alani (editorun/ajanin yazdigi
+ * belge adi), bos ise baslik okunuyor.
+ *
+ * Sira onemli: "Vergi Usul Kanunu Genel Tebliği" bir TEBLIG; kanun
+ * kontrolu sona birakiliyor. "Kanun teklifi" ayri: henuz yururlukte
+ * olmayan bir metni "Kanun" diye gostermek okuyucuyu yaniltir.
+ *
+ * Tanimlanamayan haber icin null; cagiran "Haber" gibi notr bir etiket
+ * kullanir ya da rozet basmaz.
+ *
+ * @param array<string,mixed> $haber
+ */
+function haber_belge_turu(array $haber): ?string
+{
+    $kucuk = static fn (string $s): string => mb_strtolower(strtr($s, ['I' => 'ı', 'İ' => 'i']));
+
+    $kurallar = [
+        'Özelge'      => '/özelge/u',
+        'Sirküler'    => '/sirküler/u',
+        'Genelge'     => '/genelge/u',
+        'Tebliğ'      => '/tebliğ/u',
+        'Yönetmelik'  => '/yönetmeli[kğ]/u',
+        'CB Kararı'   => '/cumhurbaşkanı kararı|cumhurbaşkanlığı kararı|bakanlar kurulu kararı/u',
+        'Yargı Kararı'=> '/danıştay|yargıtay|anayasa mahkemesi|bölge idare mahkemesi|vergi mahkemesi/u',
+        'Kanun Teklifi' => '/kanun teklifi|kanun tasarısı/u',
+        'Kanun'       => '/kanun|yasa\b/u',
+        'Duyuru'      => '/duyuru/u',
+    ];
+
+    // Baslikta kanun ADI cok gecer ("KDV Kanunu kapsaminda iade"); orada
+    // yalnizca yeni bir kanunun kendisini anlatan kaliplar sayiliyor.
+    $baslikKanun = '/sayılı kanun|torba (yasa|kanun)|kanun(u)? (resmî |resmi )?(gazete|kabul edildi|yayımlandı|yürürlüğe girdi)|kanunu? değişti/u';
+
+    foreach (['resmi_dayanak', 'baslik'] as $alan) {
+        $metin = trim((string) ($haber[$alan] ?? ''));
+
+        if ($metin === '') {
+            continue;
+        }
+
+        $metin = $kucuk($metin);
+
+        foreach ($kurallar as $tur => $desen) {
+            if ($tur === 'Kanun' && $alan === 'baslik') {
+                $desen = $baslikKanun;
+            }
+
+            if (preg_match($desen, $metin) === 1) {
+                return $tur;
+            }
+        }
+    }
+
+    // Belge adi yoksa GIB'in kendi sitesinden gelen haber bir duyurudur.
+    if (str_contains((string) ($haber['kaynak_url'] ?? ''), 'gib.gov.tr')) {
+        return 'Duyuru';
+    }
+
+    return null;
 }

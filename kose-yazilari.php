@@ -25,6 +25,7 @@ $gunler = kose_gunlere_gore($sayfa, KOSE_SAYFA_GUN);
 
 $gunAdlari = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
 
+$aktifKategori = 'kose';
 $sayfaBasligi  = 'Valentra Diyor ki… — Tüm yazılar' . ($sayfa > 1 ? ' — Sayfa ' . $sayfa : '');
 $sayfaAciklama = 'Valentra\'nın her gün gündemin en önemli konularını değerlendirdiği '
                . 'köşe yazıları: ekonomi, piyasalar, vergi ve mevzuat.';

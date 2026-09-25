@@ -26,7 +26,9 @@ ziyaret_kaydet(
     $sayfaBasligi
 );
 
-$menu = kategori_menusu();
+require_once __DIR__ . '/menu.php';
+
+$menu = site_menusu(kategori_menusu());
 
 /*
  * Arama motoru etiketleri.
@@ -40,18 +42,9 @@ $seoGorsel = $seoGorsel ?? (site_adresi() . '/assets/logo.svg');
 $seoTur    = $seoTur    ?? 'website';
 $seoSema   = $seoSema   ?? seo_site_semasi();
 
-/** Bu ust baslik ya da altlarindan biri aktif mi? */
-$menuAktif = static function (array $grup) use ($aktifKategori): bool {
-    if ($aktifKategori === '') {
-        return false;
-    }
-
-    if ($grup['slug'] === $aktifKategori) {
-        return true;
-    }
-
-    return in_array($aktifKategori, array_column($grup['altlar'], 'slug'), true);
-};
+// Ana Sayfa yalnizca ana sayfada isaretli; kategorisiz baska sayfalarda
+// (arama, hata) hicbir oge isaretli degil.
+$anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
 ?>
 <!DOCTYPE html>
 <html lang="tr">
@@ -67,6 +60,10 @@ $menuAktif = static function (array $grup) use ($aktifKategori): bool {
              asil oldugunu soyler; aksi halde arama motoru ikisini ayri
              sayfa sanip ikisinin de degerini dusurur. */ ?>
     <link rel="canonical" href="<?= e($seoAdres) ?>">
+
+    <?php if (($seoRobots ?? '') !== ''): ?>
+        <meta name="robots" content="<?= e($seoRobots) ?>">
+    <?php endif; ?>
 
     <?php
     /*
@@ -125,38 +122,39 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
                     <span class="alt">VERGİ, MUHASEBE VE FİNANS</span>
                 </span>
             </a>
-            <div class="ust-bilgi"><?= e(tarih_bicimle(date('Y-m-d H:i:s'), false)) ?> &middot; Vergi Gündemi</div>
+            <div class="ust-sag">
+                <div class="ust-bilgi"><?= e(tarih_bicimle(date('Y-m-d H:i:s'), false)) ?></div>
+
+                <form class="ust-arama" action="<?= e(arama_yolu()) ?>" method="get" role="search">
+                    <label class="gizli-etiket" for="ust-arama-q">Sitede ara</label>
+                    <input id="ust-arama-q" type="search" name="q" placeholder="Haber, mevzuat, pratik bilgi ara"
+                           value="<?= e(($aktifKategori ?? '') === 'ara' ? (string) ($_GET['q'] ?? '') : '') ?>"
+                           maxlength="100" autocomplete="off">
+                    <button type="submit" aria-label="Ara">
+                        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                            <circle cx="7" cy="7" r="5.2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                            <path d="M11 11l3.6 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </form>
+            </div>
         </div>
     </header>
 
     <?php if ($menu !== []): ?>
-        <nav class="menu-bant" aria-label="Konu grupları">
+        <nav class="menu-bant" aria-label="Ana menü">
             <div class="sinirli menu-satir">
-                <a class="menu-oge <?= $aktifKategori === '' ? 'aktif' : '' ?>" href="/">Ana Sayfa</a>
+                <a class="menu-oge <?= $aktifKategori === '' && $anaSayfa ? 'aktif' : '' ?>" href="/">Ana Sayfa</a>
 
-                <a class="menu-oge <?= ($aktifKategori ?? '') === 'pratik' ? 'aktif' : '' ?>"
-                   href="<?= e(pratik_yolu()) ?>">Pratik Bilgiler</a>
-
-                <a class="menu-oge <?= ($aktifKategori ?? '') === 'takvim' ? 'aktif' : '' ?>"
-                   href="<?= e(takvim_yolu()) ?>">Vergi Takvimi</a>
-
-                <a class="menu-oge <?= ($aktifKategori ?? '') === 'araclar' ? 'aktif' : '' ?>"
-                   href="<?= e(araclar_yolu()) ?>">Araçlar</a>
-
-                <a class="menu-oge <?= ($aktifKategori ?? '') === 'resmi-gazete' ? 'aktif' : '' ?>"
-                   href="<?= e(rg_yolu()) ?>">Resmî Gazete</a>
-
-                <?php foreach ($menu as $grup): ?>
-                    <?php if ($grup['altlar'] === []): ?>
-                        <a class="menu-oge <?= $menuAktif($grup) ? 'aktif' : '' ?>"
-                           href="<?= e(kategori_yolu((string) $grup['slug'])) ?>">
-                            <?= e($grup['ad']) ?>
-                        </a>
+                <?php foreach ($menu as $oge): ?>
+                    <?php if ($oge['href'] !== null): ?>
+                        <a class="menu-oge <?= site_menu_aktif($oge, $aktifKategori) ? 'aktif' : '' ?>"
+                           href="<?= e($oge['href']) ?>"><?= e($oge['ad']) ?></a>
                     <?php else: ?>
-                        <div class="menu-grup <?= $menuAktif($grup) ? 'aktif' : '' ?>">
+                        <div class="menu-grup <?= site_menu_aktif($oge, $aktifKategori) ? 'aktif' : '' ?>">
                             <button type="button" class="menu-oge" aria-expanded="false"
                                     aria-haspopup="true">
-                                <?= e($grup['ad']) ?>
+                                <?= e($oge['ad']) ?>
                                 <svg class="ok" width="9" height="6" viewBox="0 0 9 6" aria-hidden="true">
                                     <path d="M1 1l3.5 3.5L8 1" fill="none" stroke="currentColor"
                                           stroke-width="1.6" stroke-linecap="round"/>
@@ -164,25 +162,9 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
                             </button>
 
                             <div class="menu-acilir">
-                                <?php
-                                /*
-                                 * Kanun metinleri sayfasi bu acilir
-                                 * menunun icinde. Kategori olarak
-                                 * eklenmiyor: haber grubu degil, ajan
-                                 * oraya haber atamamali ve yaninda
-                                 * haber sayisi gostermek anlamsiz olur.
-                                 */
-                                ?>
-                                <?php if ($grup['slug'] === 'vergi-kanunlari'): ?>
-                                    <a href="<?= e(kanunlar_yolu()) ?>"
-                                       class="<?= ($aktifKategori ?? '') === 'kanunlar' ? 'aktif' : '' ?>">
-                                        <span>Kanun Metinleri</span>
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php foreach ($grup['altlar'] as $alt): ?>
-                                    <a href="<?= e(kategori_yolu((string) $alt['slug'])) ?>"
-                                       class="<?= $aktifKategori === $alt['slug'] ? 'aktif' : '' ?>">
+                                <?php foreach ($oge['altlar'] as $alt): ?>
+                                    <a href="<?= e($alt['href']) ?>"
+                                       class="<?= $aktifKategori === $alt['anahtar'] ? 'aktif' : '' ?>">
                                         <span><?= e($alt['ad']) ?></span>
                                         <?php if ($alt['adet'] > 0): ?>
                                             <span class="adet"><?= $alt['adet'] ?></span>
@@ -193,7 +175,6 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
                         </div>
                     <?php endif; ?>
                 <?php endforeach; ?>
-
             </div>
         </nav>
 

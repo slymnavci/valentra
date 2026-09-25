@@ -49,6 +49,8 @@ $yanMenu = array_values(array_filter(
                         <a href="<?= e(haber_yolu((string) $haber['slug'])) ?>">
                             <span class="ad"><?= e($haber['baslik']) ?></span>
                             <span class="ust-bilgi">
+                                <?php $belgeTuru = haber_belge_turu($haber); ?>
+                                <span class="belge-turu <?= $belgeTuru === null ? 'notr' : '' ?>"><?= e($belgeTuru ?? 'Haber') ?></span>
                                 <?php if (!empty($haber['kategori_adi'])): ?>
                                     <?= e($haber['kategori_adi']) ?> &middot;
                                 <?php endif; ?>
