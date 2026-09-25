@@ -1334,8 +1334,9 @@ function girisEkraniGoster() {
   g.innerHTML = `
     <div class="giris-kart">
       <div class="giris-logo">📘</div>
-      <h1>YMM Hazırlık Platformu</h1>
-      <p class="muted">Yeminli Mali Müşavirlik sınavı çalışma sistemi</p>
+      <h1>TMS/TFRS Eğitimi ve YMM Sınav Hazırlık</h1>
+      <p class="muted">Ders anlatımları, soru bankası, konu testleri, çalışma planı ve ilerleme takibi.
+        Üye olun, kaldığınız yerden devam edin.</p>
 
       <div class="sekme mt" role="tablist">
         <button type="button" role="tab" id="sekmeGiris" class="sekme-btn aktif" onclick="girisSekme('giris')">Giriş yap</button>

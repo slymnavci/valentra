@@ -73,6 +73,13 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         <priority>0.7</priority>
     </url>
 
+    <?php /* TMS/TFRS egitim platformu: giris sayfasi herkese acik, icerik uyelere. */ ?>
+    <url>
+        <loc><?= e($taban) ?>/egitim/</loc>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
     <url>
         <loc><?= e($taban . rg_yolu()) ?></loc>
         <changefreq>daily</changefreq>
