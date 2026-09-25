@@ -285,12 +285,14 @@ function haber_taslak_ekle(array $veri): array
             (baslik, slug, ozet, icerik, gorsel_url, etiketler, durum, kategori_id,
              kaynak_id, kaynak_adi, kaynak_url, kaynak_parmak, url_parmak,
              baslik_parmak, guven_skoru, ajan_notu,
-             analiz_degisen, analiz_etkilenen, analiz_zaman, analiz_islem)
+             analiz_degisen, analiz_etkilenen, analiz_zaman, analiz_islem,
+             isletme_etkisi, uygulama_ornegi, resmi_dayanak)
          VALUES
             (:baslik, :slug, :ozet, :icerik, :gorsel_url, :etiketler, :durum, :kategori_id,
              :kaynak_id, :kaynak_adi, :kaynak_url, :kaynak_parmak, :url_parmak,
              :baslik_parmak, :guven_skoru, :ajan_notu,
-             :analiz_degisen, :analiz_etkilenen, :analiz_zaman, :analiz_islem)'
+             :analiz_degisen, :analiz_etkilenen, :analiz_zaman, :analiz_islem,
+             :isletme_etkisi, :uygulama_ornegi, :resmi_dayanak)'
     );
 
     $ifade->execute([
@@ -320,7 +322,7 @@ function haber_taslak_ekle(array $veri): array
         'analiz_etkilenen' => mb_substr(trim((string) ($veri['analiz_etkilenen'] ?? '')), 0, 600, 'UTF-8'),
         'analiz_zaman'     => mb_substr(trim((string) ($veri['analiz_zaman'] ?? '')), 0, 600, 'UTF-8'),
         'analiz_islem'     => mb_substr(trim((string) ($veri['analiz_islem'] ?? '')), 0, 600, 'UTF-8'),
-    ]);
+    ] + haber_format_alanlari($veri));
 
     return ['durum' => 'eklendi', 'id' => (int) db()->lastInsertId()];
 }
@@ -498,7 +500,10 @@ function haber_guncelle(int $id, array $veri): bool
                 analiz_degisen = :analiz_degisen,
                 analiz_etkilenen = :analiz_etkilenen,
                 analiz_zaman = :analiz_zaman,
-                analiz_islem = :analiz_islem
+                analiz_islem = :analiz_islem,
+                isletme_etkisi = :isletme_etkisi,
+                uygulama_ornegi = :uygulama_ornegi,
+                resmi_dayanak = :resmi_dayanak
           WHERE id = :id'
     );
 
@@ -531,7 +536,38 @@ function haber_guncelle(int $id, array $veri): bool
         'analiz_zaman'     => mb_substr(trim((string) ($veri['analiz_zaman'] ?? '')), 0, 600, 'UTF-8'),
         'analiz_islem'     => mb_substr(trim((string) ($veri['analiz_islem'] ?? '')), 0, 600, 'UTF-8'),
         'id'         => $id,
-    ]);
+    ] + haber_format_alanlari($veri));
+}
+
+/**
+ * Haber formatinin ek alanlari: isletmeye etkisi, uygulama ornegi, resmi
+ * dayanak. Ajandan da panelden de ayni kirpma ile yaziliyor; uzun bir
+ * model cevabi INSERT'i dusurmesin. Bos birakilan alan sayfada gorunmez.
+ *
+ * @param array<string,mixed> $veri
+ * @return array{isletme_etkisi:string,uygulama_ornegi:?string,resmi_dayanak:string}
+ */
+function haber_format_alanlari(array $veri): array
+{
+    $ornek = trim(str_replace(["\r\n", "\r"], "\n", (string) ($veri['uygulama_ornegi'] ?? '')));
+
+    return [
+        'isletme_etkisi'  => mb_substr(trim((string) ($veri['isletme_etkisi'] ?? '')), 0, 800, 'UTF-8'),
+        'uygulama_ornegi' => $ornek !== '' ? mb_substr($ornek, 0, 6000, 'UTF-8') : null,
+        'resmi_dayanak'   => mb_substr(trim((string) ($veri['resmi_dayanak'] ?? '')), 0, 400, 'UTF-8'),
+    ];
+}
+
+/**
+ * Öne çıkarma: manşette ve listelerde önce gelir.
+ *
+ * Gunde 3-5 secilmis haber icin panelde tek tikla. Duzenleme formundaki
+ * kutuyla ayni sutun.
+ */
+function haber_one_cikar(int $id, bool $one): void
+{
+    db()->prepare('UPDATE haberler SET one_cikan = :o WHERE id = :id')
+        ->execute(['o' => $one ? 1 : 0, 'id' => $id]);
 }
 
 function haber_sil(int $id): bool

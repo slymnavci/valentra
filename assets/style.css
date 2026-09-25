@@ -2227,6 +2227,93 @@ a.menu-oge.aktif::after,
     .analiz-baslik { color: var(--altin); }
 }
 
+/* dd icindeki bicimli metin: paragraf ve kontrol listesi bosluk birakmasin. */
+.analiz-oge dd > p { margin: 0; }
+.analiz-oge dd > p + p { margin-top: .5em; }
+.analiz-oge dd > ul { margin: 0; padding-left: 1.2em; }
+.analiz-oge dd li + li { margin-top: 3px; }
+
+/* --- Uygulama ornegi (haber) ---------------------------------------------- */
+
+.uygulama-ornegi {
+    margin: 0 0 26px;
+    padding: 18px 22px 14px;
+    border-radius: var(--yuvarlak);
+    background: var(--zemin);
+    border: 1px dashed var(--altin);
+}
+
+.uygulama-ornegi h2 {
+    margin: 0 0 10px;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--altin-koyu);
+}
+
+.uygulama-ornegi p { margin: 0 0 .7em; font-size: .95rem; }
+
+.uygulama-ornegi ul {
+    margin: 0 0 .7em;
+    padding-left: 1.2em;
+    font-size: .95rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.uygulama-ornegi .uygulama-not {
+    margin: 6px 0 0;
+    font-size: .8rem;
+    color: var(--metin-soluk);
+    font-style: italic;
+}
+
+/* --- Kaynak ve tarihler (haber) -------------------------------------------- */
+
+.kaynak-tarih {
+    margin-top: 28px;
+    padding: 14px 18px;
+    border: 1px solid var(--cizgi);
+    border-radius: 8px;
+    font-size: .92rem;
+}
+
+.kaynak-tarih h2 {
+    margin: 0 0 8px;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--metin-soluk);
+}
+
+.kaynak-tarih dl { margin: 0; }
+
+.kaynak-tarih dl > div {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: 12px;
+    padding: 5px 0;
+}
+
+.kaynak-tarih dt { font-weight: 600; color: var(--metin-soluk); }
+.kaynak-tarih dd { margin: 0; color: var(--metin); }
+.kaynak-tarih a { color: var(--vurgu); text-decoration: underline; }
+
+.kaynak-tarih-not {
+    margin: 8px 0 0;
+    font-size: .82rem;
+    color: var(--metin-soluk);
+}
+
+@media (max-width: 620px) {
+    .kaynak-tarih dl > div { grid-template-columns: 1fr; gap: 0; }
+}
+
+@media (prefers-color-scheme: dark) {
+    .uygulama-ornegi h2 { color: var(--altin); }
+}
+
 /* --- Ana sayfadaki Valentra Analiz kartlari ------------------------------ */
 
 .analiz-kartlari {

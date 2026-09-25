@@ -157,3 +157,51 @@ function e_varlik(string $yol): string
 {
     return e(varlik($yol));
 }
+
+/**
+ * Dar bicimli metni HTML'e cevirir: bos satirla ayrilan paragraflar,
+ * "## " ile baslayan ara basliklar, satirlari "- " ile baslayan maddeler.
+ *
+ * Kose yazilari, haberlerin "Ne yapilmali?" kontrol listesi ve "Uygulama
+ * ornegi" bu bicimde. Model ve panel yalnizca bunu uretiyor; ham HTML
+ * kabul edilmiyor, her sey kacisliyor.
+ */
+function bicimli_metin_html(string $icerik): string
+{
+    $html = '';
+
+    foreach (preg_split('/\n\s*\n/u', trim($icerik)) ?: [] as $blok) {
+        $blok = trim($blok);
+
+        if ($blok === '') {
+            continue;
+        }
+
+        if (preg_match('/^#{2,3}\s+(.+)$/u', $blok, $m) && !str_contains($blok, "\n")) {
+            $html .= '<h2>' . e(trim($m[1])) . "</h2>\n";
+            continue;
+        }
+
+        $satirlar = preg_split('/\n/u', $blok) ?: [];
+        $maddeMi  = $satirlar !== [] && array_reduce(
+            $satirlar,
+            static fn (bool $t, string $s): bool => $t && preg_match('/^\s*[-•]\s+/u', $s) === 1,
+            true
+        );
+
+        if ($maddeMi) {
+            $html .= "<ul>\n";
+
+            foreach ($satirlar as $satir) {
+                $html .= '<li>' . e(trim((string) preg_replace('/^\s*[-•]\s+/u', '', $satir))) . "</li>\n";
+            }
+
+            $html .= "</ul>\n";
+            continue;
+        }
+
+        $html .= '<p>' . nl2br(e($blok)) . "</p>\n";
+    }
+
+    return $html;
+}

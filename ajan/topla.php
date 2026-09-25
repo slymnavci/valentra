@@ -1265,6 +1265,11 @@ foreach ($gruplar as $grupNo => $grup) {
             'analiz_etkilenen' => (string) ($sonuc['analiz_etkilenen'] ?? ''),
             'analiz_zaman'     => (string) ($sonuc['analiz_zaman'] ?? ''),
             'analiz_islem'     => (string) ($sonuc['analiz_islem'] ?? ''),
+
+            // Haber formati: bos olabilir, bos olmasi normal.
+            'isletme_etkisi'   => (string) ($sonuc['isletme_etkisi'] ?? ''),
+            'uygulama_ornegi'  => (string) ($sonuc['uygulama_ornegi'] ?? ''),
+            'resmi_dayanak'    => (string) ($sonuc['resmi_dayanak'] ?? ''),
             'gorsel_url'  => $gorseller[$sira] ?? '',
         ];
 

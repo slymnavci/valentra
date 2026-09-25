@@ -347,51 +347,10 @@ function kose_dayanaklar(string $idler): array
     return $sonuc;
 }
 
-/**
- * Yazı metnini HTML'e çevirir.
- *
- * Bicim kasten dar: bos satirla ayrilan paragraflar, "## " ile baslayan
- * ara basliklar ve satirlari "- " ile baslayan maddeler. Model ve panel
- * yalnizca bunu uretiyor; ham HTML kabul edilmiyor, her sey kacisliyor.
- */
+/** Yazı metnini HTML'e çevirir (bkz. bicimli_metin_html). */
 function kose_icerik_html(string $icerik): string
 {
-    $html = '';
-
-    foreach (preg_split('/\n\s*\n/u', trim($icerik)) ?: [] as $blok) {
-        $blok = trim($blok);
-
-        if ($blok === '') {
-            continue;
-        }
-
-        if (preg_match('/^#{2,3}\s+(.+)$/u', $blok, $m) && !str_contains($blok, "\n")) {
-            $html .= '<h2>' . e(trim($m[1])) . "</h2>\n";
-            continue;
-        }
-
-        $satirlar = preg_split('/\n/u', $blok) ?: [];
-        $maddeMi  = $satirlar !== [] && array_reduce(
-            $satirlar,
-            static fn (bool $t, string $s): bool => $t && preg_match('/^\s*[-•]\s+/u', $s) === 1,
-            true
-        );
-
-        if ($maddeMi) {
-            $html .= "<ul>\n";
-
-            foreach ($satirlar as $satir) {
-                $html .= '<li>' . e(trim((string) preg_replace('/^\s*[-•]\s+/u', '', $satir))) . "</li>\n";
-            }
-
-            $html .= "</ul>\n";
-            continue;
-        }
-
-        $html .= '<p>' . nl2br(e($blok)) . "</p>\n";
-    }
-
-    return $html;
+    return bicimli_metin_html($icerik);
 }
 
 /**

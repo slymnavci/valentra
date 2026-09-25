@@ -246,6 +246,15 @@ function sema_yukselt(array &$hatalar = []): array
     }
 
     /*
+     * Haber formati: isletmeye etkisi, uygulama ornegi, resmi dayanak.
+     * TEXT sutunu NULL: eski MySQL surumleri TEXT'e varsayilan deger
+     * vermeye izin vermiyor.
+     */
+    $sutunEkle('haberler', 'isletme_etkisi', "VARCHAR(800) NOT NULL DEFAULT '' AFTER analiz_islem");
+    $sutunEkle('haberler', 'uygulama_ornegi', 'TEXT NULL AFTER isletme_etkisi');
+    $sutunEkle('haberler', 'resmi_dayanak', "VARCHAR(400) NOT NULL DEFAULT '' AFTER uygulama_ornegi");
+
+    /*
      * Vergi takvimi kurallarina benzersizlik anahtari.
      *
      * Tohum INSERT IGNORE ile yaziliyor; IGNORE ancak bir benzersizlik
@@ -457,6 +466,10 @@ function sema_guncel_mi(): bool
             ['grafikler', 'seri'],
             ['resmi_gazete', 'url'],
             ['kose_yazilari', 'parmak'],
+            // haber_taslak_ekle() bu sutunlara yaziyor.
+            ['haberler', 'isletme_etkisi'],
+            ['haberler', 'uygulama_ornegi'],
+            ['haberler', 'resmi_dayanak'],
         ];
 
         foreach ($beklenenSutunlar as [$tablo, $sutun]) {
