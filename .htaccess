@@ -73,6 +73,9 @@
     RewriteCond %{THE_REQUEST} \s/kose-yazilari\.php[\s?] [NC]
     RewriteRule ^ /valentra-diyor-ki? [R=301,L]
 
+    RewriteCond %{THE_REQUEST} \s/araclar\.php[\s?] [NC]
+    RewriteRule ^ /araclar? [R=301,L]
+
     RewriteCond %{THE_REQUEST} \s/index\.php[\s?] [NC]
     RewriteRule ^ /? [R=301,L]
 
@@ -102,6 +105,10 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^pratik-bilgiler/?$ pratik-bilgiler.php [L,QSA]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^araclar/?$ araclar.php [L,QSA]
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

@@ -2729,3 +2729,106 @@ a.rg-madde:hover { color: var(--vurgu); }
     .kose-gundem,
     .kose-ust-etiket { color: var(--altin); }
 }
+
+/* --- Hesaplama araclari ---------------------------------------------------- */
+
+.arac-kisayol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 18px;
+}
+
+.arac-kisayol a {
+    padding: 6px 14px;
+    border: 1px solid var(--cizgi);
+    border-radius: 999px;
+    background: var(--kart);
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--vurgu);
+}
+
+.arac-kisayol a:hover { border-color: var(--vurgu); }
+
+.arac-izgara {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    align-items: start;
+}
+
+@media (max-width: 1200px) { .arac-izgara { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px)  { .arac-izgara { grid-template-columns: 1fr; } }
+
+.arac-kart {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    border-top: 3px solid var(--altin);
+    padding: 18px 20px 16px;
+    scroll-margin-top: 16px;
+}
+
+.arac-kart h2 { margin: 0 0 4px; font-size: 1.15rem; font-weight: 800; }
+
+.arac-aciklama { margin: 0 0 14px; font-size: .92rem; color: var(--metin-soluk); }
+
+.arac-form { display: grid; gap: 10px; }
+
+.arac-secim { display: grid; gap: 4px; font-size: .92rem; }
+
+.arac-secim label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+
+.arac-alan { display: grid; gap: 4px; }
+
+/* display:grid, hidden niteligini ezerdi ("Diger" orani secilmedikce gizli). */
+.arac-alan[hidden] { display: none; }
+
+.arac-alan span { font-size: .85rem; font-weight: 600; color: var(--metin-soluk); }
+
+.arac-alan input,
+.arac-alan select {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--cizgi);
+    border-radius: 8px;
+    background: var(--zemin);
+    color: var(--metin);
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+}
+
+.arac-alan input:focus,
+.arac-alan select:focus { outline: 2px solid var(--vurgu); outline-offset: 1px; }
+
+.arac-sonuc {
+    margin: 16px 0 0;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: var(--zemin);
+}
+
+.arac-sonuc > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 0;
+    font-size: .93rem;
+}
+
+.arac-sonuc > div + div { border-top: 1px solid var(--cizgi); }
+
+.arac-sonuc dt { color: var(--metin-soluk); }
+
+.arac-sonuc dd {
+    margin: 0;
+    font-weight: 600;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.arac-sonuc .arac-toplam dd { font-size: 1.05rem; color: var(--vurgu); }
+
+.arac-not { margin: 12px 0 0; font-size: .8rem; line-height: 1.5; color: var(--metin-soluk); }
+

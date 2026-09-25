@@ -140,6 +140,9 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
                 <a class="menu-oge <?= ($aktifKategori ?? '') === 'takvim' ? 'aktif' : '' ?>"
                    href="<?= e(takvim_yolu()) ?>">Vergi Takvimi</a>
 
+                <a class="menu-oge <?= ($aktifKategori ?? '') === 'araclar' ? 'aktif' : '' ?>"
+                   href="<?= e(araclar_yolu()) ?>">Araçlar</a>
+
                 <a class="menu-oge <?= ($aktifKategori ?? '') === 'resmi-gazete' ? 'aktif' : '' ?>"
                    href="<?= e(rg_yolu()) ?>">Resmî Gazete</a>
 
