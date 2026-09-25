@@ -45,7 +45,7 @@ use Valentra\Ajan\{Besleme, Getirici, Http, Kodlama, ResmiGazete, Sayfa, Site, S
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
-$secenekler = getopt('', ['saat::', 'kaynak::', 'kanunlar', 'aday::', 'rg', 'metin::']);
+$secenekler = getopt('', ['saat::', 'kaynak::', 'kanunlar', 'aday::', 'rg', 'metin::', 'evds::']);
 $saat       = max(1, (int) ($secenekler['saat'] ?? 36));
 $suzgu      = trim((string) ($secenekler['kaynak'] ?? ''));
 $kanunModu  = isset($secenekler['kanunlar']);
@@ -251,6 +251,57 @@ if (isset($secenekler['rg'])) {
     }
 
     exit($girdiler === [] ? 1 : 0);
+}
+
+/*
+ * --evds='yol ; yol': EVDS'ye SITE uzerinden sorar ve yaniti yazar.
+ *
+ * Neden: grafik ya da pratik bilgi bir seriden veri almayi biraktiginda
+ * (TUFE'nin baz yili degisince eski serinin durmasi gibi) sebebi ve
+ * yeni seri kodunu gormek icin. Site anahtari kendisi ekliyor; anahtar
+ * ne adrese ne bu gunluge yaziliyor.
+ *
+ * Yol, EVDS3 veri ucunun tabanindan sonrasi. Ornekler:
+ *   series=TP.FG.J0&startDate=01-06-2025&endDate=25-09-2026&type=json
+ *   serieList/type=json&code=bie_tukfiy4
+ *   datagroups/mode=0&type=json
+ */
+$evdsGirdi = trim((string) ($secenekler['evds'] ?? ''));
+
+if ($evdsGirdi !== '') {
+    $hata = 0;
+
+    foreach (array_filter(array_map('trim', explode(';', $evdsGirdi))) as $yol) {
+        $adres = 'https://evds3.tcmb.gov.tr/igmevdsms-dis/' . ltrim($yol, '/');
+        $ham   = $site->hamGetir($adres);
+
+        yaz('=== EVDS ' . $yol);
+
+        if ($ham === null) {
+            yaz('  ALINAMADI: ' . $site->sonHamHatasi());
+            $hata++;
+            yaz();
+            continue;
+        }
+
+        $veri = json_decode($ham, true);
+
+        // Seri yanitinda son gozlemler en onemlisi: sondan 8 satir.
+        if (is_array($veri) && isset($veri['items']) && is_array($veri['items'])) {
+            $satirlar = $veri['items'];
+            yaz('  ' . count($satirlar) . ' satır; son 8:');
+
+            foreach (array_slice($satirlar, -8) as $satir) {
+                yaz('  ' . json_encode($satir, JSON_UNESCAPED_UNICODE));
+            }
+        } else {
+            yaz('  ' . str_replace("\n", "\n  ", mb_substr($ham, 0, 6000, 'UTF-8')));
+        }
+
+        yaz();
+    }
+
+    exit($hata === 0 ? 0 : 1);
 }
 
 /*
