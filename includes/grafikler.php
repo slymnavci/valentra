@@ -431,6 +431,85 @@ function grafik_seyrelt(array $seri): array
     return $sonuc;
 }
 
+/** Aylık seride son gözlem en fazla bu kadar eski olabilir (gün). */
+const GRAFIK_AYLIK_TAZELIK_GUN = 75;
+
+/** Günlük seride son gözlem en fazla bu kadar eski olabilir (gün). */
+const GRAFIK_GUNLUK_TAZELIK_GUN = 12;
+
+/** Son başarılı çekim en fazla bu kadar eski olabilir (saat). */
+const GRAFIK_CEKIM_TAZELIK_SAAT = 72;
+
+/**
+ * Grafiğin verisi güncel mi?
+ *
+ * Iki ayri aksaklik var ve ikisi de okuyucuya ACIKCA soyleniyor:
+ *
+ * 1. Veri eskidi: cekim basarili ama kaynak yeni gozlem vermiyor. Olcum:
+ *    TUFE grafigi Eylul'de "son gozlem Ocak 2026" gosteriyordu; TUIK baz
+ *    yilini degistirince eski seri durmustu ve hicbir hata olusmuyordu.
+ *    Aylik veri bir sonraki ayin basinda yayimlaniyor; 75 gun, yayim
+ *    gecikmesine pay birakip bir ayin kacmasini yakaliyor. Gunluk seride
+ *    12 gun, uzun bayram tatiline pay birakiyor.
+ * 2. Cekim aksiyor: son basarili cekim 3 gunden eski (ajan gunde bes
+ *    kez tazeliyor). Grafik son iyi veriyle duruyor ama yenilenmiyor.
+ *
+ * Siklik, noktalar arasi ortalama araliktan anlasiliyor: 25 gunden
+ * genisse aylik.
+ *
+ * @param array<string,mixed> $grafik
+ * @return array{guncel:bool,mesaj:string,son_tarih:string}
+ */
+function grafik_guncellik(array $grafik, ?int $simdi = null): array
+{
+    $simdi = $simdi ?? time();
+    $seri  = pratik_seri_oku(isset($grafik['seri']) ? (string) $grafik['seri'] : null);
+
+    if (count($seri) < 2) {
+        return ['guncel' => true, 'mesaj' => '', 'son_tarih' => ''];
+    }
+
+    $ilk = strtotime((string) $seri[0][0]);
+    $son = strtotime((string) $seri[count($seri) - 1][0]);
+
+    if ($ilk === false || $son === false) {
+        return ['guncel' => true, 'mesaj' => '', 'son_tarih' => ''];
+    }
+
+    $aylik  = ($son - $ilk) / 86400 / (count($seri) - 1) >= 25
+           || in_array((string) ($grafik['donusum'] ?? ''), ['yillik', 'aylik'], true);
+    $sinir  = $aylik ? GRAFIK_AYLIK_TAZELIK_GUN : GRAFIK_GUNLUK_TAZELIK_GUN;
+    $yas    = (int) floor(($simdi - $son) / 86400);
+    $aylar  = [1 => 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+               'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    $sonYazi = $aylik
+        ? $aylar[(int) date('n', $son)] . ' ' . date('Y', $son)
+        : (int) date('j', $son) . ' ' . $aylar[(int) date('n', $son)] . ' ' . date('Y', $son);
+    $sonIfade = $sonYazi . ($aylik ? ' dönemine ait' : ' tarihli');
+
+    if ($yas > $sinir) {
+        return [
+            'guncel'    => false,
+            'mesaj'     => 'Bu gösterge güncel değil: son veri ' . $sonIfade
+                         . '. Kaynak yeni veri yayımlamadı ya da seri değişti; kontrol ediliyor.',
+            'son_tarih' => $sonYazi,
+        ];
+    }
+
+    $cekim = strtotime((string) ($grafik['seri_tarihi'] ?? ''));
+
+    if ($cekim !== false && $simdi - $cekim > GRAFIK_CEKIM_TAZELIK_SAAT * 3600) {
+        return [
+            'guncel'    => false,
+            'mesaj'     => 'Bu gösterge ' . (int) floor(($simdi - $cekim) / 86400)
+                         . ' gündür güncellenemedi; son veri ' . $sonIfade . '.',
+            'son_tarih' => $sonYazi,
+        ];
+    }
+
+    return ['guncel' => true, 'mesaj' => '', 'son_tarih' => $sonYazi];
+}
+
 /**
  * Veriyi çeker ve saklar. Başarısızsa SON İYİ VERİ korunur.
  *

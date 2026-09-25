@@ -173,6 +173,15 @@ $secili = static fn (mixed $a, mixed $b): string => (string) $a === (string) $b 
             <p class="ipucu">Henüz veri yok.</p>
         <?php endif; ?>
 
+        <?php $guncellik = grafik_guncellik($g); ?>
+        <?php if (!$guncellik['guncel']): ?>
+            <div class="uyari uyari-hata" style="margin:10px 0 0;">
+                <strong>Veri güncel değil.</strong> <?= e($guncellik['mesaj']) ?>
+                Seri durmuş olabilir (ör. baz yılı değişikliği); yeni seri kodunu
+                girin ya da grafiği yayından kaldırın. Ana sayfada bu uyarı okuyucuya da gösteriliyor.
+            </div>
+        <?php endif; ?>
+
         <p class="ipucu" style="margin:10px 0 0;">
             <?php if (!empty($g['seri_tarihi'])): ?>
                 Veri: <?= e(tarih_bicimle((string) $g['seri_tarihi'], true)) ?>
