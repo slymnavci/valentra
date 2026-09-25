@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/kose.php';
+require_once __DIR__ . '/includes/bugun.php';
 
 $sayfa = max(1, (int) ($_GET['sayfa'] ?? 1));
 
@@ -20,13 +21,15 @@ $sayfa = max(1, (int) ($_GET['sayfa'] ?? 1));
  */
 $adet       = 12;   // izgaradaki kart sayisi
 /*
- * Manset 10 haber.
+ * Manset 3 haber.
  *
- * Tasarim turunda besle sinirlanmisti; site sahibi 10'a geri
- * aldirdi. Kaydirak tukettigi haberleri izgaradan dusuyor, yani
- * ilk sayfadaki izgara 11. haberden basliyor.
+ * Once 10'du; site sahibi ilk ekrani "3 manset + Bugun bilmeniz
+ * gerekenler" olarak istedi (Eylul 2026). Oncelik panelde "One cikar"
+ * ile isaretlenenlerde (haber_manset siralamasi). Kaydirak tukettigi
+ * haberleri izgaradan dusuyor, yani ilk sayfadaki izgara 4. haberden
+ * basliyor.
  */
-$mansetAdet = 10;   // kaydiraktaki haber sayisi
+$mansetAdet = 3;    // kaydiraktaki haber sayisi
 
 /*
  * Resmi Gazete kaynakli haberler ana sayfa akisinda yok; kendi
@@ -86,6 +89,19 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
                 <?php require __DIR__ . '/includes/kose_kutu.php'; ?>
             </div>
+
+            <?php
+            /*
+             * Ilk ekran: bugun bilinmesi gerekenler ve kisayollar
+             * (takvim, KDV hesabi, pratik bilgiler). Yalnizca ilk sayfada.
+             */
+            if ($sayfa === 1) {
+                $bugunMaddeleri = bugun_bilmeniz_gerekenler(
+                    array_map(static fn (array $h): int => (int) $h['id'], $mansetler)
+                );
+                require __DIR__ . '/includes/bugun_kutu.php';
+            }
+            ?>
 
             <?php /* Piyasa seridi kaydiragin hemen altinda: sayfa acilir
                      acilmaz gorunen, surekli degisen tek veri. */ ?>

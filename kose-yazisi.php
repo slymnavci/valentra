@@ -39,6 +39,7 @@ $ayniGun = array_values(array_filter(
     static fn (array $y): bool => (int) $y['id'] !== (int) $yazi['id']
 ));
 
+$aktifKategori = 'kose';
 $sayfaBasligi  = $yazi['baslik'] . ' — Valentra Diyor ki…';
 $sayfaAciklama = (string) $yazi['ozet'];
 $seoAdres      = site_adresi() . kose_yolu((string) $yazi['slug']);
