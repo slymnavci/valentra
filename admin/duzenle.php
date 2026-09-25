@@ -141,8 +141,8 @@ require __DIR__ . '/ust.php';
     <?php /*
         VALENTRA ANALIZ — editorun denetiminde.
 
-        "Hangi islem yapilmali" cevabi modelden geliyor ve yeminli
-        mali musavirlik imzasi tasiyan bir sayfada yayimlaniyor. Bu
+        "Hangi islem yapilmali" cevabi modelden geliyor ve mesleki
+        bir yayinda okuyucuya yol gosteriyor. Bu
         yuzden onay ekraninda duzenlenebilir olmasi sart. Bos
         birakilan alan sayfada hic gorunmez.
     */ ?>

@@ -133,7 +133,7 @@ $yanMenu = array_values(array_filter(
         <h2 class="pencere-baslik">Valentra</h2>
         <p class="pencere-metin">
             Vergi ve mali mevzuattaki gelişmeler ile ekonomi gündemi,
-            yeminli mali müşavirlik bakışıyla derlenir.
+            uygulayıcı gözüyle derlenir.
         </p>
     </section>
 

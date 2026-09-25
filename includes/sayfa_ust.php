@@ -122,7 +122,7 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
                 <img class="marka" src="/assets/logo.svg" alt="" width="40" height="35">
                 <span class="yazi">
                     <span class="ad">VALENTRA</span>
-                    <span class="alt">YEMİNLİ MALİ MÜŞAVİRLİK</span>
+                    <span class="alt">VERGİ, MUHASEBE VE FİNANS</span>
                 </span>
             </a>
             <div class="ust-bilgi"><?= e(tarih_bicimle(date('Y-m-d H:i:s'), false)) ?> &middot; Vergi Gündemi</div>

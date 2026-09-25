@@ -125,7 +125,8 @@ function seo_site_semasi(): string
             [
                 '@type'       => 'Organization',
                 '@id'         => site_adresi() . '/#kurum',
-                'name'        => 'Valentra Yeminli Mali Müşavirlik',
+                'name'        => 'Valentra',
+                'description' => 'Vergi, muhasebe ve finans yayını',
                 'url'         => site_adresi() . '/',
                 'logo'        => site_adresi() . '/assets/logo.svg',
             ],

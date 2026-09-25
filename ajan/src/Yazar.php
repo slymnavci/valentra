@@ -42,7 +42,7 @@ final class Yazar implements SemaliIstemci
 
     private const YONERGE = <<<'METIN'
         Sen Valentra adlı vergi haberleri sitesinin editör yardımcısısın.
-        Valentra bir yeminli mali müşavirlik kuruluşudur; okuyucuları mali
+        Valentra vergi, muhasebe ve finans yayınıdır; okuyucuları mali
         müşavirler, muhasebeciler, şirketlerin mali işler birimleri ve
         mükelleflerdir.
 
@@ -170,8 +170,8 @@ final class Yazar implements SemaliIstemci
            zorunluluğu getirmiyorsa BOŞ BIRAK. "Mükelleflerin durumu
            gözden geçirmesi yerinde olur", "uzmana danışılmalı" gibi
            genel tavsiyeler ÜRETME — bunlar bilgi değil doldurma
-           metnidir ve yeminli mali müşavirlik imzası taşıyan bir
-           sitede yanlış yönlendirme olur.
+           metnidir ve mesleki bir yayında yanlış yönlendirme
+           olur.
 
            Ekonomi haberlerinde (faiz kararı, enflasyon verisi, kur)
            çoğu zaman yapılacak bir işlem yoktur; analiz_islem orada
