@@ -24,7 +24,7 @@ $adim = (string) ($_GET['adim'] ?? '');
 if ($adim !== '') {
     header('Content-Type: application/json; charset=utf-8');
     csrf_dogrula($_SERVER['HTTP_X_CSRF'] ?? null);
-    @set_time_limit(300);
+    @set_time_limit(900);
 
     $cevap = static function (array $veri): void {
         echo json_encode($veri, JSON_UNESCAPED_UNICODE);
@@ -77,7 +77,7 @@ if ($adim !== '') {
 
     if ($adim === 'dosya') {
         $cevap(egitim_dosya_aktar($oturum['adres'], $oturum['anahtar'], $oturum['token'],
-                                  (string) ($govde['yol'] ?? ''), (string) ($govde['sha1'] ?? '')));
+                                  (string) ($govde['yol'] ?? ''), (int) ($govde['boyut'] ?? -1)));
     }
 
     if ($adim === 'bitir') {
@@ -332,7 +332,7 @@ require __DIR__ . '/ust.php';
             var sayfa = Math.max(1, Math.ceil(n / boyut));
             for (var s = 0; s < sayfa; s++) { isler.push({tur: 'tablo', tablo: t, sayfa: s}); }
         });
-        ozet.dosyalar.forEach(function (d) { isler.push({tur: 'dosya', yol: d.yol, sha1: d.sha1, boyut: d.boyut}); });
+        ozet.dosyalar.forEach(function (d) { isler.push({tur: 'dosya', yol: d.yol, boyut: d.boyut}); });
 
         var sayac = {satir: 0, dosya: 0, atlanan: 0, hata: 0};
 
