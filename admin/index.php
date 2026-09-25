@@ -30,6 +30,8 @@ $bildirimler = [
     'geri'       => ['bilgi',  'Haber yayından kaldırıldı, taslaklara alındı.'],
     'guncellendi'=> ['basari', 'Haber güncellendi.'],
     'silindi'    => ['bilgi',  'Haber silindi.'],
+    'one_cikti'  => ['basari', 'Haber öne çıkarıldı: manşette ve listelerde önce gelir.'],
+    'one_kalkti' => ['bilgi',  'Haber artık öne çıkan değil.'],
 ];
 
 $bildirim = $bildirimler[(string) ($_GET['bildirim'] ?? '')] ?? null;
@@ -112,6 +114,10 @@ require __DIR__ . '/ust.php';
                 <div class="satir-bilgi">
                     <span class="rozet rozet-<?= e($haber['durum']) ?>"><?= e($haber['durum']) ?></span>
 
+                    <?php if ((int) $haber['one_cikan'] === 1): ?>
+                        <span class="rozet rozet-skor">öne çıkan</span>
+                    <?php endif; ?>
+
                     <?php if ((int) $haber['guven_skoru'] > 0): ?>
                         <span class="rozet rozet-skor">güven %<?= (int) $haber['guven_skoru'] ?></span>
                     <?php endif; ?>
@@ -140,6 +146,21 @@ require __DIR__ . '/ust.php';
 
             <div class="satir-islem">
                 <a class="dugme" href="duzenle.php?id=<?= (int) $haber['id'] ?>">İncele</a>
+
+                <?php if ($haber['durum'] !== HABER_REDDEDILDI): ?>
+                    <?php /* Gunde 3-5 secilmis haber: tam formatla okunmasi istenen haberler. */ ?>
+                    <form method="post" action="islem.php">
+                        <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                        <input type="hidden" name="id" value="<?= (int) $haber['id'] ?>">
+                        <?php if ((int) $haber['one_cikan'] === 1): ?>
+                            <input type="hidden" name="islem" value="one_cikarma">
+                            <button type="submit" class="dugme" style="width:100%;">Öne çıkarmayı kaldır</button>
+                        <?php else: ?>
+                            <input type="hidden" name="islem" value="one_cikar">
+                            <button type="submit" class="dugme" style="width:100%;">Öne çıkar</button>
+                        <?php endif; ?>
+                    </form>
+                <?php endif; ?>
 
                 <?php if ($haber['durum'] === HABER_TASLAK): ?>
                     <form method="post" action="islem.php">

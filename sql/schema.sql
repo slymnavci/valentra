@@ -105,6 +105,12 @@ CREATE TABLE IF NOT EXISTS haberler (
     analiz_zaman     VARCHAR(600) NOT NULL DEFAULT '',
     analiz_islem     VARCHAR(600) NOT NULL DEFAULT '',
 
+    -- Isletmeye etkisi, uygulama ornegi (hesaplama/muhasebe kaydi) ve
+    -- resmi dayanak (kanun/madde, RG tarih-sayi). Hepsi bos olabilir.
+    isletme_etkisi   VARCHAR(800) NOT NULL DEFAULT '',
+    uygulama_ornegi  TEXT         NULL,
+    resmi_dayanak    VARCHAR(400) NOT NULL DEFAULT '',
+
     onaylayan_id    INT UNSIGNED  NULL,
     onay_tarihi     DATETIME      NULL,
     yayin_tarihi    DATETIME      NULL,

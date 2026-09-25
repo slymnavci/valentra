@@ -138,7 +138,7 @@ final class Yazar implements SemaliIstemci
            olanı tut; diğerlerini "yinelenen: ADAY n ile aynı olay" diye
            ele.
 
-        2b) VALENTRA ANALİZ — dört alan.
+        2b) VALENTRA ANALİZ — dört alan (ardından 2c'deki üç alan).
 
            Okuyucu mali müşavir, muhasebe çalışanı ya da işletme
            yöneticisi. Haber "ne oldu"yu anlatıyor; bu dört alan
@@ -152,9 +152,14 @@ final class Yazar implements SemaliIstemci
            analiz_zaman     — Yürürlük tarihi, ilk uygulanacak dönem,
                               geçiş hükmü. Tarih kaynakta geçiyorsa
                               aynen aktar.
-           analiz_islem     — Kaynağın ZORUNLU KILDIĞI somut adım:
-                              beyanname, bildirim, kayıt, başvuru ve
-                              varsa süresi.
+           analiz_islem     — NE YAPILMALI: kaynağın ZORUNLU KILDIĞI
+                              somut adım (beyanname, bildirim, kayıt,
+                              başvuru ve süresi) ve yeni kuralın
+                              DOĞRUDAN gerektirdiği kontroller. Birden
+                              fazlaysa kontrol listesi yaz: her madde
+                              ayrı satırda, "- " ile başlar, en fazla 5
+                              madde. Örnek: "- 1 Ekim'den itibaren
+                              kesilen faturalarda %20 oranını uygulayın".
 
            EN ÖNEMLİ KURAL — BİLMEDİĞİNİ YAZMA. Bir alanın karşılığı
            kaynak metinde yoksa o alanı BOŞ BIRAK. Dördünü de
@@ -171,6 +176,39 @@ final class Yazar implements SemaliIstemci
            Ekonomi haberlerinde (faiz kararı, enflasyon verisi, kur)
            çoğu zaman yapılacak bir işlem yoktur; analiz_islem orada
            boş kalır, bu normaldir.
+
+        2c) İŞLETMEYE ETKİSİ, UYGULAMA ÖRNEĞİ, RESMÎ DAYANAK.
+
+           isletme_etkisi — Gelişmenin işletmelere hangi yoldan
+             yansıyacağı: maliyet, nakit akışı, fiyatlama, finansman,
+             vergi yükü. 1-3 cümle. ÖZELLİKLE EKONOMİ HABERLERİNDE
+             doldur: faiz kararı -> vadeli satış yapan ve krediyle
+             çalışan işletmenin finansman maliyeti, vade farkı; kur ->
+             ithalatçının maliyeti, ihracatçının geliri; enflasyon ->
+             fiyatlama ve stok değerlemesi. MEKANİZMAYI anlat, kesinlik
+             iddia etme ("artabilir", "yansıyabilir"). Kaynakta olmayan
+             rakam verme. Belirgin bir işletme etkisi yoksa BOŞ BIRAK.
+
+           uygulama_ornegi — Okuyucunun konuyu kavraması için örnek
+             hesaplama ya da muhasebe kaydı. YALNIZCA haberde
+             uygulanabilir bir oran, tutar, had ya da hesaplama kuralı
+             varsa yaz; yoksa BOŞ BIRAK. Kurallar:
+             - Oran ve kural KAYNAKTAKİ olmalı; rakamlar ise açıkça
+               varsayımsal ve yuvarlak ("Örneğin 100.000 TL'lik bir
+               satışta ..."). İlk cümle bunun bir örnek olduğunu söylesin.
+             - Hesabı adım adım yaz ve sonucu İKİ KEZ kontrol et.
+             - Muhasebe kaydı gerekiyorsa Tekdüzen Hesap Planı kodlarıyla,
+               her satır ayrı: "- 120 Alıcılar — Borç 120.000 TL". Borç
+               ve alacak toplamı eşit olmalı.
+             - Ekonomi haberinde basit bir etki hesabı olabilir (kaynakta
+               geçen faiz oranıyla örnek bir kredinin yıllık maliyeti).
+             - Emin değilsen BOŞ BIRAK: yanlış bir kayıt, hiç kayıt
+               olmamasından çok daha zararlıdır.
+             - Paragraflar boş satırla ayrılır; liste satırları "- " ile.
+
+           resmi_dayanak — Kanun ve madde numarası, tebliğ ya da
+             sirküler sıra numarası, karar sayısı, Resmî Gazete tarihi
+             ve sayısı. YALNIZCA kaynakta geçenleri yaz; yoksa BOŞ BIRAK.
 
         2) İLGİLİYSE HABERİ YAZ. Kurallar:
            - Kaynak metni yalnızca anlamak için okursun. ASLA cümle
@@ -317,12 +355,16 @@ final class Yazar implements SemaliIstemci
             'analiz_degisen'  => ['type' => 'string', 'description' => 'NE DEĞİŞTİ: önceki durum ve yeni durum, tek-iki cümle. Kaynakta yoksa boş bırak.'],
             'analiz_etkilenen'=> ['type' => 'string', 'description' => 'KİMLERİ ETKİLİYOR: hangi mükellef grubu, sektör ya da büyüklük. Kaynakta yoksa boş bırak.'],
             'analiz_zaman'    => ['type' => 'string', 'description' => 'NE ZAMAN UYGULANACAK: yürürlük tarihi, ilk uygulanacak dönem, geçiş hükmü. Kaynakta yoksa boş bırak.'],
-            'analiz_islem'    => ['type' => 'string', 'description' => 'HANGİ İŞLEM YAPILMALI: kaynağın ZORUNLU KILDIĞI somut adım (beyanname, bildirim, kayıt, başvuru) ve varsa süresi. Kaynak bir işlem zorunluluğu getirmiyorsa BOŞ BIRAK; tavsiye üretme.'],
+            'analiz_islem'    => ['type' => 'string', 'description' => 'NE YAPILMALI: kaynağın ZORUNLU KILDIĞI somut adım ve kuralın doğrudan gerektirdiği kontroller; birden fazlaysa "- " ile başlayan satırlar, en fazla 5. Yoksa BOŞ BIRAK; genel tavsiye üretme.'],
+            'isletme_etkisi'  => ['type' => 'string', 'description' => 'İŞLETMEYE ETKİSİ: maliyet, nakit akışı, fiyatlama, finansman ya da vergi yüküne hangi yoldan yansıdığı; 1-3 cümle. Özellikle ekonomi haberlerinde. Belirgin etki yoksa boş.'],
+            'uygulama_ornegi' => ['type' => 'string', 'description' => 'UYGULAMA ÖRNEĞİ: kaynaktaki oran/kuralla, varsayımsal yuvarlak rakamlarla adım adım hesaplama ya da Tekdüzen Hesap Planı ile muhasebe kaydı. Uygulanabilir kural yoksa ya da emin değilsen boş.'],
+            'resmi_dayanak'   => ['type' => 'string', 'description' => 'RESMÎ DAYANAK: kanun/madde, tebliğ sıra no, karar sayısı, Resmî Gazete tarih ve sayısı; yalnızca kaynakta geçenler, yoksa boş.'],
         ],
         'required' => [
             'sira', 'ilgili', 'red_nedeni', 'baslik', 'ozet', 'icerik',
             'etiketler', 'kategori', 'guven_skoru', 'ajan_notu',
             'analiz_degisen', 'analiz_etkilenen', 'analiz_zaman', 'analiz_islem',
+            'isletme_etkisi', 'uygulama_ornegi', 'resmi_dayanak',
         ],
     ];
 
