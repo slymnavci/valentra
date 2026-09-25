@@ -62,7 +62,9 @@ function ekonomi_seriler(): array
 
         'enflasyon-orani' => [
             'saglayici'  => 'evds',
-            'seri'       => 'TP.FG.J0',
+            // 2025=100 bazli genel endeks. TP.FG.J0 (2003=100) Ocak 2026'da
+            // arsive alindi; yeni serinin gecmisi 2005'e uzaniyor.
+            'seri'       => 'TP.TUKFIY2025.GENEL',
             'hesap'      => 'tufe',         // endeksten degisim hesapla
             'birim'      => 'yuzde',
             // 24 aylik yillik degisim icin 36 aylik endeks gerekiyor:
@@ -284,10 +286,28 @@ function ekonomi_evds_cozumle(array $seri, array $veri): array
         return $bos + ['hata' => $okuma['hata'], 'tekrar' => $okuma['tekrar']];
     }
 
-    $dizi = $okuma['gozlemler'];
+    $dizi  = $okuma['gozlemler'];
+    $devam = ['not' => '', 'uyari' => ''];
+
+    /*
+     * Baz yili degisen seride yeni bazli devam da aliniyor: ya
+     * ekonomi_oku() anahtarla kendisi cekiyor ya da ajanin site yedegi
+     * devam serisinin ham govdesini veriyor ('devam_govde').
+     */
+    if (($seri['evds_anahtari'] ?? '') !== '' || isset($seri['devam_govde'])) {
+        $devam = ekonomi_evds_devam_ekle($dizi, $seri, (string) ($seri['evds_anahtari'] ?? ''),
+                                         15, isset($seri['devam_govde']) ? (string) $seri['devam_govde'] : null);
+        $dizi  = $devam['gozlemler'];
+    }
 
     if ((string) ($seri['hesap'] ?? '') === 'tufe') {
-        return ekonomi_tufe_hesapla($dizi);
+        $sonuc = ekonomi_tufe_hesapla($dizi);
+
+        if (!empty($sonuc['tamam']) && ($devam['not'] !== '' || $devam['uyari'] !== '')) {
+            $sonuc['not'] = trim($sonuc['not'] . ' ' . $devam['not'] . ' ' . $devam['uyari']);
+        }
+
+        return $sonuc;
     }
 
     $son = $dizi[count($dizi) - 1];
@@ -380,6 +400,164 @@ function ekonomi_evds_gozlemler(array $veri, string $kod): array
     usort($dizi, static fn (array $a, array $b): int => strcmp($a['iso'], $b['iso']));
 
     return ['tamam' => true, 'gozlemler' => $dizi, 'hata' => '', 'tekrar' => false];
+}
+
+/**
+ * Baz yılı değişen EVDS serilerinin devamı: eski kod => yeni kod.
+ *
+ * TUIK Ocak 2026 verisiyle TUFE'nin baz yilini 2003=100'den 2025=100'e
+ * tasidi. Eski seri (TP.FG.J0) orada durdu ve grafik Ocak'ta takili
+ * kaldi. Eski kodu kullanan her yer (pratik bilgi, panelde tanimli
+ * grafikler) yeni seriyi KENDILIGINDEN ekliyor; panelde hicbir tanimi
+ * degistirmek gerekmiyor.
+ *
+ * Kod EVDS'in kendi listesinden dogrulandi (25 Eylul 2026, site
+ * uzerinden): bie_tukfiy2025 grubu, "Genel Endeks", 2005-01'den beri.
+ * TP.FG.J0'in listedeki adi "(Arsiv)", bitis tarihi 01-01-2026.
+ * Devam serisi bir gun alinamazsa eski seri eskisi gibi cizilir ve
+ * sebebi panelde/gunlukte yazar.
+ *
+ * @return array<string,string>
+ */
+function ekonomi_evds_devamlari(): array
+{
+    return [
+        'TP.FG.J0' => 'TP.TUKFIY2025.GENEL',
+    ];
+}
+
+/** Serinin devam kodu; yoksa null. */
+function ekonomi_evds_devami(string $kod): ?string
+{
+    return ekonomi_evds_devamlari()[strtoupper(trim($kod))] ?? null;
+}
+
+/**
+ * Eski bazlı seriyi yeni bazlı seriye bağlar.
+ *
+ * Yeni seri, verisi olan HER AYDA esas; eski seri yalnizca yeni serinin
+ * baslangicindan onceki aylari tamamliyor. Eski degerler yeni baza
+ * olceklenerek aliniyor (katsayi = yeni / eski, ILK ortak ayda): boylece
+ * son degerler TUIK bulteniyle bire bir ayni kaliyor ve yillik degisim
+ * iki bazi birbirine oranlamiyor.
+ *
+ * Ortak ay yoksa BAGLANMIYOR: katsayi bilinmeden iki endeksi yan yana
+ * koymak yillik degisimi uydurmak olur. O durumda yeni seri tek basina
+ * yillik karsilastirmaya yetiyorsa (13+ ay) o, yetmiyorsa eski seri
+ * donuyor.
+ *
+ * @param list<array{tarih:string,iso:string,deger:float}> $eski tarihe gore sirali
+ * @param list<array{tarih:string,iso:string,deger:float}> $yeni tarihe gore sirali
+ * @return array{gozlemler:list<array{tarih:string,iso:string,deger:float}>,baglandi:bool,not:string}
+ */
+function ekonomi_evds_zincirle(array $eski, array $yeni): array
+{
+    if ($yeni === []) {
+        return ['gozlemler' => $eski, 'baglandi' => false, 'not' => ''];
+    }
+
+    if ($eski === []) {
+        return ['gozlemler' => $yeni, 'baglandi' => false, 'not' => ''];
+    }
+
+    $eskiAy = [];
+
+    foreach ($eski as $g) {
+        $eskiAy[substr($g['iso'], 0, 7)] = $g;
+    }
+
+    $katsayi = null;
+    $ortakAy = '';
+
+    foreach ($yeni as $g) {
+        $ay = substr($g['iso'], 0, 7);
+
+        if (isset($eskiAy[$ay]) && $eskiAy[$ay]['deger'] > 0.0 && $g['deger'] > 0.0) {
+            $katsayi = $g['deger'] / $eskiAy[$ay]['deger'];
+            $ortakAy = $ay;
+            break;
+        }
+    }
+
+    if ($katsayi === null) {
+        $yeterli = count($yeni) >= 13;
+
+        return ['gozlemler' => $yeterli ? $yeni : $eski, 'baglandi' => false,
+                'not' => 'Eski ve yeni seride ortak ay yok; '
+                       . ($yeterli ? 'yalnızca yeni seri kullanıldı.' : 'yalnızca eski seri kullanıldı.')];
+    }
+
+    $ilkYeni = $yeni[0]['iso'];
+    $sonuc   = [];
+
+    foreach ($eski as $g) {
+        if ($g['iso'] >= $ilkYeni) {
+            break;
+        }
+
+        $sonuc[] = ['tarih' => $g['tarih'], 'iso' => $g['iso'], 'deger' => $g['deger'] * $katsayi];
+    }
+
+    return ['gozlemler' => array_merge($sonuc, $yeni), 'baglandi' => true,
+            'not' => 'Eski bazlı seri ' . $ortakAy . ' ayında yeni baza bağlandı.'];
+}
+
+/**
+ * Devamı olan seriye yeni bazlı gözlemleri ekler (ayrı bir EVDS isteğiyle).
+ *
+ * ASLA BOZMAZ: devam serisi alinamazsa gelen gozlemler aynen doner,
+ * sebep 'uyari'da. Eski serinin calisan verisi yeni kodun hatasi
+ * yuzunden kaybolmasin diye iki seri AYRI istekle aliniyor, EVDS'in
+ * coklu seri sorgusuyla degil.
+ *
+ * @param list<array{tarih:string,iso:string,deger:float}> $gozlemler
+ * @param array<string,mixed> $tanim ekonomi_adres() tanimi (saglayici, seri, gerigit)
+ * @return array{gozlemler:list<array{tarih:string,iso:string,deger:float}>,uyari:string,not:string}
+ */
+function ekonomi_evds_devam_ekle(array $gozlemler, array $tanim, string $evdsAnahtari,
+                                 int $zamanAsimi = 15, ?string $hazirGovde = null): array
+{
+    $devam = ekonomi_evds_devami((string) $tanim['seri']);
+
+    if ($devam === null || (string) $tanim['saglayici'] !== 'evds'
+        || ($evdsAnahtari === '' && $hazirGovde === null)) {
+        return ['gozlemler' => $gozlemler, 'uyari' => '', 'not' => ''];
+    }
+
+    /*
+     * $hazirGovde: ajanin site yedegi devam serisini de site uzerinden
+     * cekip ham govdeyi veriyor (GitHub IP'si EVDS'e ulasamadiginda).
+     */
+    if ($hazirGovde !== null) {
+        $yanit = ['tamam' => true, 'govde' => $hazirGovde];
+    } else {
+        $devamTanim = ['seri' => $devam] + $tanim;
+        $yanit      = http_getir(ekonomi_adres($devamTanim), $zamanAsimi, '',
+                                 ekonomi_basliklar($devamTanim, $evdsAnahtari));
+    }
+
+    $okuma = ['tamam' => false, 'hata' => (string) ($yanit['neden'] ?? 'istek başarısız')];
+
+    if ($yanit['tamam']) {
+        $veri  = json_decode((string) $yanit['govde'], true);
+        $okuma = is_array($veri)
+            ? ekonomi_evds_gozlemler($veri, $devam)
+            : ['tamam' => false, 'hata' => 'Yanıt JSON değil: ' . ekonomi_kirp((string) $yanit['govde'])];
+    }
+
+    if (!$okuma['tamam']) {
+        $uyari = 'Yeni bazlı devam serisi (' . $devam . ') alınamadı, yalnızca '
+               . $tanim['seri'] . ' kullanıldı: ' . $okuma['hata'];
+        error_log('[valentra] ' . $uyari);
+
+        return ['gozlemler' => $gozlemler, 'uyari' => $uyari, 'not' => ''];
+    }
+
+    $zincir = ekonomi_evds_zincirle($gozlemler, $okuma['gozlemler']);
+
+    return ['gozlemler' => $zincir['gozlemler'],
+            'uyari'     => $zincir['baglandi'] ? '' : $zincir['not'],
+            'not'       => $zincir['not'] . ' (' . $tanim['seri'] . ' → ' . $devam . ')'];
 }
 
 /**
@@ -893,5 +1071,5 @@ function ekonomi_oku(array $seri, string $evdsAnahtari = ''): array
                 'hata'  => (string) $yanit['neden']] + $kunye;
     }
 
-    return ekonomi_cozumle($seri, (string) $yanit['govde']) + $kunye;
+    return ekonomi_cozumle($seri + ['evds_anahtari' => $evdsAnahtari], (string) $yanit['govde']) + $kunye;
 }

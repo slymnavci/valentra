@@ -17,6 +17,12 @@ require_once __DIR__ . '/grafik.php';
 
 $anaGrafikler = ($sayfa ?? 1) === 1 ? grafik_ana_sayfa() : [];
 
+// Bayat grafikler sayfa gonderildikten SONRA tazeleniyor; ziyaretci
+// beklemiyor. Ajanin durtmesi siteye ulasamadiginda da grafikler guncel.
+if (($sayfa ?? 1) === 1) {
+    grafik_sayfa_sonunda_tazele();
+}
+
 if ($anaGrafikler === []) {
     return;
 }

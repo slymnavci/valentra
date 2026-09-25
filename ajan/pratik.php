@@ -143,7 +143,14 @@ foreach ($bilgiler as $bilgi) {
         $ham   = $adres !== '' ? $site->hamGetir($adres) : null;
 
         if ($ham !== null) {
-            $siteOkuma = ekonomi_cozumle($seri, $ham);
+            // Baz yili degisen seride (TUFE) yeni bazli devam da site
+            // uzerinden aliniyor; alinamazsa eski seri tek basina cozulur.
+            $devamKod = ekonomi_evds_devami((string) $seri['seri']);
+            $devamHam = $devamKod !== null && $seri['saglayici'] === 'evds'
+                ? $site->hamGetir(ekonomi_adres(['seri' => $devamKod] + $seri))
+                : null;
+
+            $siteOkuma = ekonomi_cozumle($seri + ($devamHam !== null ? ['devam_govde' => $devamHam] : []), $ham);
 
             if ($siteOkuma['tamam']) {
                 gunluk('      doğrudan istek düştü, site üzerinden alındı.');
