@@ -256,6 +256,9 @@ function egitim_yonetici_kaydet(string $kullaniciAdi, string $ad, string $eposta
     require_once EGITIM_KOK . '/api/db.php';
     ppBaglan();
 
+    // Hesap yokken yapilan denemeler girisi kilitlemis olabilir.
+    egitim_kilitleri_temizle();
+
     $hash = password_hash($sifre, PASSWORD_DEFAULT);
     $var  = db()->prepare('SELECT 1 FROM kullanici_hesap WHERE kullanici_adi = ?');
     $var->execute([$kullaniciAdi]);
@@ -276,4 +279,17 @@ function egitim_yonetici_kaydet(string $kullaniciAdi, string $ad, string $eposta
     )->execute([$kullaniciAdi, $ad, $eposta, $hash, gmdate('Y-m-d H:i:s')]);
 
     return ['tamam' => true, 'mesaj' => $kullaniciAdi . ' yönetici olarak oluşturuldu. valentra.com.tr/egitim adresinden giriş yapabilirsiniz.'];
+}
+
+/**
+ * Egitim girisindeki hatali deneme kilitlerini siler (bkz.
+ * egitim/api/db.php: ppDenemeSiniri). Donen deger silinen kayit sayisi.
+ */
+function egitim_kilitleri_temizle(): int
+{
+    try {
+        return db()->exec("DELETE FROM giris_deneme WHERE tur = 'giris'") ?: 0;
+    } catch (PDOException $e) {
+        return 0;   // tablo henuz yok: kilit de yok
+    }
 }
