@@ -35,11 +35,13 @@
                 <a href="/" target="_blank" rel="noopener">Siteyi gör</a>
                 <a href="istatistik.php">Ziyaretçiler</a>
                 <a href="kose-yazilari.php">Köşe yazıları</a>
+                <a href="rehberler.php">Rehberler</a>
                 <a href="ajan.php">Ajan</a>
                 <a href="pratik.php">Pratik bilgiler</a>
                 <a href="grafikler.php">Grafikler</a>
                 <a href="kaynaklar.php">Kaynaklar</a>
                 <a href="kanunlar.php">Kanun metinleri</a>
+                <a href="google.php">Google görünürlüğü</a>
                 <a href="seo.php">Arama motoru</a>
                 <a href="veritabani.php">Veritabanı</a>
                 <a href="anahtarlar.php">Ajan anahtarları</a>

@@ -14,6 +14,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/includes/bootstrap.php';
+require_once __DIR__ . '/includes/rehberler.php';
 require_once __DIR__ . '/includes/seo.php';
 
 $aktifKategori = 'araclar';
@@ -85,6 +86,11 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <p class="arac-aciklama">
             Vadeli satışta ya da geç ödemede, yıllık orana göre basit faizle vade farkını hesaplayın.
         </p>
+        <?php if (($rehber = rehber_araca_gore('vade-farki')) !== null): ?>
+            <p class="arac-rehber">
+                <a href="<?= e(rehber_yolu((string) $rehber['slug'])) ?>">Formül, örnek ve muhasebe kaydı: rehberi okuyun &rarr;</a>
+            </p>
+        <?php endif; ?>
 
         <form class="arac-form" data-arac="vade" novalidate>
             <label class="arac-alan">
@@ -132,6 +138,11 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <p class="arac-aciklama">
             Sabit giderlerinizi karşılamak için kaç adet ya da ne kadarlık satış gerektiğini bulun.
         </p>
+        <?php if (($rehber = rehber_araca_gore('basabas')) !== null): ?>
+            <p class="arac-rehber">
+                <a href="<?= e(rehber_yolu((string) $rehber['slug'])) ?>">Formül, örnek ve muhasebe kaydı: rehberi okuyun &rarr;</a>
+            </p>
+        <?php endif; ?>
 
         <form class="arac-form" data-arac="basabas" novalidate>
             <label class="arac-alan">

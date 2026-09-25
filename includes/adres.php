@@ -180,3 +180,17 @@ function arama_yolu(string $sorgu = ''): string
 
     return $sorgu !== '' ? $yol . '?q=' . rawurlencode($sorgu) : $yol;
 }
+
+/** Uygulama rehberleri listesi. */
+function rehberler_yolu(): string
+{
+    return temiz_adres_acik() ? '/rehberler' : '/rehberler.php';
+}
+
+/** Tek rehber. */
+function rehber_yolu(string $slug): string
+{
+    return temiz_adres_acik()
+        ? '/rehber/' . rawurlencode($slug)
+        : '/rehber.php?r=' . rawurlencode($slug);
+}

@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/rehberler.php';
+
 /**
  * Ust menu.
  *
@@ -96,10 +98,18 @@ function site_menusu(array $kategoriMenu): array
         $agac('muhasebe-denetim', 'Muhasebe ve Denetim'),
     );
 
-    $rehberler = [
+    $rehberler = [];
+
+    // Uygulama rehberleri yalnizca yayinda rehber varsa: bos bir listeye
+    // gondermek yerine baglantiyi hic gostermiyoruz.
+    if (function_exists('rehber_yayinda_sayisi') && rehber_yayinda_sayisi() > 0) {
+        $rehberler[] = ['ad' => 'Uygulama Rehberleri', 'anahtar' => 'rehberler', 'href' => rehberler_yolu(), 'adet' => 0];
+    }
+
+    $rehberler = array_merge($rehberler, [
         ['ad' => 'Pratik Bilgiler', 'anahtar' => 'pratik', 'href' => pratik_yolu(), 'adet' => 0],
         ['ad' => 'Vergi Takvimi',   'anahtar' => 'takvim', 'href' => takvim_yolu(), 'adet' => 0],
-    ];
+    ]);
 
     $menu = [
         ['ad' => 'Gündem',           'anahtar' => 'gundem',   'href' => null, 'altlar' => $gundem],

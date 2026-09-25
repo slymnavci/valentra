@@ -1340,3 +1340,71 @@ CREATE TABLE IF NOT EXISTS kose_yazilari (
     KEY ix_kose_durum_gun (durum, gun, sira),
     CONSTRAINT fk_kose_onaylayan FOREIGN KEY (onaylayan_id) REFERENCES yoneticiler (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Google Search Console verisi — 25.09.2026
+--
+-- Servis hesabiyla (salt okunur) site cekiyor; bkz. includes/search_console.php.
+-- gsc_gunluk: gunluk tiklama/gosterim toplami (egilim cizgisi ve donem
+-- karsilastirmasi). gsc_denetim: URL denetimi — sayfa dizinde mi, degilse
+-- Google'in gosterdigi sebep. Son 28 gunun sorgu ve sayfa tablolari
+-- ayarlar'da JSON olarak duruyor (her tazelemede tamamen yenileniyor).
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS gsc_gunluk (
+    tarih     DATE          NOT NULL,
+    tiklama   INT UNSIGNED  NOT NULL DEFAULT 0,
+    gosterim  INT UNSIGNED  NOT NULL DEFAULT 0,
+    ctr       DECIMAL(7,4)  NOT NULL DEFAULT 0,
+    sira      DECIMAL(7,2)  NOT NULL DEFAULT 0,
+
+    PRIMARY KEY (tarih)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS gsc_denetim (
+    id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    url_ozet        CHAR(64)     NOT NULL,
+    url             VARCHAR(500) NOT NULL,
+    sonuc           VARCHAR(20)  NOT NULL DEFAULT '',
+    kapsam          VARCHAR(200) NOT NULL DEFAULT '',
+    son_tarama      DATETIME     NULL,
+    google_kanonik  VARCHAR(500) NULL,
+    robots          VARCHAR(40)  NOT NULL DEFAULT '',
+    getirme         VARCHAR(60)  NOT NULL DEFAULT '',
+    denetlendi      DATETIME     NOT NULL,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_gsc_url (url_ozet)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Uygulama rehberleri — 25.09.2026
+--
+-- Kalici (haber gibi eskimeyen) icerik: "vade farki nasil hesaplanir",
+-- "nakit akis tablosu nasil hazirlanir" gibi. Haberlerden ayri tablo:
+-- tarihe gore akmiyor, guncellendikce ayni adreste kaliyor ve
+-- "son guncelleme" tarihi okuyucuya gosteriliyor.
+--
+-- Hazirlayan ve kontrol eden ayri alanlar: arama motorlari ve okuyucu
+-- icin metni kimin yazdigi ve kimin denetledigi acik olmali. Taslak
+-- yayina ancak panelden onayla cikar.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS rehberler (
+    id            INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    baslik        VARCHAR(200)  NOT NULL,
+    slug          VARCHAR(220)  NOT NULL,
+    ozet          VARCHAR(400)  NOT NULL DEFAULT '',
+    icerik        MEDIUMTEXT    NOT NULL,
+    konu          VARCHAR(80)   NOT NULL DEFAULT '',
+    arac          VARCHAR(40)   NOT NULL DEFAULT '',
+    hazirlayan    VARCHAR(160)  NOT NULL DEFAULT 'Valentra Yayın Kurulu',
+    kontrol_eden  VARCHAR(160)  NULL,
+    durum         ENUM('taslak','yayinda') NOT NULL DEFAULT 'taslak',
+    sira          INT           NOT NULL DEFAULT 100,
+    yayin_tarihi  DATETIME      NULL,
+    olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    guncellendi   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_rehber_slug (slug),
+    KEY ix_rehber_durum (durum, sira)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

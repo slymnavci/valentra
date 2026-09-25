@@ -128,6 +128,25 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         </url>
     <?php endforeach; ?>
 
+    <?php
+    /* Uygulama rehberleri: kalici icerik, guncellendikce lastmod ilerliyor. */
+    require_once __DIR__ . '/includes/rehberler.php';
+    $rehberler = rehber_yayindakiler();
+    ?>
+    <?php if ($rehberler !== []): ?>
+        <url>
+            <loc><?= e($taban . rehberler_yolu()) ?></loc>
+            <changefreq>weekly</changefreq>
+        </url>
+    <?php endif; ?>
+    <?php foreach ($rehberler as $rehber): ?>
+        <url>
+            <loc><?= e($taban . rehber_yolu((string) $rehber['slug'])) ?></loc>
+            <lastmod><?= e($zaman((string) $rehber['guncellendi'])) ?></lastmod>
+            <priority>0.8</priority>
+        </url>
+    <?php endforeach; ?>
+
     <?php foreach ($kategoriler as $kategori): ?>
         <url>
             <loc><?= e($taban . kategori_yolu((string) $kategori['slug'])) ?></loc>

@@ -183,3 +183,29 @@ function arama_resmi_gazete(array $kelimeler, int $limit = 8): array
 
     return $ifade->fetchAll();
 }
+
+/**
+ * Yayindaki uygulama rehberleri.
+ *
+ * @param list<string> $kelimeler
+ * @return list<array<string,mixed>>
+ */
+function arama_rehberler(array $kelimeler, int $limit = 8): array
+{
+    if ($kelimeler === []) {
+        return [];
+    }
+
+    [$kosul, $degerler] = arama_kosulu($kelimeler, ['baslik', 'ozet', 'konu', 'icerik'], 'g');
+    [$puan, $puanDeger] = arama_baslik_puani($kelimeler, 'baslik', 'gb');
+
+    $ifade = db()->prepare(
+        "SELECT baslik, slug, ozet, konu FROM rehberler
+          WHERE durum = 'yayinda' AND " . $kosul . '
+          ORDER BY ' . $puan . ' DESC, sira
+          LIMIT ' . max(1, $limit)
+    );
+    $ifade->execute($degerler + $puanDeger);
+
+    return $ifade->fetchAll();
+}

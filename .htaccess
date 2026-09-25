@@ -76,6 +76,12 @@
     RewriteCond %{THE_REQUEST} \s/araclar\.php[\s?] [NC]
     RewriteRule ^ /araclar? [R=301,L]
 
+    RewriteCond %{THE_REQUEST} \s/rehberler\.php[\s?] [NC]
+    RewriteRule ^ /rehberler? [R=301,L]
+
+    RewriteCond %{THE_REQUEST} \s/rehber\.php\?r=([^\s&]+) [NC]
+    RewriteRule ^ /rehber/%1? [R=301,L]
+
     RewriteCond %{THE_REQUEST} \s/index\.php[\s?] [NC]
     RewriteRule ^ /? [R=301,L]
 
@@ -113,6 +119,14 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ara/?$ ara.php [L,QSA]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^rehberler/?$ rehberler.php [L,QSA]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^rehber/([^/]+)/?$ rehber.php?r=$1 [L,QSA]
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
