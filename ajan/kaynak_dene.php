@@ -272,6 +272,13 @@ if ($evdsGirdi !== '') {
     $hata = 0;
 
     foreach (array_filter(array_map('trim', explode(';', $evdsGirdi))) as $yol) {
+        // "yol ~ kelime": liste yanitinda yalnizca kelimeyi iceren ogeler.
+        $ara = '';
+
+        if (str_contains($yol, '~')) {
+            [$yol, $ara] = array_map('trim', explode('~', $yol, 2));
+        }
+
         $adres = 'https://evds3.tcmb.gov.tr/igmevdsms-dis/' . ltrim($yol, '/');
         $ham   = $site->hamGetir($adres);
 
@@ -285,6 +292,26 @@ if ($evdsGirdi !== '') {
         }
 
         $veri = json_decode($ham, true);
+
+        if ($ara !== '' && is_array($veri) && array_is_list($veri)) {
+            $bulunan = array_values(array_filter(
+                $veri,
+                static fn ($o): bool => mb_stripos((string) json_encode($o, JSON_UNESCAPED_UNICODE), $ara, 0, 'UTF-8') !== false
+            ));
+            yaz('  "' . $ara . '" geçen ' . count($bulunan) . ' / ' . count($veri) . ' öğe:');
+
+            foreach (array_slice($bulunan, 0, 40) as $oge) {
+                // Uzun meta alanlari atlaniyor; kod, ad ve tarih yeterli.
+                $kisa = is_array($oge) ? array_intersect_key($oge, array_flip([
+                    'CATEGORY_ID', 'TOPIC_TITLE_TR', 'DATAGROUP_CODE', 'DATAGROUP_NAME', 'SERIE_CODE',
+                    'SERIE_NAME', 'START_DATE', 'END_DATE', 'FREQUENCY_STR', 'UST_CATEGORY_ID',
+                ])) : $oge;
+                yaz('  ' . json_encode($kisa, JSON_UNESCAPED_UNICODE));
+            }
+
+            yaz();
+            continue;
+        }
 
         // Seri yanitinda son gozlemler en onemlisi: sondan 8 satir.
         if (is_array($veri) && isset($veri['items']) && is_array($veri['items'])) {
