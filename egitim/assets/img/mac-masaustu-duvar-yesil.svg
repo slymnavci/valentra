@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="gok" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f3d3a"/>
+      <stop offset="45%" stop-color="#1f7a63"/>
+      <stop offset="100%" stop-color="#a9d9a0"/>
+    </linearGradient>
+    <linearGradient id="tepeArka" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4f9a72"/>
+      <stop offset="100%" stop-color="#7fbd8f"/>
+    </linearGradient>
+    <linearGradient id="tepeOrta" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#276b52"/>
+      <stop offset="100%" stop-color="#38835f"/>
+    </linearGradient>
+    <linearGradient id="tepeOn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#123a30"/>
+      <stop offset="100%" stop-color="#1a4a3a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="1000" fill="url(#gok)"/>
+  <circle cx="1230" cy="220" r="150" fill="#ffffff" opacity=".16"/>
+
+  <path d="M0,560 C260,470 430,470 620,540 C830,615 980,470 1180,520 C1350,562 1480,520 1600,560 L1600,1000 L0,1000 Z" fill="url(#tepeArka)"/>
+  <path d="M0,690 C220,610 470,660 700,610 C930,560 1130,660 1360,600 C1460,575 1540,590 1600,620 L1600,1000 L0,1000 Z" fill="url(#tepeOrta)"/>
+  <path d="M0,830 C260,760 520,820 780,770 C1020,725 1260,800 1600,750 L1600,1000 L0,1000 Z" fill="url(#tepeOn)"/>
+</svg>

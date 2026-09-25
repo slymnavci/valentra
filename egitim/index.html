@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>YMM Hazırlık Platformu</title>
+<meta name="description" content="Yeminli Mali Müşavirlik sınavı için kişisel çalışma, ilerleme takip ve soru bankası platformu">
+<link rel="stylesheet" href="assets/css/style.css?v=11">
+<link rel="stylesheet" href="assets/css/faz15.css?v=2">
+<link rel="stylesheet" href="assets/css/ai-history.css?v=1">
+<link rel="stylesheet" href="assets/css/macos-theme.css?v=3">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📘</text></svg>">
+</head>
+<body>
+<div id="girisEkrani"></div>
+<div class="app" id="uygulama" style="display:none">
+  <div class="mac-masaustu-duvar" id="macMasaustuDuvar"></div>
+  <button class="menu-toggle" onclick="menuAc()">☰</button>
+  <aside class="sidebar">
+    <div class="sidebar-brand"><div class="brand-lockup"><span class="brand-ikon">📘</span><h1>YMM Hazırlık<br>Platformu</h1></div><span>Kişisel Çalışma Platformu</span></div>
+    <div class="sidebar-nav"><nav id="navAlan"></nav></div>
+    <div class="sidebar-bottom"><div class="kullanici-kutu"><strong id="kullaniciAd">—</strong><span id="kullaniciRol">—</span></div><div class="sidebar-footer"><a href="/" style="display:inline-block;margin-bottom:8px;font-weight:600;">&larr; valentra.com.tr</a><br>İlerlemeniz bu tarayıcıda saklanır.<br>Ayarlar bölümünden düzenli yedek alın.<div style="margin-top:9px">© <span id="year"></span></div></div></div>
+  </aside>
+  <main class="main"><div id="content"></div></main>
+</div>
+<div class="foto-goruntule" id="gorselModal"><div class="foto-kare"><img id="gorselModalImg" src="" alt=""><div class="foto-metin" id="gorselModalBaslik"></div><div class="foto-kontrol"><span></span><button class="btn btn-sm" onclick="gorselModalKapat()">Kapat ✕</button></div></div></div>
+<div class="foto-goruntule" id="fotoModal"><div class="foto-kare"><img id="fotoModalImg" src="" alt=""><div class="foto-metin" id="fotoModalMetin"></div><div class="foto-kontrol"><button class="btn btn-sm" onclick="fotoModalOnceki()">‹ Önceki</button><span id="fotoModalSayac" class="muted"></span><button class="btn btn-sm" onclick="fotoModalSonraki()">Sonraki ›</button></div><div class="foto-kontrol"><span></span><button class="btn btn-sm" onclick="fotoModalKapat()">Kapat ✕</button></div></div></div>
+<script src="assets/js/data.js?v=3"></script>
+<script src="assets/js/questions.js?v=3"></script>
+<script src="assets/js/icerik-yukle.js?v=10"></script>
+<script src="assets/js/editor.js?v=4"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js" integrity="sha512-9Wd08apcJEwm8g3lBTg1UW/njdN0iuuOVWKpyinK3uA7ISAE5PmEZ4y8bZYTXVOE3tlt7aFlCBBLmLt5cUxe2Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="assets/js/pdf-ozet.js?v=3"></script>
+<script src="assets/js/vendor/jszip.min.js?v=1"></script>
+<script src="assets/js/pptx-donustur.js?v=2"></script>
+<script src="assets/js/pratik-api.js?v=2"></script>
+<script src="assets/js/kullanici-api.js?v=8"></script>
+<script src="assets/js/auth.js?v=3"></script>
+<script src="assets/js/assistant.js?v=4"></script>
+<script src="assets/js/assistant-persist.js?v=1"></script>
+<script src="assets/js/ai-history.js?v=1"></script>
+<script src="assets/js/app.js?v=28"></script>
+<script src="assets/js/cross-device-sync.js?v=1"></script>
+<script src="assets/js/faz15-guard.js?v=1"></script>
+<script src="assets/js/faz15.js?v=1"></script>
+<script src="assets/js/slide-fit-fix.js?v=1"></script>
+<script src="assets/js/ai-fix.js?v=1"></script>
+</body>
+</html>

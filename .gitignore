@@ -16,3 +16,9 @@ includes/sertifika/ca-bundle-guncel.crt
 # Panelden yuklenen kanun PDF'leri; depoya girmez.
 includes/kanun_pdf/
 ajan/onbellek/
+
+# Egitim platformunun icerigi (dersler, soru bankasi) ve materyalleri
+# sunucuda duruyor; uyelere ozel oldugu icin herkese acik depoya girmez.
+# Aktarim: panel -> Egitim.
+egitim/content/
+egitim/materyaller/
