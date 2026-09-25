@@ -123,6 +123,8 @@ jobs:
             --exclude-glob .github/** \
             --exclude-glob node_modules/ \
             --exclude-glob node_modules/** \
+            --exclude-glob egitim/content/** \
+            --exclude-glob egitim/materyaller/** \
             . .
 
           bye

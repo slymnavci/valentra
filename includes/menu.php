@@ -116,6 +116,9 @@ function site_menusu(array $kategoriMenu): array
         ['ad' => 'Vergi ve Mevzuat', 'anahtar' => 'mevzuat',  'href' => null, 'altlar' => $mevzuat],
         ['ad' => 'Muhasebe ve TFRS', 'anahtar' => 'muhasebe', 'href' => null, 'altlar' => $muhasebe],
         ['ad' => 'Rehberler',        'anahtar' => 'rehber',   'href' => null, 'altlar' => $rehberler],
+        // TMS/TFRS egitim platformu (uyelere acik, kendi girisi var);
+        // suleymanavci.com.tr'den tasindi.
+        ['ad' => 'Eğitim',           'anahtar' => 'egitim',   'href' => '/egitim/',     'altlar' => []],
         ['ad' => 'Araçlar',          'anahtar' => 'araclar',  'href' => araclar_yolu(), 'altlar' => []],
     ];
 

@@ -10,6 +10,11 @@ Disallow: /api/
 Disallow: /kurulum.php
 Disallow: /tani.php
 
+# Egitim platformu uyelere acik; API ve dosyalar taranmamali.
+Disallow: /egitim/api/
+Disallow: /egitim/materyaller/
+Disallow: /egitim/content/
+
 # Sayfalama ayni haberleri tekrar gosteriyor; asil deger ana sayfada.
 Disallow: /*?sayfa=
 

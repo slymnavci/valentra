@@ -36,6 +36,7 @@
                 <a href="istatistik.php">Ziyaretçiler</a>
                 <a href="kose-yazilari.php">Köşe yazıları</a>
                 <a href="rehberler.php">Rehberler</a>
+                <a href="egitim.php">Eğitim</a>
                 <a href="ajan.php">Ajan</a>
                 <a href="pratik.php">Pratik bilgiler</a>
                 <a href="grafikler.php">Grafikler</a>
