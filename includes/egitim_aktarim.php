@@ -9,7 +9,7 @@ declare(strict_types=1);
  * panel sayfasindaki betik her adimda tek bir tablo sayfasi ya da tek
  * bir dosya istiyor. Paylasimli hostingde tek istekte her seyi cekmek
  * zaman asimina ugrardi; parcali aktarim kesilirse kaldigi yerden
- * yeniden baslatilabilir (tablolarda REPLACE, dosyalarda sha1 karsilastirmasi).
+ * yeniden baslatilabilir (tablolarda REPLACE, materyallerde boyut karsilastirmasi).
  *
  * Finansal modul (fin_* tablolari, private-data/) tasinmiyor; eski
  * uc onlari hic vermiyor.
@@ -82,7 +82,8 @@ function egitim_baglan(string $adres, string $kullanici, string $sifre, string $
         return ['tamam' => false, 'hata' => 'Bu hesap yönetici değil; aktarım yönetici hesabıyla yapılmalı.', 'token' => '', 'ozet' => []];
     }
 
-    $ozet = egitim_istek($adres . '/api/disa_aktar.php?islem=ozet', null, egitim_basliklar($anahtar, $token));
+    // Buyuk materyal klasorlerinde liste birkac dakika surebilir.
+    $ozet = egitim_istek($adres . '/api/disa_aktar.php?islem=ozet', null, egitim_basliklar($anahtar, $token), 240);
 
     if (!$ozet['tamam']) {
         return ['tamam' => false, 'token' => '', 'ozet' => [],
@@ -179,11 +180,16 @@ function egitim_tablo_aktar(string $adres, string $anahtar, string $token, strin
 }
 
 /**
- * Tek bir dosyayi aktarir; ayni sha1 ile zaten varsa atlar.
+ * Tek bir dosyayi aktarir; ayni boyutta zaten varsa atlar.
+ *
+ * Dosya DOGRUDAN DISKE indiriliyor (gecici dosya, sonra yerine
+ * tasiniyor): materyaller 80 MB'a kadar PDF olabiliyor, bellege almak
+ * PHP bellek sinirini asardi. Eksik inen dosya boyutundan anlasiliyor
+ * ve yerine konmuyor.
  *
  * @return array{tamam:bool,hata:string,atlandi:bool}
  */
-function egitim_dosya_aktar(string $adres, string $anahtar, string $token, string $yol, string $sha1): array
+function egitim_dosya_aktar(string $adres, string $anahtar, string $token, string $yol, int $boyut): array
 {
     if (preg_match('#^(content|materyaller)/[^\0]+$#', $yol) !== 1 || str_contains($yol, '..')) {
         return ['tamam' => false, 'hata' => 'Geçersiz dosya yolu: ' . $yol, 'atlandi' => false];
@@ -191,19 +197,10 @@ function egitim_dosya_aktar(string $adres, string $anahtar, string $token, strin
 
     $hedef = EGITIM_KOK . '/' . $yol;
 
-    if (is_file($hedef) && sha1_file($hedef) === $sha1) {
+    // content/*.json her seferinde yeniden aliniyor (kucukler ve ayni
+    // boyutta degismis olabilirler); materyaller boyut tutuyorsa atlaniyor.
+    if (str_starts_with($yol, 'materyaller/') && is_file($hedef) && filesize($hedef) === $boyut) {
         return ['tamam' => true, 'hata' => '', 'atlandi' => true];
-    }
-
-    $yanit = egitim_istek(rtrim($adres, '/') . '/api/disa_aktar.php?islem=dosya&yol=' . rawurlencode($yol),
-                          null, egitim_basliklar($anahtar, $token), 240);
-
-    if (!$yanit['tamam']) {
-        return ['tamam' => false, 'hata' => $yol . ': ' . $yanit['hata'], 'atlandi' => false];
-    }
-
-    if (sha1($yanit['govde']) !== $sha1) {
-        return ['tamam' => false, 'hata' => $yol . ': indirilen dosya eksik geldi (özet tutmuyor).', 'atlandi' => false];
     }
 
     $klasor = dirname($hedef);
@@ -212,8 +209,43 @@ function egitim_dosya_aktar(string $adres, string $anahtar, string $token, strin
         return ['tamam' => false, 'hata' => $yol . ': klasör oluşturulamadı (' . $klasor . ').', 'atlandi' => false];
     }
 
-    if (@file_put_contents($hedef, $yanit['govde']) === false) {
+    $gecici = $hedef . '.indiriliyor';
+    $fh = @fopen($gecici, 'wb');
+
+    if ($fh === false) {
         return ['tamam' => false, 'hata' => $yol . ': yazılamadı; egitim/ klasörünün yazma iznini kontrol edin.', 'atlandi' => false];
+    }
+
+    $ch = curl_init(rtrim($adres, '/') . '/api/disa_aktar.php?islem=dosya&yol=' . rawurlencode($yol));
+    curl_setopt_array($ch, http_ortak_secenekler(600));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, egitim_basliklar($anahtar, $token));
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
+    curl_setopt($ch, CURLOPT_FILE, $fh);
+    curl_setopt($ch, CURLOPT_ENCODING, '');
+
+    $sonuc = curl_exec($ch);
+    $kod   = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    $hata  = curl_error($ch);
+    $no    = curl_errno($ch);
+    curl_close($ch);
+    fclose($fh);
+
+    clearstatcache(true, $gecici);
+    $inen = is_file($gecici) ? (int) filesize($gecici) : 0;
+
+    if ($sonuc === false || $kod !== 200 || $inen !== $boyut) {
+        @unlink($gecici);
+        $neden = $sonuc === false ? http_hata_acikla($no, $hata)
+               : ($kod !== 200 ? 'eski site HTTP ' . $kod : 'eksik indi (' . $inen . ' / ' . $boyut . ' bayt)');
+
+        return ['tamam' => false, 'hata' => $yol . ': ' . $neden, 'atlandi' => false];
+    }
+
+    if (!@rename($gecici, $hedef)) {
+        @unlink($gecici);
+
+        return ['tamam' => false, 'hata' => $yol . ': yerine konamadı.', 'atlandi' => false];
     }
 
     return ['tamam' => true, 'hata' => '', 'atlandi' => false];
