@@ -314,6 +314,23 @@ jobs:
           echo "$yanit" | jq -r '(.hatalar // [])[] | "::warning::Grafik tazelenemedi — \(.)"' 2>/dev/null || true
           echo "$yanit" | jq -r '(.uyarilar // [])[] | "::warning::Grafik uyarisi — \(.)"' 2>/dev/null || true
 
+      # Google Search Console verisi. Veriyi SITE cekiyor (servis hesabi
+      # anahtari panelde kayitli); site 20 saatten yeniyse hicbir sey yapmiyor,
+      # yani gunde bes calisma tek bir cekime iniyor. Anahtar girilmemisse
+      # sessizce atlaniyor.
+      - name: Search Console verisini tazele
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'topla') }}
+        env:
+          VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: |
+          curl -sS --max-time 120 -X POST \
+            -H "X-Valentra-Key: $VALENTRA_AGENT_KEY" \
+            -H "Authorization: Bearer $VALENTRA_AGENT_KEY" \
+            "${VALENTRA_SITE_URL%/}/api/gsc-tazele.php" \
+            || echo "::warning::Search Console tazeleme istegi basarisiz; panel acildiginda kendini tazeler."
+          echo
+
       # Sitenin Resmi Gazete sayfasi. Fihristi site cekiyor (Turkiye'den
       # dogrudan erisim); ajan yalnizca durtuyor.
       - name: Resmi Gazete fihristini tazele

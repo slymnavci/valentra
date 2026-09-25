@@ -10,11 +10,12 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/arama.php';
+require_once __DIR__ . '/includes/rehberler.php';
 
 $sorgu     = mb_substr(trim((string) ($_GET['q'] ?? '')), 0, ARAMA_EN_UZUN);
 $kelimeler = arama_kelimeleri($sorgu);
 
-$haberler = $koseler = $pratikler = $rgMaddeleri = [];
+$haberler = $koseler = $pratikler = $rgMaddeleri = $rehberler = [];
 $hata     = false;
 
 if ($kelimeler !== []) {
@@ -23,13 +24,14 @@ if ($kelimeler !== []) {
         $koseler     = arama_kose_yazilari($kelimeler);
         $pratikler   = arama_pratik($kelimeler);
         $rgMaddeleri = arama_resmi_gazete($kelimeler);
+        $rehberler   = arama_rehberler($kelimeler);
     } catch (PDOException $e) {
         error_log('[valentra] arama: ' . $e->getMessage());
         $hata = true;
     }
 }
 
-$toplam = count($haberler) + count($koseler) + count($pratikler) + count($rgMaddeleri);
+$toplam = count($haberler) + count($koseler) + count($pratikler) + count($rgMaddeleri) + count($rehberler);
 
 $aktifKategori = 'ara';
 $sayfaBasligi  = ($sorgu !== '' ? '"' . $sorgu . '" araması' : 'Arama') . ' — Valentra';
@@ -63,6 +65,31 @@ require __DIR__ . '/includes/sayfa_ust.php';
 </div>
 
 <div class="arama-sonuclari">
+
+    <?php if ($rehberler !== []): ?>
+        <section>
+            <div class="bolum-basligi">
+                <h2>Rehberler</h2>
+                <span class="cizgi"></span>
+            </div>
+
+            <ul class="kose-liste">
+                <?php foreach ($rehberler as $g): ?>
+                    <li>
+                        <a href="<?= e(rehber_yolu((string) $g['slug'])) ?>">
+                            <?php if ((string) $g['konu'] !== ''): ?>
+                                <span class="kose-gundem"><?= e((string) $g['konu']) ?></span>
+                            <?php endif; ?>
+                            <span class="kose-baslik"><?= e((string) $g['baslik']) ?></span>
+                            <?php if ((string) $g['ozet'] !== ''): ?>
+                                <span class="kose-ozet"><?= e((string) $g['ozet']) ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </section>
+    <?php endif; ?>
 
     <?php if ($pratikler !== []): ?>
         <section>

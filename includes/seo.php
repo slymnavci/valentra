@@ -116,6 +116,69 @@ function seo_haber_semasi(array $haber): string
     return json_encode($sema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }
 
+/**
+ * Rehber sayfası: Article + BreadcrumbList.
+ *
+ * Yazar ve kontrol eden sayfadaki kunyeyle AYNI: panelde bir kisi adi
+ * girildiyse Person, kurul adi kaldiysa Organization. Kontrol eden
+ * WebPage.reviewedBy olarak veriliyor.
+ *
+ * @param array<string,mixed> $rehber
+ */
+function seo_rehber_semasi(array $rehber): string
+{
+    $adres = site_adresi() . rehber_yolu((string) $rehber['slug']);
+    $kisi  = static fn (string $ad): array => [
+        '@type' => str_contains(mb_strtolower($ad), 'kurul') || str_contains(mb_strtolower($ad), 'valentra')
+            ? 'Organization' : 'Person',
+        'name'  => $ad,
+    ];
+
+    $yayin  = (string) ($rehber['yayin_tarihi'] ?: $rehber['olusturuldu']);
+    $makale = [
+        '@type'            => 'Article',
+        'headline'         => (string) $rehber['baslik'],
+        'description'      => (string) $rehber['ozet'],
+        'inLanguage'       => 'tr-TR',
+        'datePublished'    => date('c', (int) strtotime($yayin)),
+        'dateModified'     => date('c', (int) strtotime((string) $rehber['guncellendi'])),
+        'mainEntityOfPage' => ['@type' => 'WebPage', '@id' => $adres],
+        'author'           => $kisi((string) $rehber['hazirlayan']),
+        'publisher'        => [
+            '@type' => 'Organization',
+            'name'  => 'Valentra',
+            'logo'  => ['@type' => 'ImageObject', 'url' => site_adresi() . '/assets/logo.svg'],
+        ],
+    ];
+
+    if ((string) $rehber['konu'] !== '') {
+        $makale['articleSection'] = (string) $rehber['konu'];
+    }
+
+    $sayfa = ['@type' => 'WebPage', '@id' => $adres, 'url' => $adres, 'name' => (string) $rehber['baslik']];
+
+    if ((string) ($rehber['kontrol_eden'] ?? '') !== '') {
+        $sayfa['reviewedBy']   = $kisi((string) $rehber['kontrol_eden']);
+        $sayfa['lastReviewed'] = date('Y-m-d', (int) strtotime((string) $rehber['guncellendi']));
+    }
+
+    return json_encode([
+        '@context' => 'https://schema.org',
+        '@graph'   => [
+            $makale,
+            $sayfa,
+            [
+                '@type'           => 'BreadcrumbList',
+                'itemListElement' => [
+                    ['@type' => 'ListItem', 'position' => 1, 'name' => 'Ana Sayfa', 'item' => site_adresi() . '/'],
+                    ['@type' => 'ListItem', 'position' => 2, 'name' => 'Rehberler', 'item' => site_adresi() . rehberler_yolu()],
+                    ['@type' => 'ListItem', 'position' => 3, 'name' => (string) $rehber['baslik'], 'item' => $adres],
+                ],
+            ],
+        ],
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+}
+
 /** Sitenin kendisi için Organization + WebSite şeması. */
 function seo_site_semasi(): string
 {

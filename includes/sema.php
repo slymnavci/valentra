@@ -393,6 +393,17 @@ function sema_yukselt(array &$hatalar = []): array
         return true;
     });
 
+    /*
+     * Rehber taslaklari bir kez ekleniyor (ayarlar'daki isaretle).
+     * Yonetici bir taslagi silerse sema bir sonraki calismada onu geri
+     * getirmesin diye INSERT IGNORE'a birakilmadi.
+     */
+    $adim('rehber taslaklari', static function (): bool {
+        require_once __DIR__ . '/rehberler.php';
+
+        return rehber_tohumla() > 0;
+    });
+
     return $yapilanlar;
 }
 
@@ -470,6 +481,9 @@ function sema_guncel_mi(): bool
             ['haberler', 'isletme_etkisi'],
             ['haberler', 'uygulama_ornegi'],
             ['haberler', 'resmi_dayanak'],
+            ['gsc_gunluk', 'gosterim'],
+            ['gsc_denetim', 'kapsam'],
+            ['rehberler', 'kontrol_eden'],
         ];
 
         foreach ($beklenenSutunlar as [$tablo, $sutun]) {
