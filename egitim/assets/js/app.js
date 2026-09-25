@@ -1337,8 +1337,13 @@ function girisEkraniGoster() {
       <h1>YMM Hazırlık Platformu</h1>
       <p class="muted">Yeminli Mali Müşavirlik sınavı çalışma sistemi</p>
 
+      <div class="sekme mt" role="tablist">
+        <button type="button" role="tab" id="sekmeGiris" class="sekme-btn aktif" onclick="girisSekme('giris')">Giriş yap</button>
+        <button type="button" role="tab" id="sekmeKayit" class="sekme-btn" onclick="girisSekme('kayit')">Üye ol</button>
+      </div>
+
       <form id="formGiris" onsubmit="girisYap(event)" class="mt">
-        <label>Kullanıcı adı</label>
+        <label>Kullanıcı adı veya e-posta</label>
         <input id="gKullanici" autocomplete="username" required>
         <label class="mt">Şifre</label>
         <input id="gSifre" type="password" autocomplete="current-password" required>
@@ -1346,11 +1351,60 @@ function girisEkraniGoster() {
         <button class="btn btn-primary genis mt" type="submit" id="gGonderBtn">Giriş Yap</button>
       </form>
 
+      <form id="formKayit" onsubmit="kayitOl(event)" class="mt" hidden>
+        <label>Ad soyad</label>
+        <input id="kAd" autocomplete="name" required maxlength="120">
+        <label class="mt">E-posta</label>
+        <input id="kEposta" type="email" autocomplete="email" required maxlength="160">
+        <label class="mt">Kullanıcı adı</label>
+        <input id="kKullanici" autocomplete="username" required minlength="3" maxlength="40"
+               pattern="[a-zA-Z0-9_.]{3,40}" title="Harf, rakam, nokta ve alt çizgi; en az 3 karakter">
+        <label class="mt">Şifre</label>
+        <input id="kSifre" type="password" autocomplete="new-password" required minlength="8">
+        <label class="mt">Şifre (tekrar)</label>
+        <input id="kSifre2" type="password" autocomplete="new-password" required minlength="8">
+        <div class="giris-tuzak" aria-hidden="true"><input id="kWeb" tabindex="-1" autocomplete="off"></div>
+        <div class="muted" style="font-size:12px;margin-top:6px">Şifre en az 8 karakter olmalı, harf ve rakam içermelidir.</div>
+        <div id="kHata" class="hata"></div>
+        <button class="btn btn-primary genis mt" type="submit" id="kGonderBtn">Üye Ol</button>
+      </form>
+
       <div class="giris-uyari">
-        Bu platforma yalnızca yöneticinin eklediği üyeler giriş yapabilir.
-        Hesabınız yoksa yöneticinizle iletişime geçin.
+        Giriş için kullanıcı adınızı ya da e-posta adresinizi kullanabilirsiniz.
+        Hesabınız yoksa <a href="#" onclick="girisSekme('kayit');return false;">üye olun</a>.
       </div>
     </div>`;
+}
+
+function girisSekme(hangisi) {
+  const kayit = hangisi === "kayit";
+  $("#formGiris").hidden = kayit;
+  $("#formKayit").hidden = !kayit;
+  $("#sekmeGiris").classList.toggle("aktif", !kayit);
+  $("#sekmeKayit").classList.toggle("aktif", kayit);
+  (kayit ? $("#kAd") : $("#gKullanici")).focus();
+}
+
+async function kayitOl(e) {
+  e.preventDefault();
+  const btn = $("#kGonderBtn");
+  const hataEl = $("#kHata");
+  hataEl.textContent = "";
+  if ($("#kSifre").value !== $("#kSifre2").value) { hataEl.textContent = "Şifreler aynı değil."; return; }
+  btn.disabled = true;
+  btn.textContent = "Kaydediliyor…";
+  const r = await Auth.kayit({
+    ad: $("#kAd").value.trim(),
+    eposta: $("#kEposta").value.trim(),
+    kullaniciAdi: $("#kKullanici").value.trim().toLowerCase(),
+    sifre: $("#kSifre").value,
+    web: $("#kWeb").value
+  });
+  btn.disabled = false;
+  btn.textContent = "Üye Ol";
+  if (!r.ok) { hataEl.textContent = r.mesaj; return; }
+  location.hash = "panel";
+  yonlendir();
 }
 
 async function girisYap(e) {

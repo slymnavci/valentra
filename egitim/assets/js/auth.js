@@ -34,6 +34,21 @@ const Auth = {
     }
   },
 
+  /* Herkese açık üye kaydı (bkz. api/kayit_ol.php). Başarılı kayıt
+     aynı zamanda oturum açar; yanıt girişle aynı biçimdedir. */
+  async kayit({ ad, eposta, kullaniciAdi, sifre, web }) {
+    try {
+      const sonuc = await ppIstek("kayit_ol.php", {
+        method: "POST",
+        body: JSON.stringify({ ad, eposta, kullanici_adi: (kullaniciAdi || "").trim(), sifre, web: web || "" })
+      });
+      localStorage.setItem(OTURUM_KEY, JSON.stringify(sonuc.kullanici));
+      return { ok: true, kullanici: sonuc.kullanici };
+    } catch (e) {
+      return { ok: false, mesaj: e.message.replace(/^Pratik sistemi hatası \(\d+\):\s*/, "") };
+    }
+  },
+
   /* Aktif kullanıcı — önbellekten, ağ isteği yok. */
   aktif() {
     try { return JSON.parse(localStorage.getItem(OTURUM_KEY)); }

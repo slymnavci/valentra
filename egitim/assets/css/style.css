@@ -538,3 +538,7 @@ a { color: var(--brand-light); }
 .foto-kare img { width: 100%; max-height: 400px; object-fit: contain; background: #0f172a; }
 .foto-metin { padding: 16px 18px; font-size: 14.5px; }
 .foto-kontrol { display: flex; align-items: center; justify-content: space-between; padding: 11px 18px; border-top: 1px solid var(--border); }
+
+/* Kayit formundaki bot tuzagi: insan kullanici gormez, bos kalir. */
+.giris-tuzak { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+#formGiris[hidden], #formKayit[hidden] { display: none; }
