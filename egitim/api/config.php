@@ -48,9 +48,23 @@ if (!defined('APP_ANAHTARI')) {
         $anahtarDeger = false;
     }
 
-    // Bos anahtar: ppYetkiKontrol() her istegi reddeder (aktarim yapilana
-    // ya da panelden anahtar belirlenene kadar).
-    define('APP_ANAHTARI', is_string($anahtarDeger) ? $anahtarDeger : '');
+    // Anahtar hic uretilmemisse simdi uret: giris yapan kullanicilara
+    // otomatik veriliyor (anahtar_al.php); bos kalirsa hic kimse sunucuya
+    // yazamazdi. Yetki anahtardan degil oturum jetonundan geliyor.
+    if (!is_string($anahtarDeger) || $anahtarDeger === '') {
+        $anahtarDeger = bin2hex(random_bytes(20));
+
+        try {
+            $pdo->prepare("INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('egitim_app_anahtari', ?)")
+                ->execute([$anahtarDeger]);
+            // Ayni anda baska bir istek uretmisse onunki gecerli.
+            $anahtarDeger = (string) $pdo->query("SELECT deger FROM ayarlar WHERE anahtar = 'egitim_app_anahtari'")->fetchColumn();
+        } catch (PDOException $e) {
+            $anahtarDeger = '';
+        }
+    }
+
+    define('APP_ANAHTARI', $anahtarDeger);
 }
 
 // Sunucuda duzenlenen klasorler deploy'da ustune yazilmiyor (bkz.
