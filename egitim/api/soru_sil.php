@@ -3,6 +3,9 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/yetki.php';
 ppYetkiKontrol();
+/* Icerik degistiren uc: uygulama anahtari artik giris yapan herkese
+   veriliyor (bkz. anahtar_al.php), yetki YONETICI oturumundan geliyor. */
+ppYoneticiDogrula(ppBaglan());
 
 $pdo = ppBaglan();
 $govde = ppGovdeOku();

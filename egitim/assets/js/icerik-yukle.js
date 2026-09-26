@@ -91,7 +91,9 @@ async function icerikYukle() {
   SINAV = veri.sinav;
   DERSLER.length = 0; DERSLER.push(...veri.dersler);
   SORULAR = soru;
-  MENU_OGELER = menu.ogeler;
+  /* Finansallar modulu Valentra'ya tasinmadi; eski siteden gelen menu
+     kaydi varsa gosterilmiyor (menu kaydedilince kalici olarak duser). */
+  MENU_OGELER = menu.ogeler.filter(o => o.route !== "finansallar" && o.id !== "finansallar");
   MENU_OZEL_SAYFALAR = menu.ozelSayfalar || [];
 
   DERSLER.forEach(d => {

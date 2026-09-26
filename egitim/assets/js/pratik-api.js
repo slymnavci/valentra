@@ -164,3 +164,20 @@ function ppCsvSorulariAyristir(metin) {
   }
   return sonuc;
 }
+
+/* Giris yapmis ama tarayicisinda uygulama anahtari olmayan kullanici
+   (anahtar otomatik verilmeden once giris yapanlar): anahtari oturum
+   jetonuyla sunucudan al ve sayfayi yeniden ciz. Kullanici hicbir sey
+   girmez. */
+(function ppAnahtarTamamla() {
+  if (ppAnahtarAl() || !ppOturumTokenAl()) return;
+  fetch("api/anahtar_al.php", { headers: { "X-Session-Token": ppOturumTokenAl() } })
+    .then(r => r.ok ? r.json() : null)
+    .then(v => {
+      if (v && v.anahtar) {
+        ppAnahtarKaydet(v.anahtar);
+        if (typeof yonlendir === "function") yonlendir();
+      }
+    })
+    .catch(() => { /* ag yoksa sonra tekrar denenir */ });
+})();
