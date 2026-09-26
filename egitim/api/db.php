@@ -296,6 +296,8 @@ function ppOturumAc(PDO $pdo, array $hesap): array {
         'sonGiris' => $simdi,
         'token' => $token,
         'menuIzin' => $menuIzin,
+        // Istemci bunu ayri saklar (bkz. auth.js, anahtar_al.php).
+        'uygulamaAnahtari' => defined('APP_ANAHTARI') ? APP_ANAHTARI : '',
     ];
 }
 

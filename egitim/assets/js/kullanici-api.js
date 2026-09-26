@@ -112,7 +112,7 @@ async function kuDosyaYukle(dosya) {
   govde.append("dosya", dosya);
   const r = await fetch("api/dosya_yukle.php", {
     method: "POST",
-    headers: { "X-App-Key": anahtar },
+    headers: { "X-App-Key": anahtar, "X-Session-Token": ppOturumTokenAl() },
     body: govde
   });
   let sonuc = null;

@@ -33,6 +33,18 @@ if ($adim !== '') {
 
     $govde = json_decode((string) file_get_contents('php://input'), true) ?: [];
 
+    // Beklenmeyen hata HTML hata sayfasi olarak degil, okunur JSON olarak
+    // donsun: betik 'Unexpected token <' yerine gercek sebebi gostersin.
+    set_exception_handler(static function (Throwable $e): void {
+        error_log('[valentra] egitim aktarimi: ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+        if (!headers_sent()) {
+            http_response_code(200);
+            header('Content-Type: application/json; charset=utf-8');
+        }
+        echo json_encode(['tamam' => false, 'hata' => 'Sunucu hatası: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+        exit;
+    });
+
     if ($adim === 'baglan') {
         $adres   = trim((string) ($govde['adres'] ?? ''));
         $anahtar = trim((string) ($govde['anahtar'] ?? ''));
@@ -291,7 +303,15 @@ require __DIR__ . '/ust.php';
             headers: {'Content-Type': 'application/json', 'X-CSRF': csrf},
             body: JSON.stringify(govde || {}),
             credentials: 'same-origin'
-        }).then(function (r) { return r.json(); });
+        }).then(function (r) {
+            return r.text().then(function (metin) {
+                try { return JSON.parse(metin); }
+                catch (e) {
+                    return {tamam: false, hata: 'HTTP ' + r.status + ' — sunucu beklenmedik yanıt verdi'
+                        + (/<!DOCTYPE|<html/i.test(metin) ? ' (hata sayfası). Sayfayı yenileyip yeniden deneyin.' : ': ' + metin.slice(0, 160))};
+                }
+            });
+        });
     }
 
     function yaz(metin, oran) {

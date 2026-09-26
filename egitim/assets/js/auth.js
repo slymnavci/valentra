@@ -19,6 +19,16 @@
 
 const OTURUM_KEY = "ymm_oturum_v1";
 
+/* Giris/kayit yanitindaki uygulama anahtarini ayri saklar (bkz.
+   api/anahtar_al.php); oturum nesnesine yazilmaz. */
+function authOturumKaydet(kullanici) {
+  const k = Object.assign({}, kullanici);
+  if (k.uygulamaAnahtari) ppAnahtarKaydet(k.uygulamaAnahtari);
+  delete k.uygulamaAnahtari;
+  localStorage.setItem(OTURUM_KEY, JSON.stringify(k));
+  return k;
+}
+
 const Auth = {
   /* Sunucuda doğrula, başarılıysa oturumu bu tarayıcıda önbelleğe al. */
   async giris(kullaniciAdi, sifre) {
@@ -27,8 +37,7 @@ const Auth = {
         method: "POST",
         body: JSON.stringify({ kullanici_adi: (kullaniciAdi || "").trim(), sifre })
       });
-      localStorage.setItem(OTURUM_KEY, JSON.stringify(sonuc.kullanici));
-      return { ok: true, kullanici: sonuc.kullanici };
+      return { ok: true, kullanici: authOturumKaydet(sonuc.kullanici) };
     } catch (e) {
       return { ok: false, mesaj: e.message.replace(/^Pratik sistemi hatası \(\d+\):\s*/, "") };
     }
@@ -42,8 +51,7 @@ const Auth = {
         method: "POST",
         body: JSON.stringify({ ad, eposta, kullanici_adi: (kullaniciAdi || "").trim(), sifre, web: web || "" })
       });
-      localStorage.setItem(OTURUM_KEY, JSON.stringify(sonuc.kullanici));
-      return { ok: true, kullanici: sonuc.kullanici };
+      return { ok: true, kullanici: authOturumKaydet(sonuc.kullanici) };
     } catch (e) {
       return { ok: false, mesaj: e.message.replace(/^Pratik sistemi hatası \(\d+\):\s*/, "") };
     }
