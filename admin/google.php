@@ -18,6 +18,7 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/search_console.php';
 require_once __DIR__ . '/../includes/rehberler.php';
+require_once __DIR__ . '/../includes/arama_bildirim.php';
 
 giris_zorunlu();
 
@@ -39,6 +40,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $bildirim = $sonuc['mesaj'];
         } else {
             $hata = $sonuc['mesaj'];
+        }
+    } elseif ($islem === 'indexnow_toplu') {
+        @set_time_limit(60);
+        $adresler = arama_tum_adresler();
+        $sonucIn  = indexnow_gonder($adresler);
+        ayar_yaz('indexnow_son', (string) json_encode($sonucIn, JSON_UNESCAPED_UNICODE));
+        if ($sonucIn['tamam']) {
+            $bildirim = count($adresler) . ' adres IndexNow ile Bing ve Yandex\'e bildirildi.';
+        } else {
+            $hata = 'IndexNow bildirimi başarısız: ' . $sonucIn['hata'];
+        }
+    } elseif ($islem === 'harita_gonder') {
+        $sonucHa = gsc_site_haritasi_gonder();
+        ayar_yaz('gsc_harita_son_deneme', (string) time());
+        ayar_yaz('gsc_harita_son', (string) json_encode($sonucHa, JSON_UNESCAPED_UNICODE));
+        if ($sonucHa['tamam']) {
+            $bildirim = 'Site haritası Google\'a yeniden gönderildi.';
+        } else {
+            $hata = 'Site haritası gönderilemedi: ' . $sonucHa['hata'];
         }
     } elseif ($islem === 'tazele') {
         @set_time_limit(90);
@@ -292,6 +312,44 @@ require __DIR__ . '/ust.php';
                 <?php endif; ?>
             </div>
         <?php endforeach; ?>
+    </div>
+
+    <?php
+    $inSon = json_decode(ayar_oku('indexnow_son'), true) ?: null;
+    $haSon = json_decode(ayar_oku('gsc_harita_son'), true) ?: null;
+    $sonucYaz = static function (?array $r): string {
+        if ($r === null) {
+            return '<span class="ipucu">henüz yok</span>';
+        }
+
+        return e(tarih_bicimle((string) $r['zaman'])) . ' · '
+             . ($r['tamam'] ? '<strong style="color:var(--yesil);">başarılı</strong>'
+                            : '<strong style="color:var(--kirmizi);">başarısız</strong> — ' . e((string) $r['hata']))
+             . (isset($r['adet']) ? ' · ' . (int) $r['adet'] . ' adres' : '');
+    };
+    ?>
+    <div class="kutu" style="margin-top:20px;">
+        <h2 style="margin-top:0;">Otomatik bildirim</h2>
+        <p class="ipucu">
+            Bir haber, köşe yazısı ya da rehber yayımlandığında adresi IndexNow ile Bing ve Yandex'e
+            anında bildiriliyor, site haritası Google'a yeniden gönderiliyor (saatte en fazla bir kez).
+            Google'da tek tek "dizine eklenmesini iste"nin otomatik yolu yok; onu Search Console'dan
+            önemli sayfalar için elle yapabilirsiniz.
+        </p>
+        <ul style="line-height:1.8;margin:0 0 12px;">
+            <li>IndexNow (Bing, Yandex): <?= $sonucYaz($inSon) ?></li>
+            <li>Google site haritası: <?= $sonucYaz($haSon) ?></li>
+        </ul>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <form method="post" action="google.php" style="margin:0;">
+                <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                <button type="submit" name="islem" value="indexnow_toplu" class="dugme">Tüm adresleri IndexNow'a gönder</button>
+            </form>
+            <form method="post" action="google.php" style="margin:0;">
+                <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                <button type="submit" name="islem" value="harita_gonder" class="dugme">Site haritasını Google'a yeniden gönder</button>
+            </form>
+        </div>
     </div>
 
     <div class="kutu" style="margin-top:20px;">
