@@ -397,31 +397,62 @@ function gsc_denetim_adaylari(): array
 }
 
 /**
- * Google'in "coverageState" metinleri, Turkce ve ne yapilacagiyla.
+ * Google'in "coverageState" metni: Turkce durum ve ne yapilacagi.
+ *
+ * Metin Google'in diline gore geliyor (Turkce ya da Ingilizce) ve
+ * zaman zaman kucuk degisiklikler geciriyor; bu yuzden tam esleme
+ * yerine iki dilde anahtar kelimelerle taniniyor.
  *
  * @return array{0:string,1:string} [durum, oneri]
  */
 function gsc_kapsam_acikla(string $kapsam): array
 {
-    $sozluk = [
-        'Submitted and indexed'                     => ['Dizinde (site haritasından)', ''],
-        'Indexed, not submitted in sitemap'         => ['Dizinde (site haritasında yok)', 'Site haritasında olmalı; kontrol edin.'],
-        'Crawled - currently not indexed'           => ['Tarandı, dizine alınmadı', 'Google sayfayı gördü ama değerli bulmadı: içeriği özgünleştirip derinleştirin, başka sayfalardan bağlantı verin.'],
-        'Discovered - currently not indexed'        => ['Bulundu, henüz taranmadı', 'Google adresi biliyor ama taramadı. Genelde yeni sitelerde görülür; iç bağlantılar ve düzenli yayın hızlandırır.'],
-        'URL is unknown to Google'                  => ['Google bu adresi bilmiyor', 'Site haritasına girdiğinden ve başka sayfalardan bağlantı aldığından emin olun.'],
-        'Duplicate without user-selected canonical' => ['Kopya sayılmış', 'Google başka bir sayfayı asıl kabul etti; başlık ve metin benzerliğini azaltın.'],
-        'Duplicate, Google chose different canonical than user' => ['Google başka asıl sayfa seçti', 'Canonical etiketi ile Google\'ın seçimi farklı; benzer sayfaları birleştirin ya da ayrıştırın.'],
-        'Alternate page with proper canonical tag'  => ['Alternatif sayfa (sorun değil)', ''],
-        'Excluded by ‘noindex’ tag'                 => ['noindex ile hariç', 'Bilerek hariç değilse etiketi kaldırın.'],
-        "Excluded by 'noindex' tag"                 => ['noindex ile hariç', 'Bilerek hariç değilse etiketi kaldırın.'],
-        'Blocked by robots.txt'                     => ['robots.txt engelliyor', 'robots.txt kuralını kontrol edin.'],
-        'Not found (404)'                           => ['Bulunamadı (404)', 'Adres değiştiyse eski adresi yenisine yönlendirin.'],
-        'Soft 404'                                  => ['Boş sayfa (soft 404)', 'Sayfa içerik göstermiyor; içerik ekleyin ya da 404 döndürün.'],
-        'Page with redirect'                        => ['Yönlendiren sayfa', ''],
-        'Server error (5xx)'                        => ['Sunucu hatası', 'Sunucu Google\'a hata döndü; hosting kayıtlarına bakın.'],
-    ];
+    $k = mb_strtolower($kapsam);
+    $var = static fn (string ...$parcalar): bool => array_reduce(
+        $parcalar, static fn (bool $t, string $p): bool => $t || str_contains($k, $p), false
+    );
 
-    return $sozluk[$kapsam] ?? [$kapsam !== '' ? $kapsam : 'Bilinmiyor', ''];
+    $istek = 'Önemliyse "Search Console\'da aç" → Dizine eklenmesini iste.';
+
+    return match (true) {
+        $var('unknown to google', 'bilinmiyor')
+            => ['Google henüz görmedi', 'Site haritasında var; Google birkaç gün içinde keşfeder. ' . $istek],
+        $var('discovered', 'keşfedildi')
+            => ['Bulundu, henüz taranmadı', 'Google adresi biliyor ama taramadı; yeni sitelerde olağan. İç bağlantılar ve düzenli yayın hızlandırır. ' . $istek],
+        $var('crawled', 'tarandı')
+            => ['Tarandı, dizine alınmadı', 'Google sayfayı gördü ama yeterince değerli bulmadı: içeriği özgünleştirip derinleştirin, başka sayfalardan bağlantı verin.'],
+        $var('noindex')
+            => ['noindex ile hariç', 'Bilerek hariç değilse etiketi kaldırın.'],
+        $var('robots.txt')
+            => ['robots.txt engelliyor', 'robots.txt kuralını kontrol edin.'],
+        $var('soft 404')
+            => ['Boş sayfa (soft 404)', 'Sayfa içerik göstermiyor; içerik ekleyin ya da 404 döndürün.'],
+        $var('404', 'bulunamadı')
+            => ['Bulunamadı (404)', 'Adres değiştiyse eski adresi yenisine yönlendirin.'],
+        $var('5xx', 'server error', 'sunucu hatası')
+            => ['Sunucu hatası', 'Sunucu Google\'a hata döndü; hosting kayıtlarına bakın.'],
+        $var('redirect', 'yönlendirme')
+            => ['Yönlendiren sayfa', ''],
+        $var('alternate', 'alternatif')
+            => ['Alternatif sayfa (sorun değil)', ''],
+        $var('duplicate', 'kopya', 'standart')
+            => ['Kopya sayılmış', 'Google başka bir sayfayı asıl kabul etti; başlık ve metin benzerliğini azaltın.'],
+        $var('not submitted', 'gönderilmedi')
+            => ['Dizinde (site haritasında yok)', 'Site haritasında olmalı; kontrol edin.'],
+        $var('indexed', 'dizine eklendi', 'dizinde')
+            => ['Dizinde', ''],
+        default
+            => [$kapsam !== '' ? $kapsam : 'Bilinmiyor', ''],
+    };
+}
+
+/** Search Console'da bu adresin URL denetimi sayfasi. */
+function gsc_denetim_adresi(string $url): string
+{
+    $site = ayar_oku('gsc_site');
+
+    return 'https://search.google.com/search-console/inspect?'
+         . http_build_query(['resource_id' => $site, 'id' => $url]);
 }
 
 /**
