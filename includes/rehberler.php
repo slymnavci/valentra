@@ -162,6 +162,11 @@ function rehber_yayin(int $id, bool $yayinda): void
                 yayin_tarihi = CASE WHEN :y = 1 AND yayin_tarihi IS NULL THEN NOW() ELSE yayin_tarihi END
           WHERE id = :id'
     )->execute(['d' => $yayinda ? REHBER_YAYINDA : REHBER_TASLAK, 'y' => $yayinda ? 1 : 0, 'id' => $id]);
+
+    if ($yayinda) {
+        require_once __DIR__ . '/arama_bildirim.php';
+        arama_bildir_kayit('rehber', $id);
+    }
 }
 
 function rehber_sil(int $id): void

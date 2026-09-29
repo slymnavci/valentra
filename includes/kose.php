@@ -233,6 +233,9 @@ function kose_yayinla(int $id, ?int $yoneticiId): void
             SET durum = :d, onaylayan_id = :y, yayin_tarihi = COALESCE(yayin_tarihi, NOW())
           WHERE id = :id'
     )->execute(['d' => HABER_YAYINDA, 'y' => $yoneticiId, 'id' => $id]);
+
+    require_once __DIR__ . '/arama_bildirim.php';
+    arama_bildir_kayit('kose', $id);
 }
 
 function kose_durum_degistir(int $id, string $durum): void

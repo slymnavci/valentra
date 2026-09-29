@@ -31,6 +31,8 @@ require_once __DIR__ . '/http_ortak.php';
 require_once __DIR__ . '/seo.php';
 
 const GSC_KAPSAM          = 'https://www.googleapis.com/auth/webmasters.readonly';
+// Yalnizca site haritasini yeniden gondermek icin (bkz. gsc_site_haritasi_gonder).
+const GSC_KAPSAM_YAZ      = 'https://www.googleapis.com/auth/webmasters';
 const GSC_JETON_ADRESI    = 'https://oauth2.googleapis.com/token';
 const GSC_API             = 'https://www.googleapis.com/webmasters/v3';
 const GSC_DENETIM_API     = 'https://searchconsole.googleapis.com/v1/urlInspection/index:inspect';
@@ -103,6 +105,7 @@ function gsc_hesap_kaydet(string $json): array
 
     // Onceki hesabin jetonu ve site secimi yeni hesapta gecersiz.
     ayar_sil('gsc_jeton');
+    ayar_sil('gsc_jeton_yaz');
     ayar_sil('gsc_site');
     ayar_sil('gsc_son_hata');
 
@@ -111,7 +114,7 @@ function gsc_hesap_kaydet(string $json): array
 
 function gsc_hesap_sil(): void
 {
-    foreach (['gsc_hizmet_hesabi', 'gsc_jeton', 'gsc_site', 'gsc_son_hata'] as $a) {
+    foreach (['gsc_hizmet_hesabi', 'gsc_jeton', 'gsc_jeton_yaz', 'gsc_site', 'gsc_son_hata'] as $a) {
         ayar_sil($a);
     }
 }
@@ -155,6 +158,11 @@ function gsc_istek(string $yontem, string $url, array|string|null $govde = null,
         }
 
         curl_setopt($ch, CURLOPT_POSTFIELDS, $govde);
+    }
+
+    // Govdesiz PUT/POST: Content-Length: 0 gitsin (Google 411 dondurur).
+    if ($govde === null && $yontem !== 'GET') {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, '');
     }
 
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $yontem);
@@ -210,7 +218,7 @@ function gsc_hata_ipucu(int $kod, string $mesaj): string
  *
  * @return array{tamam:bool,jeton:string,hata:string}
  */
-function gsc_jeton(): array
+function gsc_jeton(string $kapsam = GSC_KAPSAM): array
 {
     $hesap = gsc_hesap();
 
@@ -218,7 +226,8 @@ function gsc_jeton(): array
         return ['tamam' => false, 'jeton' => '', 'hata' => 'Servis hesabı anahtarı girilmemiş.'];
     }
 
-    $onbellek = json_decode(ayar_oku('gsc_jeton'), true);
+    $onbellekAdi = $kapsam === GSC_KAPSAM ? 'gsc_jeton' : 'gsc_jeton_yaz';
+    $onbellek = json_decode(ayar_oku($onbellekAdi), true);
 
     if (is_array($onbellek) && (int) ($onbellek['bitis'] ?? 0) > time() + 60) {
         return ['tamam' => true, 'jeton' => (string) $onbellek['jeton'], 'hata' => ''];
@@ -229,7 +238,7 @@ function gsc_jeton(): array
            . '.'
            . gsc_b64((string) json_encode([
                'iss'   => $hesap['client_email'],
-               'scope' => GSC_KAPSAM,
+               'scope' => $kapsam,
                'aud'   => GSC_JETON_ADRESI,
                'iat'   => $simdi,
                'exp'   => $simdi + 3600,
@@ -252,7 +261,7 @@ function gsc_jeton(): array
         return ['tamam' => false, 'jeton' => '', 'hata' => 'Google oturum açmadı: ' . $yanit['hata']];
     }
 
-    ayar_yaz('gsc_jeton', (string) json_encode([
+    ayar_yaz($onbellekAdi, (string) json_encode([
         'jeton' => $jeton,
         'bitis' => $simdi + min(3300, (int) ($yanit['veri']['expires_in'] ?? 3300)),
     ]));
@@ -790,4 +799,36 @@ function gsc_kalite_denetimi(): array
     }
 
     return $sonuc;
+}
+
+/**
+ * Site haritasini Search Console'a yeniden gonderir (yeni icerik
+ * yayimlandiginda; bkz. arama_bildirim.php). Google'i haritayi daha
+ * erken okumaya tesvik eder, dizine almayi garanti etmez.
+ *
+ * Yazma kapsamli ayri bir jeton kullaniyor; servis hesabinin Search
+ * Console'da "Tam" izinli olmasi gerekiyor.
+ *
+ * @return array{zaman:string,tamam:bool,hata:string}
+ */
+function gsc_site_haritasi_gonder(): array
+{
+    $sonuc = ['zaman' => date('Y-m-d H:i:s'), 'tamam' => false, 'hata' => ''];
+    $jeton = gsc_jeton(GSC_KAPSAM_YAZ);
+
+    if (!$jeton['tamam']) {
+        return ['hata' => $jeton['hata']] + $sonuc;
+    }
+
+    $site = gsc_site($jeton['jeton']);
+
+    if (!$site['tamam']) {
+        return ['hata' => $site['hata']] + $sonuc;
+    }
+
+    $harita = site_adresi() . '/sitemap.php';
+    $yanit  = gsc_istek('PUT', GSC_API . '/sites/' . rawurlencode($site['site']) . '/sitemaps/' . rawurlencode($harita),
+                        null, $jeton['jeton']);
+
+    return ['tamam' => $yanit['tamam'], 'hata' => $yanit['hata']] + $sonuc;
 }

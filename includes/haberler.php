@@ -456,7 +456,14 @@ function haber_onayla(int $id, int $yoneticiId): bool
     );
     $ifade->execute(['durum' => HABER_YAYINDA, 'yonetici' => $yoneticiId, 'id' => $id]);
 
-    return $ifade->rowCount() > 0;
+    if ($ifade->rowCount() > 0) {
+        require_once __DIR__ . '/arama_bildirim.php';
+        arama_bildir_kayit('haber', $id);
+
+        return true;
+    }
+
+    return false;
 }
 
 /**
@@ -470,6 +477,11 @@ function haber_durum_degistir(int $id, string $durum): bool
 
     $ifade = db()->prepare('UPDATE haberler SET durum = :durum WHERE id = :id');
     $ifade->execute(['durum' => $durum, 'id' => $id]);
+
+    if ($ifade->rowCount() > 0 && $durum === HABER_YAYINDA) {
+        require_once __DIR__ . '/arama_bildirim.php';
+        arama_bildir_kayit('haber', $id);
+    }
 
     return $ifade->rowCount() > 0;
 }
