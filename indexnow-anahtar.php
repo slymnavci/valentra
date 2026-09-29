@@ -12,6 +12,15 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/arama_bildirim.php';
 
+$anahtar = indexnow_anahtari();
+
+// /<anahtar>.txt adresinden geliniyor (.htaccess); baska bir .txt adi
+// bu dosyaya dusmesin.
+if (isset($_GET['k']) && !hash_equals($anahtar, (string) $_GET['k'])) {
+    http_response_code(404);
+    exit;
+}
+
 header('Content-Type: text/plain; charset=utf-8');
 header('X-Robots-Tag: noindex');
-echo indexnow_anahtari();
+echo $anahtar;

@@ -6,7 +6,8 @@ declare(strict_types=1);
  *
  *  - IndexNow (Bing, Yandex, Seznam...): yeni adres aninda bildiriliyor;
  *    bu motorlar genelde dakikalar icinde tariyor. Anahtar ayarlarda
- *    uretiliyor ve /indexnow-anahtar.php'den sunuluyor.
+ *    uretiliyor ve /<anahtar>.txt adresinden sunuluyor (.htaccess ->
+ *    indexnow-anahtar.php).
  *  - Google: IndexNow'u desteklemiyor ve "dizine eklenmesini iste"nin
  *    API'si yok (Indexing API yalnizca is ilani ve canli yayin icin).
  *    Yapilabilecek tek resmi sey site haritasini Search Console'a
@@ -102,6 +103,16 @@ function indexnow_anahtari(): string
 }
 
 /**
+ * Anahtar dosyasinin adresi. IndexNow anahtari .txt uzantili bir metin
+ * dosyasinda bekliyor; /indexnow-anahtar.php 403 ile reddedildi.
+ * /<anahtar>.txt .htaccess ile indexnow-anahtar.php'ye yonleniyor.
+ */
+function indexnow_anahtar_adresi(): string
+{
+    return site_adresi() . '/' . indexnow_anahtari() . '.txt';
+}
+
+/**
  * @param list<string> $urller
  * @return array{zaman:string,tamam:bool,kod:int,adet:int,hata:string}
  */
@@ -109,14 +120,15 @@ function indexnow_gonder(array $urller): array
 {
     $host = (string) parse_url(site_adresi(), PHP_URL_HOST);
     $sonuc = ['zaman' => date('Y-m-d H:i:s'), 'tamam' => false, 'kod' => 0, 'adet' => count($urller), 'hata' => ''];
+    $anahtar = indexnow_anahtari();
 
     $ch = curl_init('https://api.indexnow.org/indexnow');
     curl_setopt_array($ch, http_ortak_secenekler(10));
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json; charset=utf-8']);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
         'host'        => $host,
-        'key'         => indexnow_anahtari(),
-        'keyLocation' => site_adresi() . '/indexnow-anahtar.php',
+        'key'         => $anahtar,
+        'keyLocation' => indexnow_anahtar_adresi(),
         'urlList'     => $urller,
     ], JSON_UNESCAPED_SLASHES));
 
@@ -135,7 +147,7 @@ function indexnow_gonder(array $urller): array
     if (!$sonuc['tamam'] && $sonuc['hata'] === '') {
         $sonuc['hata'] = match ($sonuc['kod']) {
             400 => 'Geçersiz istek.',
-            403 => 'Anahtar doğrulanamadı (indexnow-anahtar.php erişilebilir olmalı).',
+            403 => 'Anahtar doğrulanamadı: ' . indexnow_anahtar_adresi() . ' adresi anahtarı göstermeli.',
             422 => 'Adresler bu alan adına ait değil.',
             429 => 'Çok sık istek; biraz sonra yeniden denenecek.',
             default => 'HTTP ' . $sonuc['kod'],

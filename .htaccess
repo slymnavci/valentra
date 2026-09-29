@@ -13,6 +13,12 @@
     # kosmuyor.
     RewriteRule ^sitemap\.xml$ /sitemap.php [L]
 
+    # IndexNow anahtar dosyasi: Bing/Yandex anahtari /<anahtar>.txt
+    # adresinde bir metin dosyasi olarak bekliyor; .php adresi
+    # "anahtar dogrulanamadi" (403) ile reddedildi. Dosya diskte yok,
+    # anahtar ayarlardan okunuyor (bkz. includes/arama_bildirim.php).
+    RewriteRule ^([a-f0-9]{32})\.txt$ /indexnow-anahtar.php?k=$1 [L]
+
     # --- Eski adresler -> temiz adres (kalici yonlendirme) ------------
     #
     # Ayni icerigin iki adresten servis edilmesi arama motorunda
