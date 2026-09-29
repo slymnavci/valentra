@@ -1408,3 +1408,7 @@ CREATE TABLE IF NOT EXISTS rehberler (
     UNIQUE KEY uq_rehber_slug (slug),
     KEY ix_rehber_durum (durum, sira)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Ilk bes uygulama rehberi yayina alindi (29.09.2026): bkz. sema.php
+-- 'ilk rehberleri yayimla' adimi. Bu satir sema imzasini degistirip
+-- adimin canli veritabaninda calismasini sagliyor.

@@ -404,6 +404,33 @@ function sema_yukselt(array &$hatalar = []): array
         return rehber_tohumla() > 0;
     });
 
+    /*
+     * Ilk bes rehber yayina aliniyor (bir kez). Site sahibi 29.09.2026'da
+     * "yap" dedi: metinler Valentra'nin yazdigi ve kontrol ettigi taslaklar.
+     * Sonradan panelden taslaga cekilen rehber bir daha yayinlanmasin diye
+     * isaretle korunuyor.
+     */
+    $adim('ilk rehberleri yayimla', static function (): bool {
+        if (ayar_oku('rehber_yayin_1') === '1') {
+            return false;
+        }
+
+        $ifade = db()->prepare(
+            "UPDATE rehberler SET durum = 'yayinda', yayin_tarihi = COALESCE(yayin_tarihi, NOW())
+              WHERE durum = 'taslak' AND slug IN (?, ?, ?, ?, ?)"
+        );
+        $ifade->execute([
+            'vade-farki-nasil-hesaplanir',
+            'basabas-satis-tutari-nasil-bulunur',
+            'nakit-akis-tablosu-nasil-hazirlanir',
+            'musteri-bazinda-karlilik-nasil-hesaplanir',
+            'tfrs-15-orneklerle-nasil-uygulanir',
+        ]);
+        ayar_yaz('rehber_yayin_1', '1');
+
+        return $ifade->rowCount() > 0;
+    });
+
     return $yapilanlar;
 }
 
