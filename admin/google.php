@@ -339,7 +339,12 @@ require __DIR__ . '/ust.php';
                         <td>
                             <span class="rozet rozet-<?= $d['sonuc'] === 'PASS' ? 'yayinda' : ($d['sonuc'] === 'FAIL' ? 'reddedildi' : 'taslak') ?>"><?= e($durum) ?></span>
                         </td>
-                        <td class="ipucu"><?= e($oneri) ?></td>
+                        <td class="ipucu">
+                            <?= e($oneri) ?>
+                            <?php if ($d['sonuc'] !== 'PASS'): ?>
+                                <br><a href="<?= e(gsc_denetim_adresi((string) $d['url'])) ?>" target="_blank" rel="noopener">Search Console'da aç &rarr;</a>
+                            <?php endif; ?>
+                        </td>
                         <td><?= $d['son_tarama'] ? e(tarih_bicimle((string) $d['son_tarama'], false)) : '—' ?></td>
                     </tr>
                 <?php endforeach; ?>
