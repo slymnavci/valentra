@@ -711,3 +711,67 @@ code.anahtar {
 .panel-ust .panel-acilir a.aktif { background: #e8eef7; font-weight: 700; }
 
 .panel-ust .panel-menu > a.panel-cikis { margin-left: 10px; opacity: .85; }
+
+/* --- Haber listesinde toplu secim ----------------------------------------- */
+
+.toplu-cubuk {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 18px;
+    margin-bottom: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+.toplu-hepsi { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+.dugme[disabled] { opacity: .45; cursor: not-allowed; }
+
+.haber-satiri.secilebilir { grid-template-columns: auto 1fr auto; }
+.toplu-sec, .toplu-hepsi input { width: 18px; height: 18px; margin: 3px 0 0; cursor: pointer; }
+
+@media (max-width: 640px) {
+    .haber-satiri.secilebilir { grid-template-columns: auto 1fr; }
+    .haber-satiri.secilebilir .satir-islem { grid-column: 1 / -1; }
+}
+
+/* --- Gunluk isler --------------------------------------------------------- */
+
+.gunluk-ozet {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.gunluk-ozet .kutu { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.gunluk-ozet .sayi { font-size: 2rem; font-weight: 700; color: var(--lacivert); line-height: 1; }
+.gunluk-ozet .sayi.sifir { color: var(--metin-soluk); }
+.gunluk-ozet .islemler { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+
+.gunluk-liste { list-style: none; margin: 0; padding: 0; }
+
+.gunluk-is {
+    display: grid;
+    grid-template-columns: 26px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 0;
+    border-top: 1px solid var(--cizgi);
+}
+
+.gunluk-is:first-child { border-top: 0; }
+.gunluk-is .ad { font-weight: 600; }
+.gunluk-is .ipucu { margin: 2px 0 0; }
+.gunluk-is .sonuc { margin: 4px 0 0; font-size: .92rem; }
+.gunluk-is .sonuc.tamam { color: var(--yesil); }
+.gunluk-is .sonuc.hata { color: var(--kirmizi); }
+.gunluk-is .isaret { font-size: 1.1rem; text-align: center; color: var(--metin-soluk); }
+.gunluk-is form { margin: 0; }
+
+@media (max-width: 640px) {
+    .gunluk-is { grid-template-columns: 26px 1fr; }
+    .gunluk-is form { grid-column: 2; }
+}

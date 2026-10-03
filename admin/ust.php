@@ -30,7 +30,7 @@
     <?php endif; ?>
 
     <div class="sinirli">
-            <a class="logo" href="index.php" style="color:#fff;display:flex;align-items:center;gap:10px;"><img src="/assets/logo.svg" alt="" width="30" height="26" style="background:#fff;border-radius:4px;padding:2px;">VALENTRA</a>
+            <a class="logo" href="gunluk.php" style="color:#fff;display:flex;align-items:center;gap:10px;"><img src="/assets/logo.svg" alt="" width="30" height="26" style="background:#fff;border-radius:4px;padding:2px;">VALENTRA</a>
             <?php
             /*
              * Menu gruplari. Tek tek 15 baglanti iki satira tasiyordu;
@@ -38,6 +38,7 @@
              * sayfanin grubu isaretleniyor.
              */
             $panelMenu = [
+                'Günlük işler'  => 'gunluk.php',
                 'Haberler'      => 'index.php',
                 'İçerik'        => [
                     'Köşe yazıları'   => 'kose-yazilari.php',

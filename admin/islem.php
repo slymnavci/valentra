@@ -21,6 +21,39 @@ $id    = (int) ($_POST['id'] ?? 0);
 $islem = (string) ($_POST['islem'] ?? '');
 $donus = (string) ($_POST['donus'] ?? '');
 
+/*
+ * Toplu onay / ret: haber listesinde secilenler ya da Gunluk isler'deki
+ * "hepsini yayinla". Yalnizca hala onay bekleyenler islenir; bu arada
+ * baska bir sekmede yayinlanmis ya da reddedilmis habere dokunulmaz.
+ */
+if ($islem === 'toplu_onayla' || $islem === 'toplu_reddet') {
+    $idler = ((string) ($_POST['hepsi'] ?? '')) === '1'
+        ? array_map(static fn (array $h): int => (int) $h['id'], haber_listele(HABER_TASLAK, 1000))
+        : array_map('intval', (array) ($_POST['idler'] ?? []));
+    $idler = array_values(array_unique(array_filter($idler, static fn (int $i): bool => $i > 0)));
+
+    $adet = 0;
+
+    foreach ($idler as $hid) {
+        $haber = haber_bul($hid);
+
+        if ($haber === null || $haber['durum'] !== HABER_TASLAK) {
+            continue;
+        }
+
+        $islem === 'toplu_onayla'
+            ? haber_onayla($hid, aktif_yonetici_id())
+            : haber_durum_degistir($hid, HABER_REDDEDILDI);
+        $adet++;
+    }
+
+    $bildirim = ($islem === 'toplu_onayla' ? 'toplu_onay' : 'toplu_ret') . '&adet=' . $adet;
+
+    yonlendir($donus === 'gunluk'
+        ? 'gunluk.php?bildirim=' . $bildirim
+        : 'index.php?durum=' . HABER_TASLAK . '&bildirim=' . $bildirim);
+}
+
 if ($id <= 0 || haber_bul($id) === null) {
     http_response_code(404);
     exit('Haber bulunamadı.');

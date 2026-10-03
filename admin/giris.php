@@ -7,7 +7,7 @@ require_once __DIR__ . '/../includes/auth.php';
 oturum_baslat();
 
 if (oturum_acik()) {
-    yonlendir('index.php');
+    yonlendir('gunluk.php');
 }
 
 $hata = '';
@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $hata = 'Kullanıcı adı ve parola gerekli.';
     } elseif (giris_yap($kullaniciAdi, $parola)) {
         unset($_SESSION['giris_denemesi']);
-        yonlendir('index.php');
+        yonlendir('gunluk.php');
     } else {
         $_SESSION['giris_denemesi'] = $denemeler + 1;
         $hata = 'Kullanıcı adı veya parola hatalı.';
