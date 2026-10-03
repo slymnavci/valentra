@@ -37,6 +37,7 @@ on:
         default: 'topla'
         options:
           - topla
+          - gunluk
           - pratik-bilgiler
           - kose-yazisi
           - kaynak-testi
@@ -215,7 +216,7 @@ jobs:
         run: php pratik.php
 
       - name: Ajani calistir
-        if: (inputs.mod == 'topla' || inputs.mod == '') && github.event.schedule != '40 4 * * 1'
+        if: (inputs.mod == 'topla' || inputs.mod == 'gunluk' || inputs.mod == '') && github.event.schedule != '40 4 * * 1'
         working-directory: ajan
         env:
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
@@ -261,8 +262,12 @@ jobs:
       # bir kismini dusurdugu icin tek bir saate baglanmadi. Haber
       # toplamadan SONRA: gunun yeni haberleri malzemeye girsin.
       # Yazilar taslak olarak gidiyor; yayina alma panelde.
+      #
+      # 'gunluk' (panel -> Gunluk isler): haber toplama + kose yazisi tek
+      # calismada. Iki ayri istek gondermek ikincisini sirada bekletiyor,
+      # ucuncu bir istek de bekleyeni iptal ediyordu.
       - name: Kose yazilarini yaz
-        if: ${{ !cancelled() && ((github.event_name == 'schedule' && github.event.schedule != '40 4 * * 1') || inputs.mod == 'kose-yazisi') }}
+        if: ${{ !cancelled() && ((github.event_name == 'schedule' && github.event.schedule != '40 4 * * 1') || inputs.mod == 'kose-yazisi' || inputs.mod == 'gunluk') }}
         working-directory: ajan
         env:
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
@@ -290,7 +295,7 @@ jobs:
       # !cancelled(); istek basarisiz olursa is kirmizi olmuyor, uyari
       # yaziliyor — grafiklerin son iyi verisi zaten sitede duruyor.
       - name: Grafikleri tazele
-        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'topla') }}
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'topla' || inputs.mod == 'gunluk') }}
         env:
           VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}
@@ -319,7 +324,7 @@ jobs:
       # yani gunde bes calisma tek bir cekime iniyor. Anahtar girilmemisse
       # sessizce atlaniyor.
       - name: Search Console verisini tazele
-        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'topla') }}
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'topla' || inputs.mod == 'gunluk') }}
         env:
           VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}
@@ -334,7 +339,7 @@ jobs:
       # Sitenin Resmi Gazete sayfasi. Fihristi site cekiyor (Turkiye'den
       # dogrudan erisim); ajan yalnizca durtuyor.
       - name: Resmi Gazete fihristini tazele
-        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'topla') }}
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'topla' || inputs.mod == 'gunluk') }}
         env:
           VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}

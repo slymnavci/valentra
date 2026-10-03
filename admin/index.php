@@ -36,6 +36,23 @@ $bildirimler = [
 
 $bildirim = $bildirimler[(string) ($_GET['bildirim'] ?? '')] ?? null;
 
+$topluAdet = (int) ($_GET['adet'] ?? 0);
+
+if (($_GET['bildirim'] ?? '') === 'toplu_onay') {
+    $bildirim = $topluAdet > 0
+        ? ['basari', $topluAdet . ' haber yayımlandı.']
+        : ['bilgi', 'Yayımlanacak haber seçilmedi.'];
+} elseif (($_GET['bildirim'] ?? '') === 'toplu_ret') {
+    $bildirim = $topluAdet > 0
+        ? ['bilgi', $topluAdet . ' haber reddedildi.']
+        : ['bilgi', 'Reddedilecek haber seçilmedi.'];
+}
+
+// Toplu secim yalnizca onay bekleyenlerde: satirlardaki onay kutulari
+// asagidaki ayri forma (form="toplu-form") bagli, cunku her satirin
+// kendi formlari var ve form ic ice olamaz.
+$topluSecim = $durum === HABER_TASLAK && $haberler !== [];
+
 $panelBasligi = 'Haberler';
 require __DIR__ . '/ust.php';
 ?>
@@ -100,8 +117,26 @@ require __DIR__ . '/ust.php';
     </div>
 <?php else: ?>
 
+    <?php if ($topluSecim): ?>
+        <form id="toplu-form" method="post" action="islem.php" class="kutu toplu-cubuk">
+            <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+            <label class="toplu-hepsi">
+                <input type="checkbox" id="toplu-hepsi">
+                Tümünü seç
+            </label>
+            <span class="ipucu" id="toplu-sayac">0 haber seçili</span>
+            <span style="flex:1;"></span>
+            <button type="submit" name="islem" value="toplu_onayla" class="dugme dugme-onay" data-soru="yayımlansın mı?" disabled>Seçilenleri yayınla</button>
+            <button type="submit" name="islem" value="toplu_reddet" class="dugme dugme-ret" data-soru="reddedilsin mi?" disabled>Seçilenleri reddet</button>
+        </form>
+    <?php endif; ?>
+
     <?php foreach ($haberler as $haber): ?>
-        <article class="haber-satiri">
+        <article class="haber-satiri<?= $topluSecim ? ' secilebilir' : '' ?>">
+            <?php if ($topluSecim): ?>
+                <input type="checkbox" class="toplu-sec" name="idler[]" value="<?= (int) $haber['id'] ?>"
+                       form="toplu-form" aria-label="Seç: <?= e($haber['baslik']) ?>">
+            <?php endif; ?>
             <div>
                 <h3>
                     <a href="duzenle.php?id=<?= (int) $haber['id'] ?>"><?= e($haber['baslik']) ?></a>
@@ -198,6 +233,40 @@ require __DIR__ . '/ust.php';
             </div>
         </article>
     <?php endforeach; ?>
+
+    <?php if ($topluSecim): ?>
+        <script>
+        (function () {
+            var form   = document.getElementById('toplu-form');
+            var hepsi  = document.getElementById('toplu-hepsi');
+            var sayac  = document.getElementById('toplu-sayac');
+            var kutular = Array.prototype.slice.call(document.querySelectorAll('.toplu-sec'));
+            var dugmeler = form.querySelectorAll('button[type=submit]');
+
+            function guncelle() {
+                var n = kutular.filter(function (k) { return k.checked; }).length;
+                sayac.textContent = n + ' haber seçili';
+                hepsi.checked = n === kutular.length;
+                hepsi.indeterminate = n > 0 && n < kutular.length;
+                dugmeler.forEach(function (d) { d.disabled = n === 0; });
+            }
+
+            hepsi.addEventListener('change', function () {
+                kutular.forEach(function (k) { k.checked = hepsi.checked; });
+                guncelle();
+            });
+            kutular.forEach(function (k) { k.addEventListener('change', guncelle); });
+
+            form.addEventListener('submit', function (o) {
+                var n = kutular.filter(function (k) { return k.checked; }).length;
+                var soru = o.submitter ? o.submitter.getAttribute('data-soru') : 'işlensin mi?';
+                if (!confirm(n + ' haber ' + soru)) { o.preventDefault(); }
+            });
+
+            guncelle();
+        })();
+        </script>
+    <?php endif; ?>
 
 <?php endif; ?>
 
