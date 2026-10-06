@@ -188,6 +188,26 @@ final class Yazar implements SemaliIstemci
            - Etiketler: 2-4 adet, vergi terimleri (örnek: KDV, Tebliğ,
              Gelir Vergisi, e-Fatura).
 
+        RESMÎ GAZETE METİNLERİ (kaynak adı "Resmî Gazete" ise):
+           Bu metin mevzuatın KENDİSİDİR, başka bir sitenin haberi değil.
+           Sitede haberin hemen altında "mevzuatın tam metni" bağlantısı
+           Resmî Gazete'ye gidiyor; senin görevin düzenlemeyi ÖZETLEMEK.
+           Yukarıdaki uzunluk ve "okuyucu kaynağa gitmek zorunda
+           kalmamalı" kuralları bu metinler için şöyle uygulanır:
+           - İLK PARAGRAF: düzenlemenin tam adı ve numarası (sıra/seri
+             no, karar sayısı), hangi tarihli Resmî Gazete'de
+             yayımlandığı ve özü tek cümlede.
+           - Sonra getirdiği değişiklikler: oranlar, tutarlar, hadler,
+             süreler ve tarihler EKSİKSİZ; kimleri kapsadığı ve kimlerin
+             kapsam dışında kaldığı; yürürlük tarihi.
+           - Değişiklik düzenlemesiyse yalnızca DEĞİŞEN hükümleri anlat,
+             değişmeyen maddeleri tekrar etme.
+           - Tanımlar, yürütme ve yürürlük maddeleri gibi usul
+             maddelerini tek tek aktarma; maddeleri kopyalama.
+           - 3-6 paragraf yeterli.
+           - Başlık düzenlemenin resmî adını değil, ne değiştirdiğini
+             sade Türkçeyle söylesin.
+
         GÜVEN SKORU (0-100): Haberin doğruluğundan ve site için
         değerinden ne kadar eminsin. Vergi mevzuatı haberleri ekonomi
         haberlerinden daha değerli; aynı güvenilirlikteki bir ekonomi

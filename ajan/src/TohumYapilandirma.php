@@ -271,6 +271,26 @@ final class TohumYapilandirma
             // "AND sutun IS NULL" kosullari.
             preg_match_all('/\b(\w+)\s+IS\s+NULL/i', $kosul, $bosOlmali);
 
+            /*
+             * "AND sutun = 'deger'" kosullari.
+             *
+             * Kaynak adresi duzeltmeleri yalnizca BILINEN BOZUK adres
+             * hala yerindeyse uygulaniyor; yonetici panelden kendisi
+             * duzelttiyse ustune yazilmiyor. Bu kosul burada okunmasaydi
+             * tohum her zaman uygular, veritabani uygulamazdi — site
+             * erisilemezken ajan veritabanindan farkli bir kaynak
+             * listesiyle calisirdi.
+             */
+            $esitOlmali = [];
+
+            if (preg_match_all("/\b(\w+)\s*=\s*'((?:[^']|'')*)'/i", $kosul, $esitler, PREG_SET_ORDER)) {
+                foreach ($esitler as $esit) {
+                    if (strtolower($esit[1]) !== 'ad') {
+                        $esitOlmali[$esit[1]] = str_replace("''", "'", $esit[2]);
+                    }
+                }
+            }
+
             foreach ($satirlar as $sira => $satir) {
                 if (($satir['ad'] ?? null) !== $hedefAd) {
                     continue;
@@ -278,6 +298,12 @@ final class TohumYapilandirma
 
                 foreach ($bosOlmali[1] as $sutun) {
                     if (($satir[$sutun] ?? null) !== null) {
+                        continue 2;
+                    }
+                }
+
+                foreach ($esitOlmali as $sutun => $beklenen) {
+                    if (($satir[$sutun] ?? null) !== $beklenen) {
                         continue 2;
                     }
                 }

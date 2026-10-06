@@ -482,6 +482,69 @@ body.okuma .sinirli { max-width: 1320px; }
 
 .kaynak-kutusu a { color: var(--vurgu); text-decoration: underline; }
 
+/*
+ * Resmi Gazete haberinin altindaki "mevzuatin tam metni" kutusu.
+ *
+ * Kaynak kutusundan belirgin: okuyucunun bir sonraki adimi cogu zaman
+ * tam metni acmak. Altin sol kenar sitenin vurgu dili; dugme tek
+ * tikla Resmi Gazete'ye goturuyor.
+ */
+.rg-tam-metin {
+    margin: 26px 0 0;
+    padding: 18px 20px;
+    border: 1px solid var(--cizgi);
+    border-left: 4px solid var(--altin);
+    border-radius: 8px;
+    background: var(--zemin);
+}
+
+.rg-baslik {
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--altin-koyu);
+}
+
+.rg-kunye {
+    margin: 4px 0 14px;
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: var(--metin);
+}
+
+.rg-dugme {
+    display: inline-block;
+    padding: 10px 16px;
+    border-radius: 6px;
+    background: var(--lacivert);
+    color: #fff;
+    font-weight: 600;
+    font-size: .96rem;
+}
+
+.rg-dugme:hover { background: var(--lacivert-acik); }
+
+.rg-fihrist {
+    display: block;
+    margin-top: 12px;
+    font-size: .9rem;
+    color: var(--vurgu);
+    text-decoration: underline;
+}
+
+.rg-not {
+    margin: 12px 0 0;
+    font-size: .86rem;
+    color: var(--metin-soluk);
+}
+
+@media (prefers-color-scheme: dark) {
+    .rg-baslik { color: var(--altin); }
+    .rg-dugme { background: var(--altin-koyu); }
+    .rg-dugme:hover { background: var(--altin); color: var(--lacivert); }
+}
+
 /* --- Bos durum ----------------------------------------------------------- */
 
 .bos-durum {

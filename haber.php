@@ -37,6 +37,7 @@ $ziyaretHaberId = (int) $haber['id'];
 // Arama motoruna bunun bir haber oldugunu acikca soyle; yayim tarihi
 // ve gorsel de semaya giriyor.
 require_once __DIR__ . '/includes/seo.php';
+require_once __DIR__ . '/includes/resmi_gazete.php';
 
 $seoTur  = 'article';
 $seoSema = seo_haber_semasi($haber);
@@ -158,6 +159,44 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <?php endforeach; ?>
     </div>
 
+    <?php
+    /*
+     * MEVZUATIN TAM METNI — Resmi Gazete'den gelen haberlerde.
+     *
+     * Haber duzenlemenin ozeti; baglayici olan Resmi Gazete'de
+     * yayimlanan metin. Okuyucu ozetin hemen altinda tam metne tek
+     * tikla gitmeli. Genel "Orijinal habere git" baglantisi bunu
+     * soylemiyordu ve kaynak kutusunun icinde kayboluyordu.
+     *
+     * Kunye adresten cikariliyor (tarih, mukerrer, PDF); ayrica o
+     * gunun fihristine baglanti var, cunku bir duzenleme cogu zaman
+     * ayni gun yayimlanan baskalariyla birlikte okunur.
+     */
+    $rgKunye = resmi_gazete_kunyesi((string) $haber['kaynak_url']);
+    ?>
+    <?php if ($rgKunye !== null): ?>
+        <aside class="rg-tam-metin" aria-label="Mevzuatın tam metni">
+            <div class="rg-baslik">Mevzuatın tam metni</div>
+            <div class="rg-kunye">
+                Resmî Gazete &middot; <?= e($rgKunye['tarih_metin']) ?>
+                <?php if ($rgKunye['mukerrer'] > 0): ?>
+                    &middot; <?= (int) $rgKunye['mukerrer'] ?>. Mükerrer
+                <?php endif; ?>
+            </div>
+            <a class="rg-dugme" href="<?= e(guvenli_url((string) $haber['kaynak_url'])) ?>"
+               target="_blank" rel="noopener">
+                Resmî Gazete'de tam metni oku<?= $rgKunye['pdf'] ? ' (PDF)' : '' ?> &rarr;
+            </a>
+            <a class="rg-fihrist" href="<?= e($rgKunye['fihrist']) ?>" target="_blank" rel="noopener">
+                <?= e($rgKunye['tarih_metin']) ?> tarihli Resmî Gazete'nin tüm içeriği
+            </a>
+            <p class="rg-not">
+                Bu haber düzenlemenin özetidir. Bağlayıcı olan, Resmî Gazete'de
+                yayımlanan metindir.
+            </p>
+        </aside>
+    <?php endif; ?>
+
     <?php $iframeUrl = guvenli_url((string) ($haber['iframe_url'] ?? '')); ?>
     <?php if ($iframeUrl !== ''): ?>
         <div class="gomulu-icerik">
@@ -172,7 +211,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
         </div>
     <?php endif; ?>
 
-    <?php if ($haber['kaynak_url'] !== ''): ?>
+    <?php if ($haber['kaynak_url'] !== '' && $rgKunye === null): ?>
         <div class="kaynak-kutusu">
             Bu haber,
             <?= $haber['kaynak_adi'] !== ''

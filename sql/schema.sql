@@ -1162,3 +1162,115 @@ UPDATE pratik_bilgiler
 UPDATE pratik_bilgiler
    SET kaynak_adi = 'TÜİK — TCMB EVDS üzerinden'
  WHERE anahtar = 'enflasyon-orani';
+
+-- ---------------------------------------------------------------------------
+-- Kirik kaynaklar — 23.09.2026
+--
+-- Her adres GitHub Actions'ta, ajanin kendi kodu ve agiyla sinandi
+-- (kaynak_dene.php --aday). Sonuc gormeden yazilan adres yok.
+--
+-- KOSUL: guncellemeler yalnizca BILINEN BOZUK adres hala yerindeyse
+-- uygulaniyor ("AND besleme_url = 'eski'"). Yonetici bir adresi panelden
+-- kendisi duzelttiyse ustune yazilmiyor. Tohum ayristiricisi da ayni
+-- kosulu okuyor (TohumYapilandirma).
+--
+-- KAPATILANLARIN ORTAK SEBEBI: bozuk bir kaynak yalnizca bos donmuyor,
+-- digerlerine de zarar veriyor. Dogrudan erisilemeyen adresler site
+-- sunucusu uzerinden deneniyor ve bu yolun calisma basina tavani var;
+-- 403 donen kaynaklar tavani tuketiyor, sirasi sonra gelen saglam
+-- kaynaklar ("site uzerinden getirme tavani dolmustu") hic okunmuyor.
+-- ---------------------------------------------------------------------------
+
+-- Ekonomi Gazetesi alan adini .com.tr'den .com'a tasidi; eski ad DNS'te
+-- cozulmuyor. Yeni besleme sinandi: 25 guncel girdi.
+UPDATE kaynaklar
+   SET site_url    = 'https://www.ekonomigazetesi.com',
+       besleme_url = 'https://www.ekonomigazetesi.com/rss.xml',
+       liste_url   = 'https://www.ekonomigazetesi.com/ekonomi/'
+ WHERE ad = 'Ekonomi Gazetesi'
+   AND besleme_url = 'https://www.ekonomigazetesi.com.tr/rss';
+
+-- BIS besleme adresi degismis; yenisi sinandi (basin bultenleri).
+UPDATE kaynaklar
+   SET besleme_url = 'https://www.bis.org/doclist/all_pressrels.rss'
+ WHERE ad = 'Bank for International Settlements'
+   AND besleme_url = 'https://www.bis.org/list/press_rlsdate/index.rss';
+
+-- Bot engelleyenler: her yoldan (dogrudan ve site uzerinden) HTTP 403
+-- ya da bos yanit. Hicbir calismada tek girdi gelmedi.
+UPDATE kaynaklar SET aktif = 0
+ WHERE ad = 'PwC Türkiye'
+   AND liste_url = 'https://www.pwc.com.tr/tr/hizmetlerimiz/vergi/bultenler.html';
+
+UPDATE kaynaklar SET aktif = 0
+ WHERE ad = 'OECD Vergi'
+   AND liste_url = 'https://www.oecd.org/en/topics/tax-policy.html';
+
+UPDATE kaynaklar SET aktif = 0
+ WHERE ad = 'IMF'
+   AND liste_url = 'https://www.imf.org/en/News';
+
+UPDATE kaynaklar SET aktif = 0
+ WHERE ad = 'Associated Press İş'
+   AND liste_url = 'https://apnews.com/hub/business';
+
+UPDATE kaynaklar SET aktif = 0
+ WHERE ad = 'Bloomberg Ekonomi'
+   AND liste_url = 'https://www.bloomberg.com/economics';
+
+UPDATE kaynaklar SET aktif = 0
+ WHERE ad = 'EFRAG'
+   AND liste_url = 'https://www.efrag.org/en/financial-reporting/news';
+
+-- Reuters: besleme adresi ve liste sayfasi her calismada HTTP 404,
+-- iki yoldan da.
+UPDATE kaynaklar SET aktif = 0
+ WHERE ad = 'Reuters Business'
+   AND besleme_url = 'https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best';
+
+-- Vergi Algi: guvenlik sertifikasinin suresi dolmus ("certificate has
+-- expired"); iki yoldan da okunamiyor.
+UPDATE kaynaklar SET aktif = 0
+ WHERE ad = 'Vergi Algı'
+   AND besleme_url = 'https://www.vergialgi.net/feed';
+
+-- Vergi Dunyasi aylik hakemli bir dergi, haber kaynagi degil; makale
+-- listesi adresi de artik 404.
+UPDATE kaynaklar SET aktif = 0
+ WHERE ad = 'Vergi Dünyası'
+   AND liste_url = 'https://www.vergidunyasi.com.tr/makaleler';
+
+-- EY Turkiye: vergi icgoruleri sayfasi 404; "Vergide Gundem" sayfasi
+-- denendi, vergi degil genel icgoru yazilari donduruyor
+-- (surdurulebilirlik, iklim).
+UPDATE kaynaklar SET aktif = 0
+ WHERE ad = 'EY Türkiye'
+   AND liste_url = 'https://www.ey.com/tr_tr/insights/tax';
+
+-- BDDK: sunucu sertifika zincirini eksik gonderiyor ("unable to get
+-- local issuer certificate"); iki yoldan da okunamiyor.
+UPDATE kaynaklar SET aktif = 0
+ WHERE ad = 'BDDK'
+   AND liste_url = 'https://www.bddk.org.tr/Duyuru';
+
+-- CNN Business beslemesi 2019'dan beri guncellenmiyor.
+UPDATE kaynaklar SET aktif = 0
+ WHERE ad = 'CNN Business'
+   AND besleme_url = 'http://rss.cnn.com/rss/money_latest.rss';
+
+-- Accountancy Age beslemesi vergi yerine kumar ve bahis tanitimi
+-- yayimliyor.
+UPDATE kaynaklar SET aktif = 0
+ WHERE ad = 'Accountancy Age'
+   AND besleme_url = 'https://www.accountancyage.com/feed/';
+
+-- GIB: yeni site (gib.gov.tr) icerigini tarayicida JavaScript ile
+-- kuruyor. Duyuru ve mevzuat sayfalari HTTP 200 donuyor ama HTML'de
+-- tek bir baglanti yok; sayfa kazimayla okunamiyor. Eski adresler 404.
+-- Kapatiliyor ki her calismada bosuna istek yapilmasin. GIB'in
+-- tebligleri Resmi Gazete'den, sirkulerleri ISMMMO ve Grant Thornton
+-- sirkuler sayfalarindan geliyor. Sitenin veri ucu bulunursa yeniden
+-- acilacak.
+UPDATE kaynaklar SET aktif = 0
+ WHERE ad = 'Gelir İdaresi Başkanlığı'
+   AND besleme_url = 'https://www.gib.gov.tr/rss.xml';
