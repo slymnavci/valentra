@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/ayarlar.php';
 require_once __DIR__ . '/ajan_tetikle.php';
+require_once __DIR__ . '/ajan_teslim.php';
 
 /**
  * Sayfada gorunen isler, gosterim sirasiyla. "Hepsini sirayla" veri ve
@@ -37,6 +38,8 @@ function gunluk_isler(): array
                        'aciklama' => 'Sitenin tüm adreslerini IndexNow ile gönderir.'],
         'harita'   => ['grup' => 'arama', 'ad' => 'Site haritasını Google\'a gönder',
                        'aciklama' => 'Google\'a site haritasını yeniden okumasını söyler.'],
+        'teslim' => ['grup' => 'ajan', 'ad' => 'GitHub\'da bekleyen haberleri al',
+                          'aciklama' => 'Ajan siteye ulaşamadığında yazdığı haberleri GitHub\'da bırakır; site onları buradan alır. Ziyaretçi geldikçe yarım saatte bir kendiliğinden de yapılır.'],
         'ajan'     => ['grup' => 'ajan',  'ad' => 'Haberleri topla ve köşe yazılarını yaz',
                        'aciklama' => 'Ajan önce haberleri toplar, sonra günün köşe yazılarını yazar. Hepsi onayınıza düşer.'],
         'ajan_haber'  => ['grup' => 'ajan', 'ad' => 'Yalnızca haberleri topla',
@@ -63,6 +66,7 @@ function gunluk_is_calistir(string $is): array
             'gsc'         => gunluk_gsc(),
             'indexnow'    => gunluk_indexnow(),
             'harita'      => gunluk_harita(),
+            'teslim' => ajan_teslim_al(),
             'ajan'        => gunluk_ajan('gunluk'),
             'ajan_haber'  => gunluk_ajan('topla'),
             'ajan_kose'   => gunluk_ajan('kose-yazisi'),
@@ -269,6 +273,7 @@ function gunluk_son_durum(string $is): string
         'gsc'      => $zamanli(ayar_oku('gsc_son_tazeleme')),
         'indexnow' => $json('indexnow_son'),
         'harita'   => $json('gsc_harita_son'),
+        'teslim' => $json(AJAN_TESLIM_SON),
         default    => '',
     };
 }

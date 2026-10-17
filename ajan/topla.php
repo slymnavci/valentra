@@ -68,6 +68,7 @@ function site_ulasilamadi_mesaji(string $teknik, ?int $bekleyen): string
 {
     return 'Ajan siteye ulaşamadı'
         . ($bekleyen !== null ? '; ' . $bekleyen . ' haber gönderilemedi ve bekletiliyor (kaybolmadı, site açılınca kendiliğinden gönderilecek)' : '')
+        . ($bekleyen !== null ? '. Site bu haberleri GitHub\'dan kendisi alacak (Günlük işler → "GitHub\'da bekleyen haberleri al")' : '')
         . '. Ne yapmalı: siteyi tarayıcıdan açıp çalıştığını kontrol edin; site açılıyorsa '
         . 'hosting firmasına GitHub Actions\'tan gelen HTTPS (443) bağlantılarının engellendiğini bildirin. '
         . 'Teknik ayrıntı: ' . $teknik;
@@ -1402,6 +1403,25 @@ try {
     gunluk('Gönderim başarısız: ' . $e->getMessage());
     Bildirim::sorun(site_ulasilamadi_mesaji($e->getMessage(), count($gonderilecek)));
     $siteSorunuBildirildi = true;
+
+    /*
+     * Ters yol: site GitHub'a ulasabiliyor. Bekleyenlerin tamami
+     * calismanin "valentra-teslim" eserine konuyor (is akisi yukluyor);
+     * site en yenisini kendisi indirip taslak olarak kaydediyor
+     * (includes/ajan_teslim.php). Kopya engeli ikisinin ustuste
+     * binmesini zararsiz kiliyor.
+     */
+    $teslim = __DIR__ . '/teslim/haberler.json';
+    @mkdir(dirname($teslim), 0775, true);
+    $teslimYazildi = @file_put_contents(
+        $teslim,
+        json_encode(array_values($gonderilecek), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+    ) !== false;
+
+    if ($teslimYazildi) {
+        gunluk(count($gonderilecek) . ' haber GitHub\'a bırakıldı; site bunları kendisi alacak '
+            . '(panel → Günlük işler → "GitHub\'da bekleyen haberleri al").');
+    }
 
     if ($depo->yaz('bekleyen_haberler', $gonderilecek)) {
         gunluk(count($gonderilecek) . ' haber saklandı; siteye ulaşılabilen '

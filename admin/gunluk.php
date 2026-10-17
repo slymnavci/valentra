@@ -184,7 +184,7 @@ require __DIR__ . '/ust.php';
                         <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
                         <input type="hidden" name="is" value="<?= e($anahtar) ?>">
                         <button type="submit" class="dugme<?= $anahtar === 'ajan' ? ' dugme-ana' : '' ?>"
-                            <?= $is['grup'] === 'ajan' && (!$ajanVar || $ajanSuruyor) ? 'disabled' : '' ?>>Çalıştır</button>
+                            <?= $is['grup'] === 'ajan' && (!$ajanVar || ($ajanSuruyor && $anahtar !== 'teslim')) ? 'disabled' : '' ?>>Çalıştır</button>
                     </form>
                 </li>
             <?php endforeach; ?>
@@ -256,7 +256,7 @@ require __DIR__ . '/ust.php';
     // yeni sayfalar zaten yayimlaninca tek tek bildiriliyor.
     var hepsi = document.getElementById('hepsini-calistir');
     hepsi.addEventListener('click', function () {
-        var sira = ['piyasa', 'grafik', 'rg', 'gsc', 'harita'];
+        var sira = ['teslim', 'piyasa', 'grafik', 'rg', 'gsc', 'harita'];
         if (!ajanSuruyor && satir('ajan') && !satir('ajan').querySelector('button').disabled) { sira.push('ajan'); }
 
         hepsi.disabled = true;

@@ -22,3 +22,6 @@ ajan/onbellek/
 # Aktarim: panel -> Egitim.
 egitim/content/
 egitim/materyaller/
+
+# Ajanin siteye gonderemedigi haberler (GitHub eserine yuklenir)
+ajan/teslim/

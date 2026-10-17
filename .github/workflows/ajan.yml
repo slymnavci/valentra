@@ -268,6 +268,18 @@ jobs:
 
           php topla.php $BAYRAKLAR
 
+      # Siteye gonderilemeyen haberler: site bu eseri GitHub API'den
+      # kendisi indiriyor (includes/ajan_teslim.php). GitHub'dan siteye
+      # baglanti kurulamasa da ters yon calisiyor.
+      - name: Gonderilemeyen haberleri GitHub'a birak
+        if: ${{ !cancelled() && hashFiles('ajan/teslim/haberler.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: valentra-teslim
+          path: ajan/teslim/haberler.json
+          retention-days: 7
+          if-no-files-found: ignore
+
       # "Valentra Diyor ki..." kose yazilari.
       #
       # Zamanli calismalarda her seferinde deneniyor ama gunde bir kez
