@@ -72,6 +72,15 @@ concurrency:
   group: valentra-ajan
   cancel-in-progress: false
 
+# Yoneticinin bilmesi gereken sorunlar bu dosyada birikir (ajan/src/
+# Bildirim.php ve asagidaki curl adimlari yazar). Son adim dosyayi okuyup
+# calismayi KIRMIZI bitirir: GitHub e-posta atar, panel nedeni gosterir.
+#
+# Eskiden site haftalarca ulasilamaz oldugu halde calismalar yesil
+# gorunuyordu; haberler bekliyor ama kimse bilmiyordu.
+env:
+  AJAN_SORUN_DOSYASI: /tmp/valentra-ajan-sorunlar.txt
+
 jobs:
   topla:
     runs-on: ubuntu-latest
@@ -107,11 +116,16 @@ jobs:
       # kayit geri yukleniyor: GitHub onbellegi ayni anahtara ikinci
       # kez YAZMAZ, sabit anahtar kullanilsa depo ilk calismadan sonra
       # hic guncellenmezdi.
+      #
+      # Geri yukleme ve kayit ayri adimlar: actions/cache'in kendi kaydi
+      # yalnizca is BASARILI bittiginde calisiyor. Is kirmizi bitince
+      # (ornegin site ulasilamaz oldugunda) bekleyen haberler kaydedilmiyor
+      # ve bir sonraki calismaya ulasmiyordu.
       - name: Ajan deposu
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ajan/onbellek
-          key: ajan-depo-${{ github.run_id }}
+          key: ajan-depo-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: ajan-depo-
 
       - name: Bagimliliklari kur
@@ -312,6 +326,7 @@ jobs:
             "${VALENTRA_SITE_URL%/}/api/grafik-tazele.php"); then
             echo "$yanit"
             echo "::warning::Grafik tazeleme istegi basarisiz; grafiklerin son iyi verisi korunuyor."
+            echo "Grafikler tazelenemedi: siteye ulaşılamadı ya da site hata verdi. Grafiklerin son iyi verisi sitede duruyor." >> "$AJAN_SORUN_DOSYASI"
             exit 0
           fi
 
@@ -333,7 +348,8 @@ jobs:
             -H "X-Valentra-Key: $VALENTRA_AGENT_KEY" \
             -H "Authorization: Bearer $VALENTRA_AGENT_KEY" \
             "${VALENTRA_SITE_URL%/}/api/gsc-tazele.php" \
-            || echo "::warning::Search Console tazeleme istegi basarisiz; panel acildiginda kendini tazeler."
+            || { echo "::warning::Search Console tazeleme istegi basarisiz; panel acildiginda kendini tazeler."; \
+                 echo "Search Console verisi tazelenemedi: siteye ulaşılamadı." >> "$AJAN_SORUN_DOSYASI"; }
           echo
 
       # Sitenin Resmi Gazete sayfasi. Fihristi site cekiyor (Turkiye'den
@@ -348,5 +364,37 @@ jobs:
             -H "X-Valentra-Key: $VALENTRA_AGENT_KEY" \
             -H "Authorization: Bearer $VALENTRA_AGENT_KEY" \
             "${VALENTRA_SITE_URL%/}/api/resmi-gazete-tazele.php" \
-            || echo "::warning::Resmi Gazete tazeleme istegi basarisiz; sayfa acilista kendini tazeler."
+            || { echo "::warning::Resmi Gazete tazeleme istegi basarisiz; sayfa acilista kendini tazeler."; \
+                 echo "Resmî Gazete fihristi tazelenemedi: siteye ulaşılamadı." >> "$AJAN_SORUN_DOSYASI"; }
           echo
+
+      - name: Ajan deposunu kaydet
+        if: ${{ always() && hashFiles('ajan/onbellek/**') != '' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ajan/onbellek
+          key: ajan-depo-${{ github.run_id }}-${{ github.run_attempt }}
+
+      # Biriken sorunlari tek yerde, okunur bicimde gosterir ve calismayi
+      # kirmizi bitirir. Her satir Actions ozetinde ve e-postada hata
+      # olarak gorunur; panel de ayni satirlari GitHub'dan okuyup gosterir.
+      - name: Sorunlari bildir
+        if: always()
+        run: |
+          if [ ! -s "$AJAN_SORUN_DOSYASI" ]; then
+            echo "Sorun yok."
+            exit 0
+          fi
+
+          {
+            echo "## Dikkat: yapılması gereken bir şey var"
+            echo
+            awk '!gorulen[$0]++' "$AJAN_SORUN_DOSYASI" | sed 's/^/- /'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          awk '!gorulen[$0]++' "$AJAN_SORUN_DOSYASI" | while IFS= read -r satir; do
+            satir="${satir//'%'/'%25'}"
+            echo "::error title=Valentra ajanı::$satir"
+          done
+
+          exit 1

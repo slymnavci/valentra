@@ -79,6 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $anahtarVar = ajan_tetikleyebilir_mi();
 $mevcutAnahtar = ayar_oku(AJAN_GITHUB_ANAHTAR);
 $sonCalisma = $anahtarVar ? ajan_son_calisma() : ['var' => false];
+$ajanUyari  = ajan_uyarisi($sonCalisma);
 
 $bekleyen = haber_durum_sayilari()[HABER_TASLAK] ?? 0;
 $sonKayit = db()->query('SELECT * FROM ajan_kayitlari ORDER BY baslangic DESC LIMIT 5')->fetchAll();
@@ -96,6 +97,8 @@ require __DIR__ . '/ust.php';
 <?php if ($hata !== ''): ?>
     <div class="uyari uyari-hata" style="margin-top:14px;"><?= e($hata) ?></div>
 <?php endif; ?>
+
+<?php ajan_uyarisi_goster($ajanUyari); ?>
 
 <!-- Calistirma -->
 <div class="kutu" style="margin-top:18px;">

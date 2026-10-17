@@ -59,7 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $bekleyen   = gunluk_bekleyenler();
 $ajanVar    = ajan_tetikleyebilir_mi();
-$sonCalisma = $ajanVar ? ajan_son_calisma() : ['var' => false, 'durum' => '', 'sonuc' => '', 'baslangic' => '', 'adres' => ''];
+$sonCalisma = $ajanVar ? ajan_son_calisma() : ['var' => false, 'id' => 0, 'durum' => '', 'sonuc' => '', 'baslangic' => '', 'adres' => ''];
+$ajanUyari  = ajan_uyarisi($sonCalisma);
 $ajanSuruyor = $sonCalisma['var'] && $sonCalisma['durum'] !== 'completed';
 
 $bildirim = null;
@@ -82,6 +83,8 @@ require __DIR__ . '/ust.php';
 <?php if ($bildirim !== null): ?>
     <div class="uyari uyari-<?= e($bildirim[0]) ?>" style="margin-top:20px;"><?= e($bildirim[1]) ?></div>
 <?php endif; ?>
+
+<?php ajan_uyarisi_goster($ajanUyari); ?>
 
 <div class="kutu toplama-cubugu" style="margin-top:20px;">
     <div>
