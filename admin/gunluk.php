@@ -59,7 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $bekleyen   = gunluk_bekleyenler();
 $ajanVar    = ajan_tetikleyebilir_mi();
-$sonCalisma = $ajanVar ? ajan_son_calisma() : ['var' => false, 'durum' => '', 'sonuc' => '', 'baslangic' => '', 'adres' => ''];
+$sonCalisma = $ajanVar ? ajan_son_calisma() : ['var' => false, 'id' => 0, 'durum' => '', 'sonuc' => '', 'baslangic' => '', 'adres' => ''];
+$ajanUyari  = ajan_uyarisi($sonCalisma);
 $ajanSuruyor = $sonCalisma['var'] && $sonCalisma['durum'] !== 'completed';
 
 $bildirim = null;
@@ -82,6 +83,8 @@ require __DIR__ . '/ust.php';
 <?php if ($bildirim !== null): ?>
     <div class="uyari uyari-<?= e($bildirim[0]) ?>" style="margin-top:20px;"><?= e($bildirim[1]) ?></div>
 <?php endif; ?>
+
+<?php ajan_uyarisi_goster($ajanUyari); ?>
 
 <div class="kutu toplama-cubugu" style="margin-top:20px;">
     <div>
@@ -181,7 +184,7 @@ require __DIR__ . '/ust.php';
                         <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
                         <input type="hidden" name="is" value="<?= e($anahtar) ?>">
                         <button type="submit" class="dugme<?= $anahtar === 'ajan' ? ' dugme-ana' : '' ?>"
-                            <?= $is['grup'] === 'ajan' && (!$ajanVar || $ajanSuruyor) ? 'disabled' : '' ?>>Çalıştır</button>
+                            <?= $is['grup'] === 'ajan' && (!$ajanVar || ($ajanSuruyor && $anahtar !== 'teslim')) ? 'disabled' : '' ?>>Çalıştır</button>
                     </form>
                 </li>
             <?php endforeach; ?>
@@ -253,7 +256,7 @@ require __DIR__ . '/ust.php';
     // yeni sayfalar zaten yayimlaninca tek tek bildiriliyor.
     var hepsi = document.getElementById('hepsini-calistir');
     hepsi.addEventListener('click', function () {
-        var sira = ['piyasa', 'grafik', 'rg', 'gsc', 'harita'];
+        var sira = ['teslim', 'piyasa', 'grafik', 'rg', 'gsc', 'harita'];
         if (!ajanSuruyor && satir('ajan') && !satir('ajan').querySelector('button').disabled) { sira.push('ajan'); }
 
         hepsi.disabled = true;

@@ -38,54 +38,12 @@ if (count($veri['haberler']) > 100) {
     ajan_json(400, ['hata' => 'Tek istekte en fazla 100 haber gönderilebilir.']);
 }
 
-$kayit = db()->prepare(
-    'INSERT INTO ajan_kayitlari (durum, bulunan) VALUES (:durum, :bulunan)'
-);
-$kayit->execute(['durum' => 'calisiyor', 'bulunan' => count($veri['haberler'])]);
-$kayitId = (int) db()->lastInsertId();
-
-$eklenen = 0;
-$yinelenen = 0;
-$hatalar = [];
-
-foreach ($veri['haberler'] as $sira => $haber) {
-    if (!is_array($haber)) {
-        $hatalar[] = ['sira' => $sira, 'mesaj' => 'Kayıt nesne değil.'];
-        continue;
-    }
-
-    try {
-        $sonuc = haber_taslak_ekle($haber);
-
-        if ($sonuc['durum'] === 'eklendi') {
-            $eklenen++;
-        } else {
-            $yinelenen++;
-        }
-    } catch (InvalidArgumentException $e) {
-        $hatalar[] = ['sira' => $sira, 'mesaj' => $e->getMessage()];
-    } catch (PDOException $e) {
-        $hatalar[] = ['sira' => $sira, 'mesaj' => 'Kaydedilemedi.'];
-    }
-}
-
-db()->prepare(
-    'UPDATE ajan_kayitlari
-        SET bitis = NOW(), durum = :durum, eklenen = :eklenen,
-            yinelenen = :yinelenen, mesaj = :mesaj
-      WHERE id = :id'
-)->execute([
-    'durum'     => $hatalar === [] ? 'tamam' : 'hata',
-    'eklenen'   => $eklenen,
-    'yinelenen' => $yinelenen,
-    'mesaj'     => $hatalar === [] ? '' : mb_substr(count($hatalar) . ' kayıt alınamadı.', 0, 600, 'UTF-8'),
-    'id'        => $kayitId,
-]);
+$sonuc = haber_toplu_taslak_ekle($veri['haberler']);
 
 ajan_json(200, [
     'durum'     => 'tamam',
-    'eklenen'   => $eklenen,
-    'yinelenen' => $yinelenen,
-    'hatalar'   => $hatalar,
+    'eklenen'   => $sonuc['eklenen'],
+    'yinelenen' => $sonuc['yinelenen'],
+    'hatalar'   => $sonuc['hatalar'],
     'not'       => 'Haberler taslak olarak kaydedildi, yönetici onayı bekliyor.',
 ]);

@@ -42,8 +42,9 @@ require_once __DIR__ . '/src/Site.php';
 require_once __DIR__ . '/src/KotaBittiException.php';
 require_once __DIR__ . '/src/SemaliIstemci.php';
 require_once __DIR__ . '/src/Yazar.php';
+require_once __DIR__ . '/src/Bildirim.php';
 
-use Valentra\Ajan\{Besleme, Depo, Getirici, Http, Kazima, KotaBittiException, ResmiGazete, Sayfa, Site, Suzgec, TohumYapilandirma, Yazar};
+use Valentra\Ajan\{Besleme, Bildirim, Depo, Getirici, Http, Kazima, KotaBittiException, ResmiGazete, Sayfa, Site, Suzgec, TohumYapilandirma, Yazar};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
@@ -57,6 +58,20 @@ $enFazlaAday = max(1, (int) ($secenekler['enfazla'] ?? 25));
 function gunluk(string $mesaj): void
 {
     echo '[' . date('H:i:s') . '] ' . $mesaj . PHP_EOL;
+}
+
+/**
+ * Siteye ulasilamadiginda yoneticiye gidecek mesaj: ne oldu, ne
+ * kayboldu (hicbir sey), ne yapmali.
+ */
+function site_ulasilamadi_mesaji(string $teknik, ?int $bekleyen): string
+{
+    return 'Ajan siteye ulaşamadı'
+        . ($bekleyen !== null ? '; ' . $bekleyen . ' haber gönderilemedi ve bekletiliyor (kaybolmadı, site açılınca kendiliğinden gönderilecek)' : '')
+        . ($bekleyen !== null ? '. Site bu haberleri GitHub\'dan kendisi alacak (Günlük işler → "GitHub\'da bekleyen haberleri al")' : '')
+        . '. Ne yapmalı: siteyi tarayıcıdan açıp çalıştığını kontrol edin; site açılıyorsa '
+        . 'hosting firmasına GitHub Actions\'tan gelen HTTPS (443) bağlantılarının engellendiğini bildirin. '
+        . 'Teknik ayrıntı: ' . $teknik;
 }
 
 function ayar(string $ad): string
@@ -108,12 +123,15 @@ $depo = new Depo(__DIR__ . '/onbellek');
 
 $yapilandirma  = null;
 $yapilandirmaKaynagi = 'site';
+$siteHatasi    = '';
+$siteSorunuBildirildi = false;
 
 try {
     $yapilandirma = $site->yapilandirma();
     $depo->yaz('yapilandirma', $yapilandirma);
 } catch (Throwable $e) {
-    gunluk('Siteden yapılandırma alınamadı: ' . $e->getMessage());
+    $siteHatasi = $e->getMessage();
+    gunluk('Siteden yapılandırma alınamadı: ' . $siteHatasi);
 
     // 2. yol: son basarili calismadan kalan kopya.
     $yedek = $depo->oku('yapilandirma', 7);
@@ -142,6 +160,8 @@ try {
 
         if ($tohum === null) {
             fwrite(STDERR, "Yapılandırma hiçbir yoldan alınamadı; çalışma durdu.\n");
+            Bildirim::sorun(site_ulasilamadi_mesaji($siteHatasi, null)
+                . ' (Önbellekte de kaynak listesi yok; bu çalışmada hiç haber toplanmadı.)');
             exit(1);
         }
 
@@ -156,6 +176,17 @@ try {
 if ($yapilandirmaKaynagi !== 'site') {
     gunluk('Siteye ulaşılamıyor: haberler yazılacak, siteye erişilebilen '
         . 'ilk çalışmada gönderilecek.');
+
+    /*
+     * Gonderime kadar gelinirse sorun orada, bekleyen haber sayisiyla
+     * bildiriliyor. Calisma daha once biterse (aday yok, gonderilecek
+     * haber yok) site sorunu yine de sessiz kalmasin.
+     */
+    register_shutdown_function(static function () use (&$siteSorunuBildirildi, $siteHatasi, $kuruCalisma): void {
+        if (!$siteSorunuBildirildi && !$kuruCalisma) {
+            Bildirim::sorun(site_ulasilamadi_mesaji($siteHatasi, null));
+        }
+    });
 
     /*
      * Bekleyen haberler "bilinen" sayilir.
@@ -1316,6 +1347,8 @@ if ($kullanim['istek'] > 0) {
 }
 
 if ($kotaBitti) {
+    Bildirim::uyari('Günlük model (Gemini) kotası doldu; bu çalışmada adayların bir kısmı işlenmedi. '
+        . 'Kota yenilenince ajan kaldığı yerden devam eder.');
     gunluk('Günlük model kotası dolduğu için çalışma erken bitti.');
     gunluk('Kota yenilendiğinde ajan kaldığı yerden devam eder; aynı haber');
     gunluk('iki kez eklenmez, kaynak adresi üzerinden kopya engeli var.');
@@ -1368,6 +1401,27 @@ try {
      * gonderiliyorlar.
      */
     gunluk('Gönderim başarısız: ' . $e->getMessage());
+    Bildirim::sorun(site_ulasilamadi_mesaji($e->getMessage(), count($gonderilecek)));
+    $siteSorunuBildirildi = true;
+
+    /*
+     * Ters yol: site GitHub'a ulasabiliyor. Bekleyenlerin tamami
+     * calismanin "valentra-teslim" eserine konuyor (is akisi yukluyor);
+     * site en yenisini kendisi indirip taslak olarak kaydediyor
+     * (includes/ajan_teslim.php). Kopya engeli ikisinin ustuste
+     * binmesini zararsiz kiliyor.
+     */
+    $teslim = __DIR__ . '/teslim/haberler.json';
+    @mkdir(dirname($teslim), 0775, true);
+    $teslimYazildi = @file_put_contents(
+        $teslim,
+        json_encode(array_values($gonderilecek), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+    ) !== false;
+
+    if ($teslimYazildi) {
+        gunluk(count($gonderilecek) . ' haber GitHub\'a bırakıldı; site bunları kendisi alacak '
+            . '(panel → Günlük işler → "GitHub\'da bekleyen haberleri al").');
+    }
 
     if ($depo->yaz('bekleyen_haberler', $gonderilecek)) {
         gunluk(count($gonderilecek) . ' haber saklandı; siteye ulaşılabilen '

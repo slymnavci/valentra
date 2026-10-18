@@ -21,6 +21,11 @@ $anaGrafikler = ($sayfa ?? 1) === 1 ? grafik_ana_sayfa() : [];
 // beklemiyor. Ajanin durtmesi siteye ulasamadiginda da grafikler guncel.
 if (($sayfa ?? 1) === 1) {
     grafik_sayfa_sonunda_tazele();
+
+    // Ajanin siteye ulasamayip GitHub'a biraktigi haberler de ayni
+    // yontemle (sayfa gonderildikten sonra) aliniyor.
+    require_once __DIR__ . '/ajan_teslim.php';
+    ajan_teslim_sayfa_sonunda();
 }
 
 if ($anaGrafikler === []) {

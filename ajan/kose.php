@@ -40,8 +40,9 @@ require_once __DIR__ . '/src/KotaBittiException.php';
 require_once __DIR__ . '/src/SemaliIstemci.php';
 require_once __DIR__ . '/src/Yazar.php';
 require_once __DIR__ . '/src/KoseYazari.php';
+require_once __DIR__ . '/src/Bildirim.php';
 
-use Valentra\Ajan\{Depo, Http, KoseYazari, KotaBittiException, Sayfa, Site, Yazar};
+use Valentra\Ajan\{Bildirim, Depo, Http, KoseYazari, KotaBittiException, Sayfa, Site, Yazar};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
@@ -98,6 +99,8 @@ if (!$kuru && is_array($bekleyen) && $bekleyen !== []) {
         gunluk(count($bekleyen) . ' bekleyen yazı gönderildi: ' . (int) ($sonuc['eklenen'] ?? 0) . ' eklendi.');
     } catch (Throwable $e) {
         gunluk('Bekleyen yazılar yine gönderilemedi: ' . $e->getMessage());
+        Bildirim::sorun('Köşe yazısı ajanı siteye ulaşamadı; ' . count($bekleyen)
+            . ' yazı bekletiliyor (kaybolmadı). Teknik ayrıntı: ' . $e->getMessage());
         exit(0);
     }
 }
@@ -109,7 +112,15 @@ try {
 } catch (Throwable $e) {
     // Model cagrisindan ONCE: site yoksa hicbir sey harcanmadan cikiliyor.
     gunluk('Malzeme alınamadı: ' . $e->getMessage());
-    exit($zamanli ? 0 : 1);
+
+    /*
+     * Cikis kodu 0: calismayi kirmiziya ceviren is akisinin son adimi.
+     * Burada 1 donmek sonraki adimlari ve ajan deposunun kaydini
+     * etkiliyordu; sorun yine de bildiriliyor.
+     */
+    Bildirim::sorun('Köşe yazısı ajanı siteye ulaşamadı, bu çalışmada yazı yazılmadı. '
+        . 'Teknik ayrıntı: ' . $e->getMessage());
+    exit(0);
 }
 
 $tavan  = max(1, $malzeme['gunluk_tavan']);

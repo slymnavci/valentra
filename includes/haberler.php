@@ -328,6 +328,66 @@ function haber_taslak_ekle(array $veri): array
 }
 
 /**
+ * Bir toplu haber teslimini taslak olarak kaydeder ve ajan kaydı tutar.
+ *
+ * İki yoldan çağrılıyor: ajanın POST ettiği /api/ingest.php ve ajanın
+ * siteye ulaşamadığında GitHub'a bıraktığı teslimi sitenin kendisinin
+ * alması (includes/ajan_teslim.php). İkisi aynı kaydı ve kopya
+ * denetimini kullanıyor; hiçbiri haberi yayına alamaz.
+ *
+ * @param list<mixed> $haberler
+ * @return array{eklenen:int,yinelenen:int,hatalar:list<array{sira:int|string,mesaj:string}>}
+ */
+function haber_toplu_taslak_ekle(array $haberler): array
+{
+    $kayit = db()->prepare(
+        'INSERT INTO ajan_kayitlari (durum, bulunan) VALUES (:durum, :bulunan)'
+    );
+    $kayit->execute(['durum' => 'calisiyor', 'bulunan' => count($haberler)]);
+    $kayitId = (int) db()->lastInsertId();
+
+    $eklenen = 0;
+    $yinelenen = 0;
+    $hatalar = [];
+
+    foreach ($haberler as $sira => $haber) {
+        if (!is_array($haber)) {
+            $hatalar[] = ['sira' => $sira, 'mesaj' => 'Kayıt nesne değil.'];
+            continue;
+        }
+
+        try {
+            $sonuc = haber_taslak_ekle($haber);
+
+            if ($sonuc['durum'] === 'eklendi') {
+                $eklenen++;
+            } else {
+                $yinelenen++;
+            }
+        } catch (InvalidArgumentException $e) {
+            $hatalar[] = ['sira' => $sira, 'mesaj' => $e->getMessage()];
+        } catch (PDOException $e) {
+            $hatalar[] = ['sira' => $sira, 'mesaj' => 'Kaydedilemedi.'];
+        }
+    }
+
+    db()->prepare(
+        'UPDATE ajan_kayitlari
+            SET bitis = NOW(), durum = :durum, eklenen = :eklenen,
+                yinelenen = :yinelenen, mesaj = :mesaj
+          WHERE id = :id'
+    )->execute([
+        'durum'     => $hatalar === [] ? 'tamam' : 'hata',
+        'eklenen'   => $eklenen,
+        'yinelenen' => $yinelenen,
+        'mesaj'     => $hatalar === [] ? '' : mb_substr(count($hatalar) . ' kayıt alınamadı.', 0, 600, 'UTF-8'),
+        'id'        => $kayitId,
+    ]);
+
+    return ['eklenen' => $eklenen, 'yinelenen' => $yinelenen, 'hatalar' => $hatalar];
+}
+
+/**
  * Onay bekleyen taslaklar (admin paneli).
  */
 function haber_bekleyenler(int $limit = 100): array
