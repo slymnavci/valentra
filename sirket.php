@@ -349,7 +349,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
                     <?php if (!empty($temel['carpanlar'])): ?>
                         <div class="temel-kutu">
-                            <h3>Çarpanlar</h3>
+                            <h3>Güncel Çarpanlar</h3>
                             <table class="sirket-tablosu kucuk">
                                 <tbody>
                                     <?php foreach ($temel['carpanlar'] as $k => $v): ?>
@@ -361,7 +361,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
                     <?php endif; ?>
                     <?php if (!empty($temel['finansal'])): ?>
                         <div class="temel-kutu">
-                            <h3>Özet Finansallar</h3>
+                            <h3>Özet Finansallar <small>(son açıklanan)</small></h3>
                             <table class="sirket-tablosu kucuk">
                                 <tbody>
                                     <?php foreach ($temel['finansal'] as $k => $v): ?>

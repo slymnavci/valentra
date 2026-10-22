@@ -33,7 +33,9 @@ const ISY_VERI_URL  = 'https://www.isyatirim.com.tr/_layouts/15/Isyatirim.Websit
  */
 function sirket_temel(string $kod): array
 {
-    return canli_onbellek('isy_' . $kod, 12 * 3600, static function () use ($kod): ?array {
+    // Anahtar surumu: ilk surum tahmin tablolarini guncel sanmisti; o
+    // kayitlar 12 saat beklemesin diye yeni anahtar (22.10.2026).
+    return canli_onbellek('isy2_' . $kod, 12 * 3600, static function () use ($kod): ?array {
         $html = canli_indir(ISY_KART_URL . rawurlencode($kod), 15);
 
         if ($html === null) {
@@ -111,10 +113,21 @@ function isy_kart_coz(string $html, string $kod): array
         // Guncel carpanlar: iki sutunlu, "F/K" ve "PD/DD" satirlari olan tablo.
         $anahtarlar = array_map(static fn (array $s): string => $s[0], array_filter($satirlar, static fn (array $s): bool => count($s) === 2));
 
-        // Ozet finansallar (son donem): "Satislar", "FAVOK", "Net Kar"
-        // satirlari olan iki sutunlu tablo. Carpan tablosundan ONCE: ikisi
-        // ayni bicimde ve bunda da "FD/Satislar" var.
-        if ($sonuc['finansal'] === [] && in_array('Satışlar', $anahtarlar, true) && in_array('Net Kar', $anahtarlar, true)) {
+        /*
+         * Ozet finansallar ve guncel carpanlar.
+         *
+         * Kartta ayni bicimde (iki sutun: Satislar, FAVOK, Net Kar, F/K,
+         * FD/FAVOK, PD/DD, FD/Satislar) DORT tablo art arda geliyor: once
+         * uc yilin TAHMINI, en sonda son aciklanan donem (kaynak testi,
+         * 22.10.2026: 2.161.191 / 1.702.087 / 1.328.093 / 1.125.149 mn TL;
+         * tahminler asagidaki "Tahmin" tablosuyla ayni). Yil basligi
+         * tablolarin disinda; o yuzden SONUNCUSU aliniyor. Guncel carpanlar
+         * ayri bir tabloda: F/K ve PD/DD var, Satislar yok (F/K 2,7; tahmin
+         * tablolarindaki 1,6 / 2,4 / 3,9 degil).
+         */
+        if (in_array('Satışlar', $anahtarlar, true) && in_array('Net Kar', $anahtarlar, true)) {
+            $sonuc['finansal'] = [];
+
             foreach ($satirlar as $s) {
                 if (count($s) === 2) {
                     $sonuc['finansal'][$s[0]] = $s[1];
