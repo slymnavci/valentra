@@ -68,6 +68,51 @@ const HABER_SIRASI = 'h.one_cikan DESC,
     h.yayin_tarihi DESC,
     h.id DESC';
 
+/*
+ * ANA SAYFA sirasi (site sahibinin karari, 22.10.2026): "en cok okunan
+ * haberleri ve gundemi en cok mesgul eden, gundemde kalma olasiligi
+ * yuksek haberleri one koyalim; teknoloji, sanat ve kultur en sonda".
+ *
+ *   1. Panelden "one cikarilan" haberler.
+ *   2. Son 24 saatin haberleri; bunlarin icinde:
+ *      a. teknoloji ve kultur-sanat EN SONA,
+ *      b. gundem puanina gore: onem (ajan veriyor; ayni olayi veren
+ *         kaynak sayisi bunun icinde) + okunma (son 24 saatte haberi
+ *         acan farkli okuyucu: 1 okuyucu +10, 3 okuyucu +20, 7 ve
+ *         uzeri +30 puan).
+ *   3. Daha eski haberler tarih sirasiyla.
+ *
+ * Okunma sayisi sitenin kendi sayacindan (ziyaretler tablosu; bkz.
+ * includes/ziyaret.php). Yeni haberin okuyucusu yok; onem puani onu
+ * yine de one tasiyor, okundukca yukseliyor. Konu sayfalari eski
+ * HABER_SIRASI'ni kullaniyor: orada hepsi ayni baslikta.
+ *
+ * $okunma: haber_okunma_birlesimi()'nin "zo" takma adi.
+ */
+const HABER_ANA_SAYFA_SIRASI = 'h.one_cikan DESC,
+    (h.yayin_tarihi >= NOW() - INTERVAL 1 DAY) DESC,
+    CASE WHEN h.yayin_tarihi >= NOW() - INTERVAL 1 DAY
+         THEN (k.slug IN (\'teknoloji\', \'kultur-sanat\')) ELSE 0 END ASC,
+    CASE WHEN h.yayin_tarihi >= NOW() - INTERVAL 1 DAY
+         THEN h.onem + LEAST(30, 10 * LOG2(1 + COALESCE(zo.okuyucu, 0))) ELSE 0 END DESC,
+    h.yayin_tarihi DESC,
+    h.id DESC';
+
+/**
+ * Son 24 saatin okunma sayıları (farklı okuyucu), ana sayfa sırası için.
+ *
+ * Ziyaret tablosu yoksa ya da bos ise birlesim bos donuyor; sira yalnizca
+ * onem puanina gore kurulur.
+ */
+function haber_okunma_birlesimi(): string
+{
+    return 'LEFT JOIN (SELECT haber_id, COUNT(DISTINCT ziyaretci) AS okuyucu
+                         FROM ziyaretler
+                        WHERE haber_id IS NOT NULL
+                          AND zaman >= NOW() - INTERVAL 1 DAY
+                        GROUP BY haber_id) zo ON zo.haber_id = h.id';
+}
+
 /**
  * Ana sayfa akisinin kosulu: Resmi Gazete kaynakli olmayan, haber olan
  * (yemek tarifi gibi akis disi bir baslikta olmayan) her haber.
@@ -587,8 +632,9 @@ function haber_yayindakiler(int $limit = 20, int $atla = 0, bool $anaAkis = fals
         'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
            FROM haberler h
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
+           ' . ($anaAkis ? haber_okunma_birlesimi() : '') . '
           WHERE h.durum = :durum' . ($anaAkis ? ' AND ' . haber_ana_akis_kosulu() : '') . '
-          ORDER BY ' . HABER_SIRASI . '
+          ORDER BY ' . ($anaAkis ? HABER_ANA_SAYFA_SIRASI : HABER_SIRASI) . '
           LIMIT :limit OFFSET :atla'
     );
     $ifade->bindValue('durum', HABER_YAYINDA);
@@ -1004,12 +1050,15 @@ function haber_kategoride_sayi(int $kategoriId): int
  */
 function haber_manset(int $limit = 8, bool $anaAkis = false): array
 {
+    // Ana sayfada manset ve izgara AYNI sirayi kullaniyor: izgara
+    // mansetin tukettigi kadar haberi atliyor.
     $ifade = db()->prepare(
         'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
            FROM haberler h
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
+           ' . ($anaAkis ? haber_okunma_birlesimi() : '') . '
           WHERE h.durum = :durum' . ($anaAkis ? ' AND ' . haber_ana_akis_kosulu() : '') . '
-          ORDER BY ' . HABER_SIRASI . '
+          ORDER BY ' . ($anaAkis ? HABER_ANA_SAYFA_SIRASI : HABER_SIRASI) . '
           LIMIT :limit'
     );
     $ifade->bindValue('durum', HABER_YAYINDA);

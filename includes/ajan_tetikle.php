@@ -38,7 +38,7 @@ function ajan_tetikleyebilir_mi(): bool
  *
  * @return array{tamam:bool,mesaj:string}
  */
-function ajan_tetikle(bool $kuru = false, int $saat = 36, int $enFazla = 25, string $mod = 'topla'): array
+function ajan_tetikle(bool $kuru = false, int $saat = 36, int $enFazla = 25, string $mod = 'topla', string $konu = ''): array
 {
     $anahtar = trim(ayar_oku(AJAN_GITHUB_ANAHTAR));
 
@@ -68,7 +68,11 @@ function ajan_tetikle(bool $kuru = false, int $saat = 36, int $enFazla = 25, str
                 : 'topla',
             'kuru'    => $kuru ? 'true' : 'false',
             'saat'    => (string) max(1, $saat),
-            'enfazla' => (string) max(1, $enFazla),
+            // 0: ajanin varsayilani (baslik paylarinin toplami ya da
+            // secili baslik basina 20).
+            'enfazla' => $enFazla > 0 ? (string) $enFazla : '',
+            // Yalnizca bir basligi toplamak icin (panel, 22.10.2026).
+            'konu'    => in_array($konu, HABER_AKIS_KATEGORILERI, true) ? $konu : '',
         ],
     ], JSON_UNESCAPED_SLASHES);
 

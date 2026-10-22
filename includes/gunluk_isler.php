@@ -206,7 +206,7 @@ function gunluk_ajan(string $mod): array
         return ['tamam' => false, 'mesaj' => 'Ajan zaten çalışıyor; bitince yeniden deneyin. Şimdi göndermek süreni iptal ederdi.'];
     }
 
-    return ajan_tetikle(false, 36, 25, $mod);
+    return ajan_tetikle(false, 36, 0, $mod);
 }
 
 /**

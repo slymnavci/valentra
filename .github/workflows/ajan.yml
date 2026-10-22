@@ -68,6 +68,9 @@ on:
       ham:
         description: 'kaynak-testi: sayfa yapisini ozetle (adres ; adres)'
         default: ''
+      konu:
+        description: 'topla: yalnizca bu basliklar (spor, politika, dunya, ... virgulle); bos: hepsi'
+        default: ''
 
 # Ayni anda iki ajan calismasin; ust uste binerse kopya istek olusur.
 concurrency:
@@ -246,6 +249,8 @@ jobs:
           GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+          # Ortam degiskeniyle: betige dogrudan yazilmasin.
+          KONU:                ${{ inputs.konu }}
         run: |
           # Zamanli calismada girdi yok; varsayilanlar burada.
           #
@@ -275,6 +280,12 @@ jobs:
 
           if [ -n "${{ inputs.enfazla }}" ]; then
             BAYRAKLAR="$BAYRAKLAR --enfazla=${{ inputs.enfazla }}"
+          fi
+
+          # Baslik secimi (panel: "Secili basligi topla"). Yalnizca
+          # harf, rakam, tire ve virgul; kabuga baska bir sey gecmesin.
+          if [ -n "$KONU" ] && [[ "$KONU" =~ ^[a-z0-9,-]+$ ]]; then
+            BAYRAKLAR="$BAYRAKLAR --konu=$KONU"
           fi
 
           if [ "${{ inputs.kuru }}" = "true" ]; then
