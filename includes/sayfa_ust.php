@@ -241,12 +241,35 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
                 dugme.addEventListener('click', function (olay) {
                     olay.stopPropagation();
                     var acik = grup.classList.toggle('acik');
+
+                    // Dar ekranda liste position:fixed; dugmenin altina yerlessin.
+                    if (acik) {
+                        grup.style.setProperty('--menu-alt', Math.round(dugme.getBoundingClientRect().bottom) + 'px');
+                    }
+
                     dugme.setAttribute('aria-expanded', acik ? 'true' : 'false');
                     hepsiniKapat(grup);
+                });
+
+                // Liste icindeki dokunus belgeye ulasip menuyu kapatmasin.
+                grup.querySelector('.menu-acilir').addEventListener('click', function (olay) {
+                    olay.stopPropagation();
                 });
             });
 
             document.addEventListener('click', function () { hepsiniKapat(null); });
+
+            // Sabit konumlu liste sayfa kayinca dugmeden kopmasin: yeniden yerlestir.
+            window.addEventListener('scroll', function () {
+                var acik = document.querySelector('.menu-grup.acik');
+                if (acik) {
+                    acik.style.setProperty('--menu-alt', Math.round(acik.querySelector('button').getBoundingClientRect().bottom) + 'px');
+                }
+            }, { passive: true });
+
+            // Menu seridi yana kayinca dugme yer degistirir: kapat.
+            var satir = document.querySelector('.menu-satir');
+            if (satir) { satir.addEventListener('scroll', function () { hepsiniKapat(null); }, { passive: true }); }
 
             document.addEventListener('keydown', function (olay) {
                 if (olay.key === 'Escape') { hepsiniKapat(null); }

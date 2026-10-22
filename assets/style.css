@@ -699,7 +699,18 @@ a.menu-oge.aktif::after,
 
     .menu-satir::-webkit-scrollbar { display: none; }
     .menu-oge { padding: 0 14px; min-height: 44px; font-size: .94rem; }
-    .menu-acilir { position: fixed; left: 8px; right: 8px; min-width: 0; }
+    /* top:100% sabit konumda EKRAN yuksekligi demek: liste ekranin altina
+       dusup gorunmuyordu. Dugmenin alt kenari acilista betikle yaziliyor
+       (--menu-alt, bkz. sayfa_ust.php). */
+    .menu-acilir {
+        position: fixed;
+        top: var(--menu-alt, 44px);
+        left: 8px;
+        right: 8px;
+        min-width: 0;
+        max-height: calc(100vh - var(--menu-alt, 44px) - 8px);
+        overflow-y: auto;
+    }
     .menu-grup:hover .menu-acilir { opacity: 0; visibility: hidden; }
     .menu-grup.acik .menu-acilir { opacity: 1; visibility: visible; }
 }
