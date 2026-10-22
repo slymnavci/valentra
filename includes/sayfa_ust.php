@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 /** Herkese acik sayfalarin ortak ust bolumu. */
 
-$sayfaBasligi  = $sayfaBasligi ?? 'Valentra — Vergi Haberleri';
-$sayfaAciklama = $sayfaAciklama ?? 'Vergi mevzuatı, tebliğler ve ekonomi gündeminden derlenen güncel vergi haberleri.';
+$sayfaBasligi  = $sayfaBasligi ?? 'Valentra — Güncel Haberler';
+$sayfaAciklama = $sayfaAciklama ?? 'Türkiye ve dünyadan gündem, politika, ekonomi, spor, teknoloji, sağlık ve kültür-sanat haberlerinin tarafsız özetleri; her haberde kaynağı ve bağlantısıyla.';
 $aktifKategori = $aktifKategori ?? '';
 
 require_once __DIR__ . '/seo.php';
@@ -28,7 +28,7 @@ ziyaret_kaydet(
 
 require_once __DIR__ . '/menu.php';
 
-$menu = site_menusu(kategori_menusu());
+$menu = site_menusu();
 
 /*
  * Arama motoru etiketleri.
@@ -119,7 +119,7 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
                 <img class="marka" src="/assets/logo.svg" alt="" width="40" height="35">
                 <span class="yazi">
                     <span class="ad">VALENTRA</span>
-                    <span class="alt">VERGİ, MUHASEBE VE FİNANS</span>
+                    <span class="alt">GÜNCEL HABER ÖZETLERİ</span>
                 </span>
             </a>
             <div class="ust-sag">
@@ -127,7 +127,7 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
 
                 <form class="ust-arama" action="<?= e(arama_yolu()) ?>" method="get" role="search">
                     <label class="gizli-etiket" for="ust-arama-q">Sitede ara</label>
-                    <input id="ust-arama-q" type="search" name="q" placeholder="Haber, mevzuat, pratik bilgi ara"
+                    <input id="ust-arama-q" type="search" name="q" placeholder="Haber ara"
                            value="<?= e(($aktifKategori ?? '') === 'ara' ? (string) ($_GET['q'] ?? '') : '') ?>"
                            maxlength="100" autocomplete="off">
                     <button type="submit" aria-label="Ara">

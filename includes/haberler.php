@@ -24,6 +24,68 @@ const HABER_REDDEDILDI  = 'reddedildi';
  */
 const HABER_RG_KOSULU = "COALESCE(h.kaynak_url, '') LIKE '%resmigazete.gov.tr%'";
 
+/*
+ * Haber akisinin konu basliklari, menu sirasiyla.
+ *
+ * Ekim 2026'da site vergi/muhasebe yayinindan genel haber ozetlerine
+ * dondu (site sahibinin karari). Ust menu, konu bloklari ve ajanin konu
+ * listesi YALNIZCA bu basliklari kullaniyor. Eski vergi ve muhasebe
+ * kategorileri silinmedi: sayfalari acik, eski haberleri ana sayfa
+ * akisinda duruyor; yalnizca menude yoklar.
+ *
+ * Ajan tarafinda ayni liste ajan/src/HaberAkisi.php'de; biri
+ * degisirse oteki de degismeli.
+ */
+const HABER_AKIS_KATEGORILERI = [
+    'gundem', 'politika', 'ekonomi', 'dunya',
+    'spor', 'teknoloji', 'saglik', 'kultur-sanat',
+];
+
+/*
+ * Haber sirasi: onemden onemsize (site sahibinin karari, 22.10.2026).
+ *
+ *   1. Panelden "one cikarilan" haberler.
+ *   2. Son 24 saatin haberleri, onem puanina gore (ajan veriyor,
+ *      panelden degistirilebilir); esitlerde yeni olan once.
+ *   3. Daha eski haberler tarih sirasiyla.
+ *
+ * Onem puani tek basina siralama olsaydi dunun onemli haberi bugunun
+ * haberlerinin ustunde kalirdi; 24 saatlik pencere guncelligi koruyor.
+ * Manset ve izgara AYNI sirayi kullanmali: izgara mansetin tukettigi
+ * kadar haberi atliyor.
+ */
+const HABER_SIRASI = 'h.one_cikan DESC,
+    (h.yayin_tarihi >= NOW() - INTERVAL 1 DAY) DESC,
+    CASE WHEN h.yayin_tarihi >= NOW() - INTERVAL 1 DAY THEN h.onem ELSE 0 END DESC,
+    h.yayin_tarihi DESC,
+    h.id DESC';
+
+/**
+ * Ana sayfa akisinin kosulu: Resmi Gazete kaynakli olmayan her haber.
+ *
+ * Eski vergi ve muhasebe haberleri de akista KALIYOR (site sahibinin
+ * karari, 22.10.2026: "eski haberleri kaldirma, onlar da kalsin"). Yeni
+ * haberler geldikce tarih sirasiyla asagi kayiyorlar. Menu ve konu
+ * bloklari ise yalnizca haber akisi basliklarini gosteriyor.
+ */
+function haber_ana_akis_kosulu(): string
+{
+    return 'NOT (' . HABER_RG_KOSULU . ')';
+}
+
+/**
+ * Haber akisi basliklarindan birinde olma kosulu (konu bloklari icin).
+ */
+function haber_akis_kategori_kosulu(): string
+{
+    $sluglar = implode(', ', array_map(
+        static fn (string $slug): string => db()->quote($slug),
+        HABER_AKIS_KATEGORILERI
+    ));
+
+    return 'h.kategori_id IN (SELECT id FROM kategoriler WHERE slug IN (' . $sluglar . '))';
+}
+
 /**
  * Ayni haberin iki kez girmesini engelleyen parmak izi.
  * Kaynak URL varsa onu, yoksa basligi esas alir.
@@ -284,13 +346,13 @@ function haber_taslak_ekle(array $veri): array
         'INSERT INTO haberler
             (baslik, slug, ozet, icerik, gorsel_url, etiketler, durum, kategori_id,
              kaynak_id, kaynak_adi, kaynak_url, kaynak_parmak, url_parmak,
-             baslik_parmak, guven_skoru, ajan_notu,
+             baslik_parmak, guven_skoru, onem, ajan_notu,
              analiz_degisen, analiz_etkilenen, analiz_zaman, analiz_islem,
              isletme_etkisi, uygulama_ornegi, resmi_dayanak)
          VALUES
             (:baslik, :slug, :ozet, :icerik, :gorsel_url, :etiketler, :durum, :kategori_id,
              :kaynak_id, :kaynak_adi, :kaynak_url, :kaynak_parmak, :url_parmak,
-             :baslik_parmak, :guven_skoru, :ajan_notu,
+             :baslik_parmak, :guven_skoru, :onem, :ajan_notu,
              :analiz_degisen, :analiz_etkilenen, :analiz_zaman, :analiz_islem,
              :isletme_etkisi, :uygulama_ornegi, :resmi_dayanak)'
     );
@@ -311,6 +373,8 @@ function haber_taslak_ekle(array $veri): array
         'url_parmak'    => $urlParmak !== '' ? $urlParmak : null,
         'baslik_parmak' => $baslikParmak !== '' ? $baslikParmak : null,
         'guven_skoru'   => max(0, min(100, (int) ($veri['guven_skoru'] ?? 0))),
+        // Eski ajan surumu puan gondermezse orta deger.
+        'onem'          => max(0, min(100, (int) ($veri['onem'] ?? 50))),
         'ajan_notu'     => mb_substr(trim((string) ($veri['ajan_notu'] ?? '')), 0, 600, 'UTF-8'),
 
         /*
@@ -456,14 +520,14 @@ function haber_yayinda_bul(string $slug): ?array
 /**
  * Ana sayfa listesi: sadece yayinda olanlar, yeniden eskiye.
  */
-function haber_yayindakiler(int $limit = 20, int $atla = 0, bool $rgHaric = false): array
+function haber_yayindakiler(int $limit = 20, int $atla = 0, bool $anaAkis = false): array
 {
     $ifade = db()->prepare(
         'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
            FROM haberler h
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
-          WHERE h.durum = :durum' . ($rgHaric ? ' AND NOT (' . HABER_RG_KOSULU . ')' : '') . '
-          ORDER BY h.one_cikan DESC, h.yayin_tarihi DESC
+          WHERE h.durum = :durum' . ($anaAkis ? ' AND ' . haber_ana_akis_kosulu() : '') . '
+          ORDER BY ' . HABER_SIRASI . '
           LIMIT :limit OFFSET :atla'
     );
     $ifade->bindValue('durum', HABER_YAYINDA);
@@ -474,13 +538,13 @@ function haber_yayindakiler(int $limit = 20, int $atla = 0, bool $rgHaric = fals
     return $ifade->fetchAll();
 }
 
-function haber_yayinda_sayisi(bool $rgHaric = false): int
+function haber_yayinda_sayisi(bool $anaAkis = false): int
 {
     // Sayfalama ana sayfa listesiyle AYNI kosulu kullanmali; yoksa son
     // sayfalar bos cikar.
     $ifade = db()->prepare(
         'SELECT COUNT(*) FROM haberler h WHERE h.durum = :durum'
-        . ($rgHaric ? ' AND NOT (' . HABER_RG_KOSULU . ')' : '')
+        . ($anaAkis ? ' AND ' . haber_ana_akis_kosulu() : '')
     );
     $ifade->execute(['durum' => HABER_YAYINDA]);
 
@@ -569,6 +633,7 @@ function haber_guncelle(int $id, array $veri): bool
                 etiketler = :etiketler,
                 one_cikan = :one_cikan,
                 kategori_id = :kategori_id,
+                onem = :onem,
                 analiz_degisen = :analiz_degisen,
                 analiz_etkilenen = :analiz_etkilenen,
                 analiz_zaman = :analiz_zaman,
@@ -593,6 +658,7 @@ function haber_guncelle(int $id, array $veri): bool
         'etiketler'  => mb_substr(trim((string) ($veri['etiketler'] ?? '')), 0, 400, 'UTF-8'),
         'one_cikan'  => !empty($veri['one_cikan']) ? 1 : 0,
         'kategori_id'=> ($veri['kategori_id'] ?? '') !== '' ? (int) $veri['kategori_id'] : null,
+        'onem'       => max(0, min(100, (int) (($veri['onem'] ?? '') !== '' ? $veri['onem'] : 50))),
 
         /*
          * Valentra Analiz alanlari editorun denetiminde.
@@ -669,6 +735,65 @@ function kategori_listesi(bool $sadeceAktif = true): array
 }
 
 /**
+ * Kaynagin okuyucuya gosterilen adi: sondaki bolum adi atilmis hali.
+ *
+ * Ayni yayinin birden cok beslemesi ayri kaynak olarak kayitli ve adlari
+ * benzersiz olmak zorunda: "Anadolu Ajansi Politika", "NTV Spor", "TRT
+ * Haber Turkiye". Okuyucu icin kaynak yayinin kendisi: "Haberin tamamini
+ * Anadolu Ajansi sitesinde okuyun". Yalnizca bilinen bolum adlari
+ * atiliyor; "Dunya Gazetesi", "Patronlar Dunyasi", "BBC Turkce" oldugu
+ * gibi kaliyor.
+ */
+function kaynak_gorunen_ad(string $ad): string
+{
+    $ad = trim($ad);
+
+    $temiz = preg_replace(
+        '/\s+(Gündem|Politika|Ekonomi|Dünya|Spor|Teknoloji|Bilim-Teknoloji|Sağlık|Kültür|Kültür-Sanat|Sanat|Türkiye)$/u',
+        '',
+        $ad
+    );
+
+    return is_string($temiz) && $temiz !== '' ? $temiz : $ad;
+}
+
+/**
+ * Haber akisinin konu basliklari, HABER_AKIS_KATEGORILERI sirasiyla.
+ * Veritabaninda henuz olmayan baslik (sema yukseltmesi calismadiysa)
+ * atlaniyor.
+ *
+ * @return list<array{ad:string,slug:string,aciklama:string,adet:int}>
+ */
+function haber_akis_kategorileri(): array
+{
+    $sluglar = implode(', ', array_map(
+        static fn (string $slug): string => db()->quote($slug),
+        HABER_AKIS_KATEGORILERI
+    ));
+
+    $satirlar = db()->query(
+        "SELECT k.ad, k.slug, k.aciklama, COUNT(h.id) AS adet
+           FROM kategoriler k
+           LEFT JOIN haberler h
+             ON h.kategori_id = k.id AND h.durum = " . db()->quote(HABER_YAYINDA) . "
+          WHERE k.slug IN (" . $sluglar . ")
+          GROUP BY k.id, k.ad, k.slug, k.aciklama"
+    )->fetchAll();
+
+    $sira = array_flip(HABER_AKIS_KATEGORILERI);
+
+    usort($satirlar, static fn (array $a, array $b): int =>
+        $sira[(string) $a['slug']] <=> $sira[(string) $b['slug']]);
+
+    return array_map(static fn (array $k): array => [
+        'ad'       => (string) $k['ad'],
+        'slug'     => (string) $k['slug'],
+        'aciklama' => (string) $k['aciklama'],
+        'adet'     => (int) $k['adet'],
+    ], $satirlar);
+}
+
+/**
  * Ust menu agaci.
  *
  * Ust basliklar (ust_id'si olmayanlar) menude gorunur; altlarindaki
@@ -715,7 +840,7 @@ function kategori_menusu(): array
         $gorunum = [
             'vergi-kanunlari'   => ['ad' => 'Vergi Kanunları',     'sira' => 10],
             'muhasebe-denetim'  => ['ad' => 'Muhasebe ve Denetim', 'sira' => 20],
-            'ekonomi'            => ['ad' => 'Ekonomik Gündem',     'sira' => 30],
+            'ekonomi'            => ['ad' => 'Ekonomi',             'sira' => 30],
             'tms-tfrs'           => ['ad' => 'TMS/TFRS',            'sira' => 40],
             'genel'              => ['ad' => 'Genel Gündem',        'sira' => 50],
         ];
@@ -791,7 +916,7 @@ function haber_kategoride(int $kategoriId, int $limit = 20, int $atla = 0): arra
            FROM haberler h
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
           WHERE h.durum = :durum AND h.kategori_id = :kategori
-          ORDER BY h.yayin_tarihi DESC
+          ORDER BY ' . HABER_SIRASI . '
           LIMIT :limit OFFSET :atla'
     );
     $ifade->bindValue('durum', HABER_YAYINDA);
@@ -816,14 +941,14 @@ function haber_kategoride_sayi(int $kategoriId): int
 /**
  * Mansette kayacak haberler (en yeni, one cikanlar once).
  */
-function haber_manset(int $limit = 8, bool $rgHaric = false): array
+function haber_manset(int $limit = 8, bool $anaAkis = false): array
 {
     $ifade = db()->prepare(
         'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
            FROM haberler h
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
-          WHERE h.durum = :durum' . ($rgHaric ? ' AND NOT (' . HABER_RG_KOSULU . ')' : '') . '
-          ORDER BY h.one_cikan DESC, h.yayin_tarihi DESC
+          WHERE h.durum = :durum' . ($anaAkis ? ' AND ' . haber_ana_akis_kosulu() : '') . '
+          ORDER BY ' . HABER_SIRASI . '
           LIMIT :limit'
     );
     $ifade->bindValue('durum', HABER_YAYINDA);
@@ -896,7 +1021,7 @@ function haber_onemli_duzenlemeler(int $limit = 5): array
  *
  * @return list<array<string,mixed>>
  */
-function haber_analizliler(int $limit = 3, bool $rgHaric = false): array
+function haber_analizliler(int $limit = 3, bool $anaAkis = false): array
 {
     $ifade = db()->prepare(
         'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
@@ -904,7 +1029,7 @@ function haber_analizliler(int $limit = 3, bool $rgHaric = false): array
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
           WHERE h.durum = :durum
             AND h.analiz_degisen   <> \'\'
-            AND h.analiz_etkilenen <> \'\'' . ($rgHaric ? ' AND NOT (' . HABER_RG_KOSULU . ')' : '') . '
+            AND h.analiz_etkilenen <> \'\'' . ($anaAkis ? ' AND ' . haber_ana_akis_kosulu() : '') . '
           ORDER BY h.yayin_tarihi DESC
           LIMIT :limit'
     );
@@ -950,7 +1075,9 @@ function kategori_bloklari(int $grupBasiHaber = 4, int $enFazlaGrup = 6): array
            JOIN kategoriler k ON k.id = h.kategori_id
           WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . '
             AND k.aktif = 1
-          ORDER BY k.sira, k.ad, h.yayin_tarihi DESC'
+            AND ' . haber_ana_akis_kosulu() . '
+            AND ' . haber_akis_kategori_kosulu() . '
+          ORDER BY k.sira, k.ad, ' . HABER_SIRASI
     )->fetchAll();
 
     $bloklar = [];

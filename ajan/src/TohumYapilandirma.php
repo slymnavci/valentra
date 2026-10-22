@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace Valentra\Ajan;
 
+// Konu basliklari listesi; tohumu kullanan her betik ayrica yuklemesin.
+require_once __DIR__ . '/HaberAkisi.php';
+
 /**
  * Kaynak ve konu grubu listesini depodaki sql/schema.sql'den okur.
  *
@@ -390,6 +393,7 @@ final class TohumYapilandirma
                 'liste_url'    => $satir['liste_url'] ?? null,
                 'liste_secici' => $satir['liste_secici'] ?? null,
                 'tur'          => (string) ($satir['tur'] ?? 'rss'),
+                'kategori'     => $satir['kategori'] ?? null,
             ];
         }
 
@@ -402,20 +406,35 @@ final class TohumYapilandirma
      */
     private function kategorileriDuzenle(array $satirlar): array
     {
-        $sonuc = [];
+        /*
+         * Yalnizca haber akisi basliklari, menu sirasiyla (Ekim 2026).
+         *
+         * Semada eski vergi kategorileri de duruyor (eski haberler onlara
+         * bagli); site bunlari ajana gondermiyor, tohum da gondermemeli.
+         * Ayni slug birden cok INSERT'te geciyorsa sonuncusu gecerli.
+         */
+        $bulunan = [];
 
         foreach ($satirlar as $satir) {
             $slug = (string) ($satir['slug'] ?? '');
 
-            if ($slug === '') {
+            if (!in_array($slug, HaberAkisi::KATEGORILER, true)) {
                 continue;
             }
 
-            $sonuc[] = [
+            $bulunan[$slug] = [
                 'slug'     => $slug,
                 'ad'       => (string) ($satir['ad'] ?? $slug),
                 'aciklama' => (string) ($satir['aciklama'] ?? ''),
             ];
+        }
+
+        $sonuc = [];
+
+        foreach (HaberAkisi::KATEGORILER as $slug) {
+            if (isset($bulunan[$slug])) {
+                $sonuc[] = $bulunan[$slug];
+            }
         }
 
         return $sonuc;

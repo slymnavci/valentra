@@ -91,7 +91,7 @@ require __DIR__ . '/ust.php';
         <strong>Günlük işler</strong>
         <p class="ipucu" style="margin:4px 0 0;">
             Kurlar, grafikler, Resmî Gazete, Search Console verisi ve Google site haritası sırayla
-            güncellenir, sonunda ajan haberleri toplayıp köşe yazılarını yazar.
+            güncellenir, sonunda ajan haberleri toplar.
             Yayımlama yine sizin onayınızla olur.
         </p>
     </div>
@@ -305,7 +305,7 @@ require __DIR__ . '/ust.php';
                     var s = satir('ajan').querySelector('.sonuc');
                     s.className = 'sonuc ' + (basarili ? 'tamam' : 'hata');
                     s.textContent = basarili
-                        ? 'Ajan bitti. Onay bekleyen ' + v.bekleyen + ' haber var; yeni köşe yazıları için sayfayı yenileyin.'
+                        ? 'Ajan bitti. Onay bekleyen ' + v.bekleyen + ' haber var.'
                         : 'Ajan çalışması başarısız oldu (' + (v.sonuc || 'bilinmiyor') + ').';
                 })
                 .catch(function () { setTimeout(yokla, 30000); });

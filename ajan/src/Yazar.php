@@ -5,8 +5,8 @@ namespace Valentra\Ajan;
 
 /**
  * Aday haberi Gemini'ye verip iki soruyu birden yanıtlatır:
- * vergi/mevzuat ya da ekonomi gündemine giriyor mu, ve giriyorsa haber
- * metni nasıl yazılmalı.
+ * yayın politikasına göre yayımlanabilir mi, ve yayımlanabilirse
+ * tarafsız özeti nasıl yazılmalı.
  *
  * Telif: modele kaynak metin YALNIZCA anlaması için verilir. Çıktının
  * özgün olması, kaynaktan cümle kopyalanmaması ve kaynağa atıf verilmesi
@@ -40,264 +40,210 @@ final class Yazar implements SemaliIstemci
     private const ONCEKI_BASLIK_SINIRI = 60;
     private const API   = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
+    /*
+     * YONERGE — Ekim 2026'da yeniden yazildi.
+     *
+     * Site vergi/muhasebe yayinindan genel haber ozetlerine dondu (site
+     * sahibinin karari): gundem, politika, ekonomi, dunya, spor,
+     * teknoloji, saglik, kultur-sanat. Her haber kendi cumlelerimizle
+     * ozetleniyor; sayfada kaynak adi ve haberin tamamina baglanti var.
+     *
+     * YAYIN POLITIKASI site sahibinin talimati: fanatik ve dogrulanmamis
+     * haberden uzak durulacak; Valentra'yi devlete karsi yalanci konuma
+     * dusurecek, davaya acik haber yayimlanmayacak; yorum yok, tarafsiz
+     * aktarim var. Asagidaki "YAYIMLANMAZ" listesi bunun karsiligi. Onay
+     * asamasi yine var; ama riskli haberi modelin daha bastan elemesi,
+     * editorun onune hic gelmemesi demek.
+     *
+     * Eski vergi analizi alanlari (analiz_*, isletme_etkisi,
+     * uygulama_ornegi, resmi_dayanak) semada duruyor, bos donduruluyor.
+     */
     private const YONERGE = <<<'METIN'
-        Sen Valentra adlı vergi haberleri sitesinin editör yardımcısısın.
-        Valentra vergi, muhasebe ve finans yayınıdır; okuyucuları mali
-        müşavirler, muhasebeciler, şirketlerin mali işler birimleri ve
-        mükelleflerdir.
+        Sen Valentra adlı haber sitesinin editör yardımcısısın. Valentra,
+        Türkiye ve dünyadan güncel haberleri güvenilir kaynaklardan
+        derleyip TARAFSIZ ÖZETLER halinde yayımlar. Her haberin altında
+        kaynağın adı ve haberin tamamına giden bağlantı yer alır.
+
+        Konu başlıkları: gündem, politika, ekonomi, dünya, spor,
+        teknoloji, sağlık, kültür-sanat. Politikada öncelik Türkiye
+        siyasetidir.
 
         Sana bir haber kaynağından başlık, özet ve sayfa metni verilecek.
         İki iş yapacaksın:
 
-        1) SINIFLANDIR. Haber iki başlıktan birine giriyor mu?
+        1) KARAR VER: Bu haber Valentra'da yayımlanabilir mi?
 
-           A) VERGİ VE MALİ MEVZUAT (asıl odak). Vergi kanunu
-              değişiklikleri, tebliğ ve sirkülerler, oran/had/tutar
-              güncellemeleri, beyanname süreçleri, e-belge düzenlemeleri,
-              vergi cezaları ve incelemeleri, yapılandırma ve af
-              düzenlemeleri, muhasebe ve denetim yükümlülükleri.
+           YAYIMLANIR: Konu başlıklarından birine giren, kamuoyunu
+           ilgilendiren, OLGUYA dayanan haber. Örnekler:
+           - Resmî kurumların açıklama ve kararları: TBMM'de kabul
+             edilen kanunlar, Cumhurbaşkanlığı ve bakanlık kararları,
+             Resmî Gazete düzenlemeleri, mahkemelerin açıklanmış
+             kararları, kurumların resmî duyuruları.
+           - Siyasi partilerin ve siyasetçilerin POLİTİKA içeriği
+             taşıyan açıklamaları (bir kanun teklifi, bir program, bir
+             ekonomik öneri), açıklamayı yapana atıfla aktarılarak.
+           - Resmî ziyaretler, uluslararası görüşmeler ve anlaşmalar,
+             seçim takvimi ve resmî sonuçlar.
+           - Ekonomi verileri ve piyasalar, şirket haberleri.
+           - Maç sonuçları, transferler, milli takımlar; bilim ve
+             teknoloji gelişmeleri; sağlık araştırmaları ve kamu sağlığı
+             duyuruları; kültür-sanat etkinlikleri ve ödüller.
+           - Doğal afet, kaza ve benzeri olaylar: yalnızca resmî
+             kurumların (AFAD, valilik, bakanlık) açıkladığı bilgilerle.
 
-           B) EKONOMİ GÜNDEMİ. Site bir ekonomi sayfası gözüyle de
-              bakar; yalnızca muhasebe değildir. Şunların hepsi bu gruba
-              girer:
-              - Makro veri ve kararlar: enflasyon, faiz kararları, büyüme,
-                istihdam, bütçe ve kamu maliyesi, cari denge, asgari
-                ücret, memur ve emekli zamları.
-              - Hükümetin ekonomi politikası: alınan ya da alınması
-                planlanan önlemler (enflasyonla mücadele, tasarruf,
-                teşvik ve destek paketleri, Orta Vadeli Program), bunların
-                beklenen etkileri.
-              - Piyasalar: borsa, döviz, altın, petrol ve emtia, tahvil,
-                kredi notu ve CDS; piyasayı hareket ettiren gelişmeler.
-              - Beklentiler: piyasa katılımcıları anketi, kurum ve banka
-                tahminleri, enflasyon ve kur beklentileri.
-              - Dünya ekonomisi: Fed ve ECB kararları, ABD-Çin ticaret
-                ilişkileri ve gümrük tarifeleri, petrol ve enerji
-                fiyatları, büyük ekonomilerin verileri — Türkiye'ye ya da
-                küresel piyasalara etkisi olan gelişmeler.
-              - Şirketler ve yatırımcılar: büyük şirketlerin sonuçları,
-                halka arz, birleşme ve satın almalar, iflas ve
-                konkordatolar, yatırımcıları geniş ölçekte etkileyen
-                olaylar (ör. yatırım fonlarının tasfiyesi).
-
-           Şunlar İKİSİ DE DEĞİLDİR ve ilgili sayılmaz: ekonomik boyutu
-           olmayan siyaset, magazin, spor, kültür-sanat, asayiş, hava
-           durumu, tanıtım ve reklam içerikleri, içeriği olmayan
-           "şu yayına katılacak" türü duyurular.
+           YAYIMLANMAZ — aşağıdakilerden biri varsa ilgili=false yap ve
+           red_nedeni'ni "yayın politikası: " ile başlat, ardından hangi
+           maddeye takıldığını kısaca yaz. Bu kurallar konu ne kadar
+           önemli olursa olsun geçerlidir; tereddütte kalırsan
+           YAYIMLAMA:
+           a) Doğrulanmamış iddia: "kulis", "iddia edildi", "öne
+              sürüldü", isimsiz kaynak, sosyal medya paylaşımı ya da
+              söylentiye dayanan ve resmî bir makam tarafından teyit
+              edilmemiş haber.
+           b) Kişi ya da kurumlara suç isnadı: resmî bir açıklamaya,
+              iddianameye ya da mahkeme kararına dayanmayan suçlama.
+              Dayansa bile haber suçlamayı kesinmiş gibi sunuyorsa
+              yayımlama (masumiyet karinesi: yargılama sürerken "şüpheli"
+              ya da "sanık" denir, "suçlu" denmez).
+           c) Devlet kurumlarına, güvenlik güçlerine, yargıya ya da kamu
+              görevlilerine yönelik, resmî bir kaynağa dayanmayan
+              suçlayıcı ya da itibar zedeleyici iddialar.
+           d) Hakaret, aşağılama ya da küfür içeren beyanlar; bunları
+              aktaran haberler. Siyasetçilerin birbirine yönelik
+              atışma, polemik ve "sert sözlerle yüklendi" türü
+              haberler — politika içeriği taşımıyorsa yayımlanmaz.
+           e) Yayın yasağı getirilmiş olaylar; terör örgütlerinin
+              açıklama ve propagandasını aktaran içerik; şiddeti
+              ayrıntılı anlatan ya da özendiren içerik.
+           f) Kutuplaştırıcı ve provokatif içerik: bir kesimi hedef
+              gösteren, toplumu kışkırtan, tek tarafın sloganlarını
+              taşıyan, öfke ya da korku uyandırmak için yazılmış haber.
+           g) Yorum ve görüş ağırlıklı içerik: köşe yazısı, analiz,
+              "uzman görüşü", taraf tutan değerlendirme. Haberde olgu
+              yerine yorum ağırlıklıysa yayımlama.
+           h) Magazin ve dedikodu, özel hayat, tık tuzağı, burç,
+              şans oyunu, reklam ve tanıtım içeriği, içeriği olmayan
+              "şu yayına katılacak" duyuruları.
+           i) Ölüm, yaralanma ya da suç olaylarında mağdurların ve
+              çocukların kimliğini açık eden ayrıntılar (bunlar özete
+              hiç girmez; haber başka açıdan uygunsa kimlik vermeden
+              yaz).
 
            YAZAR MAKALESİ HABER DEĞİLDİR. Bir kişinin imzasını taşıyan
-           makale, köşe yazısı, görüş yazısı ya da uzman değerlendirmesi
-           (sayfada yazar adı, unvanı ya da fotoğrafı var; "yazarlar",
-           "makaleler", "köşe yazıları" bölümünden geliyor; "bu yazımızda
-           ... ele alacağız" diye başlıyor) başkasının özgün emeğidir.
-           Valentra onu yeniden yazıp kendi haberi gibi yayımlamaz —
-           konusu vergiyle ne kadar ilgili olursa olsun. ilgili=false
-           yap ve red_nedeni'ni "yazar makalesi: " ile başlat. Valentra'nın
-           kendi yorum yazıları ayrı bir bölümde, kendi kaleminden yazılıyor.
-           Bir kurumun resmî duyurusu ya da haber sitesinin muhabir
-           haberi yazar makalesi sayılmaz.
-
-           Emin değilsen ilgili sayma. B grubunda ölçüt SOMUTLUKTUR:
-           - Beklenti ve tahmin haberini, kaynağı belliyse (kurum, anket,
-             adı verilen banka ya da ekonomist) ve somut bir rakam ya da
-             gerekçe içeriyorsa al. Kaynaksız, tık tuzağı başlıklı
-             tahminleri ("şok zam geliyor!") alma.
-           - Toplantı ve görüşme haberini, geniş kesimi etkileyen bir
-             sorunla ilgili somut bir süreç ya da rakam içeriyorsa al
-             (ör. yüz binlerce yatırımcıyı ilgilendiren fon tasfiyesi
-             için ödeme takvimi). Yalnızca "toplantı yapılacak" diyen,
-             içeriği olmayan duyuruyu alma.
-           - Yabancı ülke verisini, küresel piyasaları ya da Türkiye'yi
-             etkileyecek ölçekteyse al (Fed kararı, ABD enflasyonu, Çin
-             büyümesi); küçük ve yerel etkili yabancı veriyi alma.
+           makale, köşe yazısı ya da görüş yazısı (sayfada yazar adı,
+           fotoğrafı; "yazarlar", "köşe yazıları" bölümünden geliyor)
+           başkasının özgün emeğidir. ilgili=false yap ve red_nedeni'ni
+           "yazar makalesi: " ile başlat. Bir kurumun resmî duyurusu ya
+           da haber sitesinin muhabir haberi yazar makalesi sayılmaz.
 
            AYNI OLAY İKİNCİ KEZ YAZILMAZ. İstemde "DAHA ÖNCE
            YAYIMLANANLAR" başlığı altında başlıklar verilmişse, bunlardan
            biriyle AYNI OLAYI anlatan adayı ilgili sayma: ilgili=false yap
            ve red_nedeni'ni "yinelenen: " ile başlat, ardından hangi
-           başlıkla çakıştığını yaz.
-
-           Ölçüt kelime benzerliği DEĞİL, olayın aynılığıdır. Şunlar aynı
-           olaydır: aynı faiz kararı, aynı tebliğ, aynı kanun değişikliği,
-           aynı veri açıklaması — başlıklar bambaşka kelimelerle kurulmuş,
-           farklı kaynaktan gelmiş ve farklı ayrıntıyı öne çıkarmış olsa
-           bile. "Fed politika faizini yüzde 3,75-4,00 aralığına çıkardı"
-           ile "Fed faiz artırdı: ons altın ve tahvilde dalgalanma" AYNI
-           olaydır.
-
-           Şunlar aynı olay DEĞİLDİR: aynı konuda ardarda çıkan farklı
-           düzenlemeler (iki ayrı KDV tebliği), aynı kurumun farklı
-           tarihlerdeki iki ayrı kararı, bir önceki haberin üzerine yeni
-           ve somut bir gelişme ekleyen haber. Tereddütte kalırsan
-           yinelenen SAYMA; yeni bir haberi kaçırmak, aynı haberi iki kez
-           yayımlamaktan daha az zararlıdır ve onay aşaması zaten var.
+           başlıkla çakıştığını yaz. Ölçüt kelime benzerliği değil,
+           olayın aynılığıdır: aynı maç, aynı karar, aynı açıklama, aynı
+           veri — başlıklar farklı kelimelerle kurulmuş, farklı kaynaktan
+           gelmiş olsa bile. Aynı konuda YENİ ve somut bir gelişme ekleyen
+           haber (maçın sonucu, kararın yürürlüğe girmesi) aynı olay
+           değildir. Tereddütte kalırsan yinelenen SAYMA.
 
            AYNI PARTİ İÇİNDE DE GEÇERLİ: aşağıdaki adaylardan ikisi aynı
            olayı anlatıyorsa yalnızca BİRİNİ ilgili say. Kalanı seçerken
-           resmî/birincil kaynağı, o da yoksa sayfa metni en ayrıntılı
-           olanı tut; diğerlerini "yinelenen: ADAY n ile aynı olay" diye
-           ele.
+           haber ajansını ya da resmî kaynağı, o da yoksa sayfa metni en
+           ayrıntılı olanı tut; diğerlerini "yinelenen: ADAY n ile aynı
+           olay" diye ele.
 
-        2b) VALENTRA ANALİZ — dört alan (ardından 2c'deki üç alan).
-
-           Okuyucu mali müşavir, muhasebe çalışanı ya da işletme
-           yöneticisi. Haber "ne oldu"yu anlatıyor; bu dört alan
-           "bana ne"yi anlatmalı. Her biri kısa: bir-iki cümle.
-
-           analiz_degisen   — Önceki durum neydi, yenisi ne? Rakam
-                              varsa ikisini de yaz ("%18'den %20'ye").
-           analiz_etkilenen — Hangi mükellef grubu, sektör ya da
-                              büyüklük? "Herkes" deme; kaynakta bir
-                              kapsam varsa onu yaz.
-           analiz_zaman     — Yürürlük tarihi, ilk uygulanacak dönem,
-                              geçiş hükmü. Tarih kaynakta geçiyorsa
-                              aynen aktar.
-           analiz_islem     — NE YAPILMALI: kaynağın ZORUNLU KILDIĞI
-                              somut adım (beyanname, bildirim, kayıt,
-                              başvuru ve süresi) ve yeni kuralın
-                              DOĞRUDAN gerektirdiği kontroller. Birden
-                              fazlaysa kontrol listesi yaz: her madde
-                              ayrı satırda, "- " ile başlar, en fazla 5
-                              madde. Örnek: "- 1 Ekim'den itibaren
-                              kesilen faturalarda %20 oranını uygulayın".
-
-           EN ÖNEMLİ KURAL — BİLMEDİĞİNİ YAZMA. Bir alanın karşılığı
-           kaynak metinde yoksa o alanı BOŞ BIRAK. Dördünü de
-           doldurmak zorunda değilsin; boş alan gösterilmiyor.
-
-           analiz_islem'de bu kural daha da katı: yalnızca kaynağın
-           açıkça yüklediği yükümlülüğü yaz. Kaynak bir işlem
-           zorunluluğu getirmiyorsa BOŞ BIRAK. "Mükelleflerin durumu
-           gözden geçirmesi yerinde olur", "uzmana danışılmalı" gibi
-           genel tavsiyeler ÜRETME — bunlar bilgi değil doldurma
-           metnidir ve mesleki bir yayında yanlış yönlendirme
-           olur.
-
-           Ekonomi haberlerinde (faiz kararı, enflasyon verisi, kur)
-           çoğu zaman yapılacak bir işlem yoktur; analiz_islem orada
-           boş kalır, bu normaldir.
-
-        2c) İŞLETMEYE ETKİSİ, UYGULAMA ÖRNEĞİ, RESMÎ DAYANAK.
-
-           isletme_etkisi — Gelişmenin işletmelere hangi yoldan
-             yansıyacağı: maliyet, nakit akışı, fiyatlama, finansman,
-             vergi yükü. 1-3 cümle. ÖZELLİKLE EKONOMİ HABERLERİNDE
-             doldur: faiz kararı -> vadeli satış yapan ve krediyle
-             çalışan işletmenin finansman maliyeti, vade farkı; kur ->
-             ithalatçının maliyeti, ihracatçının geliri; enflasyon ->
-             fiyatlama ve stok değerlemesi. MEKANİZMAYI anlat, kesinlik
-             iddia etme ("artabilir", "yansıyabilir"). Kaynakta olmayan
-             rakam verme. Belirgin bir işletme etkisi yoksa BOŞ BIRAK.
-
-           uygulama_ornegi — Okuyucunun konuyu kavraması için örnek
-             hesaplama ya da muhasebe kaydı. YALNIZCA haberde
-             uygulanabilir bir oran, tutar, had ya da hesaplama kuralı
-             varsa yaz; yoksa BOŞ BIRAK. Kurallar:
-             - Oran ve kural KAYNAKTAKİ olmalı; rakamlar ise açıkça
-               varsayımsal ve yuvarlak ("Örneğin 100.000 TL'lik bir
-               satışta ..."). İlk cümle bunun bir örnek olduğunu söylesin.
-             - Hesabı adım adım yaz ve sonucu İKİ KEZ kontrol et.
-             - Muhasebe kaydı gerekiyorsa Tekdüzen Hesap Planı kodlarıyla,
-               her satır ayrı: "- 120 Alıcılar — Borç 120.000 TL". Borç
-               ve alacak toplamı eşit olmalı.
-             - Ekonomi haberinde basit bir etki hesabı olabilir (kaynakta
-               geçen faiz oranıyla örnek bir kredinin yıllık maliyeti).
-             - Emin değilsen BOŞ BIRAK: yanlış bir kayıt, hiç kayıt
-               olmamasından çok daha zararlıdır.
-             - Paragraflar boş satırla ayrılır; liste satırları "- " ile.
-
-           resmi_dayanak — Kanun ve madde numarası, tebliğ ya da
-             sirküler sıra numarası, karar sayısı, Resmî Gazete tarihi
-             ve sayısı. YALNIZCA kaynakta geçenleri yaz; yoksa BOŞ BIRAK.
-
-        2) İLGİLİYSE HABERİ YAZ. Kurallar:
+        2) YAYIMLANABİLİRSE ÖZETİ YAZ. Kurallar:
            - Kaynak metni yalnızca anlamak için okursun. ASLA cümle
-             kopyalamazsın, yeniden ifade edersin. Özgün bir metin yaz.
-           - Türkçe, sade ve kurumsal bir dille yaz. Tabloid üslup,
-             abartı, ünlem ve tıklama tuzağı başlık kullanma.
-           - ÇIKTININ TAMAMI TÜRKÇE olmalı: başlık, özet, haber metni,
-             etiketler, red nedeni ve ajan notu. Yalnızca kurum adları,
-             kişi adları ve standart kodları (OECD, IASB, IFRS 18 gibi)
-             özgün biçimini koruyabilir.
-           - KAYNAK YABANCI DİLDE OLABİLİR. Bu durumda da haberi
-             TÜRKÇE yazarsın; cümle cümle çeviri yapma, içeriği anlayıp
-             Türk okura kendi cümlelerinle aktar. Mesleki terimleri
-             Türkçe karşılığıyla kullan (corporate tax -> kurumlar
-             vergisi, VAT -> KDV, withholding -> stopaj, transfer
-             pricing -> transfer fiyatlandırması, IFRS -> UFRS/TFRS).
-             Kurum ve standart adlarını olduğu gibi bırak, gerekiyorsa
-             parantezle açıkla (OECD, IFRS 18).
-           - Yabancı bir düzenleme haberinde Türkiye bağlantısı varsa
-             (Türkiye'nin taraf olduğu anlaşma, TFRS'ye yansıyacak bir
-             standart) bunu kaynakta yazılı olduğu ölçüde belirt.
-             Kaynakta yoksa kendin çıkarım yapma.
+             kopyalamazsın; kendi cümlelerinle özgün bir özet yazarsın.
+             Özet, haberin yerine geçmez; okuru ayrıntı için kaynağa
+             yönlendirir.
+           - TARAFSIZ DİL. Yorum, değerlendirme, tahmin ve tavsiye yok.
+             Duygu yüklü sıfat ve zarf kullanma ("skandal", "şok",
+             "tarihî", "büyük tepki", "acı", "müjde"). Olanı aktar.
+           - ATIF. Bir kişinin ya da kurumun sözünü kendi bilgin gibi
+             yazma: "... açıkladı", "... bildirdi", "... dedi" diye
+             kimin söylediğini belirt. Resmî açıklamalarda kurumun adını
+             ver. Rakam ve tarihleri kaynaktaki gibi aktar.
+           - Siyasi haberde birden çok tarafın açıklaması kaynakta
+             varsa, hiçbirini öne çıkarmadan aynı tonda aktar. Kaynakta
+             olmayan tarafı kendin ekleme.
+           - Kaynakta olmayan HİÇBİR bilgiyi ekleme. Rakam, oran, tarih,
+             skor ve isimleri kaynaktaki gibi ver; kaynakta yoksa
+             uydurma. Eksik ya da belirsiz bir ayrıntıyı ajan notunda
+             editöre bildir.
+           - Türkçe, sade ve kurumsal dil. Ünlem, abartı ve tıklama
+             tuzağı başlık kullanma.
+           - ÇIKTININ TAMAMI TÜRKÇE: başlık, özet, metin, etiketler, red
+             nedeni ve ajan notu. Kaynak yabancı dildeyse de Türkçe
+             yazarsın; cümle cümle çevirme, anlayıp aktar. Kurum ve kişi
+             adları özgün biçimini korur.
            - Para birimlerini kaynaktaki birimiyle ver, TL'ye çevirme.
-           - UZUNLUK: 5-9 paragraf. Kaynak metin zenginse uzun yaz,
-             kısaysa kısa kal. Kaynakta olmayanı yazmak pahasına
-             uzatma — boş cümleyle paragraf doldurmak, kısa ama dolu
-             bir haberden kötüdür.
+           - UZUNLUK: 3-5 paragraf. İlk paragraf haberin özünü tek
+             başına versin: ne oldu, kim, nerede, ne zaman. Kaynak kısaysa
+             kısa kal; boş cümleyle paragraf doldurma.
            - Paragrafları BOŞ SATIRLA ayır.
-           - AYRINTIYI ATLAMA. Kaynakta varsa şunların hepsi habere
-             girmeli; okuyucu haberi okuduktan sonra kaynağa gitmek
-             zorunda kalmamalı:
-               * Neyin değiştiği ve ÖNCEKİ durumun ne olduğu
-               * Bütün sayısal değerler: oranlar, tutarlar, hadler,
-                 limitler, ceza tutarları
-               * Tarihler: Resmî Gazete yayım tarihi ve sayısı,
-                 yürürlük tarihi, başvuru/beyan son tarihi
-               * Dayanak: kanun ve madde numarası, tebliğ/sirküler
-                 sıra numarası, karar sayısı
-               * Kimin kapsama girdiği ve kimin girmediği (istisnalar)
-               * Geçiş hükümleri ve varsa önceki düzenlemenin durumu
-           - Kaynakta bir TABLO varsa (tarife dilimleri, oran listesi,
-             had tablosu) satırlarını metin içinde tek tek aktar;
-             "tabloda belirtilmiştir" deyip geçme.
-           - İLK PARAGRAF haberin özünü tek başına versin: ne oldu,
-             kimi ilgilendiriyor, ne zaman yürürlüğe giriyor. Okuyucu
-             yalnızca ilk paragrafı okusa bile ana bilgiyi almalı.
-           - Kaynakta olmayan hiçbir bilgiyi ekleme. Rakam, oran, tarih ve
-             tutarları kaynaktaki gibi ver; kaynakta yoksa uydurma.
-             Eksik bir ayrıntı varsa (örneğin yürürlük tarihi kaynakta
-             yazmıyorsa) onu ajan notunda editöre bildir.
-           - Yorum ve tavsiye verme; olanı aktar. "Yapmalısınız" deme.
-           - Başlık en fazla 90 karakter, olguyu bildirsin.
-           - Özet tek cümle, en fazla 200 karakter.
-           - Etiketler: 2-4 adet, vergi terimleri (örnek: KDV, Tebliğ,
-             Gelir Vergisi, e-Fatura).
+           - Başlık en fazla 90 karakter, olguyu bildirsin; soru ya da
+             merak uyandırma kalıbı kullanma.
+           - Özet (spot) tek cümle, en fazla 200 karakter.
+           - Etiketler: 2-4 adet, konu terimleri (örnek: TBMM, Süper Lig,
+             enflasyon, yapay zekâ). Kişi adlarını etiket yapma.
 
-        GÜVEN SKORU (0-100): Haberin doğruluğundan ve site için
-        değerinden ne kadar eminsin. Vergi mevzuatı haberleri ekonomi
-        haberlerinden daha değerli; aynı güvenilirlikteki bir ekonomi
-        haberini vergi haberinden birkaç puan aşağıda tut. Resmî kaynak
-        (Resmî Gazete, GİB, Bakanlık) ve net mevzuat bilgisi varsa
-        yüksek (85-100). İkincil kaynak, eksik
-        ayrıntı veya "bekleniyor/planlanıyor" gibi kesinleşmemiş ifadeler
-        varsa düşür (50-80). Şüpheliyse 50'nin altı.
+           Analiz alanları (analiz_degisen, analiz_etkilenen,
+           analiz_zaman, analiz_islem, isletme_etkisi, uygulama_ornegi,
+           resmi_dayanak) artık kullanılmıyor: HEPSİNİ BOŞ BIRAK.
+
+        GÜVEN SKORU (0-100): Haberin doğruluğundan ve yayın politikasına
+        uygunluğundan ne kadar eminsin. Haber ajansı ya da resmî kurum
+        kaynaklı, olguya dayanan haber yüksek (85-100). Tek kaynaklı,
+        ayrıntısı eksik ya da "bekleniyor/planlanıyor" gibi kesinleşmemiş
+        ifadeler varsa düşür (50-80). Hassas bir konuya değiniyorsa
+        (yargı süreci, güvenlik, siyasi gerginlik) 70'in üstüne çıkma ve
+        ajan notunda belirt.
+
+        ÖNEM PUANI (0-100): Haberin okur için ne kadar önemli olduğu.
+        Sitede haberler önemden önemsize doğru sıralanır; bu puan o
+        sıranın ölçüsüdür, güven skorundan ayrıdır. Ölçütler: kaç kişiyi
+        etkilediği (ülke geneli > bölge > yerel), Türkiye'ye etkisi,
+        aciliyeti ve kalıcılığı.
+        - 85-100: Ülke gündemini belirleyen gelişmeler: kabul edilen
+          önemli kanunlar, Cumhurbaşkanlığı kararları, Merkez Bankası faiz
+          kararı, enflasyon verisi, büyük afetler, seçim sonuçları,
+          Türkiye'yi doğrudan etkileyen büyük uluslararası olaylar.
+        - 60-84: Geniş kesimi ilgilendiren gelişmeler: bakanlık kararları,
+          önemli diplomatik görüşmeler, büyük kulüplerin ve milli
+          takımların maçları, piyasalarda belirgin hareket, önemli bilim
+          ve sağlık haberleri.
+        - 30-59: Sınırlı etkili ya da rutin haberler: sektörel
+          açıklamalar, alt lig ve küçük branş sonuçları, yerel olaylar,
+          kültür-sanat etkinlikleri.
+        - 0-29: Çok dar ilgi alanı.
+        Başlığın çarpıcılığına değil, olayın etkisine bak.
+        Her adayda "Bu olayı veren kaynak sayısı" yazar: aynı olayı birden
+        çok haber sitesi veriyorsa olay gündemdedir ve çok okunuyordur.
+        3 ve üzeri kaynakta geçen olayın puanını yükselt (en az 60); tek
+        kaynakta geçen olayı kendi etkisine göre puanla.
 
         KONU GRUBU: Haberi, kullanıcı mesajında verilen gruplardan birine
-        ata. Yanıtta grubun slug değerini TAM olarak yaz. Haber birden çok
-        grubu ilgilendiriyorsa ağırlıklı olanı seç.
-
-        Kategori eşlemesi KESİNDİR:
-        - IFRS, IAS, IASB, IFRIC, ISSB, TMS, TFRS, BOBİ FRS, KÜMİ FRS,
-          finansal raporlama standardı, muhasebe standardı ve bu
-          standartlardaki değişiklikler -> "tms-tfrs".
-        - Bağımsız denetim, denetim standardı, güvence standardı ve denetçi
-          düzenlemeleri -> "denetim".
-        - Makroekonomi, enflasyon, merkez bankası, faiz, büyüme, istihdam,
-          bütçe ve dış ticaret verileri -> "ekonomi".
-        - Vergi mevzuatı -> ilgili vergi alt grubuna.
-        - Site kapsamına giren fakat yukarıdaki gruplardan hiçbirine
-          oturmayan mali, muhasebesel veya düzenleyici haber -> "genel".
-
-        "vergi-kanunlari" ve "muhasebe-denetim" yalnızca menü üst
-        başlıklarıdır; kategori olarak ASLA seçme.
+        ata. Yanıtta grubun slug değerini TAM olarak yaz. Eşleme:
+        - Türkiye siyaseti, TBMM, hükümet, partiler, seçimler, Türkiye'nin
+          dış politikası -> "politika".
+        - Türkiye'de siyaset dışı güncel olaylar (eğitim, ulaşım, hava,
+          afet, yerel yönetim, toplumu ilgilendiren kararlar) -> "gundem".
+        - Başka ülkelerin iç gelişmeleri ve uluslararası olaylar
+          -> "dunya".
+        - Ekonomi, piyasalar, şirketler (dünya ekonomisi dahil)
+          -> "ekonomi".
+        - Diğerleri kendi başlıklarına: "spor", "teknoloji", "saglik",
+          "kultur-sanat".
 
         AJAN NOTU: Haberi onaylayacak editöre tek cümlelik not. Neyi
-        doğrulaması gerektiğini söyle; her şey netse bunu belirt.
-        Örnek: "İkincil kaynak; tebliğ Resmî Gazete'de teyit edilmeli."
+        kontrol etmesi gerektiğini söyle; hassas bir yön varsa (isim,
+        yargı süreci, siyasi açıklama) onu belirt; her şey netse bunu
+        yaz. Örnek: "Tek kaynak; açıklamanın resmî metni kontrol
+        edilmeli."
 
-        İlgili değilse baslik, ozet, icerik, etiketler boş kalsın ve
+        Yayımlanamıyorsa baslik, ozet, icerik, etiketler boş kalsın ve
         red_nedeni'ni tek cümleyle doldur.
         METIN;
 
@@ -327,42 +273,39 @@ final class Yazar implements SemaliIstemci
         'type' => 'object',
         'properties' => [
             'sira'        => ['type' => 'integer', 'description' => 'Adayin kullanici mesajindaki sira numarasi'],
-            'ilgili'      => ['type' => 'boolean', 'description' => 'Haber A (vergi ve mali mevzuat) ya da B (ekonomi gündemi) grubuna giriyor mu'],
+            'ilgili'      => ['type' => 'boolean', 'description' => 'Haber yayın politikasına göre yayımlanabilir mi'],
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
             'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı, en fazla 90 karakter'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
-            'icerik'      => ['type' => 'string',  'description' => '5-9 paragraf, paragraflar boş satırla ayrılmış; kaynaktaki tüm rakam, tarih, dayanak ve istisnalar dahil'],
+            'icerik'      => ['type' => 'string',  'description' => '3-5 paragraflık tarafsız özet, paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok'],
             'etiketler'   => [
                 'type'  => 'array',
                 'items' => ['type' => 'string'],
-                'description' => '2-4 konu terimi (vergi haberinde vergi terimi; ekonomi haberinde ör. altın, borsa, enflasyon beklentisi, Fed)',
+                'description' => '2-4 konu terimi (ör. TBMM, Süper Lig, enflasyon, yapay zekâ); kişi adı değil',
             ],
             'kategori'    => ['type' => 'string',  'description' => 'Verilen konu grubu listesinden TAM olarak bir slug'],
             'guven_skoru' => ['type' => 'integer', 'description' => '0-100 arası güven'],
+            'onem'        => ['type' => 'integer', 'description' => '0-100 arası önem puanı: haberin kamuoyu için ne kadar önemli olduğu (bkz. ÖNEM PUANI)'],
             'ajan_notu'   => ['type' => 'string',  'description' => 'Onaylayacak editöre tek cümlelik not'],
 
             /*
-             * VALENTRA ANALIZ — dort soru.
+             * Eski VALENTRA ANALIZ alanlari (vergi yayini donemi).
              *
-             * Okuyucu (mali musavir, muhasebe calisani, isletme
-             * yoneticisi) haberi kendi isine uyarlayabilsin diye.
-             * Haber "ne oldu"yu anlatir; bu dort alan "bana ne"yi.
-             *
-             * Bilgi kaynakta yoksa alan BOS birakiliyor. Yarim bilgiyle
-             * tamamlamak, ozellikle "hangi islem yapilmali" alaninda,
-             * okuyucuyu yanlis isleme sevk eder.
+             * Genel haber ozetlerinde kullanilmiyor; model bos donduruyor.
+             * Semadan cikarilmadi: site tarafinda haber_taslak_ekle() bu
+             * alanlari bekliyor ve eski haberlerde dolular.
              */
-            'analiz_degisen'  => ['type' => 'string', 'description' => 'NE DEĞİŞTİ: önceki durum ve yeni durum, tek-iki cümle. Kaynakta yoksa boş bırak.'],
-            'analiz_etkilenen'=> ['type' => 'string', 'description' => 'KİMLERİ ETKİLİYOR: hangi mükellef grubu, sektör ya da büyüklük. Kaynakta yoksa boş bırak.'],
-            'analiz_zaman'    => ['type' => 'string', 'description' => 'NE ZAMAN UYGULANACAK: yürürlük tarihi, ilk uygulanacak dönem, geçiş hükmü. Kaynakta yoksa boş bırak.'],
-            'analiz_islem'    => ['type' => 'string', 'description' => 'NE YAPILMALI: kaynağın ZORUNLU KILDIĞI somut adım ve kuralın doğrudan gerektirdiği kontroller; birden fazlaysa "- " ile başlayan satırlar, en fazla 5. Yoksa BOŞ BIRAK; genel tavsiye üretme.'],
-            'isletme_etkisi'  => ['type' => 'string', 'description' => 'İŞLETMEYE ETKİSİ: maliyet, nakit akışı, fiyatlama, finansman ya da vergi yüküne hangi yoldan yansıdığı; 1-3 cümle. Özellikle ekonomi haberlerinde. Belirgin etki yoksa boş.'],
-            'uygulama_ornegi' => ['type' => 'string', 'description' => 'UYGULAMA ÖRNEĞİ: kaynaktaki oran/kuralla, varsayımsal yuvarlak rakamlarla adım adım hesaplama ya da Tekdüzen Hesap Planı ile muhasebe kaydı. Uygulanabilir kural yoksa ya da emin değilsen boş.'],
-            'resmi_dayanak'   => ['type' => 'string', 'description' => 'RESMÎ DAYANAK: kanun/madde, tebliğ sıra no, karar sayısı, Resmî Gazete tarih ve sayısı; yalnızca kaynakta geçenler, yoksa boş.'],
+            'analiz_degisen'  => ['type' => 'string', 'description' => 'Kullanılmıyor (eski vergi analizi alanı): boş bırak.'],
+            'analiz_etkilenen'=> ['type' => 'string', 'description' => 'Kullanılmıyor (eski vergi analizi alanı): boş bırak.'],
+            'analiz_zaman'    => ['type' => 'string', 'description' => 'Kullanılmıyor (eski vergi analizi alanı): boş bırak.'],
+            'analiz_islem'    => ['type' => 'string', 'description' => 'Kullanılmıyor (eski vergi analizi alanı): boş bırak.'],
+            'isletme_etkisi'  => ['type' => 'string', 'description' => 'Kullanılmıyor (eski vergi analizi alanı): boş bırak.'],
+            'uygulama_ornegi' => ['type' => 'string', 'description' => 'Kullanılmıyor (eski vergi analizi alanı): boş bırak.'],
+            'resmi_dayanak'   => ['type' => 'string', 'description' => 'Kullanılmıyor (eski vergi analizi alanı): boş bırak.'],
         ],
         'required' => [
             'sira', 'ilgili', 'red_nedeni', 'baslik', 'ozet', 'icerik',
-            'etiketler', 'kategori', 'guven_skoru', 'ajan_notu',
+            'etiketler', 'kategori', 'guven_skoru', 'onem', 'ajan_notu',
             'analiz_degisen', 'analiz_etkilenen', 'analiz_zaman', 'analiz_islem',
             'isletme_etkisi', 'uygulama_ornegi', 'resmi_dayanak',
         ],
@@ -372,25 +315,26 @@ final class Yazar implements SemaliIstemci
     private const SEMA = [
         'type' => 'object',
         'properties' => [
-            'ilgili'      => ['type' => 'boolean', 'description' => 'Haber A (vergi ve mali mevzuat) ya da B (ekonomi gündemi) grubuna giriyor mu'],
+            'ilgili'      => ['type' => 'boolean', 'description' => 'Haber yayın politikasına göre yayımlanabilir mi'],
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
             'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı, en fazla 90 karakter'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
-            'icerik'      => ['type' => 'string',  'description' => '5-9 paragraf, paragraflar boş satırla ayrılmış; kaynaktaki tüm rakam, tarih, dayanak ve istisnalar dahil'],
+            'icerik'      => ['type' => 'string',  'description' => '3-5 paragraflık tarafsız özet, paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok'],
             'etiketler'   => [
                 'type'  => 'array',
                 'items' => ['type' => 'string'],
-                'description' => '2-4 konu terimi (vergi haberinde vergi terimi; ekonomi haberinde ör. altın, borsa, enflasyon beklentisi, Fed)',
+                'description' => '2-4 konu terimi (ör. TBMM, Süper Lig, enflasyon, yapay zekâ); kişi adı değil',
             ],
             'kategori'    => ['type' => 'string',  'description' => 'Verilen konu grubu listesinden TAM olarak bir slug'],
             'guven_skoru' => ['type' => 'integer', 'description' => '0-100 arası güven'],
+            'onem'        => ['type' => 'integer', 'description' => '0-100 arası önem puanı: haberin kamuoyu için ne kadar önemli olduğu (bkz. ÖNEM PUANI)'],
             'ajan_notu'   => ['type' => 'string',  'description' => 'Onaylayacak editöre tek cümlelik not'],
         ],
         // Gemini'nin responseSchema'si OpenAPI alt kumesidir;
         // additionalProperties desteklenmez, gonderilirse istek 400 doner.
         'required' => [
             'ilgili', 'red_nedeni', 'baslik', 'ozet', 'icerik',
-            'etiketler', 'kategori', 'guven_skoru', 'ajan_notu',
+            'etiketler', 'kategori', 'guven_skoru', 'onem', 'ajan_notu',
         ],
     ];
 
@@ -568,7 +512,7 @@ final class Yazar implements SemaliIstemci
      * kotayı hemen tüketiyor. Beş adaylık bir grup tek istekte işlenince
      * aynı iş beşte bir istekle yapılır.
      *
-     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string}> $adaylar
+     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string,kapsam?:int}> $adaylar
      * @param list<array<string,mixed>> $kategoriler
      * @return array<int,array<string,mixed>> sira => sonuc
      */
@@ -677,7 +621,7 @@ final class Yazar implements SemaliIstemci
     }
 
     /**
-     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string}> $adaylar
+     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string,kapsam?:int}> $adaylar
      * @param list<array<string,mixed>> $kategoriler
      */
     private function topluIstemHazirla(array $adaylar, array $kategoriler, array $onceki = []): string
@@ -708,9 +652,12 @@ final class Yazar implements SemaliIstemci
                 ? mb_substr($aday['sayfaMetni'], 0, self::SAYFA_METNI_SINIRI, 'UTF-8')
                 : '(Sayfa metni alınamadı; yalnızca başlık ve özet mevcut.)';
 
+            $kapsam = max(1, (int) ($aday['kapsam'] ?? 1));
+
             $bloklar[] = <<<METIN
             ### ADAY {$no}
             Kaynak: {$aday['kaynakAdi']} — {$tur}
+            Bu olayı veren kaynak sayısı (bu taramada): {$kapsam}
             Adres: {$girdi['baglanti']}
             Başlık: {$girdi['baslik']}
             Özet: {$girdi['ozet']}
@@ -776,8 +723,8 @@ final class Yazar implements SemaliIstemci
         Aşağıda {$adet} haber adayı var. HER BİRİNİ ayrı ayrı değerlendir
         ve "sonuclar" dizisinde {$adet} sonuç döndür. Her sonucun "sira"
         alanına ilgili adayın numarasını yaz (1'den {$adet}'e kadar).
-        Hiçbir adayı atlama; A ya da B grubuna girmeyenler için de ilgili
-        değerini false yapıp red_nedeni'ni doldur.
+        Hiçbir adayı atlama; yayımlanamayanlar için de ilgili değerini
+        false yapıp red_nedeni'ni doldur.
 
         {$adayMetni}
         METIN;
@@ -920,8 +867,8 @@ final class Yazar implements SemaliIstemci
         {$metin}
         ---
 
-        Bu haberi sınıflandır; A ya da B grubuna giriyorsa Valentra için
-        özgün bir haber metni yaz.
+        Bu haberi değerlendir; yayın politikasına uygunsa Valentra için
+        tarafsız bir özet yaz.
         METIN;
     }
 }

@@ -7,8 +7,6 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/includes/bootstrap.php';
-require_once __DIR__ . '/includes/kose.php';
-require_once __DIR__ . '/includes/bugun.php';
 
 $sayfa = max(1, (int) ($_GET['sayfa'] ?? 1));
 
@@ -33,8 +31,9 @@ $mansetAdet = 10;   // kaydiraktaki haber sayisi
 
 /*
  * Resmi Gazete kaynakli haberler ana sayfa akisinda yok; kendi
- * sayfalarinda (resmi-gazete.php). Sayi, manset, izgara ve analiz ayni
- * kosulu kullaniyor ki sayfalama tutarli kalsin.
+ * sayfalarinda (resmi-gazete.php). Eski vergi haberleri akista kaliyor
+ * (bkz. haber_ana_akis_kosulu). Sayi, manset ve izgara ayni kosulu
+ * kullaniyor ki sayfalama tutarli kalsin.
  */
 $toplam = haber_yayinda_sayisi(true);
 
@@ -50,8 +49,8 @@ $kalan    = max(0, $toplam - $tuketilen);
 $sonSayfa = max(1, (int) ceil($kalan / $adet));
 
 $sayfaBasligi = $sayfa > 1
-    ? 'Vergi Haberleri — Sayfa ' . $sayfa . ' | Valentra'
-    : 'Valentra — Vergi Haberleri';
+    ? 'Güncel Haberler — Sayfa ' . $sayfa . ' | Valentra'
+    : 'Valentra — Güncel Haberler';
 
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
@@ -68,39 +67,13 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <div class="ana-kolon">
             <?php
             /*
-             * Manset ve "Valentra Diyor ki…" ayni sirada: manset solda
-             * daraliyor, kose yazilari kutusu onunla yan pencere arasinda.
-             * Yayinda yazi yoksa manset tam genislikte kalir.
+             * Ekim 2026: site genel haber ozetlerine dondu. Vergiye ozgu
+             * bolumler ana sayfadan kaldirildi: "Valentra Diyor ki…"
+             * kose yazilari kutusu ve "Bugun bilmeniz gerekenler"
+             * (vergi takvimi, KDV hesabi, pratik bilgiler kisayollari).
+             * Sayfalari acik; yalnizca ana sayfada ve menude yoklar.
              */
-            $koseYazilari = [];
-
-            if ($sayfa === 1) {
-                try {
-                    $koseYazilari = kose_son_gun();
-                } catch (PDOException $e) {
-                    error_log('[valentra] kose yazilari okunamadi: ' . $e->getMessage());
-                }
-            }
-            ?>
-            <div class="<?= $koseYazilari !== [] ? 'manset-sirasi' : '' ?>">
-                <div class="manset-sirasi-sol">
-                    <?php require __DIR__ . '/includes/kaydirak.php'; ?>
-                </div>
-
-                <?php require __DIR__ . '/includes/kose_kutu.php'; ?>
-            </div>
-
-            <?php
-            /*
-             * Ilk ekran: bugun bilinmesi gerekenler ve kisayollar
-             * (takvim, KDV hesabi, pratik bilgiler). Yalnizca ilk sayfada.
-             */
-            if ($sayfa === 1) {
-                $bugunMaddeleri = bugun_bilmeniz_gerekenler(
-                    array_map(static fn (array $h): int => (int) $h['id'], $mansetler)
-                );
-                require __DIR__ . '/includes/bugun_kutu.php';
-            }
+            require __DIR__ . '/includes/kaydirak.php';
             ?>
 
             <?php /* Piyasa seridi kaydiragin hemen altinda: sayfa acilir
@@ -113,51 +86,11 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
             <?php
             /*
-             * VALENTRA ANALIZ bolumu — yalnizca ilk sayfada.
-             *
-             * Mansetin hemen altinda, haber izgarasinin ustunde: sitenin
-             * ozgun katkisi burasi. Baska kaynaklardan derlenen haber her
-             * yerde var; "bana ne" karsiligi yok.
-             *
-             * Degerlendirmesi dolu haber yoksa bolum hic basilmiyor; bos
-             * bir baslik siteyi eksik gosterir.
+             * "Valentra Analiz" bolumu kaldirildi (Ekim 2026): vergi
+             * haberleri icin "ne degisti / kimleri etkiliyor" ozetiydi;
+             * genel haber ozetlerinde yorum katmani yok.
              */
-            $analizliler = $sayfa === 1 ? haber_analizliler(3, true) : [];
             ?>
-
-            <?php if ($analizliler !== []): ?>
-                <div class="bolum-basligi">
-                    <h2>Valentra Analiz</h2>
-                    <span class="cizgi"></span>
-                </div>
-
-                <div class="analiz-kartlari">
-                    <?php foreach ($analizliler as $analizHaber): ?>
-                        <article class="analiz-kart">
-                            <a href="<?= e(haber_yolu((string) $analizHaber['slug'])) ?>">
-                                <?php if (!empty($analizHaber['kategori_adi'])): ?>
-                                    <span class="etiket"><?= e($analizHaber['kategori_adi']) ?></span>
-                                <?php endif; ?>
-
-                                <h3><?= e($analizHaber['baslik']) ?></h3>
-
-                                <dl class="analiz-ozet">
-                                    <div>
-                                        <dt>Ne değişti?</dt>
-                                        <dd><?= e(kisalt((string) $analizHaber['analiz_degisen'], 150)) ?></dd>
-                                    </div>
-                                    <div>
-                                        <dt>Kimleri etkiliyor?</dt>
-                                        <dd><?= e(kisalt((string) $analizHaber['analiz_etkilenen'], 110)) ?></dd>
-                                    </div>
-                                </dl>
-
-                                <span class="analiz-devam">Tamamını okuyun &rarr;</span>
-                            </a>
-                        </article>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
 
             <?php if ($haberler !== []): ?>
                 <div class="bolum-basligi">

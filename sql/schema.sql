@@ -28,6 +28,10 @@ CREATE TABLE IF NOT EXISTS kaynaklar (
     liste_url     VARCHAR(500)  NULL,
     liste_secici  VARCHAR(200)  NULL,
     tur           ENUM('rss','resmi','web') NOT NULL DEFAULT 'rss',
+    -- Haber akisi basligi ipucu (gundem, politika, spor...). Ajan modele
+    -- giden aday kontenjanini basliklara bununla paylastiriyor; haberin
+    -- asil basligini model seciyor. Bos: ekonomi (eski kaynaklar).
+    kategori      VARCHAR(60)   NULL,
     aktif         TINYINT(1)    NOT NULL DEFAULT 1,
     son_tarama    DATETIME      NULL,
     olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -95,6 +99,9 @@ CREATE TABLE IF NOT EXISTS haberler (
     baslik_parmak   CHAR(64)      NULL,
 
     guven_skoru     TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    -- Onem puani (0-100): ana sayfa ve konu sayfalarinda son 24 saatin
+    -- haberleri bu puana gore siralaniyor. Ajan veriyor, panelden degisir.
+    onem            TINYINT UNSIGNED NOT NULL DEFAULT 50,
     ajan_notu       VARCHAR(600)  NOT NULL DEFAULT '',
 
     -- Valentra Analiz: haberin "bana ne" karsiligi. Bos olabilir ve
@@ -621,12 +628,15 @@ UPDATE kategoriler SET ad = 'Genel Gündem', aktif = 1, ust_id = NULL, sira = 50
 UPDATE kategoriler SET ad = 'Ekonomik Gündem', aktif = 1, ust_id = NULL, sira = 30
  WHERE slug = 'ekonomi';
 
+-- "aktif = 1" bu iki satirdan cikarildi (22.10.2026): sema her
+-- calistiginda kaynaklari yeniden aciyordu; genel habere donuste
+-- kapatildilar (bkz. sondaki tek seferlik gecis).
 UPDATE kaynaklar
-   SET liste_url = 'https://www.oecd.org/en/topics/tax-policy.html', aktif = 1
+   SET liste_url = 'https://www.oecd.org/en/topics/tax-policy.html'
  WHERE ad = 'OECD Vergi';
 
 UPDATE kaynaklar
-   SET liste_url = 'https://www.ifrs.org/news-and-events/news/', aktif = 1
+   SET liste_url = 'https://www.ifrs.org/news-and-events/news/'
  WHERE ad = 'IFRS Foundation';
 
 -- ---------------------------------------------------------------------------
@@ -1412,3 +1422,262 @@ CREATE TABLE IF NOT EXISTS rehberler (
 -- Ilk bes uygulama rehberi yayina alindi (29.09.2026): bkz. sema.php
 -- 'ilk rehberleri yayimla' adimi. Bu satir sema imzasini degistirip
 -- adimin canli veritabaninda calismasini sagliyor.
+
+-- ---------------------------------------------------------------------------
+-- Genel habere donus — 22.10.2026
+--
+-- TEK SEFERLIK GECIS. Asagidaki kapatma, kategori ipucu ve haber tasima
+-- adimlari 'gecis_genel_haber_2026_10' ayari yokken calisiyor; blogun
+-- sonunda ayar yaziliyor. Sema her degistiginde butun veri komutlari
+-- yeniden calistigi icin (sema_otomatik_yukselt) kosulsuz olsalardi
+-- panelden yeniden acilan bir kaynak sonraki sema degisikliginde yine
+-- kapanirdi. Yeni kaynak eklemeleri INSERT IGNORE, tekrar zarar vermiyor.
+--
+-- Site sahibinin karari: Valentra vergi/muhasebe yayinindan genel haber
+-- ozetlerine donuyor (MSN Haberler gibi: her haber kendi cumlelerimizle
+-- ozetleniyor, altinda kaynak adi ve haberin tamamina baglanti).
+--
+-- Haber akisi basliklari asagida. Menu, ana sayfa ve ajanin konu listesi
+-- yalnizca bunlari kullaniyor (bkz. HABER_AKIS_KATEGORILERI). Eski vergi
+-- ve muhasebe kategorileri SILINMEDI ve pasife de alinmadi (adresleri
+-- calismaya devam etsin); haberleri asagida Ekonomi'ye tasiniyor.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kategoriler (ad, slug, aciklama, sira) VALUES
+    ('Gündem',       'gundem',       'Türkiye''den güncel olaylar: eğitim, ulaşım, hava ve afet, yerel yönetim ve toplumu ilgilendiren resmî kararlar', 10),
+    ('Politika',     'politika',     'Türkiye siyaseti: TBMM, Cumhurbaşkanlığı ve hükümet kararları, partilerin politika açıklamaları, seçimler ve dış politika', 20),
+    ('Dünya',        'dunya',        'Uluslararası gelişmeler, diğer ülkelerin siyaseti ve uluslararası kuruluşlar', 40),
+    ('Spor',         'spor',         'Futbol, basketbol ve diğer branşlarda maç sonuçları, transferler ve milli takımlar', 50),
+    ('Teknoloji',    'teknoloji',    'Bilim, teknoloji, yapay zekâ, internet ve uzay', 60),
+    ('Sağlık',       'saglik',       'Sağlık politikası, tıp araştırmaları ve halk sağlığı', 70),
+    ('Kültür-Sanat', 'kultur-sanat', 'Sinema, müzik, edebiyat, sergi ve kültürel miras', 80);
+
+-- Ekonomi basligi korunuyor (eski ekonomi haberleri onda); adi sadeleşiyor.
+UPDATE kategoriler
+   SET ad = 'Ekonomi',
+       aciklama = 'Piyasalar, enflasyon, faiz, kur, büyüme, şirketler ve dünya ekonomisi',
+       aktif = 1, ust_id = NULL, sira = 30
+ WHERE slug = 'ekonomi';
+
+-- Eski haberlerin TAMAMI Ekonomi basligina tasiniyor (site sahibinin
+-- karari, 22.10.2026: eski haberler silinmiyor, ekonomi haberleri
+-- olarak kaliyor). Haber akisi basliklarindan birinde olmayan her haber
+-- (vergi alt gruplari, TMS/TFRS, Genel, kategorisiz) ekonomiye geciyor.
+-- Ajan artik yalnizca haber akisi basliklarini yazdigi icin sema yeniden
+-- calistiginda yeni bir haberi etkilemiyor.
+--
+-- guncellendi kendine esitleniyor: sutun ON UPDATE CURRENT_TIMESTAMP
+-- tasidigi icin aksi halde butun eski haberler "guncellendi" gorunurdu.
+UPDATE haberler h
+  JOIN kategoriler e ON e.slug = 'ekonomi'
+  LEFT JOIN kategoriler k ON k.id = h.kategori_id
+   SET h.kategori_id = e.id,
+       h.guncellendi = h.guncellendi
+ WHERE (k.id IS NULL
+        OR k.slug NOT IN ('gundem', 'politika', 'ekonomi', 'dunya', 'spor', 'teknoloji', 'saglik', 'kultur-sanat'))
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+
+-- Yeni kaynaklar. Basliga gore ayrilmis beslemeler; kategori sutunu
+-- ajanin aday kontenjanini basliklara paylastirmasi icin ipucu.
+--
+-- Secim olcutu: haber ajanslari (AA, DHA, IHA) ve ana akim yayinlar.
+-- Taraf tutan, yorum agirlikli yayinlar bilerek yok (site sahibinin
+-- karari: fanatik ve dogrulanmamis haberden uzak durulacak).
+--
+-- Adresler bu ortamdan dogrulanamadi. Panelde "Kaynaklari sina" ile
+-- kontrol edin; calismayani duzeltin ya da kapatin.
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('Anadolu Ajansı Gündem',       'https://www.aa.com.tr',      'https://www.aa.com.tr/tr/rss/default?cat=guncel',          'rss', 'gundem', 1),
+    ('Anadolu Ajansı Politika',     'https://www.aa.com.tr',      'https://www.aa.com.tr/tr/rss/default?cat=politika',        'rss', 'politika', 1),
+    ('Anadolu Ajansı Dünya',        'https://www.aa.com.tr',      'https://www.aa.com.tr/tr/rss/default?cat=dunya',           'rss', 'dunya', 1),
+    ('Anadolu Ajansı Spor',         'https://www.aa.com.tr',      'https://www.aa.com.tr/tr/rss/default?cat=spor',            'rss', 'spor', 1),
+    ('Anadolu Ajansı Teknoloji',    'https://www.aa.com.tr',      'https://www.aa.com.tr/tr/rss/default?cat=bilim-teknoloji', 'rss', 'teknoloji', 1),
+    ('Anadolu Ajansı Sağlık',       'https://www.aa.com.tr',      'https://www.aa.com.tr/tr/rss/default?cat=saglik',          'rss', 'saglik', 1),
+    ('Anadolu Ajansı Kültür',       'https://www.aa.com.tr',      'https://www.aa.com.tr/tr/rss/default?cat=kultur',          'rss', 'kultur-sanat', 1),
+    ('TRT Haber Gündem',            'https://www.trthaber.com',   'https://www.trthaber.com/gundem_articles.rss',             'rss', 'gundem', 1),
+    ('TRT Haber Türkiye',           'https://www.trthaber.com',   'https://www.trthaber.com/turkiye_articles.rss',            'rss', 'politika', 1),
+    ('TRT Haber Dünya',             'https://www.trthaber.com',   'https://www.trthaber.com/dunya_articles.rss',              'rss', 'dunya', 1),
+    ('TRT Haber Spor',              'https://www.trthaber.com',   'https://www.trthaber.com/spor_articles.rss',               'rss', 'spor', 1),
+    ('TRT Haber Bilim-Teknoloji',   'https://www.trthaber.com',   'https://www.trthaber.com/bilim-teknoloji_articles.rss',    'rss', 'teknoloji', 1),
+    ('TRT Haber Sağlık',            'https://www.trthaber.com',   'https://www.trthaber.com/saglik_articles.rss',             'rss', 'saglik', 1),
+    ('TRT Haber Kültür-Sanat',      'https://www.trthaber.com',   'https://www.trthaber.com/kultur-sanat_articles.rss',       'rss', 'kultur-sanat', 1),
+    ('DHA',                         'https://www.dha.com.tr',     'https://www.dha.com.tr/rss',                               'rss', 'gundem', 1),
+    ('İHA',                         'https://www.iha.com.tr',     'https://www.iha.com.tr/rss',                               'rss', 'gundem', 1),
+    ('NTV Türkiye',                 'https://www.ntv.com.tr',     'https://www.ntv.com.tr/turkiye.rss',                       'rss', 'politika', 1),
+    ('NTV Dünya',                   'https://www.ntv.com.tr',     'https://www.ntv.com.tr/dunya.rss',                         'rss', 'dunya', 1),
+    ('NTV Spor',                    'https://www.ntv.com.tr',     'https://www.ntv.com.tr/spor.rss',                          'rss', 'spor', 1),
+    ('NTV Teknoloji',               'https://www.ntv.com.tr',     'https://www.ntv.com.tr/teknoloji.rss',                     'rss', 'teknoloji', 1),
+    ('NTV Sağlık',                  'https://www.ntv.com.tr',     'https://www.ntv.com.tr/saglik.rss',                        'rss', 'saglik', 1),
+    ('NTV Sanat',                   'https://www.ntv.com.tr',     'https://www.ntv.com.tr/sanat.rss',                         'rss', 'kultur-sanat', 1),
+    ('CNN Türk Türkiye',            'https://www.cnnturk.com',    'https://www.cnnturk.com/feed/rss/turkiye/news',            'rss', 'politika', 1),
+    ('CNN Türk Dünya',              'https://www.cnnturk.com',    'https://www.cnnturk.com/feed/rss/dunya/news',              'rss', 'dunya', 1),
+    ('Webtekno',                    'https://www.webtekno.com',   'https://www.webtekno.com/rss.xml',                         'rss', 'teknoloji', 1);
+
+-- En cok okunan Turk haber siteleri (site sahibinin istegi, 22.10.2026):
+-- gundem, dunya ve spor beslemeleri. Ekonomi beslemeleri zaten listede.
+-- Yayin politikasi (dogrulanmamis iddia, polemik, kutuplastirici icerik
+-- yayimlanmaz) modelde uygulaniyor; kaynak genis tutuldu ki ayni olayin
+-- kac sitede gectigi (kapsam) olculebilsin.
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('Hürriyet Gündem',             'https://www.hurriyet.com.tr', 'https://www.hurriyet.com.tr/rss/gundem',                  'rss', 'gundem', 1),
+    ('Hürriyet Dünya',              'https://www.hurriyet.com.tr', 'https://www.hurriyet.com.tr/rss/dunya',                   'rss', 'dunya', 1),
+    ('Hürriyet Spor',               'https://www.hurriyet.com.tr', 'https://www.hurriyet.com.tr/rss/spor',                    'rss', 'spor', 1),
+    ('Milliyet Gündem',             'https://www.milliyet.com.tr', 'https://www.milliyet.com.tr/rss/rssnew/gundemrss.xml',    'rss', 'gundem', 1),
+    ('Milliyet Dünya',              'https://www.milliyet.com.tr', 'https://www.milliyet.com.tr/rss/rssnew/dunyarss.xml',     'rss', 'dunya', 1),
+    ('Milliyet Spor',               'https://www.milliyet.com.tr', 'https://www.milliyet.com.tr/rss/rssnew/sporrss.xml',      'rss', 'spor', 1),
+    ('Sabah Gündem',                'https://www.sabah.com.tr',    'https://www.sabah.com.tr/rss/gundem.xml',                 'rss', 'gundem', 1),
+    ('Sabah Dünya',                 'https://www.sabah.com.tr',    'https://www.sabah.com.tr/rss/dunya.xml',                  'rss', 'dunya', 1),
+    ('Sabah Spor',                  'https://www.sabah.com.tr',    'https://www.sabah.com.tr/rss/spor.xml',                   'rss', 'spor', 1),
+    ('Habertürk Gündem',            'https://www.haberturk.com',   'https://www.haberturk.com/rss/gundem.xml',                'rss', 'gundem', 1),
+    ('Habertürk Dünya',             'https://www.haberturk.com',   'https://www.haberturk.com/rss/dunya.xml',                 'rss', 'dunya', 1),
+    ('Habertürk Spor',              'https://www.haberturk.com',   'https://www.haberturk.com/rss/spor.xml',                  'rss', 'spor', 1),
+    ('Sözcü Gündem',                'https://www.sozcu.com.tr',    'https://www.sozcu.com.tr/feeds-rss-category-gundem',      'rss', 'gundem', 1),
+    ('Sözcü Dünya',                 'https://www.sozcu.com.tr',    'https://www.sozcu.com.tr/feeds-rss-category-dunya',       'rss', 'dunya', 1),
+    ('Sözcü Spor',                  'https://www.sozcu.com.tr',    'https://www.sozcu.com.tr/feeds-rss-category-spor',        'rss', 'spor', 1),
+    ('CNN Türk Spor',               'https://www.cnnturk.com',     'https://www.cnnturk.com/feed/rss/spor/news',              'rss', 'spor', 1);
+
+-- Dunyanin onde gelen haber kuruluslari (Ingilizce). Ajan haberi
+-- Turkceye cevirerek degil, anlayip kendi cumleleriyle Turkce ozetliyor
+-- (bkz. Yazar yonergesi). Bu siteler GitHub'dan dogrudan erisilebiliyor.
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('BBC News',                    'https://www.bbc.com/news',    'https://feeds.bbci.co.uk/news/world/rss.xml',             'rss', 'dunya', 1),
+    ('CNN',                         'https://edition.cnn.com',     'http://rss.cnn.com/rss/edition_world.rss',                'rss', 'dunya', 1),
+    ('Reuters',                     'https://www.reuters.com',     'https://www.reutersagency.com/feed/?best-topics=political-general&post_type=best', 'rss', 'dunya', 1),
+    ('The Guardian',                'https://www.theguardian.com', 'https://www.theguardian.com/world/rss',                   'rss', 'dunya', 1),
+    ('The New York Times',          'https://www.nytimes.com',     'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',  'rss', 'dunya', 1),
+    ('France 24',                   'https://www.france24.com/en', 'https://www.france24.com/en/rss',                         'rss', 'dunya', 1),
+    ('DW News',                     'https://www.dw.com/en',       'https://rss.dw.com/rdf/rss-en-world',                     'rss', 'dunya', 1),
+    ('NPR',                         'https://www.npr.org',         'https://feeds.npr.org/1004/rss.xml',                      'rss', 'dunya', 1);
+
+-- Al Jazeera'nin beslemesi zaten genel haber beslemesi (all.xml); ekonomi
+-- yerine dunya basligiyla acik kaliyor.
+UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'Al Jazeera Ekonomi' AND kategori IS NULL
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+
+-- Turkce yayin yapan yabanci kuruluslarin genel beslemeleri: dunya.
+UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'BBC Türkçe' AND kategori IS NULL
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'DW Türkçe' AND kategori IS NULL
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'VOA Türkçe' AND kategori IS NULL
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+
+-- Yalnizca vergi, muhasebe ve mesleki mevzuat yayinlayan kaynaklar
+-- kapatiliyor; ekonomi kaynaklari acik kaliyor (kategori ipucu bos =
+-- ekonomi). Tek tek yaziliyor: ajanin tohum okuyucusu (site
+-- erisilemediginde depodaki bu dosyadan liste kuruyor) yalnizca
+-- "WHERE ad = '...'" kalibini taniyor.
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Resmî Gazete'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Gelir İdaresi Başkanlığı'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Hazine ve Maliye Bakanlığı'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'KGK'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'TÜRMOB'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Alomaliye'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Muhasebe News'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Vergi Algı'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'MuhasebeTR'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'İSMMMO'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'BDDK'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'SPK'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Rekabet Kurumu'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'SGK'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Ticaret Bakanlığı'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'KOSGEB'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Deloitte Türkiye'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'PwC Türkiye'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'KPMG Türkiye'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'BDO Türkiye'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'EY Türkiye'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Grant Thornton Türkiye'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Vergi Dünyası'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'OECD Vergi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Avrupa Komisyonu Vergi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IFRS Foundation'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IAS Plus'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'EFRAG'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IRS'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Tax Foundation'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Accountancy Age'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Tax Justice Network'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'ICAEW'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IFAC'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Euronews Vergi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+
+-- Ingilizce yayin yapan yabanci ekonomi kaynaklari da kapatiliyor: site
+-- Turkce genel haber ozetleri yayimliyor; dunya ve dunya ekonomisi
+-- haberleri Turkce kaynaklardan (AA, TRT, NTV, CNN Turk, BBC/DW
+-- Turkce) geliyor. Tarama suresi de yeni basliklarin kaynaklarina
+-- kaliyor. Gerekirse panelden tek tek acilabilir.
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IMF'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Reuters Business'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Bloomberg Ekonomi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'BBC Business'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'The Guardian Business'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'The New York Times Business'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'The Economist Finans'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Financial Times'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'CNBC Ekonomi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'MarketWatch'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'CNN Business'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'DW Business'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Associated Press İş'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Nikkei Asia Ekonomi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Avrupa Merkez Bankası'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Federal Reserve'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Dünya Bankası'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Bank for International Settlements'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+
+-- Gecis tamamlandi: yukaridaki tek seferlik adimlar bir daha calismaz.
+INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_genel_haber_2026_10', '22.10.2026');

@@ -2,8 +2,8 @@
 
     <footer class="alt-bant">
         <div class="sinirli">
-            <span>&copy; <?= date('Y') ?> Valentra — Vergi Haberleri</span>
-            <span>Haberler kaynaklarına atıfla yayımlanır.</span>
+            <span>&copy; <?= date('Y') ?> Valentra — Güncel Haberler</span>
+            <span>Haberler, kaynaklarına atıf ve bağlantıyla özet olarak yayımlanır.</span>
         </div>
     </footer>
 </body>

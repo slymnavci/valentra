@@ -297,6 +297,10 @@ function sema_yukselt(array &$hatalar = []): array
     $sutunEkle('kategoriler', 'ust_id', 'INT UNSIGNED NULL AFTER aciklama');
     $sutunEkle('kaynaklar', 'liste_url', 'VARCHAR(500) NULL AFTER besleme_url');
     $sutunEkle('kaynaklar', 'liste_secici', 'VARCHAR(200) NULL AFTER besleme_url');
+    // Haber akisi basligi ipucu (Ekim 2026, genel habere donus).
+    $sutunEkle('kaynaklar', 'kategori', 'VARCHAR(60) NULL AFTER tur');
+    // Onem puani: ana sayfa sirasi (Ekim 2026).
+    $sutunEkle('haberler', 'onem', 'TINYINT UNSIGNED NOT NULL DEFAULT 50 AFTER guven_skoru');
 
     // Kopya sorgulari bu iki alan uzerinden calisiyor; indekssiz
     // arama arsiv buyudukce her aday icin tam tarama demek olurdu.
@@ -485,6 +489,11 @@ function sema_guncel_mi(): bool
             ['kategoriler', 'ust_id'],
             ['kaynaklar', 'liste_url'],
             ['kaynaklar', 'liste_secici'],
+            // api/kaynaklar.php bu sutunu sorguluyor; yoksa ajan
+            // yapilandirmayi alamaz.
+            ['kaynaklar', 'kategori'],
+            // Ana sayfa siralamasi ve haber_taslak_ekle() bu sutunu kullaniyor.
+            ['haberler', 'onem'],
             // pratik_aday_yaz bu sutunu dogrudan sorguluyor; yukseltme
             // dustuyse panel "guncel" dememeli.
             ['pratik_bilgiler', 'seri'],

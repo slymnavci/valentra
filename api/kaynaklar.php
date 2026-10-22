@@ -23,39 +23,26 @@ if (ajan_anahtar_dogrula($neden) === null) {
 }
 
 $kaynaklar = db()->query(
-    'SELECT id, ad, site_url, besleme_url, liste_url, liste_secici, tur
+    'SELECT id, ad, site_url, besleme_url, liste_url, liste_secici, tur, kategori
        FROM kaynaklar
       WHERE aktif = 1
       ORDER BY ad'
 )->fetchAll();
 
-$kategoriler = db()->query(
-    "SELECT k.ad, k.slug, k.aciklama
-       FROM kategoriler k
-      WHERE (k.aktif = 1 OR k.slug IN ('tms-tfrs','genel','ekonomi'))
-        AND NOT EXISTS (
-            SELECT 1
-              FROM kategoriler c
-             WHERE c.ust_id = k.id
-               AND c.aktif = 1
-        )
-      ORDER BY
-        CASE k.slug
-            WHEN 'kurumlar-vergisi' THEN 10
-            WHEN 'gelir-vergisi' THEN 20
-            WHEN 'kdv' THEN 30
-            WHEN 'vergi-usul-kanunu' THEN 40
-            WHEN 'otv-ve-diger' THEN 50
-            WHEN 'e-belge' THEN 60
-            WHEN 'tesvik-yapilandirma' THEN 70
-            WHEN 'denetim' THEN 80
-            WHEN 'tms-tfrs' THEN 90
-            WHEN 'ekonomi' THEN 100
-            WHEN 'genel' THEN 110
-            ELSE 500
-        END,
-        k.sira, k.ad"
-)->fetchAll();
+/*
+ * Konu gruplari: yalnizca haber akisi basliklari, menu sirasiyla.
+ *
+ * Ekim 2026'dan once burada vergi alt gruplari (KDV, kurumlar vergisi,
+ * TMS/TFRS...) vardi. Site genel haber ozetlerine donunce model artik
+ * yalnizca gundem, politika, ekonomi, dunya, spor, teknoloji, saglik ve
+ * kultur-sanat arasindan seciyor. Eski kategoriler veritabaninda duruyor
+ * (eski haberler onlara bagli) ama modele gosterilmiyor.
+ */
+$kategoriler = array_map(static fn (array $k): array => [
+    'ad'       => $k['ad'],
+    'slug'     => $k['slug'],
+    'aciklama' => $k['aciklama'],
+], haber_akis_kategorileri());
 
 /*
  * Bilinen haberlerin parmak izleri.
@@ -139,6 +126,7 @@ ajan_json(200, [
         'liste_url'    => $k['liste_url'],
         'liste_secici' => $k['liste_secici'],
         'tur'          => $k['tur'],
+        'kategori'     => $k['kategori'],
     ], $kaynaklar),
     'kategoriler' => $kategoriler,
     'bilinen'        => $parmaklar,

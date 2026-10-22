@@ -13,6 +13,38 @@ require_once __DIR__ . '/../includes/kazima.php';
 
 giris_zorunlu();
 
+/**
+ * Kaynagin haber akisi basligi (kaynaklar.kategori). Ajan modele giden
+ * aday kontenjanini basliklara bununla paylastiriyor; bos = ekonomi.
+ */
+function kaynak_kategori_suz(string $deger): ?string
+{
+    return in_array($deger, HABER_AKIS_KATEGORILERI, true) ? $deger : null;
+}
+
+function kaynak_kategori_adi(string $slug): string
+{
+    foreach (haber_akis_kategorileri() as $k) {
+        if ($k['slug'] === $slug) {
+            return $k['ad'];
+        }
+    }
+
+    return 'Ekonomi (belirtilmemiş)';
+}
+
+function kaynak_kategori_secenekleri(string $secili): string
+{
+    $html = '<option value=""' . ($secili === '' ? ' selected' : '') . '>Belirtilmemiş (ekonomi sayılır)</option>';
+
+    foreach (haber_akis_kategorileri() as $k) {
+        $html .= '<option value="' . e($k['slug']) . '"' . ($secili === $k['slug'] ? ' selected' : '') . '>'
+               . e($k['ad']) . '</option>';
+    }
+
+    return $html;
+}
+
 $hata = '';
 $bildirim = '';
 /** @var array<int,array{tamam:bool,mesaj:string,adet:int,ornek:string}> */
@@ -38,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $listeUrl   = guvenli_url((string) ($_POST['liste_url'] ?? ''));
         $listeSecici = trim((string) ($_POST['liste_secici'] ?? ''));
         $tur        = (string) ($_POST['tur'] ?? 'rss');
+        $kategori   = kaynak_kategori_suz((string) ($_POST['kategori'] ?? ''));
 
         if (!in_array($tur, ['rss', 'resmi', 'web'], true)) {
             $tur = 'rss';
@@ -52,8 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   . 'en az birini girin.';
         } else {
             db()->prepare(
-                'INSERT INTO kaynaklar (ad, site_url, besleme_url, liste_url, liste_secici, tur)
-                 VALUES (:ad, :site, :besleme, :liste, :secici, :tur)'
+                'INSERT INTO kaynaklar (ad, site_url, besleme_url, liste_url, liste_secici, tur, kategori)
+                 VALUES (:ad, :site, :besleme, :liste, :secici, :tur, :kategori)'
             )->execute([
                 'ad'      => mb_substr($ad, 0, 160, 'UTF-8'),
                 'site'    => $siteUrl,
@@ -61,6 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'liste'   => $listeUrl !== '' ? $listeUrl : null,
                 'secici'  => $listeSecici !== '' ? mb_substr($listeSecici, 0, 200, 'UTF-8') : null,
                 'tur'     => $tur,
+                'kategori' => $kategori,
             ]);
 
             $bildirim = 'Kaynak eklendi.';
@@ -112,18 +146,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $beslemeUrl  = guvenli_url((string) ($_POST['besleme_url'] ?? ''));
         $listeUrl    = guvenli_url((string) ($_POST['liste_url'] ?? ''));
         $listeSecici = trim((string) ($_POST['liste_secici'] ?? ''));
+        $kategori    = kaynak_kategori_suz((string) ($_POST['kategori'] ?? ''));
 
         if ($beslemeUrl === '' && $listeUrl === '') {
             $hata = 'RSS adresi ya da duyuru sayfası adresinden en az birini girin.';
         } else {
             db()->prepare(
                 'UPDATE kaynaklar
-                    SET besleme_url = :besleme, liste_url = :liste, liste_secici = :secici
+                    SET besleme_url = :besleme, liste_url = :liste, liste_secici = :secici,
+                        kategori = :kategori
                   WHERE id = :id'
             )->execute([
                 'besleme' => $beslemeUrl !== '' ? $beslemeUrl : null,
                 'liste'   => $listeUrl !== '' ? $listeUrl : null,
                 'secici'  => $listeSecici !== '' ? mb_substr($listeSecici, 0, 200, 'UTF-8') : null,
+                'kategori' => $kategori,
                 'id'      => $id,
             ]);
 
@@ -352,6 +389,14 @@ require __DIR__ . '/ust.php';
             <div class="ipucu">Resmî kaynaklar ajan tarafından daha yüksek güvenle işaretlenir.</div>
         </div>
 
+        <div class="alan">
+            <label for="kategori">Başlık</label>
+            <select id="kategori" name="kategori" style="width:100%;padding:10px 12px;border:1px solid var(--cizgi);border-radius:7px;font-family:inherit;font-size:.92rem;">
+                <?= kaynak_kategori_secenekleri('') ?>
+            </select>
+            <div class="ipucu">Beslemenin ağırlıklı konusu. Ajan her çalışmada haber adaylarını başlıklara paylaştırırken bunu kullanır; haberin asıl başlığını yine ajan seçer.</div>
+        </div>
+
         <button type="submit" class="dugme dugme-ana">Ekle</button>
     </form>
 </div>
@@ -461,6 +506,7 @@ require __DIR__ . '/ust.php';
                 </div>
 
                 <div class="satir-bilgi" style="margin-top:4px;font-size:.74rem;">
+                    <span>Başlık: <?= e(kaynak_kategori_adi((string) ($kaynak['kategori'] ?? ''))) ?></span>
                     <?php if (($kaynak['besleme_url'] ?? '') !== ''): ?>
                         <span>RSS: <?= e($kaynak['besleme_url']) ?></span>
                     <?php endif; ?>
@@ -507,6 +553,13 @@ require __DIR__ . '/ust.php';
                                    value="<?= e($kaynak['liste_secici'] ?? '') ?>"
                                    placeholder=".duyuru-listesi a">
                             <div class="ipucu">Boş bırakın; ajan bağlantıları kendi bulur.</div>
+                        </div>
+
+                        <div class="alan" style="margin-bottom:10px;">
+                            <label>Başlık</label>
+                            <select name="kategori" style="width:100%;padding:8px 10px;border:1px solid var(--cizgi);border-radius:7px;font-family:inherit;font-size:.88rem;">
+                                <?= kaynak_kategori_secenekleri((string) ($kaynak['kategori'] ?? '')) ?>
+                            </select>
                         </div>
 
                         <button type="submit" class="dugme dugme-ana">Kaydet</button>
