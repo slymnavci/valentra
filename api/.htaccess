@@ -2,6 +2,12 @@
 # Bearer dogrulamasinin calismasi icin acikca aktariyoruz.
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # PHP2Shell gecici onlemi (bkz. kokteki .htaccess): API dosya
+    # almiyor, multipart istek PHP'ye ulasmadan reddediliyor.
+    RewriteCond %{HTTP:Content-Type} multipart/ [NC]
+    RewriteRule ^ - [F]
+
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 </IfModule>

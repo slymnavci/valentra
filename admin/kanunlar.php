@@ -316,14 +316,15 @@ require __DIR__ . '/ust.php';
 
                 <?php $yuklenen = kanun_dosya_bilgisi((int) $kanun['no']); ?>
 
-                <form method="post" enctype="multipart/form-data" style="margin-top:8px;">
-                    <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
-                    <input type="hidden" name="no" value="<?= (int) $kanun['no'] ?>">
-                    <input type="hidden" name="islem" value="pdf_yukle">
-                    <input type="file" name="pdf" accept="application/pdf,.pdf"
-                           style="width:230px;">
-                    <button class="dugme" type="submit">PDF yükle</button>
-                </form>
+                <?php
+                // PDF yukleme gecici olarak kapali: PHP2Shell onlemi olarak
+                // multipart istekler .htaccess'te reddediliyor. Sunucudaki
+                // PHP yamali surume gecince .htaccess kurali ile birlikte
+                // bu form geri acilacak.
+                ?>
+                <p class="ipucu" style="margin:8px 0 0;">
+                    PDF yükleme, güvenlik önlemi nedeniyle sunucu PHP'si güncellenene kadar kapalı.
+                </p>
 
                 <?php if ($yuklenen['var']): ?>
                     <p class="ipucu" style="margin:6px 0 0;">
