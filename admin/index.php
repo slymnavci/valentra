@@ -11,6 +11,7 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/ayarlar.php';
 require_once __DIR__ . '/../includes/ajan_tetikle.php';
+require_once __DIR__ . '/../includes/php_guvenlik.php';
 
 giris_zorunlu();
 
@@ -53,12 +54,18 @@ if (($_GET['bildirim'] ?? '') === 'toplu_onay') {
 // kendi formlari var ve form ic ice olamaz.
 $topluSecim = $durum === HABER_TASLAK && $haberler !== [];
 
+$phpUyarisi = php_guvenlik_uyarisi();
+
 $panelBasligi = 'Haberler';
 require __DIR__ . '/ust.php';
 ?>
 
 <?php if ($bildirim !== null): ?>
     <div class="uyari uyari-<?= e($bildirim[0]) ?>" style="margin-top:20px;"><?= e($bildirim[1]) ?></div>
+<?php endif; ?>
+
+<?php if ($phpUyarisi !== null): ?>
+    <div class="uyari uyari-hata" style="margin-top:20px;"><?= e($phpUyarisi) ?></div>
 <?php endif; ?>
 
 <!--

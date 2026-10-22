@@ -1,5 +1,16 @@
 # Valentra
 
+# PHP2Shell (CVE-2026-109619) gecici onlemi. PHP "Apache modulu" olarak
+# calisiyorsa .user.ini okunmaz, ayar buradan verilir. IfModule sart:
+# PHP FPM/FastCGI ile calisiyorsa php_flag bilinmeyen yonerge olur ve
+# tum siteyi 500 ile dusururdu. Asil cozum PHP guncellemesi.
+<IfModule mod_php.c>
+    php_flag session.upload_progress.enabled off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag session.upload_progress.enabled off
+</IfModule>
+
 # IfModule sarmalayicisi sart: mod_rewrite yoksa yonergeler sunucuyu
 # 500 ile dusurur ve TUM site erisilemez olur. Paylasimli hostingde
 # bunu onceden denemek mumkun degil, o yuzden en temkinli hali.
