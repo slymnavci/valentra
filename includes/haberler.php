@@ -337,6 +337,26 @@ function haber_benzersiz_slug(string $baslik, ?int $haricId = null): string
 }
 
 /**
+ * Ajanın gönderdiği video adresi, izinli bir oynatıcıysa; değilse boş.
+ *
+ * Ajan haber sayfasinin gomdugu videoyu gonderiyor (ajan/src/Sayfa.php,
+ * videoBul). Sayfada iframe olarak gosterilecegi icin serbest adres
+ * kabul edilmiyor: yalnizca YouTube (gizlilik modu), Vimeo ve
+ * Dailymotion'in resmi gomme adresleri. Panelden elle girilen adres bu
+ * kisittan muaf (yonetici ne gomdugunu biliyor).
+ */
+function haber_video_adresi(string $adres): string
+{
+    $adres = trim($adres);
+
+    $izinli = preg_match('#^https://www\.youtube-nocookie\.com/embed/[A-Za-z0-9_-]{11}$#', $adres)
+        || preg_match('#^https://player\.vimeo\.com/video/\d{6,12}$#', $adres)
+        || preg_match('#^https://www\.dailymotion\.com/embed/video/[A-Za-z0-9]{5,12}$#', $adres);
+
+    return $izinli ? $adres : '';
+}
+
+/**
  * Ajanin buldugu haberi taslak olarak kaydeder.
  *
  * @return array{durum:string,id:?int} durum: 'eklendi' | 'yinelenen'
@@ -382,13 +402,13 @@ function haber_taslak_ekle(array $veri): array
         'INSERT INTO haberler
             (baslik, slug, ozet, icerik, gorsel_url, etiketler, durum, kategori_id,
              kaynak_id, kaynak_adi, kaynak_url, kaynak_parmak, url_parmak,
-             baslik_parmak, kaynak_baslik, kaynak_baslik_parmak, guven_skoru, onem, ajan_notu,
+             baslik_parmak, kaynak_baslik, kaynak_baslik_parmak, iframe_url, guven_skoru, onem, ajan_notu,
              analiz_degisen, analiz_etkilenen, analiz_zaman, analiz_islem,
              isletme_etkisi, uygulama_ornegi, resmi_dayanak)
          VALUES
             (:baslik, :slug, :ozet, :icerik, :gorsel_url, :etiketler, :durum, :kategori_id,
              :kaynak_id, :kaynak_adi, :kaynak_url, :kaynak_parmak, :url_parmak,
-             :baslik_parmak, :kaynak_baslik, :kaynak_baslik_parmak, :guven_skoru, :onem, :ajan_notu,
+             :baslik_parmak, :kaynak_baslik, :kaynak_baslik_parmak, :iframe_url, :guven_skoru, :onem, :ajan_notu,
              :analiz_degisen, :analiz_etkilenen, :analiz_zaman, :analiz_islem,
              :isletme_etkisi, :uygulama_ornegi, :resmi_dayanak)'
     );
@@ -410,6 +430,9 @@ function haber_taslak_ekle(array $veri): array
         'baslik_parmak' => $baslikParmak !== '' ? $baslikParmak : null,
         'kaynak_baslik'        => $kaynakBaslik,
         'kaynak_baslik_parmak' => $kaynakBaslikParmak !== '' ? $kaynakBaslikParmak : null,
+        // Ajanin buldugu video: yalnizca izinli oynaticilar (bkz.
+        // haber_video_adresi); baska her sey bos.
+        'iframe_url'           => haber_video_adresi((string) ($veri['iframe_url'] ?? '')) ?: null,
         'guven_skoru'   => max(0, min(100, (int) ($veri['guven_skoru'] ?? 0))),
         // Eski ajan surumu puan gondermezse orta deger.
         'onem'          => max(0, min(100, (int) ($veri['onem'] ?? 50))),

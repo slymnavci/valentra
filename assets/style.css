@@ -3593,3 +3593,18 @@ a.rg-madde:hover { color: var(--vurgu); }
 
 /* Acilir menuden gelinen bolumler sabit menunun altinda kalmasin. */
 #puan-durumu, #fikstur, [id$="-haberleri"] { scroll-margin-top: 70px; }
+
+/* Haber videosu (YouTube/Vimeo/Dailymotion): belge iframe'i gibi
+   ekran boyu degil, 16:9. */
+.gomulu-icerik.video {
+    min-height: 0;
+    aspect-ratio: 16 / 9;
+    margin: 0 0 24px;
+    background: #000;
+}
+
+.gomulu-icerik.video iframe {
+    height: 100%;
+    min-height: 0;
+    background: #000;
+}

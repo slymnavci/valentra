@@ -1279,6 +1279,7 @@ foreach ($basliklar as $konu => $konuAdaylari) {
 gunluk(count($gruplar) . ' grup halinde, başlık başlık işlenecek (grup başına en fazla ' . $grupBoyu . ' aday).');
 
 $islenenAday = 0;
+$gorselsiz   = 0;
 
 foreach ($gruplar as $grupNo => $grup) {
     if ($grupNo > 0) {
@@ -1299,7 +1300,22 @@ foreach ($gruplar as $grupNo => $grup) {
     /** @var array<int,string> Aday sirasina gore gorsel adresi */
     $gorseller = [];
 
-    foreach ($grup as $sira => $aday) {
+    /** @var array<int,string> Aday sirasina gore video oynatici adresi */
+    $videolar = [];
+
+    /*
+     * GORSELSIZ HABER ALINMIYOR (site sahibinin karari, 22.10.2026: "tum
+     * haberlerde goruntu olacak, goruntusuz haberleri alma").
+     *
+     * Gorselsiz aday modele hic gitmiyor; grup bu yuzden tutulanlarla
+     * YENIDEN kuruluyor. $grup, $modelAdaylari, $gorseller ve $videolar
+     * ayni sirayla birlikte dolduruluyor: model sonuclari siraya gore
+     * eslestirildigi icin biri digerinden ayri kisalirsa sonuclar kayar
+     * (asagidaki uyari).
+     */
+    $tutulan = [];
+
+    foreach ($grup as $aday) {
         /*
          * Sayfa genis okunuyor.
          *
@@ -1309,7 +1325,9 @@ foreach ($gruplar as $grupNo => $grup) {
          * giden miktari Yazar ayrica kendi sinirina gore kirpar.
          */
         /*
-         * Sayfa okumasi da kalkanli — ama ADAY ATLANMAZ.
+         * Sayfa okumasi da kalkanli — ama ADAY ATLANMAZ. (Gorselsiz aday
+         * ise bilerek atlaniyor; o durumda dort dizi birlikte kisaliyor,
+         * bkz. yukaridaki GORSELSIZ notu.)
          *
          * Hata yakalanip bos metinle devam ediliyor. Adayi listeden
          * duşurmek cazip gorunuyor ama TEHLIKELI: model sonuclari
@@ -1330,15 +1348,33 @@ foreach ($gruplar as $grupNo => $grup) {
                 mb_substr($aday['girdi']['baslik'], 0, 60),
                 $e->getMessage()
             ));
-            $okunan = ['metin' => '', 'gorsel' => ''];
+            $okunan = ['metin' => '', 'gorsel' => '', 'video' => ''];
         }
 
         // Gorsel once beslemeden, yoksa haber sayfasinin og:image'inden.
         // Besleme gorseli daha guvenilir: siteyi yazan kisi haberin
         // gorselini oraya koyuyor, og:image bazen genel site kapagi.
-        $gorseller[$sira] = ($aday['girdi']['gorsel'] ?? '') !== ''
+        $gorsel = ($aday['girdi']['gorsel'] ?? '') !== ''
             ? (string) $aday['girdi']['gorsel']
-            : $okunan['gorsel'];
+            : (string) $okunan['gorsel'];
+
+        if ($gorsel === '') {
+            $gorselsiz++;
+
+            // Sayfa okunduysa ve gorsel yine yoksa bir sonraki calismada
+            // da olmayacak: eleme hafizasina yaziliyor ki kontenjani her
+            // calismada yeniden yemesin. Sayfa OKUNAMADIYSA yazilmiyor;
+            // gecici bir hata olabilir.
+            if (trim((string) $okunan['metin']) !== '') {
+                $elenenler[url_parmak($aday['girdi']['baglanti'])] = time();
+            }
+
+            continue;
+        }
+
+        $tutulan[]   = $aday;
+        $gorseller[] = $gorsel;
+        $videolar[]  = (string) ($okunan['video'] ?? '');
 
         $modelAdaylari[] = [
             'girdi'      => $aday['girdi'],
@@ -1349,7 +1385,12 @@ foreach ($gruplar as $grupNo => $grup) {
         ];
     }
 
-    $no = $grupNo + 1;
+    $grup = $tutulan;
+    $no   = $grupNo + 1;
+
+    if ($grup === []) {
+        continue;
+    }
 
     try {
         $sonuclar = $yazar->topluIsle($modelAdaylari, $kategoriler, $modeleGosterilecek);
@@ -1454,6 +1495,9 @@ foreach ($gruplar as $grupNo => $grup) {
             'uygulama_ornegi'  => (string) ($sonuc['uygulama_ornegi'] ?? ''),
             'resmi_dayanak'    => (string) ($sonuc['resmi_dayanak'] ?? ''),
             'gorsel_url'  => $gorseller[$sira] ?? '',
+            // Haber sayfasinin gomdugu YouTube/Vimeo/Dailymotion oynaticisi
+            // (bkz. Sayfa::videoBul); haber sayfasinda gorselin altinda.
+            'iframe_url'  => $videolar[$sira] ?? '',
         ];
 
         /*
@@ -1481,6 +1525,11 @@ if (!$kuruCalisma) {
 // --- 5. Siteye gönder ------------------------------------------------------
 
 gunluk('---');
+
+if ($gorselsiz > 0) {
+    gunluk($gorselsiz . ' aday görseli olmadığı için alınmadı (görselsiz haber yayımlanmıyor).');
+}
+
 gunluk(
     count($haberler) . ' haber yazıldı, ' . $elenen . ' eleme'
     . ($yinelenen > 0 ? ' (' . $yinelenen . ' yinelenen)' : '')
