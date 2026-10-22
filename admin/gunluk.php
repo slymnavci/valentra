@@ -90,8 +90,8 @@ require __DIR__ . '/ust.php';
     <div>
         <strong>Günlük işler</strong>
         <p class="ipucu" style="margin:4px 0 0;">
-            Kurlar, grafikler, Resmî Gazete, Search Console verisi ve Google site haritası sırayla
-            güncellenir, sonunda ajan haberleri toplar.
+            Kurlar, Search Console verisi ve Google site haritası sırayla güncellenir,
+            sonunda ajan haberleri toplayıp köşe yazılarını yazar.
             Yayımlama yine sizin onayınızla olur.
         </p>
     </div>
@@ -256,7 +256,7 @@ require __DIR__ . '/ust.php';
     // yeni sayfalar zaten yayimlaninca tek tek bildiriliyor.
     var hepsi = document.getElementById('hepsini-calistir');
     hepsi.addEventListener('click', function () {
-        var sira = ['teslim', 'piyasa', 'grafik', 'rg', 'gsc', 'harita'];
+        var sira = ['teslim', 'piyasa', 'gsc', 'harita'];
         if (!ajanSuruyor && satir('ajan') && !satir('ajan').querySelector('button').disabled) { sira.push('ajan'); }
 
         hepsi.disabled = true;
@@ -305,7 +305,7 @@ require __DIR__ . '/ust.php';
                     var s = satir('ajan').querySelector('.sonuc');
                     s.className = 'sonuc ' + (basarili ? 'tamam' : 'hata');
                     s.textContent = basarili
-                        ? 'Ajan bitti. Onay bekleyen ' + v.bekleyen + ' haber var.'
+                        ? 'Ajan bitti. Onay bekleyen ' + v.bekleyen + ' haber var; yeni köşe yazıları için sayfayı yenileyin.'
                         : 'Ajan çalışması başarısız oldu (' + (v.sonuc || 'bilinmiyor') + ').';
                 })
                 .catch(function () { setTimeout(yokla, 30000); });

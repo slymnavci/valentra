@@ -7,6 +7,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/includes/bootstrap.php';
+require_once __DIR__ . '/includes/kose.php';
 
 $sayfa = max(1, (int) ($_GET['sayfa'] ?? 1));
 
@@ -67,22 +68,38 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <div class="ana-kolon">
             <?php
             /*
-             * Ekim 2026: site genel haber ozetlerine dondu. Vergiye ozgu
-             * bolumler ana sayfadan kaldirildi: "Valentra Diyor ki…"
-             * kose yazilari kutusu ve "Bugun bilmeniz gerekenler"
-             * (vergi takvimi, KDV hesabi, pratik bilgiler kisayollari).
-             * Sayfalari acik; yalnizca ana sayfada ve menude yoklar.
+             * Manset ve "Valentra Diyor ki…" ayni sirada: manset solda
+             * daraliyor, kose yazilari kutusu onunla yan pencere arasinda.
+             * Yayinda yazi yoksa manset tam genislikte kalir.
+             *
+             * "Bugun bilmeniz gerekenler" (vergi takvimi, KDV hesabi,
+             * pratik bilgiler kisayollari) Ekim 2026'da kaldirildi; site
+             * genel haber ozetlerine dondu.
              */
-            require __DIR__ . '/includes/kaydirak.php';
+            $koseYazilari = [];
+
+            if ($sayfa === 1) {
+                try {
+                    $koseYazilari = kose_son_gun();
+                } catch (PDOException $e) {
+                    error_log('[valentra] kose yazilari okunamadi: ' . $e->getMessage());
+                }
+            }
             ?>
+            <div class="<?= $koseYazilari !== [] ? 'manset-sirasi' : '' ?>">
+                <div class="manset-sirasi-sol">
+                    <?php require __DIR__ . '/includes/kaydirak.php'; ?>
+                </div>
+
+                <?php require __DIR__ . '/includes/kose_kutu.php'; ?>
+            </div>
 
             <?php /* Piyasa seridi kaydiragin hemen altinda: sayfa acilir
                      acilmaz gorunen, surekli degisen tek veri. */ ?>
             <?php require __DIR__ . '/includes/piyasa_serit.php'; ?>
 
-            <?php /* Panelden yayina alinan grafikler: seridin hemen altinda,
-                     yalnizca ilk sayfada. Yayinda grafik yoksa hic basilmaz. */ ?>
-            <?php require __DIR__ . '/includes/ana_grafikler.php'; ?>
+            <?php /* Kur grafikleri ana sayfadan kaldirildi (22.10.2026, site
+                     sahibinin karari); kurlar ve BIST seritte kaliyor. */ ?>
 
             <?php
             /*

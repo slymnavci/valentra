@@ -4,10 +4,9 @@ declare(strict_types=1);
 /**
  * Ana sayfa: "Valentra Diyor ki…" kutusu.
  *
- * Mansetin sagina, Onemli Duzenlemeler'in soluna oturuyor (dar ekranda
+ * Mansetin sagina, yan pencerenin soluna oturuyor (dar ekranda
  * mansetin altina) ve mansetle ayni boyda. Gorunum yan penceredeki
- * "Onemli Duzenlemeler" ile AYNI (numarali liste, baslik, altinda konu):
- * iki kutu yan yana duruyor ve ayni ailenin parcasi gibi okunmali. Tarih
+ * kutularla ayni aileden (numarali liste, baslik, altinda konu). Tarih
  * baslikta: bir gunun yazilari, her satirda ayni tarihi tekrarlamak yer
  * kaybi. En altta butun yazilarin listesine bag.
  *

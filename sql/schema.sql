@@ -1681,3 +1681,46 @@ UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Bank for International Settlements'
 
 -- Gecis tamamlandi: yukaridaki tek seferlik adimlar bir daha calismaz.
 INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_genel_haber_2026_10', '22.10.2026');
+
+-- ---------------------------------------------------------------------------
+-- Tarafsiz kaynaklar — 22.10.2026 (site sahibinin karari)
+--
+-- "Taraflı gazeteler olmasın ama bağımsız haber ajansları mutlaka
+-- bulundurulsun." Iki taraftan da acikca taraf tutan yayinlarin
+-- beslemeleri kapatiliyor; haber ajanslari (AA, DHA, IHA, Reuters, AP)
+-- ve ana akim yayinlar acik kaliyor. Panelden yeniden acilabilir:
+-- kapatma tek seferlik ('gecis_tarafsiz_kaynaklar_2026_10').
+-- ---------------------------------------------------------------------------
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Sabah Gündem'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_tarafsiz_kaynaklar_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Sabah Dünya'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_tarafsiz_kaynaklar_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Sabah Spor'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_tarafsiz_kaynaklar_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Sabah Ekonomi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_tarafsiz_kaynaklar_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Sözcü Gündem'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_tarafsiz_kaynaklar_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Sözcü Dünya'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_tarafsiz_kaynaklar_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Sözcü Spor'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_tarafsiz_kaynaklar_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Sözcü Ekonomi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_tarafsiz_kaynaklar_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Cumhuriyet Ekonomi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_tarafsiz_kaynaklar_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'A Haber Ekonomi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_tarafsiz_kaynaklar_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Star Ekonomi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_tarafsiz_kaynaklar_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Yeni Şafak Ekonomi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_tarafsiz_kaynaklar_2026_10');
+
+-- Bagimsiz uluslararasi ajans ve kuruluslar (dunya). Associated Press'in
+-- genel RSS beslemesi yok; dunya haberleri sayfasi kaziniyor.
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, kategori, aktif) VALUES
+    ('Associated Press',            'https://apnews.com',           NULL, 'https://apnews.com/world-news', 'web', 'dunya', 1),
+    ('UN News',                     'https://news.un.org/en',       'https://news.un.org/feed/subscribe/en/news/all/rss.xml', NULL, 'rss', 'dunya', 1),
+    ('Euronews',                    'https://www.euronews.com',     'https://www.euronews.com/rss?level=theme&name=news',      NULL, 'rss', 'dunya', 1);
+
+INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_tarafsiz_kaynaklar_2026_10', '22.10.2026');

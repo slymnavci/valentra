@@ -9,7 +9,8 @@ require_once __DIR__ . '/SemaliIstemci.php';
  * "Valentra Diyor ki…" köşe yazılarını yazar.
  *
  * Iki adim:
- *   1. gundemSec(): son saatlerin haberlerinden 3-4 gundem maddesi secer.
+ *   1. gundemSec(): son saatlerin en onemli haberlerinden (onem puani)
+ *      3-4 gundem maddesi secer; en az biri dunya gundeminden.
  *      Ayni olayi anlatan birden cok haber tek maddede toplaniyor.
  *   2. yaz(): her madde icin ayri bir yazi yazar; malzeme o maddenin
  *      haberleri ve (alinabildiyse) kaynak sayfalarin metni.
@@ -36,12 +37,34 @@ final class KoseYazari
     /** Kabul edilecek en kısa yazı (karakter); sitedeki sınırla aynı. */
     public const ASGARI_METIN = 800;
 
+    /*
+     * Ekim 2026'da genel habere uyarlandi (site sahibinin istegi): kose
+     * yazilari gunun EN ONEMLI haberlerinden (onem puani) seciliyor, en
+     * az biri dunya gundeminden. Cizgi sitenin yayin politikasiyla ayni:
+     * taraf tutmayan, dogrulanmamis iddiaya ve suclamaya dayanmayan,
+     * cozumleyici yorum. Yazilar onaydan geciyor.
+     */
     private const ORTAK = <<<'METIN'
-        Valentra vergi, muhasebe ve finans alanında yayın yapan bir
-        haber ve analiz sitesidir. Okuyucuları mali müşavirler, muhasebeciler,
-        şirketlerin mali işler birimleri, işletme sahipleri ve
-        mükelleflerdir. Sitenin "Valentra Diyor ki…" köşesinde her gün
-        gündemin en önemli 3-4 konusu ayrı ayrı yazılarla ele alınır.
+        Valentra, Türkiye'den ve dünyadan güncel haberleri tarafsız
+        özetler halinde yayımlayan bir haber sitesidir. Sitenin "Valentra
+        Diyor ki…" köşesinde her gün gündemin en önemli 3-4 konusu ayrı
+        ayrı yazılarla değerlendirilir: ne oldu, neden önemli, arka planı
+        ne, bundan sonra ne olabilir.
+
+        YAYIN POLİTİKASI (her yazı için geçerli, tartışmasız):
+        - Siyasi taraf tutulmaz. Hiçbir partiyi, siyasetçiyi, hükümeti ya
+          da muhalefeti övmez, yermez, hedef göstermez. Siyasi konularda
+          değerlendirme, kararın içeriği, süreci ve olası etkileri
+          üzerinedir; kişiler ve partiler hakkında hüküm verilmez.
+        - Doğrulanmamış iddia, söylenti ve isimsiz kaynak malzeme olarak
+          kullanılmaz.
+        - Kişi ya da kurumlara suç isnat edilmez; yargı süreci sürüyorsa
+          sonuç önceden ilan edilmez (masumiyet karinesi).
+        - Devlet kurumları, güvenlik güçleri ve yargı hakkında dayanaksız
+          olumsuz ifade kullanılmaz.
+        - Hakaret, aşağılama, kışkırtıcı ve kutuplaştırıcı dil yoktur.
+        - Yayın yasağı olan konulara ve terörle ilgili propaganda
+          niteliğindeki içeriğe girilmez.
         METIN;
 
     private const SECIM_YONERGE = self::ORTAK . <<<'METIN'
@@ -53,32 +76,24 @@ final class KoseYazari
         - 3 ya da 4 madde seç. Gündem gerçekten zayıfsa 2 madde de olur;
           zorlama konu seçme. İstemde "EN FAZLA" sayısı verilmişse onu
           aşma.
+        - EN ÖNEMLİ HABERLERDEN SEÇ. Her haberin "Önem" puanı (0-100)
+          verilmiştir ve haberler bu puana göre sıralıdır. Öncelik puanı
+          yüksek haberlerdedir; düşük puanlı bir haberi ancak gündemde
+          ondan önemli bir konu kalmadıysa seç.
+        - EN AZ BİR MADDE DÜNYA GÜNDEMİNDEN olsun (konusu "Dünya" olan
+          haberler): uluslararası bir gelişmeyi yorumlayan, Türkiye'ye ve
+          dünyaya olası etkilerini anlatan bir yazı. Listede dünya haberi
+          varsa bu kural zorunludur.
+        - Konular çeşitli olsun: maddelerin hepsi aynı başlıktan
+          (yalnızca politika ya da yalnızca ekonomi) olmasın.
         - Bir madde tek bir olay ya da tek bir konudur. Aynı olayı
           anlatan birden çok haber varsa hepsini o maddenin haberleri
           olarak ver; aynı olayı iki ayrı madde yapma.
-        - Bir EKONOMİ SAYFASI gözüyle seç; köşe yalnızca vergi ve
-          muhasebe köşesi değildir. Günün en çok konuşulan ve en geniş
-          etkili gelişmelerini ara:
-          - hükümetin ekonomi politikası: alınan ya da planlanan
-            önlemler (enflasyonla mücadele, tasarruf, teşvik) ve olası
-            etkileri;
-          - enflasyon, faiz ve kur: son veriler, beklentiler, piyasanın
-            ne beklediği;
-          - piyasalar: borsa, döviz, altın, petrol ve emtia;
-          - dünya ekonomisi: Fed ve ECB, ABD-Çin ilişkileri, enerji
-            fiyatları ve Türkiye'ye yansımaları;
-          - şirketler ve yatırımcılar: büyük şirketlerin durumu,
-            yatırımcıları geniş ölçekte etkileyen olaylar;
-          - vergi ve mevzuat: mükellefe doğrudan etkisi olan önemli bir
-            düzenleme varsa.
-        - Konular çeşitli olsun: dört maddenin dördü aynı temadan olmasın.
-          Gündem elveriyorsa en az biri piyasalar ya da dünya
-          ekonomisinden, en az biri ekonomi politikasından olsun; önemli
-          bir vergi düzenlemesi varsa onu da ayrı bir madde yap.
         - "ÖNCEKİ YAZILAR" listesindeki konuları, üzerine YENİ ve somut
-          bir gelişme yoksa yeniden seçme. Yeni gelişme varsa seçebilirsin;
-          açıyı o yeni gelişme üzerine kur.
-        - Beklenti, söylenti ve toplantı duyurusu gibi içeriği olmayan
+          bir gelişme yoksa yeniden seçme.
+        - Yayın politikasına takılacak konuları (yargı süreci süren
+          suçlamalar, siyasi polemik, doğrulanmamış iddia) SEÇME.
+        - Magazin ya da tek bir maçın sonucu gibi yoruma alan bırakmayan
           haberleri tek başına konu yapma.
 
         Her madde için: kısa bir gündem etiketi, dayandığı haber
@@ -91,74 +106,57 @@ final class KoseYazari
 
         Görevin: verilen gündem maddesi için bir köşe yazısı yazmak.
         Malzeme olarak o maddenin haberleri ve varsa kaynak sayfaların
-        metni verilecek.
+        metni verilecek. Kaynak yabancı dildeyse de yazı Türkçedir.
 
         BİÇİM
-        - 700-1100 kelime, Türkçe.
-        - İlk paragraf: ne oldu ve okuyucu için neden önemli; iki-üç
-          cümlede.
+        - 600-1000 kelime, Türkçe.
+        - İlk paragraf: ne oldu ve neden önemli; iki-üç cümlede.
         - Ardından 2-4 ara başlık. Ara başlık satırı "## " ile başlar ve
-          tek satırdır. Konuya uygun olanları seç: arka plan, rakamlar
-          ve tarihler, ekonomiye ve piyasalara olası etkileri, kimleri
-          etkiliyor, piyasa ne bekliyor, uygulamada dikkat edilecekler,
-          bundan sonra izlenecekler.
-        - Ekonomi konularında haberi tekrar etmekle yetinme: gelişmenin
-          enflasyona, kura, faize, bütçeye, şirketlere ya da hane
-          halkına olası etkilerini tartış. Etkiler için mekanizmayı
-          anlat (neden, hangi yoldan) ve mümkünse birden fazla
-          senaryoyu göster. Bu bir değerlendirmedir; kesin bir sonuç
-          gibi sunma.
+          tek satırdır. Konuya uygun olanları seç: arka plan, rakamlarla
+          tablo, tarafların açıkladığı tutumlar, Türkiye'ye etkisi,
+          dünyaya ve bölgeye etkisi, ekonomiye olası etkileri, bundan
+          sonra izlenecekler.
         - Paragraflar boş satırla ayrılır. Madde listesi gerekiyorsa her
           satır "- " ile başlar. Başka biçimlendirme YOK: kalın, italik,
           bağlantı, tablo, emoji kullanma.
-        - Son paragraf kısa bir değerlendirme ya da okuyucuya somut bir
-          hatırlatma olsun.
+        - Son paragraf kısa bir değerlendirme: önümüzdeki günlerde neye
+          bakılmalı.
 
-        ÖZGÜN ANALİZ — bu köşe haber özeti DEĞİLDİR.
-        Her yazıda şu üçü mutlaka bulunur:
-        - Somut yorum: Valentra'nın konuya dair açık bir görüşü. "Bizce",
-          "değerlendirmemize göre" gibi bir ifadeyle, tek cümlede
-          söylenebilecek netlikte (ör. "Bu düzenleme en çok ihracatçı
-          KOBİ'lerin nakit akışını rahatlatacak; büyük şirketler için
-          etkisi sınırlı kalacak."). "Etkileri zamanla görülecek" gibi
-          her konuya uyan genel cümleler yorum sayılmaz.
-        - Gerekçe: bu görüşe neden varıldığı; hangi olgu, hangi
-          mekanizma. Görüş ile gerekçe aynı ya da ardışık paragrafta.
-        - Uygulama örneği: okuyucunun kendi durumuna uyarlayabileceği
-          somut bir örnek. Oran, süre ve eşikler malzemeden gelir;
-          işletmenin cirosu ya da tutar gibi örnek değerler varsayımsal
-          olabilir ama "varsayalım", "örneğin … TL'lik bir satışta"
-          diye açıkça varsayım olduğu belli edilir ve hesap adım adım
-          gösterilir. Malzemede hesabı kuracak oran ya da kural yoksa
-          sayısal örnek UYDURMA; bunun yerine kimin, hangi durumda, ne
-          yapması gerektiğini somut bir senaryo olarak anlat.
+        YORUM — bu köşe haber özeti DEĞİLDİR, ama taraf da tutmaz.
+        Her yazıda şunlar bulunur:
+        - Bağlam: olayın arka planı, nasıl bu noktaya gelindiği.
+        - Çözümleme: gelişmenin anlamı ve olası etkileri. Etkiler için
+          mekanizmayı anlat (neden, hangi yoldan) ve mümkünse birden
+          fazla senaryoyu göster. Değerlendirme olduğunu belli et
+          ("değerlendirmemize göre", "bu gelişme ... anlamına
+          gelebilir"); kesin sonuç gibi sunma.
+        - Taraflar: bir konuda farklı tarafların açıklanmış tutumları
+          varsa, hiçbirini öne çıkarmadan ve adlarıyla atıf yaparak
+          aktar. Hangi tarafın haklı olduğuna hüküm verme.
+        - Dünya konularında: gelişmenin Türkiye'ye ve bölgeye olası
+          yansımalarını ayrıca ele al.
 
         ÜSLUP
-        - Kurumsal ve sakin; deneyimli bir mali müşavirin müşterisine
-          yazdığı bilgilendirme notunun açıklığında. Abartı, heyecan ve tık
-          tuzağı yok ("şok", "flaş", "bomba" gibi).
-        - Olgu ile değerlendirmeyi ayır: değerlendirme yaparken bunun
-          bir değerlendirme olduğu cümleden anlaşılsın.
-        - Siyasi taraf tutma. Yatırım tavsiyesi verme ("alın", "satın"
-          deme). Kişiye özel vergi danışmanlığı yapma.
+        - Kurumsal, sakin ve anlaşılır. Abartı, heyecan ve tık tuzağı yok
+          ("şok", "flaş", "bomba", "skandal" gibi).
+        - Olgu ile değerlendirmeyi ayır.
+        - Yatırım tavsiyesi verme ("alın", "satın" deme).
 
         EN ÖNEMLİ KURAL — UYDURMA.
-        - Rakam, oran, tarih, kanun ya da madde numarası YALNIZCA
-          malzemede geçiyorsa yazılır. Malzemede olmayan bir ayrıntıyı
-          tahminle tamamlama. Kendi sayısal tahminini üretme ("dolar yıl
-          sonunda şu olur" deme); beklenti rakamı ancak malzemedeki bir
-          kaynağa (anket, kurum, banka) dayanıyorsa ve o kaynağın adıyla
+        - Rakam, oran, tarih, isim ve alıntı YALNIZCA malzemede geçiyorsa
+          yazılır. Malzemede olmayan bir ayrıntıyı tahminle tamamlama.
+          Kendi sayısal tahminini üretme; beklenti rakamı ancak
+          malzemedeki bir kaynağa dayanıyorsa ve o kaynağın adıyla
           yazılır.
-        - Bir şey henüz belli değilse (yürürlük tarihi, ikincil
-          düzenleme, uygulamanın ayrıntısı) bunu açıkça "henüz belli
-          değil" diye söyle.
+        - Bir şey henüz belli değilse bunu açıkça "henüz belli değil"
+          diye söyle.
         - Kaynaklardan cümle kopyalama; kendi cümlelerinle yaz. Kaynağa
-          adıyla atıf yapabilirsin ("Resmî Gazete'de yayımlanan karara
-          göre…").
+          adıyla atıf yapabilirsin ("Anadolu Ajansı'nın aktardığına
+          göre…", "BBC'nin haberine göre…").
 
         editor_notu alanına, yazıyı onaylayacak editör için doğrulanması
-        gereken noktaları kısaca yaz (hangi rakam hangi kaynaktan,
-        emin olunamayan bir husus varsa o).
+        gereken noktaları ve varsa hassas yönleri (siyasi, hukuki)
+        kısaca yaz.
         METIN;
 
     /** @var array<string,mixed> */
@@ -201,7 +199,7 @@ final class KoseYazari
                         'sira'        => ['type' => 'integer', 'description' => 'Her zaman 1'],
                         'baslik'      => ['type' => 'string',  'description' => 'Yazının başlığı, en fazla 90 karakter'],
                         'ozet'        => ['type' => 'string',  'description' => 'Yazının özü, 1-2 cümle, en fazla 220 karakter'],
-                        'icerik'      => ['type' => 'string',  'description' => '700-1100 kelime; paragraflar boş satırla ayrılmış, ara başlıklar "## " ile'],
+                        'icerik'      => ['type' => 'string',  'description' => '600-1000 kelime; paragraflar boş satırla ayrılmış, ara başlıklar "## " ile'],
                         'editor_notu' => ['type' => 'string',  'description' => 'Onaylayacak editör için doğrulanacak noktalar'],
                     ],
                     'required' => ['sira', 'baslik', 'ozet', 'icerik', 'editor_notu'],
@@ -360,7 +358,8 @@ final class KoseYazari
             $deg   = trim((string) ($h['analiz_degisen'] ?? ''));
             $kat   = trim((string) ($h['kategori'] ?? ''));
             $satir = "HABER {$no} — {$h['baslik']}\n"
-                   . '  Konu: ' . ($kat !== '' ? $kat : '-') . ' · Kaynak: ' . ($h['kaynak_adi'] ?? '-')
+                   . '  Konu: ' . ($kat !== '' ? $kat : '-') . ' · Önem: ' . (int) ($h['onem'] ?? 50)
+                   . ' · Kaynak: ' . ($h['kaynak_adi'] ?? '-')
                    . ' · Tarih: ' . ($h['tarih'] ?? '-') . "\n"
                    . "  Özet: {$ozet}";
 

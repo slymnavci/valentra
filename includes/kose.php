@@ -360,7 +360,9 @@ function kose_icerik_html(string $icerik): string
  * Ajanın yazı malzemesi: son saatlerin haberleri.
  *
  * Yayindaki ve onay bekleyen haberler birlikte: ikisi de ajanin
- * elemesinden gecmis, vergi/ekonomi gundemi. Onay bekleyenler de alindi
+ * yayin politikasi elemesinden gecmis. En onemliler once (onem puani,
+ * 22.10.2026): liste sinirliysa kesilen, onemsiz haberler olsun; model
+ * de gundemi bu siraya bakarak seciyor. Onay bekleyenler de alindi
  * cunku yazilar ogleden sonra yaziliyor ve gunun haberleri o saatte
  * cogu zaman henuz onaylanmamis oluyor; yazi da ayrica onaydan geciyor.
  *
@@ -388,12 +390,12 @@ function kose_malzeme(int $saat = 36, int $limit = 60): array
     $haberler = db()->prepare(
         'SELECT h.id, h.baslik, h.ozet, h.icerik, h.durum, h.kaynak_adi, h.kaynak_url,
                 h.analiz_degisen, h.analiz_etkilenen, h.analiz_zaman, h.analiz_islem,
-                COALESCE(h.yayin_tarihi, h.olusturuldu) AS tarih, k.ad AS kategori
+                h.onem, COALESCE(h.yayin_tarihi, h.olusturuldu) AS tarih, k.ad AS kategori
            FROM haberler h
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
           WHERE h.durum IN (:y, :t)
             AND COALESCE(h.yayin_tarihi, h.olusturuldu) >= :sinir
-          ORDER BY COALESCE(h.yayin_tarihi, h.olusturuldu) DESC
+          ORDER BY h.onem DESC, COALESCE(h.yayin_tarihi, h.olusturuldu) DESC
           LIMIT ' . max(1, $limit)
     );
     $haberler->execute([
@@ -410,6 +412,7 @@ function kose_malzeme(int $saat = 36, int $limit = 60): array
         }
 
         $h['id']     = (int) $h['id'];
+        $h['onem']   = (int) $h['onem'];
         $h['icerik'] = mb_substr((string) $h['icerik'], 0, 6000, 'UTF-8');
         $sonuc[]     = $h;
     }

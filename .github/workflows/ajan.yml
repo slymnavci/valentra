@@ -25,10 +25,9 @@ on:
     # Dakika 20: saat basi GitHub'da yogun ve zamanlanmis isler
     # gecikebiliyor.
     - cron: '20 2,6,10,14,18 * * *'
-    # Pratik bilgiler: pazartesi sabahi haftada bir. Asgari ucret,
-    # oranlar ve hadler yilda birkac kez degisiyor; daha sik kontrol
-    # etmek model cagrisini bosa harcar.
-    - cron: '40 4 * * 1'
+    # Pratik bilgilerin haftalik calismasi kaldirildi (22.10.2026, site
+    # sahibinin karari: ajan yalnizca haber ve kose yazisi uretiyor).
+    # Panelden "pratik-bilgiler" moduyla elle calistirilabiliyor.
   workflow_dispatch:
     inputs:
       mod:
@@ -220,7 +219,7 @@ jobs:
       # toplamayla ayni siklikta kosmasi anlamsiz olurdu. Haftada bir
       # zamanlanmis, ayrica panelden elle calistirilabiliyor.
       - name: Pratik bilgileri topla
-        if: inputs.mod == 'pratik-bilgiler' || github.event.schedule == '40 4 * * 1'
+        if: inputs.mod == 'pratik-bilgiler'
         working-directory: ajan
         env:
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
@@ -230,7 +229,7 @@ jobs:
         run: php pratik.php
 
       - name: Ajani calistir
-        if: (inputs.mod == 'topla' || inputs.mod == 'gunluk' || inputs.mod == '') && github.event.schedule != '40 4 * * 1'
+        if: inputs.mod == 'topla' || inputs.mod == 'gunluk' || inputs.mod == ''
         working-directory: ajan
         env:
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
@@ -289,17 +288,15 @@ jobs:
       # toplamadan SONRA: gunun yeni haberleri malzemeye girsin.
       # Yazilar taslak olarak gidiyor; yayina alma panelde.
       #
-      # 'gunluk' (panel -> Gunluk isler) eskiden haber toplama ile kose
-      # yazisini tek calismada yapiyordu; artik yalnizca haber topluyor.
+      # 'gunluk' (panel -> Gunluk isler): haber toplama + kose yazisi tek
+      # calismada. Iki ayri istek gondermek ikincisini sirada bekletiyor,
+      # ucuncu bir istek de bekleyeni iptal ediyordu.
       #
-      # ZAMANLI CALISMADA KAPALI (Ekim 2026). Kose yazilari vergi ve
-      # ekonomi uzerine Valentra'nin yorum yazilariydi ("Valentra Diyor
-      # ki…"). Site genel haber ozetlerine, yorumsuz ve tarafsiz bir
-      # cizgiye dondu; bolum menuden ve ana sayfadan kaldirildi. Yazi
-      # uretmek bosuna model kredisi harcardi. Panelden "kose-yazisi"
-      # moduyla elle calistirmak hala mumkun.
+      # Kose yazilari 22.10.2026'da genel habere uyarlandi: gunun en
+      # onemli haberlerinden (onem puani) ve en az biri dunyadan olmak
+      # uzere yorum yazilari. Hepsi onaya duser.
       - name: Kose yazilarini yaz
-        if: ${{ !cancelled() && inputs.mod == 'kose-yazisi' }}
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'kose-yazisi' || inputs.mod == 'gunluk') }}
         working-directory: ajan
         env:
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
@@ -319,38 +316,9 @@ jobs:
 
           php kose.php $BAYRAKLAR
 
-      # Panelden yayina alinan grafiklerin verisini tazele.
-      #
-      # Veriyi SITE cekiyor (api/grafik-tazele.php): EVDS anahtari sitede
-      # kayitli ve site Turkiye'de barindigi icin TCMB'ye ulasiyor. Ajan
-      # yalnizca durtuyor. Haber toplama dussa bile grafikler eskimesin diye
-      # !cancelled(); istek basarisiz olursa is kirmizi olmuyor, uyari
-      # yaziliyor — grafiklerin son iyi verisi zaten sitede duruyor.
-      - name: Grafikleri tazele
-        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'topla' || inputs.mod == 'gunluk') }}
-        env:
-          VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
-          VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}
-        #
-        # --fail-with-body: once HTTP 401/500 yanitlari da "basarili"
-        # sayiliyordu ve grafikler gunlerce tazelenmeden kaldigi halde is
-        # yesil gorunuyordu. Simdi hem istek hatasi hem de sitenin
-        # bildirdigi basarisiz/uyarili grafikler Actions'ta uyari olarak
-        # cikiyor.
-        run: |
-          if ! yanit=$(curl -sS --fail-with-body --max-time 120 -X POST \
-            -H "X-Valentra-Key: $VALENTRA_AGENT_KEY" \
-            -H "Authorization: Bearer $VALENTRA_AGENT_KEY" \
-            "${VALENTRA_SITE_URL%/}/api/grafik-tazele.php"); then
-            echo "$yanit"
-            echo "::warning::Grafik tazeleme istegi basarisiz; grafiklerin son iyi verisi korunuyor."
-            echo "Grafikler tazelenemedi: siteye ulaşılamadı ya da site hata verdi. Grafiklerin son iyi verisi sitede duruyor." >> "$AJAN_SORUN_DOSYASI"
-            exit 0
-          fi
-
-          echo "$yanit"
-          echo "$yanit" | jq -r '(.hatalar // [])[] | "::warning::Grafik tazelenemedi — \(.)"' 2>/dev/null || true
-          echo "$yanit" | jq -r '(.uyarilar // [])[] | "::warning::Grafik uyarisi — \(.)"' 2>/dev/null || true
+      # Grafik tazeleme ve Resmi Gazete fihristi adimlari kaldirildi
+      # (22.10.2026): ana sayfada grafik yok, ajan yalnizca haber ve kose
+      # yazisi uretiyor. Kurlar ve BIST serit verisini site kendisi cekiyor.
 
       # Google Search Console verisi. Veriyi SITE cekiyor (servis hesabi
       # anahtari panelde kayitli); site 20 saatten yeniyse hicbir sey yapmiyor,
@@ -368,22 +336,6 @@ jobs:
             "${VALENTRA_SITE_URL%/}/api/gsc-tazele.php" \
             || { echo "::warning::Search Console tazeleme istegi basarisiz; panel acildiginda kendini tazeler."; \
                  echo "Search Console verisi tazelenemedi: siteye ulaşılamadı." >> "$AJAN_SORUN_DOSYASI"; }
-          echo
-
-      # Sitenin Resmi Gazete sayfasi. Fihristi site cekiyor (Turkiye'den
-      # dogrudan erisim); ajan yalnizca durtuyor.
-      - name: Resmi Gazete fihristini tazele
-        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'topla' || inputs.mod == 'gunluk') }}
-        env:
-          VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
-          VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}
-        run: |
-          curl -sS --max-time 120 -X POST \
-            -H "X-Valentra-Key: $VALENTRA_AGENT_KEY" \
-            -H "Authorization: Bearer $VALENTRA_AGENT_KEY" \
-            "${VALENTRA_SITE_URL%/}/api/resmi-gazete-tazele.php" \
-            || { echo "::warning::Resmi Gazete tazeleme istegi basarisiz; sayfa acilista kendini tazeler."; \
-                 echo "Resmî Gazete fihristi tazelenemedi: siteye ulaşılamadı." >> "$AJAN_SORUN_DOSYASI"; }
           echo
 
       - name: Ajan deposunu kaydet

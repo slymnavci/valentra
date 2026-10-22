@@ -97,8 +97,8 @@ require __DIR__ . '/includes/sayfa_ust.php';
     <p class="kose-not">
         Bu yazı, günün haberlerinden yapay zekâ desteğiyle hazırlanmış ve
         Valentra editörlerinin onayından geçmiştir. Değerlendirmeler genel
-        bilgilendirme amaçlıdır; yatırım tavsiyesi ya da kişiye özel vergi
-        danışmanlığı yerine geçmez.
+        bilgilendirme amaçlıdır; yatırım tavsiyesi ya da kişiye özel
+        danışmanlık yerine geçmez.
     </p>
 </article>
 
