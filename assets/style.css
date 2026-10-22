@@ -3460,6 +3460,48 @@ a.rg-madde:hover { color: var(--vurgu); }
     .puan-tablosu th, .puan-tablosu td { padding: 6px 4px; }
 }
 
+/* Spor sayfalari arasi sekmeler: Puan Durumu / Fikstur / Spor Haberleri */
+.spor-sekmeler {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 20px;
+}
+
+.spor-sekmeler a {
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--cizgi);
+    font-size: .88rem;
+    font-weight: 600;
+    color: var(--metin);
+    background: var(--kart);
+}
+
+.spor-sekmeler a:hover { border-color: var(--altin); }
+
+.spor-sekmeler a.aktif {
+    background: var(--lacivert);
+    border-color: var(--lacivert);
+    color: #fff;
+}
+
+/* Fikstur sayfasinda sezonun butun haftalari, hafta hafta acilir. */
+.spor-tum-fikstur { margin-top: 18px; }
+
+.spor-tum-fikstur details { border-bottom: 1px solid var(--cizgi); }
+.spor-tum-fikstur details:last-child { border-bottom: 0; }
+
+.spor-tum-fikstur summary {
+    cursor: pointer;
+    padding: 9px 0;
+    font-weight: 600;
+    color: var(--metin);
+}
+
+.spor-tum-fikstur details[open] summary { color: var(--vurgu); }
+.spor-tum-fikstur .mac-listesi { margin-bottom: 8px; }
+
 /* Piyasalar */
 .piyasa-kartlar {
     display: grid;

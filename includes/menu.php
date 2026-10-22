@@ -33,18 +33,19 @@ function site_menusu(): array
 
     /*
      * Spor acilir menu (22.10.2026, site sahibinin istegi): puan durumu,
-     * fikstur ve guncel spor haberleri. Ucu de Spor sayfasinin bolumleri
-     * (kategori.php, includes/spor_panel.php); baglantilar o bolumlere
-     * gidiyor.
+     * fikstur ve guncel spor haberleri. 23.10.2026'dan beri ucu AYRI
+     * sayfa (kategori.php, includes/spor_panel.php); onceden ayni
+     * sayfanin bolumleriydi.
      */
+    require_once __DIR__ . '/spor_panel.php';
+
     foreach ($menu as $i => $oge) {
         if ($oge['anahtar'] === 'spor') {
-            $spor = (string) $oge['href'];
             $menu[$i]['href']   = null;
             $menu[$i]['altlar'] = [
-                ['ad' => 'Puan Durumu',           'anahtar' => 'spor-puan',     'href' => $spor . '#puan-durumu',    'adet' => 0],
-                ['ad' => 'Fikstür',               'anahtar' => 'spor-fikstur',  'href' => $spor . '#fikstur',        'adet' => 0],
-                ['ad' => 'Güncel Spor Haberleri', 'anahtar' => 'spor-haberler', 'href' => $spor . '#spor-haberleri', 'adet' => 0],
+                ['ad' => 'Puan Durumu',           'anahtar' => 'spor-puan',     'href' => spor_bolum_yolu('puan-durumu'), 'adet' => 0],
+                ['ad' => 'Fikstür',               'anahtar' => 'spor-fikstur',  'href' => spor_bolum_yolu('fikstur'),     'adet' => 0],
+                ['ad' => 'Güncel Spor Haberleri', 'anahtar' => 'spor-haberler', 'href' => spor_bolum_yolu(),              'adet' => 0],
             ];
         }
     }

@@ -49,6 +49,30 @@ $sayfaAciklama = $kategori['aciklama'] !== ''
     ? $kategori['aciklama']
     : $kategori['ad'] . ' konusundaki güncel haberler.';
 
+/*
+ * Spor: puan durumu, fikstur ve spor haberleri AYRI sayfalar
+ * (23.10.2026, site sahibinin istegi). ?bolum= yoksa yalnizca haberler.
+ * Bilinmeyen bolum adi haber sayfasina duser.
+ */
+$sporBolum = '';
+
+if ($kategori['slug'] === 'spor') {
+    require_once __DIR__ . '/includes/spor_panel.php';
+
+    $istenen = (string) ($_GET['bolum'] ?? '');
+
+    if (isset(SPOR_BOLUMLERI[$istenen])) {
+        $sporBolum     = $istenen;
+        $aktifKategori = $sporBolum === 'puan-durumu' ? 'spor-puan' : 'spor-fikstur';
+        $sayfaBasligi  = 'Süper Lig ' . SPOR_BOLUMLERI[$sporBolum] . ' — Valentra';
+        $sayfaAciklama = $sporBolum === 'puan-durumu'
+            ? 'Trendyol Süper Lig güncel puan durumu (TFF).'
+            : 'Trendyol Süper Lig fikstürü: haftanın maçları, sonuçlar ve sezonun bütün haftaları (TFF).';
+    } else {
+        $aktifKategori = 'spor-haberler';
+    }
+}
+
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
 
@@ -59,20 +83,23 @@ require __DIR__ . '/includes/sayfa_ust.php';
     <?php endif; ?>
 </div>
 
+<?php if ($kategori['slug'] === 'spor'): ?>
+    <?= spor_sekmeleri_html($sporBolum) ?>
+<?php endif; ?>
+
 <div class="ana-duzen">
     <div class="ana-kolon">
         <?php
         /*
-         * Canli bolumler (22.10.2026, site sahibinin istegi): Spor'da
-         * Super Lig puan durumu ve fikstur (TFF), Ekonomi'de piyasa
-         * kartlari, grafikleri ve borsa sirketleri. Yalnizca ilk sayfada;
-         * veri yoksa bolum hic basilmiyor.
+         * Canli bolumler (22.10.2026, site sahibinin istegi): Spor'un
+         * puan durumu ve fikstur sayfalari (TFF), Ekonomi'de piyasa
+         * kartlari, grafikleri ve borsa sirketleri. Ekonomi'de yalnizca
+         * ilk sayfada; veri yoksa bolum hic basilmiyor.
          */
         $canliPanel = '';
 
-        if ($sayfa === 1 && $kategori['slug'] === 'spor') {
-            require_once __DIR__ . '/includes/spor_panel.php';
-            $canliPanel = spor_paneli_html();
+        if ($sporBolum !== '') {
+            $canliPanel = spor_paneli_html($sporBolum);
         } elseif ($sayfa === 1 && $kategori['slug'] === 'ekonomi') {
             require_once __DIR__ . '/includes/piyasa_panel.php';
             $canliPanel = piyasa_paneli_html((string) ($_GET['donem'] ?? '3a'));
@@ -84,8 +111,16 @@ require __DIR__ . '/includes/sayfa_ust.php';
         }
         ?>
 
+        <?php if ($sporBolum !== '' && $canliPanel === ''): ?>
+            <div class="bos-durum">
+                <strong><?= e(SPOR_BOLUMLERI[$sporBolum]) ?> şu an alınamıyor.</strong>
+                Veri TFF'den çekiliyor; birkaç dakika sonra sayfayı yenileyin.
+            </div>
+        <?php endif; ?>
+
+        <?php if ($sporBolum === ''): ?>
         <div class="bolum-basligi" id="<?= e((string) $kategori['slug']) ?>-haberleri">
-            <h2><?= $canliPanel !== '' ? 'Güncel ' . e((string) $kategori['ad']) . ' Haberleri' : $toplam . ' Haber' ?></h2>
+            <h2><?= $canliPanel !== '' || $kategori['slug'] === 'spor' ? 'Güncel ' . e((string) $kategori['ad']) . ' Haberleri' : $toplam . ' Haber' ?></h2>
             <span class="cizgi"></span>
         </div>
 
@@ -109,6 +144,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
                     <?php endif; ?>
                 </nav>
             <?php endif; ?>
+        <?php endif; ?>
         <?php endif; ?>
     </div>
 
