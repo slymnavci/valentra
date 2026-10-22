@@ -447,7 +447,15 @@ require __DIR__ . '/ust.php';
         </p>
     <?php else: ?>
         <?php foreach ($kaynaklar as $kaynak): ?>
-            <div style="padding:12px 0;border-bottom:1px solid var(--cizgi);">
+            <?php
+            /*
+             * Satirin kimligi: satirdaki formlar sonuc sayfasinda bu satira
+             * donuyor (action'daki #kaynak-N). Eskiden her "Test et"ten sonra
+             * sayfa en basa kayiyor, sonucu gormek icin listede yeniden
+             * asagi inmek gerekiyordu (site sahibinin sikayeti, 22.10.2026).
+             */
+            ?>
+            <div id="kaynak-<?= (int) $kaynak['id'] ?>" style="padding:12px 0;border-bottom:1px solid var(--cizgi);scroll-margin-top:80px;">
                 <div class="satir-bilgi" style="align-items:center;">
                     <strong style="color:var(--metin);"><?= e($kaynak['ad']) ?></strong>
 
@@ -463,14 +471,14 @@ require __DIR__ . '/ust.php';
                     </span>
 
                     <span style="margin-left:auto;display:flex;gap:8px;">
-                        <form method="post" action="kaynaklar.php">
+                        <form method="post" action="kaynaklar.php#kaynak-<?= (int) $kaynak['id'] ?>">
                             <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
                             <input type="hidden" name="islem" value="test">
                             <input type="hidden" name="id" value="<?= (int) $kaynak['id'] ?>">
                             <button type="submit" class="dugme">Test et</button>
                         </form>
 
-                        <form method="post" action="kaynaklar.php">
+                        <form method="post" action="kaynaklar.php#kaynak-<?= (int) $kaynak['id'] ?>">
                             <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
                             <input type="hidden" name="islem" value="bul">
                             <input type="hidden" name="id" value="<?= (int) $kaynak['id'] ?>">
@@ -478,7 +486,7 @@ require __DIR__ . '/ust.php';
                         </form>
 
                         <?php if (($kaynak['liste_url'] ?? '') !== ''): ?>
-                            <form method="post" action="kaynaklar.php">
+                            <form method="post" action="kaynaklar.php#kaynak-<?= (int) $kaynak['id'] ?>">
                                 <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
                                 <input type="hidden" name="islem" value="kazima_test">
                                 <input type="hidden" name="id" value="<?= (int) $kaynak['id'] ?>">
@@ -486,7 +494,7 @@ require __DIR__ . '/ust.php';
                             </form>
                         <?php endif; ?>
 
-                        <form method="post" action="kaynaklar.php">
+                        <form method="post" action="kaynaklar.php#kaynak-<?= (int) $kaynak['id'] ?>">
                             <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
                             <input type="hidden" name="islem" value="durum">
                             <input type="hidden" name="id" value="<?= (int) $kaynak['id'] ?>">
@@ -495,7 +503,7 @@ require __DIR__ . '/ust.php';
                             </button>
                         </form>
 
-                        <form method="post" action="kaynaklar.php"
+                        <form method="post" action="kaynaklar.php#kaynak-<?= (int) $kaynak['id'] ?>"
                               onsubmit="return confirm('Bu kaynak silinecek. Emin misiniz?');">
                             <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
                             <input type="hidden" name="islem" value="sil">
@@ -527,7 +535,7 @@ require __DIR__ . '/ust.php';
                         Adresleri düzenle
                     </summary>
 
-                    <form method="post" action="kaynaklar.php"
+                    <form method="post" action="kaynaklar.php#kaynak-<?= (int) $kaynak['id'] ?>"
                           style="margin-top:10px;padding:12px;background:var(--zemin);border-radius:8px;">
                         <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
                         <input type="hidden" name="islem" value="duzenle">

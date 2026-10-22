@@ -411,6 +411,52 @@ function ziyaret_populer_haberler(int $gun = 7, int $adet = 10): array
 }
 
 /**
+ * Okuyucuya gösterilen "En Çok Okunanlar" (yan pencere).
+ *
+ * Site sahibinin istegi (22.10.2026): "en cok hangi sayfalara
+ * bakildiysa onlari on plana alalim". Panel listesinden (yukarida)
+ * farki: yalnizca YAYINDAKI haberler, sayim ayni okuyucunun tekrar
+ * acmalarini degil FARKLI okuyuculari sayiyor (bir kisi yenile tusuna
+ * basarak listeyi degistiremesin) ve donem kisa (son 2 gun): okuyucu
+ * gecen haftanin degil bugunun cok okunanini gormek istiyor. Iki gunde
+ * yeterli haber yoksa 7 gune genisliyor.
+ *
+ * @return list<array{baslik:string,slug:string,okuyucu:int}>
+ */
+function haber_en_cok_okunanlar(int $adet = 6): array
+{
+    foreach ([2, 7] as $gun) {
+        try {
+            $ifade = db()->prepare(
+                'SELECT h.baslik, h.slug, COUNT(DISTINCT z.ziyaretci) AS okuyucu
+                   FROM ziyaretler z
+                   JOIN haberler h ON h.id = z.haber_id
+                  WHERE z.haber_id IS NOT NULL
+                    AND h.durum = :d
+                    AND z.zaman >= (NOW() - INTERVAL ' . $gun . ' DAY)
+                  GROUP BY h.id, h.baslik, h.slug
+                  ORDER BY okuyucu DESC, MAX(z.zaman) DESC
+                  LIMIT ' . max(1, min(20, $adet))
+            );
+            $ifade->execute(['d' => HABER_YAYINDA]);
+            $liste = $ifade->fetchAll();
+        } catch (Throwable $e) {
+            return [];
+        }
+
+        if (count($liste) >= min(3, $adet)) {
+            break;
+        }
+    }
+
+    return array_map(static fn (array $s): array => [
+        'baslik'  => (string) $s['baslik'],
+        'slug'    => (string) $s['slug'],
+        'okuyucu' => (int) $s['okuyucu'],
+    ], $liste);
+}
+
+/**
  * En çok görüntülenen sayfalar (haber dışı sayfalar dahil).
  *
  * @return list<array<string,mixed>>

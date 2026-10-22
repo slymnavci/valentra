@@ -84,8 +84,8 @@ require __DIR__ . '/includes/sayfa_ust.php';
         }
         ?>
 
-        <div class="bolum-basligi">
-            <h2><?= $toplam ?> Haber</h2>
+        <div class="bolum-basligi" id="<?= e((string) $kategori['slug']) ?>-haberleri">
+            <h2><?= $canliPanel !== '' ? 'Güncel ' . e((string) $kategori['ad']) . ' Haberleri' : $toplam . ' Haber' ?></h2>
             <span class="cizgi"></span>
         </div>
 

@@ -19,6 +19,7 @@ final class HaberAkisi
     public const KATEGORILER = [
         'gundem', 'politika', 'ekonomi', 'dunya',
         'spor', 'teknoloji', 'saglik', 'kultur-sanat',
+        'yemek-tarifleri',
     ];
 
     /**
@@ -42,6 +43,8 @@ final class HaberAkisi
         'teknoloji'    => 6,
         'saglik'       => 5,
         'kultur-sanat' => 5,
+        // Tarifler haber degil; az ama surekli (22.10.2026).
+        'yemek-tarifleri' => 4,
     ];
 
     /**
@@ -54,6 +57,8 @@ final class HaberAkisi
     public const SIRA = [
         'spor', 'politika', 'dunya', 'kultur-sanat',
         'teknoloji', 'gundem', 'saglik', 'ekonomi',
+        // En sonda: kota biterse ilk tarifler kalsin, haberler degil.
+        'yemek-tarifleri',
     ];
 
     /** Gunluge yazilacak baslik adi. */
@@ -66,6 +71,7 @@ final class HaberAkisi
         'teknoloji'    => 'Teknoloji',
         'saglik'       => 'Sağlık',
         'kultur-sanat' => 'Kültür-Sanat',
+        'yemek-tarifleri' => 'Yemek Tarifleri',
     ];
 
     /**

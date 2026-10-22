@@ -39,7 +39,15 @@ const HABER_RG_KOSULU = "COALESCE(h.kaynak_url, '') LIKE '%resmigazete.gov.tr%'"
 const HABER_AKIS_KATEGORILERI = [
     'gundem', 'politika', 'ekonomi', 'dunya',
     'spor', 'teknoloji', 'saglik', 'kultur-sanat',
+    // Yemek tarifleri (22.10.2026, site sahibinin istegi): menunun en
+    // sonunda. Haber degil; ana sayfanin manset ve haber izgarasina
+    // girmiyor (bkz. haber_ana_akis_kosulu), kendi sayfasi ve ana
+    // sayfanin alttaki konu bloklarinda.
+    'yemek-tarifleri',
 ];
+
+/** Haber olmayan, ana sayfa akisina girmeyen basliklar. */
+const HABER_AKIS_DISI = ['yemek-tarifleri'];
 
 /*
  * Haber sirasi: onemden onemsize (site sahibinin karari, 22.10.2026).
@@ -61,7 +69,8 @@ const HABER_SIRASI = 'h.one_cikan DESC,
     h.id DESC';
 
 /**
- * Ana sayfa akisinin kosulu: Resmi Gazete kaynakli olmayan her haber.
+ * Ana sayfa akisinin kosulu: Resmi Gazete kaynakli olmayan, haber olan
+ * (yemek tarifi gibi akis disi bir baslikta olmayan) her haber.
  *
  * Eski vergi ve muhasebe haberleri de akista KALIYOR (site sahibinin
  * karari, 22.10.2026: "eski haberleri kaldirma, onlar da kalsin"). Yeni
@@ -70,7 +79,14 @@ const HABER_SIRASI = 'h.one_cikan DESC,
  */
 function haber_ana_akis_kosulu(): string
 {
-    return 'NOT (' . HABER_RG_KOSULU . ')';
+    $disarida = implode(', ', array_map(
+        static fn (string $slug): string => db()->quote($slug),
+        HABER_AKIS_DISI
+    ));
+
+    return 'NOT (' . HABER_RG_KOSULU . ')'
+        . ' AND (h.kategori_id IS NULL OR h.kategori_id NOT IN'
+        . ' (SELECT id FROM kategoriler WHERE slug IN (' . $disarida . ')))';
 }
 
 /**
@@ -1097,7 +1113,7 @@ function kategori_bloklari(int $grupBasiHaber = 4, int $enFazlaGrup = 6): array
            JOIN kategoriler k ON k.id = h.kategori_id
           WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . '
             AND k.aktif = 1
-            AND ' . haber_ana_akis_kosulu() . '
+            AND NOT (' . HABER_RG_KOSULU . ')
             AND ' . haber_akis_kategori_kosulu() . '
           ORDER BY k.sira, k.ad, ' . HABER_SIRASI
     )->fetchAll();

@@ -3590,3 +3590,6 @@ a.rg-madde:hover { color: var(--vurgu); }
     .pk-deger { font-size: 1.1rem; }
     .sirket-tablosu .kod { display: none; }
 }
+
+/* Acilir menuden gelinen bolumler sabit menunun altinda kalmasin. */
+#puan-durumu, #fikstur, [id$="-haberleri"] { scroll-margin-top: 70px; }

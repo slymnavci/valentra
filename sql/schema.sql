@@ -1790,3 +1790,15 @@ UPDATE kaynaklar SET besleme_url = NULL, liste_url = 'https://www.iha.com.tr/', 
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_iha_2026_10_22');
 
 INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_iha_2026_10_22', '22.10.2026');
+
+-- ---------------------------------------------------------------------------
+-- Yemek tarifleri — 22.10.2026
+--
+-- Site sahibinin istegi: "en sona yemek tarifleri toplayalim, bunun icin
+-- bir menu hazirla". Menunun en sonunda; haber olmadigi icin ana sayfanin
+-- manset ve haber izgarasina girmiyor (HABER_AKIS_DISI). Ajan tarifi
+-- kendi cumleleriyle yaziyor (malzemeler + yapilis), altinda kaynak ve
+-- tarifin tamamina baglanti.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kategoriler (ad, slug, aciklama, sira) VALUES
+    ('Yemek Tarifleri', 'yemek-tarifleri', 'Türk ve dünya mutfağından tarifler: ana yemekler, çorbalar, tatlılar ve hamur işleri', 90);

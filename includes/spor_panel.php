@@ -32,6 +32,10 @@ function spor_paneli_html(): string
     $gecenNo    = $hafta !== null ? $hafta - 1 : $sonOynanan;
     $gecen      = $gecenNo !== null ? ($veri['fikstur'][$gecenNo] ?? []) : [];
 
+    // Gelecek hafta: fiksturde tarih yok, yalnizca eslesmeler.
+    $gelecekNo  = $hafta !== null ? $hafta + 1 : null;
+    $gelecek    = $gelecekNo !== null ? ($veri['fikstur'][$gelecekNo] ?? []) : [];
+
     ob_start();
     ?>
     <section class="spor-panel" data-canli-bolum="/api/spor.php" aria-label="Trendyol Süper Lig">
@@ -44,7 +48,7 @@ function spor_paneli_html(): string
         </div>
 
         <div class="spor-izgara">
-            <div class="spor-kutu spor-puan">
+            <div class="spor-kutu spor-puan" id="puan-durumu">
                 <h3>Puan Durumu</h3>
                 <div class="tablo-kaydir">
                     <table class="puan-tablosu">
@@ -82,7 +86,7 @@ function spor_paneli_html(): string
                 </div>
             </div>
 
-            <div class="spor-kutu spor-maclar">
+            <div class="spor-kutu spor-maclar" id="fikstur">
                 <?php if ($maclar !== []): ?>
                     <h3><?= $hafta !== null ? $hafta . '. Hafta' : 'Haftanın Maçları' ?></h3>
                     <ul class="mac-listesi">
@@ -104,6 +108,19 @@ function spor_paneli_html(): string
                             <li>
                                 <span class="mac-ev"><?= e($mac['ev']) ?></span>
                                 <span class="mac-skor<?= $mac['skor'] === '' ? ' oynanmadi' : '' ?>"><?= $mac['skor'] !== '' ? e($mac['skor']) : '-' ?></span>
+                                <span class="mac-dep"><?= e($mac['dep']) ?></span>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+
+                <?php if ($gelecek !== []): ?>
+                    <h3><?= (int) $gelecekNo ?>. Hafta</h3>
+                    <ul class="mac-listesi sonuclar">
+                        <?php foreach ($gelecek as $mac): ?>
+                            <li>
+                                <span class="mac-ev"><?= e($mac['ev']) ?></span>
+                                <span class="mac-skor oynanmadi">-</span>
                                 <span class="mac-dep"><?= e($mac['dep']) ?></span>
                             </li>
                         <?php endforeach; ?>
