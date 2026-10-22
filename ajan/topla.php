@@ -37,14 +37,14 @@ require_once __DIR__ . '/src/Besleme.php';
 require_once __DIR__ . '/src/Sayfa.php';
 require_once __DIR__ . '/src/Kazima.php';
 require_once __DIR__ . '/src/ResmiGazete.php';
-require_once __DIR__ . '/src/Suzgec.php';
+require_once __DIR__ . '/src/HaberAkisi.php';
 require_once __DIR__ . '/src/Site.php';
 require_once __DIR__ . '/src/KotaBittiException.php';
 require_once __DIR__ . '/src/SemaliIstemci.php';
 require_once __DIR__ . '/src/Yazar.php';
 require_once __DIR__ . '/src/Bildirim.php';
 
-use Valentra\Ajan\{Besleme, Bildirim, Depo, Getirici, Http, Kazima, KotaBittiException, ResmiGazete, Sayfa, Site, Suzgec, TohumYapilandirma, Yazar};
+use Valentra\Ajan\{Besleme, Bildirim, Depo, Getirici, HaberAkisi, Http, Kazima, KotaBittiException, ResmiGazete, Sayfa, Site, TohumYapilandirma, Yazar};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
@@ -95,7 +95,6 @@ gunluk('Valentra ajanı başlıyor' . ($kuruCalisma ? ' (KURU ÇALIŞMA — gön
 $site    = new Site($siteUrl, $ajanKey);
 $http    = new Http();
 
-$suzgec  = new Suzgec();
 $yazar   = new Yazar($apiKey);
 
 // --- 1. Yapılandırma -------------------------------------------------------
@@ -533,6 +532,16 @@ function kaynaklari_sirala(array $kaynaklar, int $calismaNo): array
         'ICAEW', 'IFAC', 'Avrupa Merkez Bankası', 'Federal Reserve',
     ];
 
+    /*
+     * HABER AKISI KAYNAKLARI EN ONDE (Ekim 2026).
+     *
+     * Site genel haber ozetlerine donunce gundem, politika, dunya, spor
+     * gibi basliklarin beslemeleri eklendi. Ekonomi listesi (40'tan
+     * fazla kaynak) acik kaldigi icin zaman butcesi onlarla dolup yeni
+     * basliklarin kaynaklarina sira gelmeyebilirdi. Kategori ipucu
+     * ekonomi disinda olan kaynaklar bu yuzden once taraniyor.
+     */
+    $akis      = [];
     $mevzuat   = [];
     $cekirdek  = [];
     $digerleri = [];
@@ -540,7 +549,9 @@ function kaynaklari_sirala(array $kaynaklar, int $calismaNo): array
     foreach ($kaynaklar as $kaynak) {
         $ad = (string) $kaynak['ad'];
 
-        if (in_array($ad, $mevzuatAdlari, true)) {
+        if (HaberAkisi::kova($kaynak) !== 'ekonomi') {
+            $akis[] = $kaynak;
+        } elseif (in_array($ad, $mevzuatAdlari, true)) {
             $mevzuat[] = $kaynak;
         } elseif (in_array($ad, $cekirdekAdlar, true)) {
             $cekirdek[] = $kaynak;
@@ -578,10 +589,11 @@ function kaynaklari_sirala(array $kaynaklar, int $calismaNo): array
      * Bolen 1: her calismada bir adim kayiyor, boylece dolasim yavas
      * ve duzenli oluyor.
      */
+    $akis      = $kaydir($akis, $calismaNo);
     $mevzuat   = $kaydir($mevzuat, $calismaNo, max(1, count($mevzuat)));
     $digerleri = $kaydir($digerleri, $calismaNo);
 
-    return array_merge($mevzuat, $cekirdek, $digerleri);
+    return array_merge($akis, $mevzuat, $cekirdek, $digerleri);
 }
 
 /**
@@ -652,16 +664,14 @@ function resmi_gazete_mi(array $kaynak): bool
  * @param array<string,int>           $paylar      Konu => tur basina pay
  * @return list<array<string,mixed>>
  */
-function konu_kontenjani(array $adaylar, array $paylar, int $enFazla, Suzgec $suzgec): array
+function konu_kontenjani(array $adaylar, array $paylar, int $enFazla): array
 {
     /** @var array<string,list<array<string,mixed>>> */
     $kovalar = array_fill_keys(array_keys($paylar), []);
 
     foreach ($adaylar as $aday) {
-        $konu = $suzgec->konu(
-            (string) $aday['girdi']['baslik'],
-            (string) ($aday['girdi']['ozet'] ?? '')
-        );
+        // Baslik, kaynagin kategori ipucundan (bkz. HaberAkisi::kova).
+        $konu = HaberAkisi::kova($aday['kaynak']);
 
         // Bilinmeyen bir konu gelirse aday kaybolmasin.
         if (!isset($kovalar[$konu])) {
@@ -914,9 +924,15 @@ foreach ($kaynaklar as $kaynak) {
     $zatenVar = 0;
 
     foreach ($girdiler as $girdi) {
-        if (!$suzgec->gecer($girdi['baslik'], $girdi['ozet'])) {
-            continue;
-        }
+        /*
+         * Anahtar kelime on elemesi YOK (Ekim 2026).
+         *
+         * Site vergi yayiniyken Suzgec vergi ve ekonomi terimi gecmeyen
+         * girdiyi modele hic gondermiyordu. Genel haber ozetlerine
+         * donulunce bu, spor, saglik ya da kultur haberlerinin hepsini
+         * eliyordu. Artik her girdi aday; secimi baslik kontenjani
+         * (HaberAkisi::PAYLAR) ve model yapiyor.
+         */
 
         // Yazar makalesi haber olarak yeniden yazilmaz (bkz. yazar_makalesi_mi).
         if (yazar_makalesi_mi((string) $girdi['baglanti'])) {
@@ -971,7 +987,10 @@ foreach ($kaynaklar as $kaynak) {
         $adaylar[] = [
             'girdi'  => $girdi,
             'kaynak' => $kaynak,
-            'puan'   => $suzgec->puan($girdi['baslik'], $girdi['ozet']),
+            // Puan = yayim zamani: yeni haber once. Vergi terimi puani
+            // (Suzgec) genel haberde anlamsiz; ekonomi kelimesi gecen
+            // siyaset haberini one aliyordu.
+            'puan'   => ($girdi['tarih'] ?? null) !== null ? (int) strtotime((string) $girdi['tarih']) : 0,
         ];
         $gecen++;
     }
@@ -993,7 +1012,7 @@ if ($adaylar === []) {
     exit(0);
 }
 
-// Güçlü sinyal verenler önce; bütçe sınırına takılırsa en iyileri işlensin.
+// En yeniler önce; bütçe sınırına takılırsa güncel olanlar işlensin.
 usort($adaylar, static fn (array $a, array $b): int => $b['puan'] <=> $a['puan']);
 
 /*
@@ -1067,17 +1086,17 @@ if ($kopyaElenen > 0) {
 }
 
 /*
- * Paylar: her turda 3 vergi, 2 mevzuat, 1 standart, 3 ekonomi.
+ * Paylar: haber akisi basliklarina gore (bkz. HaberAkisi::PAYLAR).
  *
- * Ekonominin payi 1'den 3'e cikti (24.09.2026): site "yalnizca muhasebe"
- * degil, ekonomi sayfasi gozuyle de bakiyor — piyasalar, beklentiler,
- * dunya ekonomisi, sirketler. Standart haberi seyrek geliyor; payi
- * 2'den 1'e indi, kullanilmayan pay zaten digerlerine kaliyor.
+ * Ekim 2026'ya kadar vergi, mevzuat, standart ve ekonomi arasinda
+ * paylasiliyordu. Site genel haber ozetlerine donunce paylar gundem,
+ * politika, ekonomi, dunya, spor, teknoloji, saglik ve kultur-sanat
+ * basliklarina gecti; politika en buyuk pay.
  */
-$konuPaylari = ['vergi' => 3, 'mevzuat' => 2, 'standart' => 1, 'ekonomi' => 3];
+$konuPaylari = HaberAkisi::PAYLAR;
 $adaylar     = array_merge(
     $rgTekil,
-    konu_kontenjani($digerTekil, $konuPaylari, max(0, $enFazlaAday - count($rgTekil)), $suzgec)
+    konu_kontenjani($digerTekil, $konuPaylari, max(0, $enFazlaAday - count($rgTekil)))
 );
 
 if ($rgTekil !== []) {
@@ -1089,10 +1108,7 @@ $konuOzeti = [];
 foreach (array_keys($konuPaylari) as $konu) {
     $adet = count(array_filter(
         $adaylar,
-        static fn (array $a): bool => $suzgec->konu(
-            (string) $a['girdi']['baslik'],
-            (string) ($a['girdi']['ozet'] ?? '')
-        ) === $konu
+        static fn (array $a): bool => HaberAkisi::kova($a['kaynak']) === $konu
     ));
 
     $konuOzeti[] = $konu . ': ' . $adet;
@@ -1284,11 +1300,16 @@ foreach ($gruplar as $grupNo => $grup) {
             'ozet'        => (string) $sonuc['ozet'],
             'icerik'      => (string) $sonuc['icerik'],
             'etiketler'   => is_array($etiketler) ? implode(', ', $etiketler) : (string) $etiketler,
-            'kategori'    => (string) ($sonuc['kategori'] ?? 'genel'),
+            // Listede olmayan slug (eski vergi gruplari dahil) gundeme
+            // dusuyor; editor onayda degistirebilir.
+            'kategori'    => in_array((string) ($sonuc['kategori'] ?? ''), HaberAkisi::KATEGORILER, true)
+                ? (string) $sonuc['kategori']
+                : 'gundem',
             'kaynak_id'   => (int) $kaynak['id'],
             'kaynak_adi'  => (string) $kaynak['ad'],
             'kaynak_url'  => $girdi['baglanti'],
             'guven_skoru' => (int) ($sonuc['guven_skoru'] ?? 0),
+            'onem'        => (int) ($sonuc['onem'] ?? 50),
             'ajan_notu'   => (string) ($sonuc['ajan_notu'] ?? ''),
 
             // Valentra Analiz — dordu de bos olabilir, bos olmasi normal.
@@ -1317,7 +1338,7 @@ foreach ($gruplar as $grupNo => $grup) {
          */
         array_unshift($modeleGosterilecek, (string) $sonuc['baslik']);
 
-        gunluk("  kabul (%{$sonuc['guven_skoru']}, {$sonuc['kategori']}) — {$sonuc['baslik']}");
+        gunluk("  kabul (%{$sonuc['guven_skoru']}, önem " . (int) ($sonuc['onem'] ?? 50) . ", {$sonuc['kategori']}) — {$sonuc['baslik']}");
     }
 }
 

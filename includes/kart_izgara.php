@@ -31,7 +31,7 @@ if (($izgaraHaberleri ?? []) === []) {
                     <div class="kart-alt">
                         <span><?= e(tarih_bicimle($haber['yayin_tarihi'])) ?></span>
                         <?php if ($haber['kaynak_adi'] !== ''): ?>
-                            <span>&middot; <?= e($haber['kaynak_adi']) ?></span>
+                            <span>&middot; <?= e(kaynak_gorunen_ad((string) $haber['kaynak_adi'])) ?></span>
                         <?php endif; ?>
                     </div>
                 </div>

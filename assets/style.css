@@ -2306,6 +2306,29 @@ a.menu-oge.aktif::after,
     color: var(--metin-soluk);
 }
 
+/* Kaynak adi ve "haberin tamami" dugmesi: ozetin hemen altinda, okuyucu
+   kaynaga tek tikla gidebilsin. */
+.kaynak-tarih-ad {
+    margin: 0 0 10px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--metin);
+}
+
+.kaynak-tarih .kaynak-tarih-dugme {
+    display: inline-block;
+    margin: 0 0 12px;
+    padding: 10px 16px;
+    border-radius: 6px;
+    background: var(--lacivert);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.kaynak-tarih .kaynak-tarih-dugme:hover { background: var(--lacivert-acik); }
+
 @media (max-width: 620px) {
     .kaynak-tarih dl > div { grid-template-columns: 1fr; gap: 0; }
 }

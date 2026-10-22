@@ -38,6 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'etiketler'  => $_POST['etiketler'] ?? '',
             'one_cikan'   => $_POST['one_cikan'] ?? null,
             'kategori_id' => $_POST['kategori_id'] ?? '',
+            'onem'        => $_POST['onem'] ?? '',
 
             'analiz_degisen'   => $_POST['analiz_degisen'] ?? '',
             'analiz_etkilenen' => $_POST['analiz_etkilenen'] ?? '',
@@ -94,6 +95,7 @@ require __DIR__ . '/ust.php';
 
         <?php if ((int) $haber['guven_skoru'] > 0): ?>
             <span class="rozet rozet-skor">güven %<?= (int) $haber['guven_skoru'] ?></span>
+            <span class="rozet rozet-skor">önem <?= (int) ($haber['onem'] ?? 50) ?></span>
         <?php endif; ?>
 
         <span>Derlendi: <?= e(tarih_bicimle($haber['olusturuldu'])) ?></span>
@@ -209,7 +211,17 @@ require __DIR__ . '/ust.php';
         <select id="kategori_id" name="kategori_id"
                 style="width:100%;padding:10px 12px;border:1px solid var(--cizgi);border-radius:7px;font-family:inherit;font-size:.92rem;">
             <option value="">— seçilmedi —</option>
-            <?php foreach (kategori_listesi() as $kategori): ?>
+            <?php
+            // Yalnizca haber akisi basliklari, menu sirasiyla (Ekim 2026).
+            $akisSirasi = array_flip(HABER_AKIS_KATEGORILERI);
+            $secenekler = array_filter(
+                kategori_listesi(false),
+                static fn (array $k): bool => isset($akisSirasi[$k['slug']])
+            );
+            usort($secenekler, static fn (array $a, array $b): int =>
+                $akisSirasi[$a['slug']] <=> $akisSirasi[$b['slug']]);
+            ?>
+            <?php foreach ($secenekler as $kategori): ?>
                 <option value="<?= (int) $kategori['id'] ?>"
                     <?= (int) ($haber['kategori_id'] ?? 0) === (int) $kategori['id'] ? 'selected' : '' ?>>
                     <?= e($kategori['ad']) ?>
@@ -223,7 +235,14 @@ require __DIR__ . '/ust.php';
         <label for="etiketler">Etiketler</label>
         <input type="text" id="etiketler" name="etiketler" maxlength="400"
                value="<?= e($haber['etiketler']) ?>">
-        <div class="ipucu">Virgülle ayırın. Örnek: KDV, Gelir Vergisi, Tebliğ</div>
+        <div class="ipucu">Virgülle ayırın. Örnek: TBMM, Süper Lig, enflasyon</div>
+    </div>
+
+    <div class="alan">
+        <label for="onem">Önem puanı (0-100)</label>
+        <input type="number" id="onem" name="onem" min="0" max="100" step="1"
+               value="<?= (int) ($haber['onem'] ?? 50) ?>" style="max-width:120px;">
+        <div class="ipucu">Ana sayfada son 24 saatin haberleri bu puana göre sıralanır (yüksek olan önde). Ajan önerir; buradan değiştirebilirsiniz.</div>
     </div>
 
     <div class="alan">

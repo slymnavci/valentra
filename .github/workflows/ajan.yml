@@ -1,4 +1,4 @@
-name: Vergi haberleri ajani
+name: Haber ajani
 
 on:
   schedule:
@@ -289,11 +289,17 @@ jobs:
       # toplamadan SONRA: gunun yeni haberleri malzemeye girsin.
       # Yazilar taslak olarak gidiyor; yayina alma panelde.
       #
-      # 'gunluk' (panel -> Gunluk isler): haber toplama + kose yazisi tek
-      # calismada. Iki ayri istek gondermek ikincisini sirada bekletiyor,
-      # ucuncu bir istek de bekleyeni iptal ediyordu.
+      # 'gunluk' (panel -> Gunluk isler) eskiden haber toplama ile kose
+      # yazisini tek calismada yapiyordu; artik yalnizca haber topluyor.
+      #
+      # ZAMANLI CALISMADA KAPALI (Ekim 2026). Kose yazilari vergi ve
+      # ekonomi uzerine Valentra'nin yorum yazilariydi ("Valentra Diyor
+      # ki…"). Site genel haber ozetlerine, yorumsuz ve tarafsiz bir
+      # cizgiye dondu; bolum menuden ve ana sayfadan kaldirildi. Yazi
+      # uretmek bosuna model kredisi harcardi. Panelden "kose-yazisi"
+      # moduyla elle calistirmak hala mumkun.
       - name: Kose yazilarini yaz
-        if: ${{ !cancelled() && ((github.event_name == 'schedule' && github.event.schedule != '40 4 * * 1') || inputs.mod == 'kose-yazisi' || inputs.mod == 'gunluk') }}
+        if: ${{ !cancelled() && inputs.mod == 'kose-yazisi' }}
         working-directory: ajan
         env:
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}

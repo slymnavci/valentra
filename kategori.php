@@ -22,6 +22,21 @@ if ($kategori === null) {
     exit;
 }
 
+/*
+ * Eski vergi ve muhasebe kategorileri -> Ekonomi (22.10.2026).
+ *
+ * Bu kategorilerin haberlerinin hepsi Ekonomi basligina tasindi (bkz.
+ * sql/schema.sql, "Genel habere donus"). Sayfalari bos kalacagi icin
+ * eski adresler (arama motorunda, yer imlerinde) kalici olarak
+ * Ekonomi'ye yonleniyor. Panelden bu kategorilere yeniden haber
+ * atanirsa yonlendirme kendiliginden duruyor.
+ */
+if (!in_array((string) $kategori['slug'], HABER_AKIS_KATEGORILERI, true)
+    && haber_kategoride_sayi((int) $kategori['id']) === 0) {
+    header('Location: ' . kategori_yolu('ekonomi'), true, 301);
+    exit;
+}
+
 $sayfa    = max(1, (int) ($_GET['sayfa'] ?? 1));
 $adet     = 12;
 $toplam   = haber_kategoride_sayi((int) $kategori['id']);
@@ -32,7 +47,7 @@ $aktifKategori = $kategori['slug'];
 $sayfaBasligi  = $kategori['ad'] . ' — Valentra';
 $sayfaAciklama = $kategori['aciklama'] !== ''
     ? $kategori['aciklama']
-    : $kategori['ad'] . ' konusundaki güncel vergi haberleri.';
+    : $kategori['ad'] . ' konusundaki güncel haberler.';
 
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>

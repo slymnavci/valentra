@@ -34,13 +34,12 @@ require_once __DIR__ . '/src/Besleme.php';
 require_once __DIR__ . '/src/Kazima.php';
 require_once __DIR__ . '/src/Sayfa.php';
 require_once __DIR__ . '/src/ResmiGazete.php';
-require_once __DIR__ . '/src/Suzgec.php';
 require_once __DIR__ . '/src/TohumYapilandirma.php';
 require_once __DIR__ . '/src/Site.php';
 require_once __DIR__ . '/../includes/url.php';
 require_once __DIR__ . '/../includes/kazima.php';
 
-use Valentra\Ajan\{Besleme, Getirici, Http, Kodlama, ResmiGazete, Sayfa, Site, Suzgec, TohumYapilandirma};
+use Valentra\Ajan\{Besleme, Getirici, Http, Kodlama, ResmiGazete, Sayfa, Site, TohumYapilandirma};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
@@ -512,7 +511,6 @@ function siteYolunuDene(Site $site, string $url): array
 
     return ['tamam' => $ham !== null, 'boyut' => $ham !== null ? strlen($ham) : 0];
 }
-$suzgec  = new Suzgec();
 
 /*
  * ADAY MODU: henuz veritabaninda olmayan adresleri sinar.
@@ -743,27 +741,13 @@ foreach ($kaynaklar as $kaynak) {
                 }
             }
 
-            $gecen = 0;
-
-            foreach ($girdiler as $girdi) {
-                if ($suzgec->gecer($girdi['baslik'], $girdi['ozet'])) {
-                    $gecen++;
-                }
-            }
-
+            // Vergi on elemesi kalkti (Ekim 2026, genel habere donus):
+            // butun girdiler aday. Burada yalnizca ilk basliklar listeleniyor.
             if ($girdiler !== []) {
-                yaz('       Ön elemeden geçen: ' . $gecen);
-
                 // Adres de yaziliyor: yazar makalesi gibi adres kalibiyla
                 // ayiklanacak girdileri gormek icin.
                 foreach (array_slice($girdiler, 0, 12) as $girdi) {
-                    $p = $suzgec->puanlar($girdi['baslik'], $girdi['ozet']);
-                    yaz(sprintf(
-                        '       [v:%d e:%d] %s',
-                        $p['vergi'],
-                        $p['ekonomi'],
-                        mb_substr($girdi['baslik'], 0, 90)
-                    ));
+                    yaz('       ' . mb_substr($girdi['baslik'], 0, 90));
                     yaz('              ' . $girdi['baglanti']);
                 }
             }

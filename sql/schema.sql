@@ -28,6 +28,10 @@ CREATE TABLE IF NOT EXISTS kaynaklar (
     liste_url     VARCHAR(500)  NULL,
     liste_secici  VARCHAR(200)  NULL,
     tur           ENUM('rss','resmi','web') NOT NULL DEFAULT 'rss',
+    -- Haber akisi basligi ipucu (gundem, politika, spor...). Ajan modele
+    -- giden aday kontenjanini basliklara bununla paylastiriyor; haberin
+    -- asil basligini model seciyor. Bos: ekonomi (eski kaynaklar).
+    kategori      VARCHAR(60)   NULL,
     aktif         TINYINT(1)    NOT NULL DEFAULT 1,
     son_tarama    DATETIME      NULL,
     olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -95,6 +99,9 @@ CREATE TABLE IF NOT EXISTS haberler (
     baslik_parmak   CHAR(64)      NULL,
 
     guven_skoru     TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    -- Onem puani (0-100): ana sayfa ve konu sayfalarinda son 24 saatin
+    -- haberleri bu puana gore siralaniyor. Ajan veriyor, panelden degisir.
+    onem            TINYINT UNSIGNED NOT NULL DEFAULT 50,
     ajan_notu       VARCHAR(600)  NOT NULL DEFAULT '',
 
     -- Valentra Analiz: haberin "bana ne" karsiligi. Bos olabilir ve
@@ -1412,3 +1419,155 @@ CREATE TABLE IF NOT EXISTS rehberler (
 -- Ilk bes uygulama rehberi yayina alindi (29.09.2026): bkz. sema.php
 -- 'ilk rehberleri yayimla' adimi. Bu satir sema imzasini degistirip
 -- adimin canli veritabaninda calismasini sagliyor.
+
+-- ---------------------------------------------------------------------------
+-- Genel habere donus — 22.10.2026
+--
+-- Site sahibinin karari: Valentra vergi/muhasebe yayinindan genel haber
+-- ozetlerine donuyor (MSN Haberler gibi: her haber kendi cumlelerimizle
+-- ozetleniyor, altinda kaynak adi ve haberin tamamina baglanti).
+--
+-- Haber akisi basliklari asagida. Menu, ana sayfa ve ajanin konu listesi
+-- yalnizca bunlari kullaniyor (bkz. HABER_AKIS_KATEGORILERI). Eski vergi
+-- ve muhasebe kategorileri SILINMEDI ve pasife de alinmadi (adresleri
+-- calismaya devam etsin); haberleri asagida Ekonomi'ye tasiniyor.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kategoriler (ad, slug, aciklama, sira) VALUES
+    ('Gündem',       'gundem',       'Türkiye''den güncel olaylar: eğitim, ulaşım, hava ve afet, yerel yönetim ve toplumu ilgilendiren resmî kararlar', 10),
+    ('Politika',     'politika',     'Türkiye siyaseti: TBMM, Cumhurbaşkanlığı ve hükümet kararları, partilerin politika açıklamaları, seçimler ve dış politika', 20),
+    ('Dünya',        'dunya',        'Uluslararası gelişmeler, diğer ülkelerin siyaseti ve uluslararası kuruluşlar', 40),
+    ('Spor',         'spor',         'Futbol, basketbol ve diğer branşlarda maç sonuçları, transferler ve milli takımlar', 50),
+    ('Teknoloji',    'teknoloji',    'Bilim, teknoloji, yapay zekâ, internet ve uzay', 60),
+    ('Sağlık',       'saglik',       'Sağlık politikası, tıp araştırmaları ve halk sağlığı', 70),
+    ('Kültür-Sanat', 'kultur-sanat', 'Sinema, müzik, edebiyat, sergi ve kültürel miras', 80);
+
+-- Ekonomi basligi korunuyor (eski ekonomi haberleri onda); adi sadeleşiyor.
+UPDATE kategoriler
+   SET ad = 'Ekonomi',
+       aciklama = 'Piyasalar, enflasyon, faiz, kur, büyüme, şirketler ve dünya ekonomisi',
+       aktif = 1, ust_id = NULL, sira = 30
+ WHERE slug = 'ekonomi';
+
+-- Eski haberlerin TAMAMI Ekonomi basligina tasiniyor (site sahibinin
+-- karari, 22.10.2026: eski haberler silinmiyor, ekonomi haberleri
+-- olarak kaliyor). Haber akisi basliklarindan birinde olmayan her haber
+-- (vergi alt gruplari, TMS/TFRS, Genel, kategorisiz) ekonomiye geciyor.
+-- Ajan artik yalnizca haber akisi basliklarini yazdigi icin sema yeniden
+-- calistiginda yeni bir haberi etkilemiyor.
+--
+-- guncellendi kendine esitleniyor: sutun ON UPDATE CURRENT_TIMESTAMP
+-- tasidigi icin aksi halde butun eski haberler "guncellendi" gorunurdu.
+UPDATE haberler h
+  JOIN kategoriler e ON e.slug = 'ekonomi'
+  LEFT JOIN kategoriler k ON k.id = h.kategori_id
+   SET h.kategori_id = e.id,
+       h.guncellendi = h.guncellendi
+ WHERE k.id IS NULL
+    OR k.slug NOT IN ('gundem', 'politika', 'ekonomi', 'dunya', 'spor', 'teknoloji', 'saglik', 'kultur-sanat');
+
+-- Yeni kaynaklar. Basliga gore ayrilmis beslemeler; kategori sutunu
+-- ajanin aday kontenjanini basliklara paylastirmasi icin ipucu.
+--
+-- Secim olcutu: haber ajanslari (AA, DHA, IHA) ve ana akim yayinlar.
+-- Taraf tutan, yorum agirlikli yayinlar bilerek yok (site sahibinin
+-- karari: fanatik ve dogrulanmamis haberden uzak durulacak).
+--
+-- Adresler bu ortamdan dogrulanamadi. Panelde "Kaynaklari sina" ile
+-- kontrol edin; calismayani duzeltin ya da kapatin.
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('Anadolu Ajansı Gündem',       'https://www.aa.com.tr',      'https://www.aa.com.tr/tr/rss/default?cat=guncel',          'rss', 'gundem', 1),
+    ('Anadolu Ajansı Politika',     'https://www.aa.com.tr',      'https://www.aa.com.tr/tr/rss/default?cat=politika',        'rss', 'politika', 1),
+    ('Anadolu Ajansı Dünya',        'https://www.aa.com.tr',      'https://www.aa.com.tr/tr/rss/default?cat=dunya',           'rss', 'dunya', 1),
+    ('Anadolu Ajansı Spor',         'https://www.aa.com.tr',      'https://www.aa.com.tr/tr/rss/default?cat=spor',            'rss', 'spor', 1),
+    ('Anadolu Ajansı Teknoloji',    'https://www.aa.com.tr',      'https://www.aa.com.tr/tr/rss/default?cat=bilim-teknoloji', 'rss', 'teknoloji', 1),
+    ('Anadolu Ajansı Sağlık',       'https://www.aa.com.tr',      'https://www.aa.com.tr/tr/rss/default?cat=saglik',          'rss', 'saglik', 1),
+    ('Anadolu Ajansı Kültür',       'https://www.aa.com.tr',      'https://www.aa.com.tr/tr/rss/default?cat=kultur',          'rss', 'kultur-sanat', 1),
+    ('TRT Haber Gündem',            'https://www.trthaber.com',   'https://www.trthaber.com/gundem_articles.rss',             'rss', 'gundem', 1),
+    ('TRT Haber Türkiye',           'https://www.trthaber.com',   'https://www.trthaber.com/turkiye_articles.rss',            'rss', 'politika', 1),
+    ('TRT Haber Dünya',             'https://www.trthaber.com',   'https://www.trthaber.com/dunya_articles.rss',              'rss', 'dunya', 1),
+    ('TRT Haber Spor',              'https://www.trthaber.com',   'https://www.trthaber.com/spor_articles.rss',               'rss', 'spor', 1),
+    ('TRT Haber Bilim-Teknoloji',   'https://www.trthaber.com',   'https://www.trthaber.com/bilim-teknoloji_articles.rss',    'rss', 'teknoloji', 1),
+    ('TRT Haber Sağlık',            'https://www.trthaber.com',   'https://www.trthaber.com/saglik_articles.rss',             'rss', 'saglik', 1),
+    ('TRT Haber Kültür-Sanat',      'https://www.trthaber.com',   'https://www.trthaber.com/kultur-sanat_articles.rss',       'rss', 'kultur-sanat', 1),
+    ('DHA',                         'https://www.dha.com.tr',     'https://www.dha.com.tr/rss',                               'rss', 'gundem', 1),
+    ('İHA',                         'https://www.iha.com.tr',     'https://www.iha.com.tr/rss',                               'rss', 'gundem', 1),
+    ('NTV Türkiye',                 'https://www.ntv.com.tr',     'https://www.ntv.com.tr/turkiye.rss',                       'rss', 'politika', 1),
+    ('NTV Dünya',                   'https://www.ntv.com.tr',     'https://www.ntv.com.tr/dunya.rss',                         'rss', 'dunya', 1),
+    ('NTV Spor',                    'https://www.ntv.com.tr',     'https://www.ntv.com.tr/spor.rss',                          'rss', 'spor', 1),
+    ('NTV Teknoloji',               'https://www.ntv.com.tr',     'https://www.ntv.com.tr/teknoloji.rss',                     'rss', 'teknoloji', 1),
+    ('NTV Sağlık',                  'https://www.ntv.com.tr',     'https://www.ntv.com.tr/saglik.rss',                        'rss', 'saglik', 1),
+    ('NTV Sanat',                   'https://www.ntv.com.tr',     'https://www.ntv.com.tr/sanat.rss',                         'rss', 'kultur-sanat', 1),
+    ('CNN Türk Türkiye',            'https://www.cnnturk.com',    'https://www.cnnturk.com/feed/rss/turkiye/news',            'rss', 'politika', 1),
+    ('CNN Türk Dünya',              'https://www.cnnturk.com',    'https://www.cnnturk.com/feed/rss/dunya/news',              'rss', 'dunya', 1),
+    ('Webtekno',                    'https://www.webtekno.com',   'https://www.webtekno.com/rss.xml',                         'rss', 'teknoloji', 1);
+
+-- Turkce yayin yapan yabanci kuruluslarin genel beslemeleri: dunya.
+UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'BBC Türkçe' AND kategori IS NULL;
+UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'DW Türkçe' AND kategori IS NULL;
+UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'VOA Türkçe' AND kategori IS NULL;
+
+-- Yalnizca vergi, muhasebe ve mesleki mevzuat yayinlayan kaynaklar
+-- kapatiliyor; ekonomi kaynaklari acik kaliyor (kategori ipucu bos =
+-- ekonomi). Tek tek yaziliyor: ajanin tohum okuyucusu (site
+-- erisilemediginde depodaki bu dosyadan liste kuruyor) yalnizca
+-- "WHERE ad = '...'" kalibini taniyor.
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Resmî Gazete';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Gelir İdaresi Başkanlığı';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Hazine ve Maliye Bakanlığı';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'KGK';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'TÜRMOB';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Alomaliye';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Muhasebe News';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Vergi Algı';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'MuhasebeTR';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'İSMMMO';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'BDDK';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'SPK';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Rekabet Kurumu';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'SGK';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Ticaret Bakanlığı';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'KOSGEB';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Deloitte Türkiye';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'PwC Türkiye';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'KPMG Türkiye';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'BDO Türkiye';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'EY Türkiye';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Grant Thornton Türkiye';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Vergi Dünyası';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'OECD Vergi';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Avrupa Komisyonu Vergi';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IFRS Foundation';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IAS Plus';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'EFRAG';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IRS';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Tax Foundation';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Accountancy Age';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Tax Justice Network';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'ICAEW';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IFAC';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Euronews Vergi';
+
+-- Ingilizce yayin yapan yabanci ekonomi kaynaklari da kapatiliyor: site
+-- Turkce genel haber ozetleri yayimliyor; dunya ve dunya ekonomisi
+-- haberleri Turkce kaynaklardan (AA, TRT, NTV, CNN Turk, BBC/DW
+-- Turkce) geliyor. Tarama suresi de yeni basliklarin kaynaklarina
+-- kaliyor. Gerekirse panelden tek tek acilabilir.
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IMF';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Reuters Business';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Bloomberg Ekonomi';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'BBC Business';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'The Guardian Business';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'The New York Times Business';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'The Economist Finans';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Financial Times';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'CNBC Ekonomi';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'MarketWatch';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'CNN Business';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Al Jazeera Ekonomi';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'DW Business';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Associated Press İş';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Nikkei Asia Ekonomi';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Avrupa Merkez Bankası';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Federal Reserve';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Dünya Bankası';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Bank for International Settlements';

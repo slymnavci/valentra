@@ -64,12 +64,12 @@ require __DIR__ . '/includes/sayfa_ust.php';
 <div class="ana-kolon">
 
 <article class="detay">
+    <?php $etiketler = etiketleri_coz($haber['etiketler']); ?>
     <?php if (!empty($haber['kategori_slug'])): ?>
         <a class="etiket" href="<?= e(kategori_yolu((string) $haber['kategori_slug'])) ?>">
             <?= e($haber['kategori_adi']) ?>
         </a>
     <?php else: ?>
-        <?php $etiketler = etiketleri_coz($haber['etiketler']); ?>
         <?php if ($etiketler !== []): ?>
             <span class="etiket">#<?= e($etiketler[0]) ?></span>
         <?php endif; ?>
@@ -104,7 +104,14 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <?php endif; ?>
 
         <?php if ($haber['kaynak_adi'] !== ''): ?>
-            <span>&middot; Kaynak: <?= e($haber['kaynak_adi']) ?></span>
+            <?php $kunyeKaynakUrl = guvenli_url((string) $haber['kaynak_url']); ?>
+            <span>&middot; Kaynak:
+                <?php if ($kunyeKaynakUrl !== ''): ?>
+                    <a href="<?= e($kunyeKaynakUrl) ?>" target="_blank" rel="noopener nofollow ugc"><?= e(kaynak_gorunen_ad((string) $haber['kaynak_adi'])) ?></a>
+                <?php else: ?>
+                    <?= e(kaynak_gorunen_ad((string) $haber['kaynak_adi'])) ?>
+                <?php endif; ?>
+            </span>
         <?php endif; ?>
     </div>
 
@@ -197,27 +204,35 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
     <?php
     /*
-     * KAYNAK VE TARIHLER — resmi dayanak, yururluk ve yayim tarihleri
-     * tek yerde. Okuyucu dayanaga ve tarihe bakmak icin metni taramasin.
+     * KAYNAK — haberin nereden geldigi ve tamaminin nerede okunacagi.
+     *
+     * Ekim 2026'dan beri site genel haber OZETLERI yayimliyor (MSN
+     * Haberler gibi): metin Valentra'nin kendi cumleleriyle yazilmis bir
+     * ozet, haberin tamami kaynakta. Kaynak adi ve "haberin tamami"
+     * baglantisi bu yuzden metnin hemen altinda ve belirgin; okuyucu
+     * kaynaga bir tikla gidebilmeli. Telif acisindan da sart: ozet,
+     * kaynagin yerine gecmiyor, ona yonlendiriyor.
+     *
+     * Resmi dayanak ve yururluk alanlari eski vergi haberlerinde dolu;
+     * yenilerde bos kaliyor ve gosterilmiyor.
      */
     $kaynakUrl    = guvenli_url((string) $haber['kaynak_url']);
+    $kaynakAdi    = $haber['kaynak_adi'] !== '' ? kaynak_gorunen_ad((string) $haber['kaynak_adi']) : 'kaynak';
     $resmiDayanak = trim((string) ($haber['resmi_dayanak'] ?? ''));
     $yururluk     = trim((string) ($haber['analiz_zaman'] ?? ''));
     ?>
-    <section class="kaynak-tarih" aria-label="Kaynak ve tarihler">
-        <h2>Kaynak ve tarihler</h2>
+    <section class="kaynak-tarih" aria-label="Haberin kaynağı">
+        <h2>Haberin kaynağı</h2>
+
+        <p class="kaynak-tarih-ad"><?= e($kaynakAdi) ?></p>
+
+        <?php if ($kaynakUrl !== ''): ?>
+            <a class="kaynak-tarih-dugme" href="<?= e($kaynakUrl) ?>" target="_blank" rel="noopener nofollow ugc">
+                Haberin tamamını <?= e($kaynakAdi) ?> sitesinde okuyun &rarr;
+            </a>
+        <?php endif; ?>
+
         <dl>
-            <?php if ($haber['kaynak_adi'] !== '' || $kaynakUrl !== ''): ?>
-                <div>
-                    <dt>Kaynak</dt>
-                    <dd>
-                        <?= e($haber['kaynak_adi'] !== '' ? $haber['kaynak_adi'] : 'Kaynak') ?>
-                        <?php if ($kaynakUrl !== ''): ?>
-                            &middot; <a href="<?= e($kaynakUrl) ?>" target="_blank" rel="noopener nofollow ugc">Orijinal metne git</a>
-                        <?php endif; ?>
-                    </dd>
-                </div>
-            <?php endif; ?>
             <?php if ($resmiDayanak !== ''): ?>
                 <div><dt>Resmî dayanak</dt><dd><?= e($resmiDayanak) ?></dd></div>
             <?php endif; ?>
@@ -226,12 +241,12 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <?php endif; ?>
             <div><dt>Valentra'da yayım</dt><dd><?= e(tarih_bicimle($haber['yayin_tarihi'])) ?></dd></div>
         </dl>
-        <?php if ($kaynakUrl !== ''): ?>
-            <p class="kaynak-tarih-not">
-                Bu haber, kaynağında yayımlanan içerikten derlenmiştir. Bağlayıcı
-                olan resmî metindir.
-            </p>
-        <?php endif; ?>
+
+        <p class="kaynak-tarih-not">
+            Bu metin, <?= e($kaynakAdi) ?> tarafından yayımlanan haberden
+            Valentra tarafından hazırlanmış bir özettir. Haberin tamamı ve
+            ayrıntılar için kaynağına başvurun.
+        </p>
     </section>
 
     <?php if ($etiketler !== []): ?>

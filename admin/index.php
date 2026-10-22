@@ -162,6 +162,7 @@ require __DIR__ . '/ust.php';
 
                     <?php if ((int) $haber['guven_skoru'] > 0): ?>
                         <span class="rozet rozet-skor">güven %<?= (int) $haber['guven_skoru'] ?></span>
+                        <span class="rozet rozet-skor">önem <?= (int) ($haber['onem'] ?? 50) ?></span>
                     <?php endif; ?>
 
                     <?php if (!empty($haber['kategori_adi'])): ?>
