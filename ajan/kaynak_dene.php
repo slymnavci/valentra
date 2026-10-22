@@ -291,9 +291,12 @@ if ($hamGirdi !== '') {
          * sinaniyor: yayina almadan once gercek sayfada ne cikardiklari
          * gorulsun (spor: TFF, ekonomi: Yahoo).
          */
+        $tffCozuldu = false;
+
         if (str_contains($adres, 'tff.org')) {
             require_once __DIR__ . '/../includes/spor.php';
             $tff = tff_sayfa_coz($govde);
+            $tffCozuldu = count($tff['puan']) >= 10;
             yaz(sprintf('  TFF çözümleme: %d takım, hafta %s, haftanın maçları %d, fikstür %d hafta (son oynanan %s)',
                 count($tff['puan']), var_export($tff['hafta'], true), count($tff['haftanin_maclari']),
                 count($tff['fikstur']), var_export(spor_son_oynanan_hafta($tff['fikstur']), true)));
@@ -329,8 +332,12 @@ if ($hamGirdi !== '') {
             continue;
         }
 
-        // Cozumleyici sinandiysa tablo dokumu gereksiz kalabalik.
-        if (str_contains($adres, 'tff.org')) {
+        /*
+         * Cozumleyici tuttuysa tablo dokumu gereksiz kalabalik. Tutmadiysa
+         * (gol kralligi, baska lig sayfasi) tablolar ve baglantilar
+         * dokuluyor: yeni sayfanin yapisi gorulsun.
+         */
+        if ($tffCozuldu) {
             yaz();
             continue;
         }
@@ -385,7 +392,7 @@ if ($hamGirdi !== '') {
         foreach ($dom->getElementsByTagName('a') as $a) {
             $metin = $temiz($a->textContent);
 
-            if ($gosterilen < 25 && preg_match('/puan|fikst|maç|mac|süper lig|hafta/iu', $metin . ' ' . $a->getAttribute('href'))) {
+            if ($gosterilen < 40 && preg_match('/puan|fikst|maç|mac|süper lig|hafta|gol|1\. lig|lig/iu', $metin . ' ' . $a->getAttribute('href'))) {
                 yaz('  bağlantı: ' . mb_substr($metin, 0, 50) . ' -> ' . $a->getAttribute('href'));
                 $gosterilen++;
             }
