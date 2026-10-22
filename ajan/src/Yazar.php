@@ -255,8 +255,11 @@ final class Yazar implements SemaliIstemci
         - YAYIMLANIR: malzemesi ve yapılışı kaynakta belli olan gerçek bir
           tarif (ana yemek, çorba, tatlı, hamur işi, içecek...).
         - YAYIMLANMAZ: ürün ya da marka tanıtımı, kampanya, restoran
-          reklamı; "zayıflatır, şifa verir, hastalığı önler" gibi sağlık
-          iddiası taşıyan içerik; malzemesi ya da yapılışı eksik sayfa.
+          reklamı; "en iyi tatlıcılar", "nerede yenir" gibi mekân
+          listeleri; yalnızca yemek adlarını sıralayan günlük menüler;
+          mutfak eşyası rehberleri; "zayıflatır, şifa verir, hastalığı
+          önler" gibi sağlık iddiası taşıyan içerik; malzemesi ya da
+          yapılışı eksik sayfa.
         - baslik: tarifin adı (ör. "Fırında Sebzeli Tavuk").
         - ozet: tek cümle; tarifin ne olduğu, kaynakta varsa kaç kişilik
           ve ne kadar sürede hazırlandığı.

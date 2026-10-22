@@ -1803,10 +1803,16 @@ INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_iha_2026_10_22', '22.
 INSERT IGNORE INTO kategoriler (ad, slug, aciklama, sira) VALUES
     ('Yemek Tarifleri', 'yemek-tarifleri', 'Türk ve dünya mutfağından tarifler: ana yemekler, çorbalar, tatlılar ve hamur işleri', 90);
 
--- Tarif kaynaklari. Kaynak testinde (kaynak_dene --aday, 22.10.2026)
--- calisan ve guncel olanlar: Ardanin Mutfagi RSS (son haftada 6 tarif).
--- Nefis Yemek Tarifleri otomatik erisimi engelliyor (403); Yemek.com,
--- Lezzet ve Milliyet adresleri 404; Sabah ve Hurriyet sayfalari eski
--- yazar yazilari ve restoran listeleri getiriyor: eklenmedi.
+-- Tarif kaynaklari. Iki kaynak testinde (kaynak_dene --aday, 22.10.2026)
+-- calisan ve guncel olanlar (son bir haftadaki girdi sayisiyla):
+-- Yemek.com RSS (46), Hurriyet Lezizz RSS (20), Kevserin Mutfagi RSS
+-- (10), Ardanin Mutfagi RSS (6). Yemek.com ve Lezizz beslemelerinde
+-- restoran listeleri ve gida haberleri de var; tarif olmayani editor
+-- talimati eliyor (YEMEK TARIFLERI bolumu). Nefis Yemek Tarifleri ve
+-- yemektarifleri.com otomatik erisimi engelliyor (403); Lezzet,
+-- Milliyet ve Sabah'ta guncel tarif listesi bulunamadi: eklenmedi.
 INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
-    ('Ardanın Mutfağı', 'https://www.ardaninmutfagi.com', 'https://www.ardaninmutfagi.com/feed/', 'rss', 'yemek-tarifleri', 1);
+    ('Ardanın Mutfağı',   'https://www.ardaninmutfagi.com',  'https://www.ardaninmutfagi.com/feed/',   'rss', 'yemek-tarifleri', 1),
+    ('Yemek.com',         'https://yemek.com',               'https://yemek.com/rss.xml',              'rss', 'yemek-tarifleri', 1),
+    ('Hürriyet Lezizz',   'https://www.hurriyet.com.tr',     'https://www.hurriyet.com.tr/rss/lezizz', 'rss', 'yemek-tarifleri', 1),
+    ('Kevserin Mutfağı',  'https://www.kevserinmutfagi.com', 'https://www.kevserinmutfagi.com/feed',   'rss', 'yemek-tarifleri', 1);
