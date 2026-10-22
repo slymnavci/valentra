@@ -99,6 +99,10 @@ const VERI_UCLARI = [
     'evds3.tcmb.gov.tr',   // TCMB EVDS
     'api.worldbank.org',   // Dunya Bankasi
     'www.imf.org',         // IMF DataMapper
+    // Spor ve piyasa sayfalarinin veri uclari (22.10.2026): site bunlari
+    // kendisi okuyor; buradan yalnizca tani (kaynak_dene --ham) icin.
+    'www.tff.org',
+    'query1.finance.yahoo.com',
 ];
 
 if (in_array($sunucu, VERI_UCLARI, true)) {

@@ -44,7 +44,7 @@ use Valentra\Ajan\{Besleme, Getirici, Http, Kodlama, ResmiGazete, Sayfa, Site, T
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
-$secenekler = getopt('', ['saat::', 'kaynak::', 'kanunlar', 'aday::', 'rg', 'metin::', 'evds::']);
+$secenekler = getopt('', ['saat::', 'kaynak::', 'kanunlar', 'aday::', 'rg', 'metin::', 'evds::', 'ham::']);
 $saat       = max(1, (int) ($secenekler['saat'] ?? 36));
 $suzgu      = trim((string) ($secenekler['kaynak'] ?? ''));
 $kanunModu  = isset($secenekler['kanunlar']);
@@ -250,6 +250,110 @@ if (isset($secenekler['rg'])) {
     }
 
     exit($girdiler === [] ? 1 : 0);
+}
+
+/*
+ * --ham='adres ; adres': sayfanin YAPISINI ozetler (22.10.2026).
+ *
+ * Yeni bir veri kaynagi (TFF puan durumu, piyasa grafigi ucu) icin
+ * cozumleyici yazmadan once sayfanin tablolarini ya da JSON yanitini
+ * gormek gerekiyor; gelistirme ortamindan dis sitelere cikis kapali.
+ * Once dogrudan, olmazsa site uzerinden alinir. HTML'de her tablonun
+ * sinifi, satir sayisi ve ilk satirlari; JSON'da ilk 1500 karakter.
+ */
+$hamGirdi = trim((string) ($secenekler['ham'] ?? ''));
+
+if ($hamGirdi !== '') {
+    foreach (array_filter(array_map('trim', explode(';', $hamGirdi))) as $adres) {
+        yaz('=== ' . $adres);
+
+        $yanit = $http->dene($adres);
+        $govde = null;
+
+        if ($yanit['govde'] !== null && $yanit['kod'] >= 200 && $yanit['kod'] < 300) {
+            $govde = (string) $yanit['govde'];
+            yaz(sprintf('  doğrudan: HTTP %d, %d bayt', $yanit['kod'], strlen($govde)));
+        } else {
+            yaz(sprintf('  doğrudan: HTTP %d %s', $yanit['kod'], $yanit['hata']));
+            $govde = $site->hamGetir($adres);
+            yaz($govde !== null
+                ? '  site üzerinden: ' . strlen($govde) . ' bayt'
+                : '  site üzerinden de alınamadı: ' . $site->sonHamHatasi());
+        }
+
+        if ($govde === null) {
+            yaz();
+            continue;
+        }
+
+        $json = json_decode($govde, true);
+
+        if (is_array($json)) {
+            yaz('  JSON: ' . mb_substr((string) json_encode($json, JSON_UNESCAPED_UNICODE), 0, 1500));
+            yaz();
+            continue;
+        }
+
+        $dom = new DOMDocument();
+        @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $govde);
+
+        $baslik = $dom->getElementsByTagName('title')->item(0);
+        yaz('  başlık: ' . ($baslik !== null ? trim($baslik->textContent) : '-'));
+
+        $tablolar = $dom->getElementsByTagName('table');
+        yaz('  tablo sayısı: ' . $tablolar->length);
+
+        $temiz = static fn (string $m): string => trim(preg_replace('/\s+/u', ' ', $m) ?? $m);
+
+        foreach ($tablolar as $no => $tablo) {
+            $satirlar = $tablo->getElementsByTagName('tr');
+
+            if ($satirlar->length < 3) {
+                continue;
+            }
+
+            yaz(sprintf(
+                '  tablo %d: class="%s" id="%s", %d satır',
+                $no,
+                $tablo->getAttribute('class'),
+                $tablo->getAttribute('id'),
+                $satirlar->length
+            ));
+
+            for ($i = 0; $i < min(4, $satirlar->length); $i++) {
+                $hucreler = [];
+
+                foreach ($satirlar->item($i)->childNodes as $hucre) {
+                    if ($hucre instanceof DOMElement && in_array($hucre->tagName, ['td', 'th'], true)) {
+                        $hucreler[] = mb_substr($temiz($hucre->textContent), 0, 30);
+                    }
+                }
+
+                yaz('     ' . implode(' | ', $hucreler));
+            }
+
+            // Ilk veri satirinin ham HTML'i: sinif adlari ve baglantilar.
+            if ($satirlar->length > 1) {
+                yaz('     ham: ' . mb_substr($temiz($dom->saveHTML($satirlar->item(1)) ?: ''), 0, 600));
+            }
+        }
+
+        // Tablo yoksa ya da azsa: puan/fikstur/mac gecen baglantilar.
+        $gosterilen = 0;
+
+        foreach ($dom->getElementsByTagName('a') as $a) {
+            $metin = $temiz($a->textContent);
+
+            if ($gosterilen < 25 && preg_match('/puan|fikst|maç|mac|süper lig|hafta/iu', $metin . ' ' . $a->getAttribute('href'))) {
+                yaz('  bağlantı: ' . mb_substr($metin, 0, 50) . ' -> ' . $a->getAttribute('href'));
+                $gosterilen++;
+            }
+        }
+
+        yaz();
+    }
+
+    exit(0);
 }
 
 /*
