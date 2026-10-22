@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Piyasa verisi: dolar, euro ve BIST 100.
+ * Piyasa verisi: dolar, euro, gram altin, ons altin ve BIST 100.
  *
  * Tasarim notlari:
  *
@@ -40,7 +40,7 @@ const PIYASA_ONBELLEK_SURE    = 120;
  *
  * @return array{
  *     usd:?float, eur:?float, bist:?float, bist_degisim:?float,
- *     zaman:string, kaynak:string, tazelendi:bool
+ *     altin:?float, ons:?float, zaman:string, kaynak:string, tazelendi:bool
  * }
  */
 function piyasa_verisi(bool $zorla = false): array
@@ -106,6 +106,10 @@ function piyasa_onbellekten(bool $sureyiYoksay = false): ?array
         'bist_degisim' => isset($veri['bist_degisim']) ? (float) $veri['bist_degisim'] : null,
         'usd_degisim'  => isset($veri['usd_degisim']) ? (float) $veri['usd_degisim'] : null,
         'eur_degisim'  => isset($veri['eur_degisim']) ? (float) $veri['eur_degisim'] : null,
+        'altin'        => isset($veri['altin']) ? (float) $veri['altin'] : null,
+        'altin_degisim'=> isset($veri['altin_degisim']) ? (float) $veri['altin_degisim'] : null,
+        'ons'          => isset($veri['ons']) ? (float) $veri['ons'] : null,
+        'ons_degisim'  => isset($veri['ons_degisim']) ? (float) $veri['ons_degisim'] : null,
         'zaman'        => (string) $veri['zaman'],
         'kaynak'       => (string) ($veri['kaynak'] ?? ''),
     ];
@@ -123,6 +127,9 @@ function piyasa_cek(): array
         'eur'          => null,
         'bist'         => null,
         'bist_degisim' => null,
+        'altin'        => null,
+        'ons'          => null,
+        'ons_degisim'  => null,
         'zaman'        => date('Y-m-d H:i:s'),
         'kaynak'       => '',
     ];
@@ -148,7 +155,16 @@ function piyasa_cek(): array
         $kaynaklar[]           = $endeks['kaynak'];
     }
 
-    $sonuc['kaynak'] = implode(' + ', $kaynaklar);
+    $altin = piyasa_altin($sonuc['usd']);
+
+    if ($altin['gram'] !== null || $altin['ons'] !== null) {
+        $sonuc['altin']       = $altin['gram'];
+        $sonuc['ons']         = $altin['ons'];
+        $sonuc['ons_degisim'] = $altin['ons_degisim'];
+        $kaynaklar[]          = $altin['kaynak'];
+    }
+
+    $sonuc['kaynak'] = implode(' + ', array_unique($kaynaklar));
 
     return piyasa_degisimi_ekle($sonuc);
 }
@@ -176,8 +192,9 @@ function piyasa_cek(): array
  */
 function piyasa_degisimi_ekle(array $sonuc): array
 {
-    $sonuc['usd_degisim'] = null;
-    $sonuc['eur_degisim'] = null;
+    $sonuc['usd_degisim']   = null;
+    $sonuc['eur_degisim']   = null;
+    $sonuc['altin_degisim'] = null;
 
     $bugun   = date('Y-m-d');
     $referans = piyasa_referans_oku();
@@ -197,12 +214,13 @@ function piyasa_degisimi_ekle(array $sonuc): array
             'tarih' => $bugun,
             'usd'   => $eski['usd'] ?? null,
             'eur'   => $eski['eur'] ?? null,
+            'altin' => $eski['altin'] ?? null,
         ];
 
         piyasa_referans_yaz($referans);
     }
 
-    foreach (['usd', 'eur'] as $ad) {
+    foreach (['usd', 'eur', 'altin'] as $ad) {
         $simdi = $sonuc[$ad] ?? null;
         $temel = $referans[$ad] ?? null;
 
@@ -217,24 +235,25 @@ function piyasa_degisimi_ekle(array $sonuc): array
     return $sonuc;
 }
 
-/** @return array{tarih:string,usd:?float,eur:?float} */
+/** @return array{tarih:string,usd:?float,eur:?float,altin:?float} */
 function piyasa_referans_oku(): array
 {
     $ham  = ayar_oku(PIYASA_REFERANS_ANAHTAR);
     $veri = $ham !== '' ? json_decode($ham, true) : null;
 
     if (!is_array($veri)) {
-        return ['tarih' => '', 'usd' => null, 'eur' => null];
+        return ['tarih' => '', 'usd' => null, 'eur' => null, 'altin' => null];
     }
 
     return [
         'tarih' => (string) ($veri['tarih'] ?? ''),
         'usd'   => isset($veri['usd']) ? (float) $veri['usd'] : null,
         'eur'   => isset($veri['eur']) ? (float) $veri['eur'] : null,
+        'altin' => isset($veri['altin']) ? (float) $veri['altin'] : null,
     ];
 }
 
-/** @param array{tarih:string,usd:?float,eur:?float} $referans */
+/** @param array{tarih:string,usd:?float,eur:?float,altin:?float} $referans */
 function piyasa_referans_yaz(array $referans): void
 {
     ayar_yaz(PIYASA_REFERANS_ANAHTAR, (string) json_encode($referans, JSON_UNESCAPED_UNICODE));
@@ -345,7 +364,7 @@ function piyasa_kur_makul(?float $usd, ?float $eur): bool
  * altinda ya da 1000'in ustunde olamaz, boylece sayfadaki alakasiz
  * sayilar (tarih, ziyaretci sayisi, reklam) eleniyor.
  */
-function piyasa_etiketli_sayi(string $html, array $etiketler): ?float
+function piyasa_etiketli_sayi(string $html, array $etiketler, float $enAz = 5, float $enCok = 500): ?float
 {
     $duz = strip_tags($html);
     $duz = html_entity_decode($duz, ENT_QUOTES | ENT_HTML5, 'UTF-8');
@@ -365,8 +384,9 @@ function piyasa_etiketli_sayi(string $html, array $etiketler): ?float
                 $sayi = piyasa_sayiya_cevir($ham);
 
                 // Alt sinir 5: parite degerleri (1,15 gibi) TL kuru
-                // olamaz ve ilk surumde tam bu hataya dusmustuk.
-                if ($sayi !== null && $sayi > 5 && $sayi < 500) {
+                // olamaz ve ilk surumde tam bu hataya dusmustuk. Altin
+                // gibi baska kalemler kendi araligini veriyor.
+                if ($sayi !== null && $sayi > $enAz && $sayi < $enCok) {
                     return $sayi;
                 }
             }
@@ -460,6 +480,87 @@ function piyasa_bist(): array
         : null;
 
     return ['deger' => $deger, 'degisim' => $degisim, 'kaynak' => 'Yahoo Finance'];
+}
+
+/**
+ * Altın: gram altın (TL) ve ons altın (USD).
+ *
+ * Site sahibinin istegi (22.10.2026): ana sayfada altin fiyati anlik.
+ *
+ * ONS: BIST ile ayni uctan (Yahoo Finance, altin vadeli GC=F); onceki
+ * kapanis da geldigi icin gunluk degisim kaynaktan hesaplaniyor.
+ *
+ * GRAM: once Turk piyasa sayfalari (BigPara, Doviz.com) kaziniyor; Turk
+ * okurun bildigi gram altin fiyati bu. Kazima kor bir yontem oldugu
+ * icin okunan deger ons x dolar / 31,1035 ile sinaniyor: yuzde 6'dan
+ * fazla sapiyorsa yanlis sayi alinmis demektir ve hesaplanan deger
+ * kullaniliyor. Hicbir sayfa okunamazsa da hesaplanan deger gosteriliyor
+ * (bankalar arasi gram fiyatinin karsiligi).
+ *
+ * @return array{gram:?float,ons:?float,ons_degisim:?float,kaynak:string}
+ */
+function piyasa_altin(?float $usd): array
+{
+    $ons = null;
+    $onsDegisim = null;
+    $kaynaklar  = [];
+
+    $ham  = piyasa_indir('https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=1d&range=1d');
+    $meta = $ham !== null ? (json_decode($ham, true)['chart']['result'][0]['meta'] ?? null) : null;
+
+    if (is_array($meta) && isset($meta['regularMarketPrice'])) {
+        $deger = (float) $meta['regularMarketPrice'];
+
+        // Ons altin bu araligin disindaysa aldigimiz sayi ons degildir.
+        if ($deger > 500 && $deger < 20000) {
+            $ons    = $deger;
+            $onceki = isset($meta['chartPreviousClose']) ? (float) $meta['chartPreviousClose'] : null;
+            $onsDegisim = ($onceki !== null && $onceki > 0)
+                ? round((($ons - $onceki) / $onceki) * 100, 2)
+                : null;
+            $kaynaklar[] = 'Yahoo Finance';
+        }
+    }
+
+    // 1 ons = 31,1035 gram.
+    $hesap = ($ons !== null && $usd !== null) ? round($ons * $usd / 31.1035, 2) : null;
+    $gram  = null;
+
+    foreach ([
+        'BigPara'   => 'https://bigpara.hurriyet.com.tr/altin/',
+        'Döviz.com' => 'https://altin.doviz.com/',
+    ] as $ad => $url) {
+        $html = piyasa_indir($url);
+
+        if ($html === null) {
+            continue;
+        }
+
+        $okunan = piyasa_etiketli_sayi($html, ['gram altın', 'gram altin', 'gram-altin', 'gram'], 500, 100000);
+
+        if ($okunan === null) {
+            continue;
+        }
+
+        if ($hesap !== null && abs($okunan - $hesap) / $hesap > 0.06) {
+            continue;
+        }
+
+        $gram        = $okunan;
+        $kaynaklar[] = $ad;
+        break;
+    }
+
+    if ($gram === null && $hesap !== null) {
+        $gram = $hesap;
+    }
+
+    return [
+        'gram'        => $gram,
+        'ons'         => $ons,
+        'ons_degisim' => $onsDegisim,
+        'kaynak'      => implode(' + ', $kaynaklar),
+    ];
 }
 
 /** "1.234,56" -> 1234.56 */
