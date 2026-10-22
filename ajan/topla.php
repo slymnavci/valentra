@@ -44,8 +44,9 @@ require_once __DIR__ . '/src/ModelErisimYokException.php';
 require_once __DIR__ . '/src/SemaliIstemci.php';
 require_once __DIR__ . '/src/Yazar.php';
 require_once __DIR__ . '/src/Bildirim.php';
+require_once __DIR__ . '/src/CokOkunan.php';
 
-use Valentra\Ajan\{Besleme, Bildirim, Depo, Getirici, HaberAkisi, Http, Kazima, KotaBittiException, ModelErisimYokException, ResmiGazete, Sayfa, Site, TohumYapilandirma, Yazar};
+use Valentra\Ajan\{Besleme, Bildirim, CokOkunan, Depo, Getirici, HaberAkisi, Http, Kazima, KotaBittiException, ModelErisimYokException, ResmiGazete, Sayfa, Site, TohumYapilandirma, Yazar};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
@@ -833,6 +834,7 @@ function ayni_olayi_ele(array $adaylar): array
             // Elenen kopyanin yayincilari tutulan adaya ekleniyor (bkz. KAPSAM).
             $tekil[$ayni]['kaynaklar'] = ($tekil[$ayni]['kaynaklar'] ?? []) + ($aday['kaynaklar'] ?? []);
             $tekil[$ayni]['kapsam']    = max(1, count($tekil[$ayni]['kaynaklar']));
+            $tekil[$ayni]['cok_okunan'] = max((int) ($tekil[$ayni]['cok_okunan'] ?? 0), (int) ($aday['cok_okunan'] ?? 0));
             $elenen++;
             continue;
         }
@@ -1110,6 +1112,7 @@ foreach ($kaynaklar as $kaynak) {
             'girdi'  => $girdi,
             'kaynak' => $kaynak,
             'kapsam'    => 1,
+            'cok_okunan' => 0,
             'kaynaklar' => [kaynak_yayincisi($kaynak) => true],
             // Puan = yayim zamani: yeni haber once. Vergi terimi puani
             // (Suzgec) genel haberde anlamsiz; ekonomi kelimesi gecen
@@ -1136,10 +1139,85 @@ if ($adaylar === []) {
     exit(0);
 }
 
-// Önce çok kaynakta geçenler (kapsam), sonra en yeniler; bütçe sınırına
-// takılırsa gündemdeki ve güncel olanlar işlensin.
+/*
+ * EN COK OKUNANLAR (23.10.2026).
+ *
+ * Site sahibi "en cok okunan haberler one" istedi; kaynaklarin okunma
+ * sayilari disariya acik degil. Adaylarin geldigi yayincilarin ana
+ * sayfasindaki "En Cok Okunanlar" kutusu okunuyor (bkz. CokOkunan) ve
+ * her aday icin kac yayincinin listesinde gectigi sayiliyor: adres
+ * birebir ya da baslik benzer (baslik_benzer). Kapsamla birlikte aday
+ * siralamasinda ve modelin onem puaninda kullaniliyor.
+ *
+ * Ayri bir zaman butcesi var: bu ek bir sinyal, haber yazmayi
+ * geciktirmemeli. Okunamayan site sessizce atlaniyor.
+ */
+$okunanSayfalari = [];
+
+foreach ($adaylar as $aday) {
+    $yayinci = kaynak_yayincisi($aday['kaynak']);
+    $alan    = (string) parse_url((string) ($aday['kaynak']['site_url'] ?? ''), PHP_URL_HOST);
+
+    if ($alan !== '' && !resmi_gazete_mi($aday['kaynak']) && !isset($okunanSayfalari[$yayinci])) {
+        $okunanSayfalari[$yayinci] = 'https://' . $alan . '/';
+    }
+}
+
+$okunanAdresler = [];   // adres anahtari => [yayinci => true]
+$okunanKumeler  = [];   // [kume, yayinci]
+$okunanBaslangic = time();
+$okunanOkunan    = 0;
+$cokOkunan       = new CokOkunan($http);
+
+foreach (array_slice($okunanSayfalari, 0, 25, true) as $yayinci => $adres) {
+    if (time() - $okunanBaslangic > 90) {
+        break;
+    }
+
+    $liste = $cokOkunan->oku($adres);
+
+    if ($liste !== []) {
+        $okunanOkunan++;
+    }
+
+    foreach ($liste as $girdi) {
+        $okunanAdresler[CokOkunan::adres_anahtari(url_sadelestir($girdi['baglanti']))][$yayinci] = true;
+
+        $kume = baslik_kumesi($girdi['baslik']);
+
+        if ($kume !== []) {
+            $okunanKumeler[] = [$kume, $yayinci];
+        }
+    }
+}
+
+$cokOkunanAday = 0;
+
+foreach ($adaylar as $i => $aday) {
+    $listeler = $okunanAdresler[CokOkunan::adres_anahtari(url_sadelestir((string) $aday['girdi']['baglanti']))] ?? [];
+    $kume     = baslik_kumesi((string) $aday['girdi']['baslik']);
+
+    foreach ($okunanKumeler as [$okunanKume, $yayinci]) {
+        if (!isset($listeler[$yayinci]) && baslik_benzer($kume, $okunanKume)) {
+            $listeler[$yayinci] = true;
+        }
+    }
+
+    $adaylar[$i]['cok_okunan'] = count($listeler);
+
+    if ($listeler !== []) {
+        $cokOkunanAday++;
+    }
+}
+
+gunluk('  En çok okunanlar: ' . $okunanOkunan . '/' . min(25, count($okunanSayfalari))
+    . ' sitenin listesi okundu, ' . $cokOkunanAday . ' aday bu listelerde geçiyor ('
+    . (time() - $okunanBaslangic) . ' sn).');
+
+// Önce çok kaynakta geçenler ve çok okunanlar, sonra en yeniler; bütçe
+// sınırına takılırsa gündemdeki ve güncel olanlar işlensin.
 usort($adaylar, static fn (array $a, array $b): int =>
-    [$b['kapsam'], $b['puan']] <=> [$a['kapsam'], $a['puan']]);
+    [$b['kapsam'] + $b['cok_okunan'], $b['puan']] <=> [$a['kapsam'] + $a['cok_okunan'], $a['puan']]);
 
 $cokKaynakli = array_values(array_filter($adaylar, static fn (array $a): bool => $a['kapsam'] > 1));
 
@@ -1460,6 +1538,7 @@ foreach ($gruplar as $grupNo => $grup) {
             'kaynakAdi'  => (string) $aday['kaynak']['ad'],
             'kaynakTuru' => (string) ($aday['kaynak']['tur'] ?? 'rss'),
             'kapsam'     => (int) ($aday['kapsam'] ?? 1),
+            'cokOkunan'  => (int) ($aday['cok_okunan'] ?? 0),
         ];
     }
 

@@ -425,6 +425,27 @@ function ziyaret_populer_haberler(int $gun = 7, int $adet = 10): array
  */
 function haber_en_cok_okunanlar(int $adet = 6): array
 {
+    /*
+     * 10 dakikalik onbellek (23.10.2026). Liste her sayfanin yan
+     * penceresinde ve sorgu ziyaretler tablosunun son 2-7 gununu
+     * sayiyor; her istekte calismasi trafik arttikca sayfayi
+     * yavaslatiyordu. Bayatsa eskisi gosterilip yanittan sonra
+     * tazeleniyor (bkz. includes/canli_onbellek.php).
+     */
+    require_once __DIR__ . '/canli_onbellek.php';
+
+    $kayit = canli_onbellek(
+        'en_cok_okunan_' . $adet,
+        600,
+        static fn (): array => haber_en_cok_okunanlar_hesapla($adet)
+    );
+
+    return $kayit['veri'] ?? [];
+}
+
+/** @return list<array{baslik:string,slug:string,okuyucu:int}> */
+function haber_en_cok_okunanlar_hesapla(int $adet): array
+{
     foreach ([2, 7] as $gun) {
         try {
             $ifade = db()->prepare(

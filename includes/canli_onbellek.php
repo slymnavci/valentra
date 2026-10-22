@@ -144,6 +144,21 @@ function canli_butce_var(): bool
 /** Yanıt gönderildikten sonra çalışacak tazelemeyi sıraya koyar. */
 function canli_sonra_tazele(string $anahtar, callable $uret): void
 {
+    canli_yanittan_sonra(static function () use ($anahtar, $uret): void {
+        canli_onbellek_uret($anahtar, $uret);
+    });
+}
+
+/**
+ * İşi yanıt gönderildikten sonra çalıştırır.
+ *
+ * Kendi kayit bicimi olan onbellekler de (piyasa seridi, okunma ozeti)
+ * ziyaretciyi bekletmeden tazelenebilsin diye ayri.
+ *
+ * @param callable():void $is
+ */
+function canli_yanittan_sonra(callable $is): void
+{
     static $kuyruk = null;
 
     if ($kuyruk === null) {
@@ -160,13 +175,17 @@ function canli_sonra_tazele(string $anahtar, callable $uret): void
             ignore_user_abort(true);
             @set_time_limit(60);
 
-            foreach ($liste as [$ad, $is]) {
-                canli_onbellek_uret($ad, $is);
+            foreach ($liste as $bekleyen) {
+                try {
+                    $bekleyen();
+                } catch (Throwable $e) {
+                    error_log('[valentra] yanittan sonraki is basarisiz: ' . $e->getMessage());
+                }
             }
         });
     }
 
-    $kuyruk[] = [$anahtar, $uret];
+    $kuyruk[] = $is;
 }
 
 /** Kısa zaman aşımıyla indirir; başarısızsa null. */

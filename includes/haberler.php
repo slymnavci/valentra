@@ -98,19 +98,66 @@ const HABER_ANA_SAYFA_SIRASI = 'h.one_cikan DESC,
     h.yayin_tarihi DESC,
     h.id DESC';
 
+const HABER_OKUNMA_OZET_ANAHTAR = 'okunma_ozet_zaman';
+const HABER_OKUNMA_OZET_SURE    = 600;
+
 /**
  * Son 24 saatin okunma sayıları (farklı okuyucu), ana sayfa sırası için.
  *
  * Ziyaret tablosu yoksa ya da bos ise birlesim bos donuyor; sira yalnizca
  * onem puanina gore kurulur.
+ *
+ * Sayilar haber_okunma_ozet tablosundan (23.10.2026). Onceden her ana
+ * sayfa acilisinda ziyaretler tablosu iki kez (manset ve izgara)
+ * yeniden sayiliyordu; trafik arttikca sayfa yavasliyordu. Ozet 10
+ * dakikada bir, yanit gonderildikten sonra tazeleniyor; siralama en
+ * fazla 10 dakika geriden geliyor. Ozet hic yazilamadiysa (tablo henuz
+ * yok) eski dogrudan sayim kullaniliyor ki sayfa dusmesin.
  */
 function haber_okunma_birlesimi(): string
 {
-    return 'LEFT JOIN (SELECT haber_id, COUNT(DISTINCT ziyaretci) AS okuyucu
-                         FROM ziyaretler
-                        WHERE haber_id IS NOT NULL
-                          AND zaman >= NOW() - INTERVAL 1 DAY
-                        GROUP BY haber_id) zo ON zo.haber_id = h.id';
+    require_once __DIR__ . '/canli_onbellek.php';
+
+    $zaman = (int) ayar_oku(HABER_OKUNMA_OZET_ANAHTAR, '0');
+
+    if (time() - $zaman >= HABER_OKUNMA_OZET_SURE && canli_deneme_izni('okunma_ozet')) {
+        canli_yanittan_sonra('haber_okunma_ozeti_tazele');
+    }
+
+    if ($zaman === 0) {
+        return 'LEFT JOIN (SELECT haber_id, COUNT(DISTINCT ziyaretci) AS okuyucu
+                             FROM ziyaretler
+                            WHERE haber_id IS NOT NULL
+                              AND zaman >= NOW() - INTERVAL 1 DAY
+                            GROUP BY haber_id) zo ON zo.haber_id = h.id';
+    }
+
+    return 'LEFT JOIN haber_okunma_ozet zo ON zo.haber_id = h.id';
+}
+
+/** Okunma özetini ziyaretler tablosundan yeniden yazar. */
+function haber_okunma_ozeti_tazele(): void
+{
+    $db = db();
+    $db->beginTransaction();
+
+    try {
+        $db->exec('DELETE FROM haber_okunma_ozet');
+        $db->exec(
+            'INSERT INTO haber_okunma_ozet (haber_id, okuyucu)
+             SELECT haber_id, COUNT(DISTINCT ziyaretci)
+               FROM ziyaretler
+              WHERE haber_id IS NOT NULL
+                AND zaman >= NOW() - INTERVAL 1 DAY
+              GROUP BY haber_id'
+        );
+        $db->commit();
+    } catch (Throwable $e) {
+        $db->rollBack();
+        throw $e;
+    }
+
+    ayar_yaz(HABER_OKUNMA_OZET_ANAHTAR, (string) time());
 }
 
 /**

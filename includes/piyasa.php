@@ -12,7 +12,9 @@ declare(strict_types=1);
  *
  * 2) Onbellek 2 dakika. Sayfa 2 dakikada bir yenilendigi icin daha kisa
  *    tutmanin anlami yok; yuz ziyaretci ayni anda baksa bile kaynak
- *    siteye 2 dakikada bir tek istek gider.
+ *    siteye 2 dakikada bir tek istek gider. Suresi dolan veri
+ *    gosterilmeye devam eder, yenisi yanittan sonra cekilir (bkz.
+ *    piyasa_verisi); ziyaretci kaynagi beklemez.
  *
  * 3) Saglayicilar SIRAYLA denenir. Kazima kirilgan bir yontem: sayfa
  *    duzeni degisince desen tutmaz. Tek saglayiciya baglanirsak kutu
@@ -45,14 +47,50 @@ const PIYASA_ONBELLEK_SURE    = 120;
  */
 function piyasa_verisi(bool $zorla = false): array
 {
-    if (!$zorla) {
-        $onbellek = piyasa_onbellekten();
-
-        if ($onbellek !== null) {
-            return $onbellek + ['tazelendi' => false];
-        }
+    if ($zorla) {
+        return piyasa_tazele();
     }
 
+    $onbellek = piyasa_onbellekten();
+
+    if ($onbellek !== null) {
+        return $onbellek + ['tazelendi' => false];
+    }
+
+    /*
+     * BAYAT VERI: eskisi gosteriliyor, yenisi yanittan sonra (23.10.2026).
+     *
+     * Onceden suresi dolan onbellek ziyaretcinin istegi icinde
+     * tazeleniyordu: kur zinciri + BIST + altin, her biri 8 sn zaman
+     * asimli bes kaynak. Kaynaklar yavasken ana sayfa onlarca saniye
+     * bekliyordu; kilit olmadigi icin o anda gelen her ziyaretci ayni
+     * cekimi bir daha baslatiyordu. Artik yalnizca hic veri yokken
+     * (ilk kurulum) bekleniyor.
+     */
+    $eski = piyasa_onbellekten(true);
+
+    if ($eski !== null && piyasa_kur_makul($eski['usd'], $eski['eur'])) {
+        require_once __DIR__ . '/canli_onbellek.php';
+
+        if (canli_deneme_izni('piyasa')) {
+            canli_yanittan_sonra(static function (): void {
+                piyasa_tazele();
+            });
+        }
+
+        return $eski + ['tazelendi' => false];
+    }
+
+    return piyasa_tazele();
+}
+
+/**
+ * Kaynaklardan çeker, önbelleğe yazar.
+ *
+ * @return array<string,mixed> piyasa_verisi() ile ayni bicim
+ */
+function piyasa_tazele(): array
+{
     $veri = piyasa_cek();
 
     // Cekim basarisizsa eski veriyi gostermek bos kutudan iyidir;
@@ -580,7 +618,7 @@ function piyasa_sayiya_cevir(string $ham): ?float
  */
 function piyasa_indir(string $url): ?string
 {
-    // Bu istek ziyaretcinin sayfasini bekletiyor; kisa tutuluyor.
+    // Ilk kurulumda ziyaretcinin sayfasini bekletebiliyor; kisa tutuluyor.
     $sonuc = http_getir($url, 8);
 
     return $sonuc['tamam'] ? $sonuc['govde'] : null;
