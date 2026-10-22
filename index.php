@@ -20,15 +20,17 @@ $sayfa = max(1, (int) ($_GET['sayfa'] ?? 1));
  */
 $adet       = 12;   // izgaradaki kart sayisi
 /*
- * Manset 10 haber — SITE SAHIBININ KARARI, degistirmeyin.
+ * Manset 20 haber — SITE SAHIBININ KARARI, degistirmeyin.
  *
  * Iki kez dusuruldu (tasarim turunda 5'e, Eylul 2026'daki ana sayfa
- * duzeninde 3'e) ve ikisinde de site sahibi 10'a geri aldirdi. "Bugun
- * bilmeniz gerekenler" kutusu mansetle birlikte duruyor; manset sayisini
- * azaltmayi gerektirmiyor. Kaydirak tukettigi haberleri izgaradan
- * dusuyor, yani ilk sayfadaki izgara 11. haberden basliyor.
+ * duzeninde 3'e) ve ikisinde de site sahibi 10'a geri aldirdi; 22.10.2026
+ * site sahibinin istegiyle 20'ye cikti. "Bugun bilmeniz gerekenler"
+ * kutusu mansetle birlikte duruyor; manset sayisini azaltmayi
+ * gerektirmiyor. Kaydirak tukettigi haberleri izgaradan dusuyor, yani
+ * ilk sayfadaki izgara 21. haberden basliyor. Secici dugmeler 10'arli iki
+ * satir (assets/style.css, .kaydirak-sayfalar).
  */
-$mansetAdet = 10;   // kaydiraktaki haber sayisi
+$mansetAdet = 20;   // kaydiraktaki haber sayisi
 
 /*
  * Resmi Gazete kaynakli haberler ana sayfa akisinda yok; kendi
