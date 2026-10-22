@@ -219,6 +219,10 @@ final class Yazar implements SemaliIstemci
           kültür-sanat etkinlikleri.
         - 0-29: Çok dar ilgi alanı.
         Başlığın çarpıcılığına değil, olayın etkisine bak.
+        Her adayda "Bu olayı veren kaynak sayısı" yazar: aynı olayı birden
+        çok haber sitesi veriyorsa olay gündemdedir ve çok okunuyordur.
+        3 ve üzeri kaynakta geçen olayın puanını yükselt (en az 60); tek
+        kaynakta geçen olayı kendi etkisine göre puanla.
 
         KONU GRUBU: Haberi, kullanıcı mesajında verilen gruplardan birine
         ata. Yanıtta grubun slug değerini TAM olarak yaz. Eşleme:
@@ -508,7 +512,7 @@ final class Yazar implements SemaliIstemci
      * kotayı hemen tüketiyor. Beş adaylık bir grup tek istekte işlenince
      * aynı iş beşte bir istekle yapılır.
      *
-     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string}> $adaylar
+     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string,kapsam?:int}> $adaylar
      * @param list<array<string,mixed>> $kategoriler
      * @return array<int,array<string,mixed>> sira => sonuc
      */
@@ -617,7 +621,7 @@ final class Yazar implements SemaliIstemci
     }
 
     /**
-     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string}> $adaylar
+     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string,kapsam?:int}> $adaylar
      * @param list<array<string,mixed>> $kategoriler
      */
     private function topluIstemHazirla(array $adaylar, array $kategoriler, array $onceki = []): string
@@ -648,9 +652,12 @@ final class Yazar implements SemaliIstemci
                 ? mb_substr($aday['sayfaMetni'], 0, self::SAYFA_METNI_SINIRI, 'UTF-8')
                 : '(Sayfa metni alınamadı; yalnızca başlık ve özet mevcut.)';
 
+            $kapsam = max(1, (int) ($aday['kapsam'] ?? 1));
+
             $bloklar[] = <<<METIN
             ### ADAY {$no}
             Kaynak: {$aday['kaynakAdi']} — {$tur}
+            Bu olayı veren kaynak sayısı (bu taramada): {$kapsam}
             Adres: {$girdi['baglanti']}
             Başlık: {$girdi['baslik']}
             Özet: {$girdi['ozet']}

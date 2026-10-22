@@ -1501,6 +1501,46 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) V
     ('CNN Türk Dünya',              'https://www.cnnturk.com',    'https://www.cnnturk.com/feed/rss/dunya/news',              'rss', 'dunya', 1),
     ('Webtekno',                    'https://www.webtekno.com',   'https://www.webtekno.com/rss.xml',                         'rss', 'teknoloji', 1);
 
+-- En cok okunan Turk haber siteleri (site sahibinin istegi, 22.10.2026):
+-- gundem, dunya ve spor beslemeleri. Ekonomi beslemeleri zaten listede.
+-- Yayin politikasi (dogrulanmamis iddia, polemik, kutuplastirici icerik
+-- yayimlanmaz) modelde uygulaniyor; kaynak genis tutuldu ki ayni olayin
+-- kac sitede gectigi (kapsam) olculebilsin.
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('Hürriyet Gündem',             'https://www.hurriyet.com.tr', 'https://www.hurriyet.com.tr/rss/gundem',                  'rss', 'gundem', 1),
+    ('Hürriyet Dünya',              'https://www.hurriyet.com.tr', 'https://www.hurriyet.com.tr/rss/dunya',                   'rss', 'dunya', 1),
+    ('Hürriyet Spor',               'https://www.hurriyet.com.tr', 'https://www.hurriyet.com.tr/rss/spor',                    'rss', 'spor', 1),
+    ('Milliyet Gündem',             'https://www.milliyet.com.tr', 'https://www.milliyet.com.tr/rss/rssnew/gundemrss.xml',    'rss', 'gundem', 1),
+    ('Milliyet Dünya',              'https://www.milliyet.com.tr', 'https://www.milliyet.com.tr/rss/rssnew/dunyarss.xml',     'rss', 'dunya', 1),
+    ('Milliyet Spor',               'https://www.milliyet.com.tr', 'https://www.milliyet.com.tr/rss/rssnew/sporrss.xml',      'rss', 'spor', 1),
+    ('Sabah Gündem',                'https://www.sabah.com.tr',    'https://www.sabah.com.tr/rss/gundem.xml',                 'rss', 'gundem', 1),
+    ('Sabah Dünya',                 'https://www.sabah.com.tr',    'https://www.sabah.com.tr/rss/dunya.xml',                  'rss', 'dunya', 1),
+    ('Sabah Spor',                  'https://www.sabah.com.tr',    'https://www.sabah.com.tr/rss/spor.xml',                   'rss', 'spor', 1),
+    ('Habertürk Gündem',            'https://www.haberturk.com',   'https://www.haberturk.com/rss/gundem.xml',                'rss', 'gundem', 1),
+    ('Habertürk Dünya',             'https://www.haberturk.com',   'https://www.haberturk.com/rss/dunya.xml',                 'rss', 'dunya', 1),
+    ('Habertürk Spor',              'https://www.haberturk.com',   'https://www.haberturk.com/rss/spor.xml',                  'rss', 'spor', 1),
+    ('Sözcü Gündem',                'https://www.sozcu.com.tr',    'https://www.sozcu.com.tr/feeds-rss-category-gundem',      'rss', 'gundem', 1),
+    ('Sözcü Dünya',                 'https://www.sozcu.com.tr',    'https://www.sozcu.com.tr/feeds-rss-category-dunya',       'rss', 'dunya', 1),
+    ('Sözcü Spor',                  'https://www.sozcu.com.tr',    'https://www.sozcu.com.tr/feeds-rss-category-spor',        'rss', 'spor', 1),
+    ('CNN Türk Spor',               'https://www.cnnturk.com',     'https://www.cnnturk.com/feed/rss/spor/news',              'rss', 'spor', 1);
+
+-- Dunyanin onde gelen haber kuruluslari (Ingilizce). Ajan haberi
+-- Turkceye cevirerek degil, anlayip kendi cumleleriyle Turkce ozetliyor
+-- (bkz. Yazar yonergesi). Bu siteler GitHub'dan dogrudan erisilebiliyor.
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('BBC News',                    'https://www.bbc.com/news',    'https://feeds.bbci.co.uk/news/world/rss.xml',             'rss', 'dunya', 1),
+    ('CNN',                         'https://edition.cnn.com',     'http://rss.cnn.com/rss/edition_world.rss',                'rss', 'dunya', 1),
+    ('Reuters',                     'https://www.reuters.com',     'https://www.reutersagency.com/feed/?best-topics=political-general&post_type=best', 'rss', 'dunya', 1),
+    ('The Guardian',                'https://www.theguardian.com', 'https://www.theguardian.com/world/rss',                   'rss', 'dunya', 1),
+    ('The New York Times',          'https://www.nytimes.com',     'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',  'rss', 'dunya', 1),
+    ('France 24',                   'https://www.france24.com/en', 'https://www.france24.com/en/rss',                         'rss', 'dunya', 1),
+    ('DW News',                     'https://www.dw.com/en',       'https://rss.dw.com/rdf/rss-en-world',                     'rss', 'dunya', 1),
+    ('NPR',                         'https://www.npr.org',         'https://feeds.npr.org/1004/rss.xml',                      'rss', 'dunya', 1);
+
+-- Al Jazeera'nin beslemesi zaten genel haber beslemesi (all.xml); ekonomi
+-- yerine dunya basligiyla acik kaliyor.
+UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'Al Jazeera Ekonomi' AND kategori IS NULL;
+
 -- Turkce yayin yapan yabanci kuruluslarin genel beslemeleri: dunya.
 UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'BBC Türkçe' AND kategori IS NULL;
 UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'DW Türkçe' AND kategori IS NULL;
@@ -1563,7 +1603,6 @@ UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Financial Times';
 UPDATE kaynaklar SET aktif = 0 WHERE ad = 'CNBC Ekonomi';
 UPDATE kaynaklar SET aktif = 0 WHERE ad = 'MarketWatch';
 UPDATE kaynaklar SET aktif = 0 WHERE ad = 'CNN Business';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Al Jazeera Ekonomi';
 UPDATE kaynaklar SET aktif = 0 WHERE ad = 'DW Business';
 UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Associated Press İş';
 UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Nikkei Asia Ekonomi';

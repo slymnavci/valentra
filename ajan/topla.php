@@ -732,7 +732,7 @@ function konu_kontenjani(array $adaylar, array $paylar, int $enFazla): array
  */
 function ayni_olayi_ele(array $adaylar): array
 {
-    /** @var list<array{kume:array<string,bool>,kaynak:string}> */
+    /** @var list<array{kume:array<string,bool>,kaynak:string,sira:int}> */
     $kumeler = [];
     $tekil   = [];
     $elenen  = 0;
@@ -740,7 +740,7 @@ function ayni_olayi_ele(array $adaylar): array
     foreach ($adaylar as $aday) {
         $kume   = baslik_kumesi((string) $aday['girdi']['baslik']);
         $kaynak = (string) ($aday['kaynak']['ad'] ?? '');
-        $ayni   = false;
+        $ayni   = null;
 
         foreach ($kumeler as $onceki) {
             if ($onceki['kaynak'] === $kaynak) {
@@ -748,18 +748,20 @@ function ayni_olayi_ele(array $adaylar): array
             }
 
             if (baslik_benzer($kume, $onceki['kume'])) {
-                $ayni = true;
+                $ayni = $onceki['sira'];
                 break;
             }
         }
 
-        if ($ayni) {
+        if ($ayni !== null) {
+            // Elenen kopyanin kapsami tutulan adaya ekleniyor (bkz. KAPSAM).
+            $tekil[$ayni]['kapsam'] = (int) ($tekil[$ayni]['kapsam'] ?? 1) + (int) ($aday['kapsam'] ?? 1);
             $elenen++;
             continue;
         }
 
         if ($kume !== []) {
-            $kumeler[] = ['kume' => $kume, 'kaynak' => $kaynak];
+            $kumeler[] = ['kume' => $kume, 'kaynak' => $kaynak, 'sira' => count($tekil)];
         }
 
         $tekil[] = $aday;
@@ -771,6 +773,9 @@ function ayni_olayi_ele(array $adaylar): array
 // --- 2 ve 3. Beslemeleri oku, ön elemeden geçir ---------------------------
 
 $adaylar = [];
+// Bu calismanin adaylari: kapsam sayimi icin (bkz. KAPSAM).
+$calismaBasliklari = [];
+$calismaKumeleri   = [];
 
 /*
  * Kaynak tarama icin zaman butcesi.
@@ -940,6 +945,40 @@ foreach ($kaynaklar as $kaynak) {
             continue;
         }
 
+        /*
+         * KAPSAM: ayni olayi kac kaynak verdi (22.10.2026).
+         *
+         * Site sahibi "en cok okunan, en onemli haberler one" istedi.
+         * Beslemeler okunma sayisi vermiyor; ulasilabilen en iyi gosterge,
+         * ayni olayin bu calismada kac FARKLI kaynakta gectigi. Ajans
+         * haberleri cogu sitede ayni baslikla yayimlaniyor, buyuk olaylar
+         * da her sitede. Bu calismada daha once alinmis bir adayla ayni
+         * olan girdi yeni aday olmuyor, o adayin kapsamini artiriyor.
+         * Kapsam aday siralamasinda ve modelin onem puaninda kullaniliyor.
+         */
+        $buBaslik = baslik_parmak($girdi['baslik']);
+        $buKume   = baslik_kumesi($girdi['baslik']);
+        $esSira   = $calismaBasliklari[$buBaslik] ?? null;
+
+        if ($esSira === null && $buKume !== []) {
+            foreach ($calismaKumeleri as [$kume, $sira]) {
+                if (baslik_benzer($buKume, $kume)) {
+                    $esSira = $sira;
+                    break;
+                }
+            }
+        }
+
+        if ($esSira !== null) {
+            if (!isset($adaylar[$esSira]['kaynaklar'][$kaynak['ad']])) {
+                $adaylar[$esSira]['kaynaklar'][$kaynak['ad']] = true;
+                $adaylar[$esSira]['kapsam']++;
+            }
+
+            $zatenVar++;
+            continue;
+        }
+
         // Sitede zaten olan haberi modele sormak bosa para.
         if (isset($bilinen[parmak_izi($girdi['baglanti'], $girdi['baslik'])])
             || isset($bilinenUrl[url_parmak($girdi['baglanti'])])
@@ -984,9 +1023,19 @@ foreach ($kaynaklar as $kaynak) {
             $bilinenKumeler[] = $kume;
         }
 
+        if ($buBaslik !== '') {
+            $calismaBasliklari[$buBaslik] = count($adaylar);
+        }
+
+        if ($buKume !== []) {
+            $calismaKumeleri[] = [$buKume, count($adaylar)];
+        }
+
         $adaylar[] = [
             'girdi'  => $girdi,
             'kaynak' => $kaynak,
+            'kapsam'    => 1,
+            'kaynaklar' => [(string) $kaynak['ad'] => true],
             // Puan = yayim zamani: yeni haber once. Vergi terimi puani
             // (Suzgec) genel haberde anlamsiz; ekonomi kelimesi gecen
             // siyaset haberini one aliyordu.
@@ -1012,8 +1061,17 @@ if ($adaylar === []) {
     exit(0);
 }
 
-// En yeniler önce; bütçe sınırına takılırsa güncel olanlar işlensin.
-usort($adaylar, static fn (array $a, array $b): int => $b['puan'] <=> $a['puan']);
+// Önce çok kaynakta geçenler (kapsam), sonra en yeniler; bütçe sınırına
+// takılırsa gündemdeki ve güncel olanlar işlensin.
+usort($adaylar, static fn (array $a, array $b): int =>
+    [$b['kapsam'], $b['puan']] <=> [$a['kapsam'], $a['puan']]);
+
+$cokKaynakli = array_values(array_filter($adaylar, static fn (array $a): bool => $a['kapsam'] > 1));
+
+if ($cokKaynakli !== []) {
+    gunluk('  ' . count($cokKaynakli) . ' olay birden çok kaynakta geçiyor; en geniş: '
+        . $cokKaynakli[0]['kapsam'] . ' kaynak — ' . mb_substr((string) $cokKaynakli[0]['girdi']['baslik'], 0, 80));
+}
 
 /*
  * KAYNAK BASINA TAVAN.
@@ -1218,6 +1276,7 @@ foreach ($gruplar as $grupNo => $grup) {
             'sayfaMetni' => $okunan['metin'],
             'kaynakAdi'  => (string) $aday['kaynak']['ad'],
             'kaynakTuru' => (string) ($aday['kaynak']['tur'] ?? 'rss'),
+            'kapsam'     => (int) ($aday['kapsam'] ?? 1),
         ];
     }
 

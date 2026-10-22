@@ -25,7 +25,8 @@ final class HaberAkisi
      * Her turda basliga dusen aday sayisi.
      *
      * Politika en buyuk pay (site sahibinin karari: once Turkiye
-     * siyaseti). Ekonomi kaynaklari sayica cok (eski ekonomi listesi
+     * siyaseti). Dunya da 3: dunyanin onde gelen haber kuruluslari
+     * kaynak listesinde (site sahibinin istegi, 22.10.2026). Ekonomi kaynaklari sayica cok (eski ekonomi listesi
      * acik kaldi); pay olmasa kontenjanin cogunu onlar yerdi. Bir
      * baslikta aday kalmazsa payi otekilere geciyor.
      *
@@ -35,7 +36,7 @@ final class HaberAkisi
         'politika'     => 3,
         'gundem'       => 2,
         'ekonomi'      => 2,
-        'dunya'        => 2,
+        'dunya'        => 3,
         'spor'         => 2,
         'teknoloji'    => 1,
         'saglik'       => 1,
