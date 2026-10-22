@@ -1,9 +1,29 @@
 # Valentra
 
-# PHP2Shell (CVE-2026-109619) gecici onlemi. PHP "Apache modulu" olarak
-# calisiyorsa .user.ini okunmaz, ayar buradan verilir. IfModule sart:
-# PHP FPM/FastCGI ile calisiyorsa php_flag bilinmeyen yonerge olur ve
-# tum siteyi 500 ile dusururdu. Asil cozum PHP guncellemesi.
+# --- PHP2Shell (CVE-2026-109618 / CVE-2026-109619) gecici onlemleri --
+#
+# Asil cozum sunucudaki PHP'nin yamali surume gecmesi; bunlar yalnizca
+# riski azaltiyor.
+#
+# 1) Iki acigin da bilinen giris yolu multipart (dosya yuklemeli) POST
+#    istegi; PHP govdeyi sayfa kodu calismadan once ayristiriyor. Sitede
+#    dosya alan yalnizca iki adres var, digerlerine gelen multipart
+#    istek PHP'ye hic ulasmadan 403 ile geri cevriliyor. api/.htaccess
+#    kendi RewriteEngine'ini actigi icin bu kurali miras almiyor; ayni
+#    kural orada da var. Yeni bir dosya yukleme adresi eklenirse
+#    buraya istisna olarak yazilmali.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTP:Content-Type} multipart/ [NC]
+    RewriteCond %{REQUEST_URI} !^/admin/kanunlar\.php$
+    RewriteCond %{REQUEST_URI} !^/egitim/api/dosya_yukle\.php$
+    RewriteRule ^ - [F]
+</IfModule>
+
+# 2) Yukleme ilerlemesi kapali. PHP "Apache modulu" olarak calisiyorsa
+#    .user.ini okunmaz, ayar buradan verilir. IfModule sart: PHP
+#    FPM/FastCGI ile calisiyorsa php_flag bilinmeyen yonerge olur ve tum
+#    siteyi 500 ile dusururdu.
 <IfModule mod_php.c>
     php_flag session.upload_progress.enabled off
 </IfModule>
