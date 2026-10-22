@@ -445,27 +445,86 @@ function futbol_tur_adi(string $tur): string
 /**
  * Bir tarih aralığının maçları (golleri, kartları, istatistikleriyle).
  *
- * Gecmis aralik bir daha degismiyor: bir hafta saklaniyor. Dunu, bugunu
- * ya da gelecegi kapsayan aralik 2 dakikada bir tazeleniyor.
+ * ESPN ARALIK SORGUSUNU KABUL ETMIYOR: scoreboard?dates=20261016-20261020
+ * HTTP 400 donuyor, tek gun (dates=20261018) 200. Kaynak testiyle
+ * goruldu (22.10.2026); fikstur bu yuzden "Bu gunlerin maclari
+ * alinamadi" diyordu. Aralik gun gun cekiliyor ve birlestiriliyor; her
+ * gun ayri saklaniyor (bkz. futbol_gun_maclari).
+ *
+ * Bir gun alinamazsa digerleri yine gosteriliyor. zaman: en eski
+ * verinin cekildigi an.
  *
  * @return array{veri:?array,zaman:int} veri: list<mac>
  */
 function futbol_tarih_maclari(string $lig, string $aralik): array
 {
-    $son  = (string) (explode('-', $aralik)[1] ?? $aralik);
-    $sure = $son < date('Ymd', time() - 86400) ? 7 * 86400 : 120;
+    if (!preg_match('/^(\d{8})(?:-(\d{8}))?$/', $aralik, $e)) {
+        return ['veri' => null, 'zaman' => 0];
+    }
 
-    return futbol_onbellekli('/site/v2/sports/soccer/' . $lig . '/scoreboard', ['dates' => $aralik, 'limit' => 200], $sure, static function (array $c) use ($lig): ?array {
+    $bas = DateTimeImmutable::createFromFormat('!Ymd', $e[1]);
+    $son = DateTimeImmutable::createFromFormat('!Ymd', $e[2] ?? $e[1]);
+
+    if ($bas === false || $son === false || $son < $bas) {
+        return ['veri' => null, 'zaman' => 0];
+    }
+
+    $maclar = [];
+    $zaman  = 0;
+    $alinan = 0;
+
+    // Bir tur birkac gun; adresten gelen asiri uzun araliga karsi sinir.
+    for ($gun = $bas, $i = 0; $gun <= $son && $i < 14; $gun = $gun->modify('+1 day'), $i++) {
+        $kayit = futbol_gun_maclari($lig, $gun->format('Ymd'));
+
+        if ($kayit['veri'] === null) {
+            continue;
+        }
+
+        $alinan++;
+        $zaman = $zaman === 0 ? $kayit['zaman'] : min($zaman, $kayit['zaman']);
+
+        foreach ($kayit['veri']['maclar'] as $m) {
+            $maclar[$m['id']] = $m;
+        }
+    }
+
+    if ($alinan === 0) {
+        return ['veri' => null, 'zaman' => 0];
+    }
+
+    $maclar = array_values($maclar);
+    usort($maclar, static fn (array $a, array $b): int => $a['zaman'] <=> $b['zaman']);
+
+    return ['veri' => $maclar, 'zaman' => $zaman];
+}
+
+/**
+ * Tek bir ESPN gününün maçları.
+ *
+ * Gecmis gun bir daha degismiyor: bir hafta saklaniyor. Dunu, bugunu ya
+ * da gelecegi 2 dakikada bir tazeleniyor. Maci olmayan gun de BOS LISTE
+ * olarak saklaniyor; yoksa her ziyaret ESPN'e yeniden giderdi.
+ *
+ * @return array{veri:?array{maclar:list<array>},zaman:int}
+ */
+function futbol_gun_maclari(string $lig, string $gun): array
+{
+    $sure = $gun < date('Ymd', time() - 86400) ? 7 * 86400 : 120;
+
+    return futbol_onbellekli('/site/v2/sports/soccer/' . $lig . '/scoreboard', ['dates' => $gun, 'limit' => 200], $sure, static function (array $c) use ($lig): ?array {
+        if (!isset($c['events']) || !is_array($c['events'])) {
+            return null;
+        }
+
         $ligAdi = (string) ($c['leagues'][0]['name'] ?? '');
         $maclar = [];
 
-        foreach ($c['events'] ?? [] as $olay) {
+        foreach ($c['events'] as $olay) {
             $maclar[] = futbol_mac_kirp($olay, $lig, $ligAdi, true);
         }
 
-        usort($maclar, static fn (array $a, array $b): int => $a['zaman'] <=> $b['zaman']);
-
-        return $maclar !== [] ? $maclar : null;
+        return ['maclar' => $maclar];
     });
 }
 
@@ -671,7 +730,7 @@ function futbol_mac_ayrintilari(array $maclar): array
 
     foreach ($gunler as $lig => $liste) {
         foreach (array_keys($liste) as $gun) {
-            foreach (futbol_tarih_maclari((string) $lig, $gun . '-' . $gun)['veri'] ?? [] as $a) {
+            foreach (futbol_tarih_maclari((string) $lig, $gun)['veri'] ?? [] as $a) {
                 $sonuc[$a['id']] = $a;
             }
         }
@@ -697,7 +756,7 @@ function futbol_mac_ayrintisi(int $mac, string $lig, string $gun): ?array
         return null;
     }
 
-    foreach (futbol_tarih_maclari($lig, $gun . '-' . $gun)['veri'] ?? [] as $a) {
+    foreach (futbol_tarih_maclari($lig, $gun)['veri'] ?? [] as $a) {
         if ($a['id'] === $mac) {
             return $a;
         }
