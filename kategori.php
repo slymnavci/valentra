@@ -49,6 +49,48 @@ $sayfaAciklama = $kategori['aciklama'] !== ''
     ? $kategori['aciklama']
     : $kategori['ad'] . ' konusundaki güncel haberler.';
 
+/*
+ * Spor: puan durumu, fikstur, gol kralligi, kulup ve mac sayfalari ve
+ * spor haberleri AYRI sayfalar (23.10.2026, site sahibinin istegi; bkz.
+ * includes/spor_panel.php). ?bolum= yoksa yalnizca haberler. Bilinmeyen
+ * bolum adi haber sayfasina duser.
+ */
+$sporBolum = '';
+$sporP     = [];
+
+if ($kategori['slug'] === 'spor') {
+    require_once __DIR__ . '/includes/spor_panel.php';
+
+    $istenen = (string) ($_GET['bolum'] ?? '');
+    $sporP   = spor_ulke_ligine_uyarla(spor_parametreleri($_GET));
+
+    if (isset(SPOR_BOLUMLERI[$istenen]) || isset(SPOR_ALT_BOLUMLER[$istenen])) {
+        $sporBolum     = $istenen;
+        $aktifKategori = match ($sporBolum) {
+            'puan-durumu'  => 'spor-puan',
+            'fikstur'      => 'spor-fikstur',
+            'gol-kralligi' => 'spor-gol',
+            default        => 'spor',
+        };
+
+        $ligAdi = futbol_api_acik()
+            ? (futbol_lig_katalog_adi($sporP['lig']) ?: (string) (futbol_lig($sporP['lig'])['ad'] ?? ''))
+            : 'Süper Lig';
+        $baslik = SPOR_BOLUMLERI[$sporBolum] ?? SPOR_ALT_BOLUMLER[$sporBolum];
+
+        $sayfaBasligi  = trim($ligAdi . ' ' . $baslik) . ' — Valentra';
+        $sayfaAciklama = match ($sporBolum) {
+            'puan-durumu'  => $ligAdi . ' güncel puan durumu.',
+            'fikstur'      => $ligAdi . ' fikstürü, maç sonuçları ve canlı skorlar.',
+            'gol-kralligi' => $ligAdi . ' gol krallığı.',
+            'kulup'        => 'Kulübün sezon analizi, son maçları ve golleri.',
+            default        => 'Maçın golleri, kartları, istatistikleri ve kadroları.',
+        };
+    } else {
+        $aktifKategori = 'spor-haberler';
+    }
+}
+
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
 
@@ -59,20 +101,26 @@ require __DIR__ . '/includes/sayfa_ust.php';
     <?php endif; ?>
 </div>
 
+<?php if ($kategori['slug'] === 'spor'): ?>
+    <?= spor_sekmeleri_html($sporBolum, (string) $sporP['lig']) ?>
+    <?php if (isset(SPOR_BOLUMLERI[$sporBolum])): ?>
+        <?= spor_secici_html($sporBolum, $sporP) ?>
+    <?php endif; ?>
+<?php endif; ?>
+
 <div class="ana-duzen">
     <div class="ana-kolon">
         <?php
         /*
-         * Canli bolumler (22.10.2026, site sahibinin istegi): Spor'da
-         * Super Lig puan durumu ve fikstur (TFF), Ekonomi'de piyasa
-         * kartlari, grafikleri ve borsa sirketleri. Yalnizca ilk sayfada;
-         * veri yoksa bolum hic basilmiyor.
+         * Canli bolumler (22.10.2026, site sahibinin istegi): Spor'un
+         * puan durumu ve fikstur sayfalari (TFF), Ekonomi'de piyasa
+         * kartlari, grafikleri ve borsa sirketleri. Ekonomi'de yalnizca
+         * ilk sayfada; veri yoksa bolum hic basilmiyor.
          */
         $canliPanel = '';
 
-        if ($sayfa === 1 && $kategori['slug'] === 'spor') {
-            require_once __DIR__ . '/includes/spor_panel.php';
-            $canliPanel = spor_paneli_html();
+        if ($sporBolum !== '') {
+            $canliPanel = spor_paneli_html($sporBolum, $sporP);
         } elseif ($kategori['slug'] === 'ekonomi') {
             /*
              * Ekonomi sayfasi yalnizca HABERLER (22.10.2026, site
@@ -98,8 +146,21 @@ require __DIR__ . '/includes/sayfa_ust.php';
         }
         ?>
 
+        <?php if ($sporBolum !== '' && $canliPanel === ''): ?>
+            <div class="bos-durum">
+                <?php if (!futbol_api_acik() && !in_array($sporBolum, ['puan-durumu', 'fikstur'], true)): ?>
+                    <strong>Bu bölüm şu an kapalı.</strong>
+                    Dünya ligleri, kulüp ve maç ayrıntıları spor veri kaynağı açılınca görünecek.
+                <?php else: ?>
+                    <strong>Veri şu an alınamıyor.</strong>
+                    Birkaç dakika sonra sayfayı yenileyin.
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($sporBolum === ''): ?>
         <div class="bolum-basligi" id="<?= e((string) $kategori['slug']) ?>-haberleri">
-            <h2><?= $canliPanel !== '' || $kategori['slug'] === 'ekonomi'
+            <h2><?= $canliPanel !== '' || in_array($kategori['slug'], ['spor', 'ekonomi'], true)
                 ? 'Güncel ' . e((string) $kategori['ad']) . ' Haberleri'
                 : $toplam . ' Haber' ?></h2>
             <span class="cizgi"></span>
@@ -125,6 +186,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
                     <?php endif; ?>
                 </nav>
             <?php endif; ?>
+        <?php endif; ?>
         <?php endif; ?>
     </div>
 

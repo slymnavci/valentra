@@ -2,7 +2,8 @@
 declare(strict_types=1);
 
 /**
- * Spor sayfasinin Super Lig bolumu (HTML parcasi).
+ * Spor sayfalarinin canli bolumu (HTML parcasi): ?bolum=puan-durumu,
+ * fikstur ya da mac; lig, tur ve mac parametreleriyle.
  *
  * Sayfadaki betik bunu 3 dakikada bir yokluyor ve bolumu yeniliyor; mac
  * gunu skorlar sayfa yenilenmeden guncellenir. Veri sunucuda onbellekte
@@ -17,4 +18,4 @@ require_once __DIR__ . '/../includes/spor_panel.php';
 header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: public, max-age=60');
 
-echo spor_paneli_html();
+echo spor_paneli_html((string) ($_GET['bolum'] ?? ''), spor_parametreleri($_GET));

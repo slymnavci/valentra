@@ -178,6 +178,19 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         </url>
     <?php endforeach; ?>
 
+    <?php // Spor'un puan durumu ve fikstur sayfalari ayri adresler (23.10.2026). ?>
+    <?php if (in_array('spor', array_column($kategoriler, 'slug'), true)): ?>
+        <?php require_once __DIR__ . '/includes/spor_panel.php'; ?>
+        <?php foreach (array_keys(SPOR_BOLUMLERI) as $bolum): ?>
+            <?php if ($bolum === 'gol-kralligi' && !futbol_api_acik()) { continue; } ?>
+            <url>
+                <loc><?= e($taban . spor_bolum_yolu($bolum)) ?></loc>
+                <changefreq>daily</changefreq>
+                <priority>0.6</priority>
+            </url>
+        <?php endforeach; ?>
+    <?php endif; ?>
+
     <?php foreach ($haberler as $haber): ?>
         <url>
             <loc><?= e($taban . haber_yolu((string) $haber['slug'])) ?></loc>

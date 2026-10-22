@@ -3460,6 +3460,272 @@ a.rg-madde:hover { color: var(--vurgu); }
     .puan-tablosu th, .puan-tablosu td { padding: 6px 4px; }
 }
 
+/* Spor sayfalari arasi sekmeler: Puan Durumu / Fikstur / Spor Haberleri */
+.spor-sekmeler {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 20px;
+}
+
+.spor-sekmeler a {
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--cizgi);
+    font-size: .88rem;
+    font-weight: 600;
+    color: var(--metin);
+    background: var(--kart);
+}
+
+.spor-sekmeler a:hover { border-color: var(--altin); }
+
+.spor-sekmeler a.aktif {
+    background: var(--lacivert);
+    border-color: var(--lacivert);
+    color: #fff;
+}
+
+/* Lig secici: one cikan ligler + ulke/lig secimi (API-Football) */
+.lig-secici {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px 20px;
+    margin: 0 0 20px;
+}
+
+.lig-hizli { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.lig-hizli a {
+    padding: 5px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--cizgi);
+    font-size: .82rem;
+    color: var(--metin);
+    background: var(--kart);
+}
+
+.lig-hizli a:hover { border-color: var(--altin); }
+.lig-hizli a.aktif { border-color: var(--altin); box-shadow: inset 0 0 0 1px var(--altin); font-weight: 700; }
+
+.lig-form { display: flex; flex-wrap: wrap; gap: 10px; }
+.lig-form label { display: flex; flex-direction: column; gap: 3px; font-size: .76rem; color: var(--metin-soluk); }
+
+.lig-form select {
+    min-width: 170px;
+    max-width: 100%;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--cizgi);
+    background: var(--kart);
+    color: var(--metin);
+    font-size: .9rem;
+}
+
+.canli-panel-ust h2 { display: flex; align-items: center; gap: 8px; }
+.lig-logo { width: 28px; height: 28px; object-fit: contain; }
+
+.puan-tablosu td.takim a { display: inline-flex; align-items: center; gap: 7px; color: inherit; }
+.puan-tablosu td.takim a:hover { color: var(--vurgu); }
+.puan-tablosu td.takim img { width: 18px; height: 18px; object-fit: contain; }
+.soluk { color: var(--metin-soluk); font-weight: 400; }
+
+/* Form rozetleri: G / B / M */
+.form-dizi { display: inline-flex; gap: 3px; }
+
+.form-dizi span {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    border-radius: 4px;
+    font-size: .68rem;
+    font-weight: 800;
+    text-align: center;
+    color: #fff;
+}
+
+.form-g { background: var(--artis); }
+.form-b { background: #8a94a6; }
+.form-m { background: var(--dusus); }
+
+/* Fikstur: tur gezgini ve tur listesi */
+.tur-gezgin {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 6px;
+    font-size: .88rem;
+}
+
+.tur-gezgin a { color: var(--vurgu); }
+.tur-listesi { margin-top: 14px; font-size: .85rem; }
+.tur-listesi summary { cursor: pointer; color: var(--vurgu); }
+.tur-listesi p { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 10px 0 0; }
+.tur-listesi a { color: var(--metin); }
+.tur-listesi a.aktif { font-weight: 700; color: var(--vurgu); }
+
+.mac-listesi a.mac-ev,
+.mac-listesi a.mac-dep { color: var(--metin); }
+.mac-listesi a.mac-ev:hover,
+.mac-listesi a.mac-dep:hover { color: var(--vurgu); }
+.mac-listesi a.mac-skor { color: #fff; }
+.mac-listesi a.mac-skor.oynanmadi { color: var(--metin-soluk); }
+.mac-listesi li.canli .mac-skor { background: var(--dusus); }
+
+.canli-rozet {
+    display: inline-block;
+    padding: 0 6px;
+    border-radius: 4px;
+    background: var(--dusus);
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 700;
+}
+
+/* Kulup sayfasi */
+.kulup-baslik { display: flex; align-items: center; gap: 14px; margin: 0 0 16px; }
+.kulup-baslik img { width: 56px; height: 56px; object-fit: contain; }
+.kulup-baslik h2 { margin: 0; font-size: 1.4rem; color: var(--metin); }
+
+.kulup-ozet {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin: 0 0 18px;
+}
+
+.ozet-kart { display: flex; flex-direction: column; gap: 6px; }
+.ozet-kart span:first-child { font-size: .76rem; color: var(--metin-soluk); text-transform: uppercase; letter-spacing: .06em; }
+.ozet-kart b { font-size: 1.35rem; color: var(--metin); }
+.ozet-kart small { color: var(--metin-soluk); }
+
+.kulup-panel > .spor-kutu,
+.kulup-panel > .spor-izgara,
+.mac-panel > .spor-kutu,
+.mac-panel > .spor-izgara { margin-bottom: 18px; }
+
+.analiz-tablosu th[scope="row"] { text-align: left; font-weight: 600; color: var(--metin); }
+
+.analiz-listesi,
+.golcu-listesi { list-style: none; margin: 0 0 14px; padding: 0; font-size: .9rem; }
+
+.analiz-listesi li,
+.golcu-listesi li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--cizgi);
+}
+
+.analiz-listesi li:last-child,
+.golcu-listesi li:last-child { border-bottom: 0; }
+
+.golcu-listesi { columns: 2 220px; column-gap: 24px; }
+.golcu-listesi li { break-inside: avoid; }
+
+.dakika-dagilimi { list-style: none; margin: 0; padding: 0; font-size: .8rem; }
+.dakika-dagilimi li { display: grid; grid-template-columns: 64px 1fr; gap: 2px 8px; margin: 0 0 6px; }
+.dakika-dagilimi .aralik { grid-row: span 2; align-self: center; color: var(--metin-soluk); }
+
+.dakika-dagilimi .cubuk {
+    display: block;
+    min-width: 2px;
+    height: 12px;
+    line-height: 12px;
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: .66rem;
+    color: #fff;
+}
+
+.cubuk.atilan,
+.lejant.atilan { background: var(--artis); }
+.cubuk.yenilen,
+.lejant.yenilen { background: var(--dusus); }
+.lejant { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: middle; }
+
+.mac-listesi li.mac-ek {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding-top: 0;
+    font-size: .8rem;
+    color: var(--metin-soluk);
+}
+
+.kulup-maclari li:not(.mac-ek) { border-bottom: 0; padding-bottom: 2px; }
+
+/* Mac sayfasi */
+.mac-skorbord {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.mac-skorbord .takim {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+    font-weight: 700;
+    color: var(--metin);
+}
+
+.mac-skorbord .takim img { width: 48px; height: 48px; object-fit: contain; }
+.mac-skorbord .skor { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.mac-skorbord .skor b { font-size: 2rem; font-variant-numeric: tabular-nums; color: var(--metin); }
+.mac-skorbord .skor small { color: var(--metin-soluk); }
+
+.olay-listesi { list-style: none; margin: 0; padding: 0; font-size: .9rem; }
+
+.olay-listesi li {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--cizgi);
+}
+
+.olay-listesi li:last-child { border-bottom: 0; }
+.olay-listesi li.dep { flex-direction: row-reverse; text-align: right; }
+.olay-listesi .dk { min-width: 42px; color: var(--metin-soluk); font-variant-numeric: tabular-nums; }
+.olay-listesi small { color: var(--metin-soluk); }
+
+.mac-istatistik td { width: 30%; font-weight: 700; }
+.mac-istatistik th[scope="row"] { font-weight: 500; color: var(--metin-soluk); }
+
+.spor-izgara.esit { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.kadro { margin: 0; padding-left: 22px; font-size: .9rem; line-height: 1.7; }
+
+@media (max-width: 700px) {
+    .spor-izgara.esit { grid-template-columns: 1fr; }
+    .mac-skorbord .skor b { font-size: 1.5rem; }
+}
+
+/* Fikstur sayfasinda sezonun butun haftalari, hafta hafta acilir. */
+.spor-tum-fikstur { margin-top: 18px; }
+
+.spor-tum-fikstur details { border-bottom: 1px solid var(--cizgi); }
+.spor-tum-fikstur details:last-child { border-bottom: 0; }
+
+.spor-tum-fikstur summary {
+    cursor: pointer;
+    padding: 9px 0;
+    font-weight: 600;
+    color: var(--metin);
+}
+
+.spor-tum-fikstur details[open] summary { color: var(--vurgu); }
+.spor-tum-fikstur .mac-listesi { margin-bottom: 8px; }
+
 /* Piyasalar */
 .piyasa-kartlar {
     display: grid;

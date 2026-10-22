@@ -56,6 +56,43 @@ function yaz(string $mesaj = ''): void
 }
 
 /**
+ * JSON'un yapisini satir satir ozetler: her anahtar, dizilerin uzunlugu
+ * ve yalnizca ILK ogesi, yapraklarda kisaltilmis ornek deger. Derinlik
+ * ve satir sayisi sinirli; gunluk okunabilir kalsin.
+ *
+ * @return list<string>
+ */
+function json_yapisi(mixed $deger, string $girinti, int $derinlik, ?int &$sayac): array
+{
+    $sayac ??= 0;
+    $satirlar = [];
+
+    if ($derinlik > 7 || !is_array($deger)) {
+        return $satirlar;
+    }
+
+    $liste = array_is_list($deger);
+    $ogeler = $liste ? array_slice($deger, 0, 1, true) : $deger;
+
+    foreach ($ogeler as $anahtar => $alt) {
+        if (++$sayac > 260) {
+            return $satirlar;
+        }
+
+        $ad = $liste ? '[0] (' . count($deger) . ' öğe)' : (string) $anahtar;
+
+        if (is_array($alt)) {
+            $satirlar[] = $girinti . $ad . ':';
+            array_push($satirlar, ...json_yapisi($alt, $girinti . '  ', $derinlik + 1, $sayac));
+        } else {
+            $satirlar[] = $girinti . $ad . ' = ' . mb_substr(var_export($alt, true), 0, 60);
+        }
+    }
+
+    return $satirlar;
+}
+
+/**
  * Sutun hizalamasi icin dolgu.
  *
  * sprintf'in %-20s dolgusu bayt sayar; "Kazıma" gibi Turkce karakterli
@@ -291,9 +328,12 @@ if ($hamGirdi !== '') {
          * sinaniyor: yayina almadan once gercek sayfada ne cikardiklari
          * gorulsun (spor: TFF, ekonomi: Yahoo).
          */
+        $tffCozuldu = false;
+
         if (str_contains($adres, 'tff.org')) {
             require_once __DIR__ . '/../includes/spor.php';
             $tff = tff_sayfa_coz($govde);
+            $tffCozuldu = count($tff['puan']) >= 10;
             yaz(sprintf('  TFF çözümleme: %d takım, hafta %s, haftanın maçları %d, fikstür %d hafta (son oynanan %s)',
                 count($tff['puan']), var_export($tff['hafta'], true), count($tff['haftanin_maclari']),
                 count($tff['fikstur']), var_export(spor_son_oynanan_hafta($tff['fikstur']), true)));
@@ -325,24 +365,32 @@ if ($hamGirdi !== '') {
 
         if (is_array($json)) {
             yaz('  JSON: ' . mb_substr((string) json_encode($json, JSON_UNESCAPED_UNICODE), 0, 1500));
+
+            // Belgesiz uclar (ESPN) icin yapinin ozeti: anahtarlar, ilk
+            // ogeler ve ornek degerler; cozumleyici bundan yaziliyor.
+            yaz('  YAPI:');
+            $satirSayaci = 0;
+            foreach (json_yapisi($json, '    ', 0, $satirSayaci) as $satir) {
+                yaz($satir);
+            }
             yaz();
             continue;
         }
 
-        // Cozumleyici sinandiysa tablo dokumu gereksiz kalabalik.
-        if (str_contains($adres, 'tff.org')) {
-            yaz();
-            continue;
-        }
-
+        /*
+         * Cozumleyici tuttuysa tablo dokumu gereksiz kalabalik. Tutmadiysa
+         * (gol kralligi, baska lig sayfasi) tablolar ve baglantilar
+         * dokuluyor: yeni sayfanin yapisi gorulsun.
+         */
         $dom = new DOMDocument();
         @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $govde);
 
         $baslik = $dom->getElementsByTagName('title')->item(0);
         yaz('  başlık: ' . ($baslik !== null ? trim($baslik->textContent) : '-'));
 
-        $tablolar = $dom->getElementsByTagName('table');
-        yaz('  tablo sayısı: ' . $tablolar->length);
+        // Cozulduyse tablolar atlaniyor, baglantilar yine dokuluyor.
+        $tablolar = $tffCozuldu ? [] : iterator_to_array($dom->getElementsByTagName('table'));
+        yaz('  tablo sayısı: ' . $dom->getElementsByTagName('table')->length);
 
         $temiz = static fn (string $m): string => trim(preg_replace('/\s+/u', ' ', $m) ?? $m);
 
@@ -385,7 +433,7 @@ if ($hamGirdi !== '') {
         foreach ($dom->getElementsByTagName('a') as $a) {
             $metin = $temiz($a->textContent);
 
-            if ($gosterilen < 25 && preg_match('/puan|fikst|maç|mac|süper lig|hafta/iu', $metin . ' ' . $a->getAttribute('href'))) {
+            if ($gosterilen < 40 && preg_match('/puan|fikst|maç|mac|süper lig|hafta|gol|1\. lig|lig/iu', $metin . ' ' . $a->getAttribute('href'))) {
                 yaz('  bağlantı: ' . mb_substr($metin, 0, 50) . ' -> ' . $a->getAttribute('href'));
                 $gosterilen++;
             }
