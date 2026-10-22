@@ -22,8 +22,25 @@ if (!in_array($durum, $gecerliDurumlar, true)) {
     $durum = HABER_TASLAK;
 }
 
-$sayilar  = haber_durum_sayilari();
-$haberler = haber_listele($durum);
+/*
+ * Baslik suzgeci (22.10.2026). "Yemek Tarifleri" toplamasi bittiginde
+ * tarif, ayni listede baska bir calismanin haberleriyle karisik
+ * duruyordu ve secilen basligin baska haberler topladigi saniliyordu.
+ */
+$kategori = (string) ($_GET['kategori'] ?? '');
+
+if (!in_array($kategori, HABER_AKIS_KATEGORILERI, true)) {
+    $kategori = '';
+}
+
+$sayilar          = haber_durum_sayilari();
+$kategoriSayilari = haber_kategori_sayilari($durum);
+$haberler         = haber_listele($durum, 100, $kategori);
+$basliklar        = haber_akis_kategorileri();
+
+// Sekme ve suzgec baglantilari secili basligi korusun.
+$listeAdresi = static fn (string $d, string $k): string
+    => '?' . http_build_query(array_filter(['durum' => $d, 'kategori' => $k]));
 
 $bildirimler = [
     'onaylandi'  => ['basari', 'Haber onaylandı ve ana sayfaya alındı.'],
@@ -83,11 +100,25 @@ require __DIR__ . '/ust.php';
     </div>
 
     <?php if (ajan_tetikleyebilir_mi()): ?>
-        <form method="post" action="ajan.php" style="margin:0;">
+        <form method="post" action="ajan.php" style="margin:0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
             <input type="hidden" name="islem" value="calistir">
             <input type="hidden" name="saat" value="36">
             <input type="hidden" name="enfazla" value="25">
+            <?php
+            /*
+             * Baslik secimi burada da (22.10.2026): dugme once hep butun
+             * basliklari topluyordu. Bir baslik secilince ajan yalnizca
+             * onun kaynaklarini tariyor (en fazla 25 aday); liste
+             * bir basliga suzulmusse o baslik secili geliyor.
+             */
+            ?>
+            <select name="konu" aria-label="Başlık" style="padding:8px 10px;border:1px solid var(--cizgi);border-radius:7px;font-family:inherit;">
+                <option value="">Tüm başlıklar</option>
+                <?php foreach ($basliklar as $b): ?>
+                    <option value="<?= e($b['slug']) ?>"<?= $b['slug'] === $kategori ? ' selected' : '' ?>><?= e($b['ad']) ?></option>
+                <?php endforeach; ?>
+            </select>
             <button type="submit" class="dugme dugme-ana">Haberleri topla</button>
         </form>
     <?php else: ?>
@@ -96,24 +127,34 @@ require __DIR__ . '/ust.php';
 </div>
 
 <nav class="sekmeler">
-    <a href="?durum=taslak" class="<?= $durum === HABER_TASLAK ? 'aktif' : '' ?>">
+    <a href="<?= e($listeAdresi(HABER_TASLAK, $kategori)) ?>" class="<?= $durum === HABER_TASLAK ? 'aktif' : '' ?>">
         Onay bekleyen
         <?php if ($sayilar[HABER_TASLAK] > 0): ?>
             <span class="adet"><?= $sayilar[HABER_TASLAK] ?></span>
         <?php endif; ?>
     </a>
-    <a href="?durum=yayinda" class="<?= $durum === HABER_YAYINDA ? 'aktif' : '' ?>">
+    <a href="<?= e($listeAdresi(HABER_YAYINDA, $kategori)) ?>" class="<?= $durum === HABER_YAYINDA ? 'aktif' : '' ?>">
         Yayında (<?= $sayilar[HABER_YAYINDA] ?>)
     </a>
-    <a href="?durum=reddedildi" class="<?= $durum === HABER_REDDEDILDI ? 'aktif' : '' ?>">
+    <a href="<?= e($listeAdresi(HABER_REDDEDILDI, $kategori)) ?>" class="<?= $durum === HABER_REDDEDILDI ? 'aktif' : '' ?>">
         Reddedilen (<?= $sayilar[HABER_REDDEDILDI] ?>)
     </a>
+</nav>
+
+<nav class="baslik-suzgeci" aria-label="Başlığa göre süz">
+    <a href="<?= e($listeAdresi($durum, '')) ?>" class="<?= $kategori === '' ? 'aktif' : '' ?>">Tümü</a>
+    <?php foreach ($basliklar as $b): ?>
+        <?php $adet = $kategoriSayilari[$b['slug']] ?? 0; ?>
+        <a href="<?= e($listeAdresi($durum, (string) $b['slug'])) ?>" class="<?= $b['slug'] === $kategori ? 'aktif' : '' ?><?= $adet === 0 ? ' bos' : '' ?>">
+            <?= e($b['ad']) ?> <span class="adet"><?= $adet ?></span>
+        </a>
+    <?php endforeach; ?>
 </nav>
 
 <?php if ($haberler === []): ?>
     <div class="bos-durum">
         <?php if ($durum === HABER_TASLAK): ?>
-            <strong>Onay bekleyen haber yok.</strong>
+            <strong>Onay bekleyen haber yok<?= $kategori !== '' ? ' (bu başlıkta)' : '' ?>.</strong>
             Ajan yeni haber derlediğinde burada listelenecek.
         <?php elseif ($durum === HABER_YAYINDA): ?>
             <strong>Yayında haber yok.</strong>
@@ -127,6 +168,7 @@ require __DIR__ . '/ust.php';
     <?php if ($topluSecim): ?>
         <form id="toplu-form" method="post" action="islem.php" class="kutu toplu-cubuk">
             <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+            <input type="hidden" name="kategori" value="<?= e($kategori) ?>">
             <label class="toplu-hepsi">
                 <input type="checkbox" id="toplu-hepsi">
                 Tümünü seç

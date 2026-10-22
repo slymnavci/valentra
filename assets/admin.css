@@ -96,6 +96,36 @@ a { color: var(--vurgu); }
 
 .sekmeler a.aktif .adet { background: var(--altin); color: #14213a; }
 
+/* --- Baslik suzgeci (onay listesi) ----------------------------------------- */
+
+.baslik-suzgeci {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: -6px 0 18px;
+}
+
+.baslik-suzgeci a {
+    padding: 4px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--cizgi);
+    background: var(--kart);
+    color: var(--metin-soluk);
+    text-decoration: none;
+    font-size: .88rem;
+}
+
+.baslik-suzgeci a.bos { opacity: .55; }
+
+.baslik-suzgeci a.aktif {
+    background: var(--lacivert);
+    border-color: #14171c;
+    color: #fff;
+    opacity: 1;
+}
+
+.baslik-suzgeci .adet { font-weight: 700; margin-left: 2px; }
+
 /* --- Liste --------------------------------------------------------------- */
 
 .haber-satiri {

@@ -580,21 +580,59 @@ function haber_bekleyenler(int $limit = 100): array
 /**
  * Duruma gore listeleme (admin paneli sekmeler).
  */
-function haber_listele(string $durum, int $limit = 100): array
+/**
+ * Paneldeki haber listesi; $kategori verilirse yalnızca o başlık (slug).
+ */
+function haber_listele(string $durum, int $limit = 100, string $kategori = ''): array
 {
     $ifade = db()->prepare(
         'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
            FROM haberler h
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
-          WHERE h.durum = :durum
-          ORDER BY COALESCE(h.yayin_tarihi, h.guncellendi) DESC
+          WHERE h.durum = :durum'
+        . ($kategori !== '' ? ' AND k.slug = :kategori' : '')
+        . ' ORDER BY COALESCE(h.yayin_tarihi, h.guncellendi) DESC
           LIMIT :limit'
     );
     $ifade->bindValue('durum', $durum);
     $ifade->bindValue('limit', $limit, PDO::PARAM_INT);
+
+    if ($kategori !== '') {
+        $ifade->bindValue('kategori', $kategori);
+    }
+
     $ifade->execute();
 
     return $ifade->fetchAll();
+}
+
+/**
+ * Bir durumdaki haberlerin başlığa göre sayısı (slug => adet).
+ *
+ * Panelde baslik suzgecinin yanindaki sayilar icin: "Yemek Tarifleri"
+ * toplamasi bittiginde tarifler onay listesinde diger haberlerin
+ * arasinda kayboluyordu (22.10.2026).
+ *
+ * @return array<string,int>
+ */
+function haber_kategori_sayilari(string $durum): array
+{
+    $ifade = db()->prepare(
+        'SELECT k.slug, COUNT(*) AS adet
+           FROM haberler h
+           JOIN kategoriler k ON k.id = h.kategori_id
+          WHERE h.durum = :durum
+          GROUP BY k.slug'
+    );
+    $ifade->execute(['durum' => $durum]);
+
+    $sayilar = [];
+
+    foreach ($ifade->fetchAll() as $satir) {
+        $sayilar[(string) $satir['slug']] = (int) $satir['adet'];
+    }
+
+    return $sayilar;
 }
 
 function haber_bul(int $id): ?array

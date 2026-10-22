@@ -51,7 +51,11 @@ if ($islem === 'toplu_onayla' || $islem === 'toplu_reddet') {
 
     yonlendir($donus === 'gunluk'
         ? 'gunluk.php?bildirim=' . $bildirim
-        : 'index.php?durum=' . HABER_TASLAK . '&bildirim=' . $bildirim);
+        : 'index.php?durum=' . HABER_TASLAK . '&bildirim=' . $bildirim
+          // Baslik suzgeci korunuyor: tarifleri onaylayan tariflerde kalsin.
+          . (in_array((string) ($_POST['kategori'] ?? ''), HABER_AKIS_KATEGORILERI, true)
+              ? '&kategori=' . rawurlencode((string) $_POST['kategori'])
+              : ''));
 }
 
 if ($id <= 0 || haber_bul($id) === null) {

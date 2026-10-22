@@ -1167,9 +1167,14 @@ if ($cokKaynakli !== []) {
  */
 // 4'ten 6'ya (22.10.2026): baslik paylari buyudu; az kaynakli
 // basliklar (saglik, kultur-sanat) payini doldurabilsin.
-$kaynakBasinaTavan = max(1, (int) ($secenekler['kaynakbasina'] ?? 6));
+//
+// Tek baslik secilince (--konu) 10: o basligin kaynagi az (yemek
+// tarifleri 4 kaynak) ve 6'lik tavan 31 tarifi olan Yemek.com'u 6'ya
+// indirip kontenjani bos birakiyordu (22.10.2026: 20 aday yerine 7).
+$kaynakBasinaTavan = max(1, (int) ($secenekler['kaynakbasina'] ?? ($konular !== [] ? 10 : 6)));
 $kaynakSayaci      = [];
 $secilen           = [];
+$tarifDegil        = 0;
 
 /*
  * RESMI GAZETE ONCE VE TAVANSIZ.
@@ -1197,6 +1202,17 @@ foreach ($adaylar as $aday) {
         continue;
     }
 
+    /*
+     * Tarif kaynaginin tarif olmadigi basligindan belli olan icerigi
+     * ("... Nerede Yenir", "Gunun Menusu") TAVANDAN ONCE ayikla. Once
+     * modele gonderme aninda atiliyordu; kaynak tavanindaki yeri
+     * yiyordu ve Yemek.com'un 6 adayinin 4'u bu yuzden bosa gitti.
+     */
+    if (HaberAkisi::kova($aday['kaynak']) === 'yemek-tarifleri' && !tarif_basligi_mi($aday['girdi']['baslik'])) {
+        $tarifDegil++;
+        continue;
+    }
+
     $ad = (string) $aday['kaynak']['ad'];
     $kaynakSayaci[$ad] = ($kaynakSayaci[$ad] ?? 0) + 1;
 
@@ -1207,7 +1223,11 @@ foreach ($adaylar as $aday) {
     $secilen[] = $aday;
 }
 
-$tavanaTakilan = count($adaylar) - count($secilen) - count($rgAdaylar);
+if ($tarifDegil > 0) {
+    gunluk('  ' . $tarifDegil . ' tarif kaynağı girdisi başlığından tarif olmadığı belli olduğu için alınmadı (nerede yenir, menü vb.).');
+}
+
+$tavanaTakilan = count($adaylar) - count($secilen) - count($rgAdaylar) - $tarifDegil;
 
 [$tekil, $kopyaElenen] = ayni_olayi_ele(array_merge($rgAdaylar, $secilen));
 
