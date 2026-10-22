@@ -337,19 +337,15 @@ if ($hamGirdi !== '') {
          * (gol kralligi, baska lig sayfasi) tablolar ve baglantilar
          * dokuluyor: yeni sayfanin yapisi gorulsun.
          */
-        if ($tffCozuldu) {
-            yaz();
-            continue;
-        }
-
         $dom = new DOMDocument();
         @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $govde);
 
         $baslik = $dom->getElementsByTagName('title')->item(0);
         yaz('  başlık: ' . ($baslik !== null ? trim($baslik->textContent) : '-'));
 
-        $tablolar = $dom->getElementsByTagName('table');
-        yaz('  tablo sayısı: ' . $tablolar->length);
+        // Cozulduyse tablolar atlaniyor, baglantilar yine dokuluyor.
+        $tablolar = $tffCozuldu ? [] : iterator_to_array($dom->getElementsByTagName('table'));
+        yaz('  tablo sayısı: ' . $dom->getElementsByTagName('table')->length);
 
         $temiz = static fn (string $m): string => trim(preg_replace('/\s+/u', ' ', $m) ?? $m);
 
