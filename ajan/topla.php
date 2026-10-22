@@ -707,6 +707,24 @@ function konu_kontenjani(array $adaylar, array $paylar, int $enFazla): array
 }
 
 /**
+ * Kaynagin yayincisi: site adresinin alan adi (www. atilmis).
+ *
+ * Kapsam sayiminda ayni yayinin farkli beslemeleri ("TRT Haber Gundem",
+ * "TRT Haber Turkiye") TEK kaynak sayilmali; yoksa bir sitenin ayni
+ * haberi iki bolumunde yayimlamasi haberi "cok kaynakli" gosterirdi.
+ * Alan adi yoksa kaynak adi kullaniliyor.
+ *
+ * @param array<string,mixed> $kaynak
+ */
+function kaynak_yayincisi(array $kaynak): string
+{
+    $alan = strtolower((string) parse_url((string) ($kaynak['site_url'] ?? ''), PHP_URL_HOST));
+    $alan = preg_replace('/^www\./', '', $alan) ?? $alan;
+
+    return $alan !== '' ? $alan : (string) ($kaynak['ad'] ?? '');
+}
+
+/**
  * Aynı olayı anlatan adaylardan yalnızca en iyisini bırakır.
  *
  * Bilinen basliklara benzerlik zaten olculuyor ama o denetim GECMISE
@@ -754,8 +772,9 @@ function ayni_olayi_ele(array $adaylar): array
         }
 
         if ($ayni !== null) {
-            // Elenen kopyanin kapsami tutulan adaya ekleniyor (bkz. KAPSAM).
-            $tekil[$ayni]['kapsam'] = (int) ($tekil[$ayni]['kapsam'] ?? 1) + (int) ($aday['kapsam'] ?? 1);
+            // Elenen kopyanin yayincilari tutulan adaya ekleniyor (bkz. KAPSAM).
+            $tekil[$ayni]['kaynaklar'] = ($tekil[$ayni]['kaynaklar'] ?? []) + ($aday['kaynaklar'] ?? []);
+            $tekil[$ayni]['kapsam']    = max(1, count($tekil[$ayni]['kaynaklar']));
             $elenen++;
             continue;
         }
@@ -970,10 +989,8 @@ foreach ($kaynaklar as $kaynak) {
         }
 
         if ($esSira !== null) {
-            if (!isset($adaylar[$esSira]['kaynaklar'][$kaynak['ad']])) {
-                $adaylar[$esSira]['kaynaklar'][$kaynak['ad']] = true;
-                $adaylar[$esSira]['kapsam']++;
-            }
+            $adaylar[$esSira]['kaynaklar'][kaynak_yayincisi($kaynak)] = true;
+            $adaylar[$esSira]['kapsam'] = count($adaylar[$esSira]['kaynaklar']);
 
             $zatenVar++;
             continue;
@@ -1035,7 +1052,7 @@ foreach ($kaynaklar as $kaynak) {
             'girdi'  => $girdi,
             'kaynak' => $kaynak,
             'kapsam'    => 1,
-            'kaynaklar' => [(string) $kaynak['ad'] => true],
+            'kaynaklar' => [kaynak_yayincisi($kaynak) => true],
             // Puan = yayim zamani: yeni haber once. Vergi terimi puani
             // (Suzgec) genel haberde anlamsiz; ekonomi kelimesi gecen
             // siyaset haberini one aliyordu.
