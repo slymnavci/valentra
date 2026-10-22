@@ -98,6 +98,13 @@ CREATE TABLE IF NOT EXISTS haberler (
     url_parmak      CHAR(64)      NULL,
     baslik_parmak   CHAR(64)      NULL,
 
+    -- Kaynagin KENDI basligi (22.10.2026). baslik modelin yeniden
+    -- yazdigi baslik; ayni ajans haberi saatler sonra baska bir sitede
+    -- ozgun basligiyla gorundugunde ona benzemiyor ve haber ikinci kez
+    -- toplanabiliyordu. Kopya denetimi bu ikisine de bakar.
+    kaynak_baslik        VARCHAR(300) NOT NULL DEFAULT '',
+    kaynak_baslik_parmak CHAR(64)     NULL,
+
     guven_skoru     TINYINT UNSIGNED NOT NULL DEFAULT 0,
     -- Onem puani (0-100): ana sayfa ve konu sayfalarinda son 24 saatin
     -- haberleri bu puana gore siralaniyor. Ajan veriyor, panelden degisir.
@@ -130,6 +137,7 @@ CREATE TABLE IF NOT EXISTS haberler (
     UNIQUE KEY uq_haber_parmak (kaynak_parmak),
     KEY ix_haber_url_parmak (url_parmak),
     KEY ix_haber_baslik_parmak (baslik_parmak),
+    KEY ix_haber_kaynak_baslik_parmak (kaynak_baslik_parmak),
     KEY ix_haber_durum_tarih (durum, yayin_tarihi),
     KEY ix_haber_bekleyen (durum, olusturuldu),
     KEY ix_haber_kategori (kategori_id, durum, yayin_tarihi),

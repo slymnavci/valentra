@@ -68,31 +68,18 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <div class="ana-kolon">
             <?php
             /*
-             * Manset ve "Valentra Diyor ki…" ayni sirada: manset solda
-             * daraliyor, kose yazilari kutusu onunla yan pencere arasinda.
-             * Yayinda yazi yoksa manset tam genislikte kalir.
+             * Manset ana kolonun tam genisliginde (22.10.2026, site
+             * sahibinin istegi: "ana haber alani daha buyuk olsun").
+             * "Valentra Diyor ki…" kutusu eskiden mansetle ayni siradaydi
+             * ve mansetı daraltiyordu; artik yan pencerede, "Konular"in
+             * yerinde (includes/yan_pencere.php).
              *
              * "Bugun bilmeniz gerekenler" (vergi takvimi, KDV hesabi,
              * pratik bilgiler kisayollari) Ekim 2026'da kaldirildi; site
              * genel haber ozetlerine dondu.
              */
-            $koseYazilari = [];
-
-            if ($sayfa === 1) {
-                try {
-                    $koseYazilari = kose_son_gun();
-                } catch (PDOException $e) {
-                    error_log('[valentra] kose yazilari okunamadi: ' . $e->getMessage());
-                }
-            }
             ?>
-            <div class="<?= $koseYazilari !== [] ? 'manset-sirasi' : '' ?>">
-                <div class="manset-sirasi-sol">
-                    <?php require __DIR__ . '/includes/kaydirak.php'; ?>
-                </div>
-
-                <?php require __DIR__ . '/includes/kose_kutu.php'; ?>
-            </div>
+            <?php require __DIR__ . '/includes/kaydirak.php'; ?>
 
             <?php /* Piyasa seridi kaydiragin hemen altinda: sayfa acilir
                      acilmaz gorunen, surekli degisen tek veri. */ ?>

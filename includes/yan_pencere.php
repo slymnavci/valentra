@@ -4,9 +4,13 @@ declare(strict_types=1);
 /**
  * Ana sayfanin ve haber sayfasinin yan penceresi.
  *
- * Ana kolonda haberler tarih sirasiyla akiyor; buradaki pencereler
- * okuyucuya farkli bir giris kapisi veriyor: konu basliklari ve
+ * Ana kolonda haberler onem sirasiyla akiyor; buradaki pencereler
+ * okuyucuya farkli bir giris kapisi veriyor: gunun kose yazilari ve
  * etiketler.
+ *
+ * 22.10.2026: "Konular" penceresi kaldirildi, yerine "Valentra Diyor
+ * ki…" (kose yazilari) geldi (site sahibinin istegi). Konu basliklari
+ * zaten ust menude.
  *
  * Ekim 2026: site genel haber ozetlerine dondu. Vergiye ozgu iki
  * pencere kaldirildi: "Onemli Duzenlemeler" (mevzuat kategorileri) ve
@@ -14,33 +18,21 @@ declare(strict_types=1);
  * burada gosterilmiyor.
  */
 
-$yanMenu   = haber_akis_kategorileri();
+require_once __DIR__ . '/kose.php';
+
 $etiketler = haber_etiket_bulutu(12);
 
-// Konu listesinde bos gruplari gostermek anlamsiz.
-$yanMenu = array_values(array_filter(
-    $yanMenu,
-    static fn (array $grup): bool => $grup['adet'] > 0
-));
+$koseYazilari = [];
+
+try {
+    $koseYazilari = kose_son_gun();
+} catch (PDOException $e) {
+    error_log('[valentra] kose yazilari okunamadi: ' . $e->getMessage());
+}
 ?>
 <aside class="yan-pencere">
 
-    <?php if ($yanMenu !== []): ?>
-        <section class="pencere">
-            <h2 class="pencere-baslik">Konular</h2>
-
-            <ul class="konu-listesi">
-                <?php foreach ($yanMenu as $grup): ?>
-                    <li>
-                        <a href="<?= e(kategori_yolu((string) $grup['slug'])) ?>">
-                            <?= e($grup['ad']) ?>
-                            <span class="adet"><?= $grup['adet'] ?></span>
-                        </a>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
-        </section>
-    <?php endif; ?>
+    <?php require __DIR__ . '/kose_kutu.php'; ?>
 
     <?php if ($etiketler !== []): ?>
         <section class="pencere">

@@ -210,9 +210,18 @@ function haber_baslik_parmak(string $baslik): string
  *
  * Durum farketmez: reddedilmis bir haberi yeniden yazdirmak da
  * istemiyoruz, yoksa ayni haber her calismada geri gelirdi.
+ *
+ * Basliklar CAPRAZ karsilastiriliyor: yeni haberin yeniden yazilmis ve
+ * ozgun basligi, kayitli haberlerin hem yeniden yazilmis hem ozgun
+ * basligiyla. Ayni ajans haberi baska bir sitede ozgun basligiyla
+ * geldiginde ancak kayitli haberin ozgun basligina benziyor.
  */
-function haber_kopya_bul(string $parmak, string $urlParmak, string $baslikParmak): ?int
-{
+function haber_kopya_bul(
+    string $parmak,
+    string $urlParmak,
+    string $baslikParmak,
+    string $kaynakBaslikParmak = ''
+): ?int {
     $kosullar = ['kaynak_parmak = :p'];
     $degerler = ['p' => $parmak];
 
@@ -221,9 +230,16 @@ function haber_kopya_bul(string $parmak, string $urlParmak, string $baslikParmak
         $degerler['u'] = $urlParmak;
     }
 
-    if ($baslikParmak !== '') {
-        $kosullar[] = 'baslik_parmak = :b';
-        $degerler['b'] = $baslikParmak;
+    $basliklar = array_values(array_unique(array_filter(
+        [$baslikParmak, $kaynakBaslikParmak],
+        static fn (string $b): bool => $b !== ''
+    )));
+
+    foreach ($basliklar as $i => $b) {
+        $kosullar[] = 'baslik_parmak = :b' . $i;
+        $kosullar[] = 'kaynak_baslik_parmak = :kb' . $i;
+        $degerler['b' . $i]  = $b;
+        $degerler['kb' . $i] = $b;
     }
 
     $ifade = db()->prepare(
@@ -323,6 +339,10 @@ function haber_taslak_ekle(array $veri): array
     $urlParmak    = haber_url_parmak($kaynakUrl);
     $baslikParmak = haber_baslik_parmak($baslik);
 
+    // Kaynagin ozgun basligi (eski ajan surumu gondermiyor olabilir).
+    $kaynakBaslik       = mb_substr(trim((string) ($veri['kaynak_baslik'] ?? '')), 0, 300, 'UTF-8');
+    $kaynakBaslikParmak = $kaynakBaslik !== '' ? haber_baslik_parmak($kaynakBaslik) : '';
+
     /*
      * Uc olcut de deneniyor ve biri tutarsa haber eklenmiyor.
      *
@@ -331,7 +351,7 @@ function haber_taslak_ekle(array $veri): array
      * geldiginde yeniden yaziliyordu. Basliga da bakmak ayni haberin
      * iki kaynaktan gelen kopyasini da yakaliyor.
      */
-    $mevcutId = haber_kopya_bul($parmak, $urlParmak, $baslikParmak);
+    $mevcutId = haber_kopya_bul($parmak, $urlParmak, $baslikParmak, $kaynakBaslikParmak);
 
     if ($mevcutId !== null) {
         return ['durum' => 'yinelenen', 'id' => $mevcutId];
@@ -346,13 +366,13 @@ function haber_taslak_ekle(array $veri): array
         'INSERT INTO haberler
             (baslik, slug, ozet, icerik, gorsel_url, etiketler, durum, kategori_id,
              kaynak_id, kaynak_adi, kaynak_url, kaynak_parmak, url_parmak,
-             baslik_parmak, guven_skoru, onem, ajan_notu,
+             baslik_parmak, kaynak_baslik, kaynak_baslik_parmak, guven_skoru, onem, ajan_notu,
              analiz_degisen, analiz_etkilenen, analiz_zaman, analiz_islem,
              isletme_etkisi, uygulama_ornegi, resmi_dayanak)
          VALUES
             (:baslik, :slug, :ozet, :icerik, :gorsel_url, :etiketler, :durum, :kategori_id,
              :kaynak_id, :kaynak_adi, :kaynak_url, :kaynak_parmak, :url_parmak,
-             :baslik_parmak, :guven_skoru, :onem, :ajan_notu,
+             :baslik_parmak, :kaynak_baslik, :kaynak_baslik_parmak, :guven_skoru, :onem, :ajan_notu,
              :analiz_degisen, :analiz_etkilenen, :analiz_zaman, :analiz_islem,
              :isletme_etkisi, :uygulama_ornegi, :resmi_dayanak)'
     );
@@ -372,6 +392,8 @@ function haber_taslak_ekle(array $veri): array
         'kaynak_parmak' => $parmak,
         'url_parmak'    => $urlParmak !== '' ? $urlParmak : null,
         'baslik_parmak' => $baslikParmak !== '' ? $baslikParmak : null,
+        'kaynak_baslik'        => $kaynakBaslik,
+        'kaynak_baslik_parmak' => $kaynakBaslikParmak !== '' ? $kaynakBaslikParmak : null,
         'guven_skoru'   => max(0, min(100, (int) ($veri['guven_skoru'] ?? 0))),
         // Eski ajan surumu puan gondermezse orta deger.
         'onem'          => max(0, min(100, (int) ($veri['onem'] ?? 50))),

@@ -203,9 +203,15 @@ if ($yapilandirmaKaynagi !== 'site') {
         foreach ($bekleyenler as $eski) {
             $url    = (string) ($eski['kaynak_url'] ?? '');
             $baslik = (string) ($eski['baslik'] ?? '');
+            $kaynakBaslik = (string) ($eski['kaynak_baslik'] ?? '');
 
             if ($url !== '') {
                 $yapilandirma['bilinen_url'][] = url_parmak($url);
+            }
+
+            if ($kaynakBaslik !== '') {
+                $yapilandirma['bilinen_baslik'][] = baslik_parmak($kaynakBaslik);
+                $yapilandirma['son_kaynak_basliklari'][] = $kaynakBaslik;
             }
 
             if ($baslik !== '') {
@@ -295,7 +301,13 @@ $bilinenBaslik = array_fill_keys($yapilandirma['bilinen_baslik'], true);
 /** @var list<array<string,bool>> Bilinen basliklarin kelime kumeleri */
 $bilinenKumeler = [];
 
-foreach ($yapilandirma['son_basliklar'] as $eskiBaslik) {
+/*
+ * Kaynaklarin ozgun basliklari da karsilastiriliyor (22.10.2026): beslemedeki
+ * aday ozgun baslikla geliyor, sitedeki baslik ise modelin yeniden yazdigi.
+ * Ayni ajans haberi baska bir sitede yeniden gorundugunde ancak ozgun
+ * basliga benziyor.
+ */
+foreach (array_merge($yapilandirma['son_basliklar'], $yapilandirma['son_kaynak_basliklari'] ?? []) as $eskiBaslik) {
     $kume = baslik_kumesi((string) $eskiBaslik);
 
     if ($kume !== []) {
@@ -1384,6 +1396,9 @@ foreach ($gruplar as $grupNo => $grup) {
             'kaynak_id'   => (int) $kaynak['id'],
             'kaynak_adi'  => (string) $kaynak['ad'],
             'kaynak_url'  => $girdi['baglanti'],
+            // Beslemedeki ozgun baslik: site kopya denetiminde bunu da
+            // kullaniyor (ayni haber baska sitede ayni baslikla gelirse).
+            'kaynak_baslik' => (string) $girdi['baslik'],
             'guven_skoru' => (int) ($sonuc['guven_skoru'] ?? 0),
             'onem'        => (int) ($sonuc['onem'] ?? 50),
             'ajan_notu'   => (string) ($sonuc['ajan_notu'] ?? ''),

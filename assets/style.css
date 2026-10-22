@@ -751,8 +751,14 @@ a.menu-oge.aktif::after,
      * 42vh / en fazla 400px: ayni ekranda manset 378 piksele, ilk
      * kart 507 pikseline iniyor; izgaranin ust siri katlanin ustunde
      * basliyor.
+     *
+     * 22.10.2026: site sahibi ana haber alaninin buyumesini istedi.
+     * Manset artik ana kolonun tam genisliginde (kose yazilari kutusu
+     * yan pencereye gecti); yukseklik de 48vh / en fazla 460px. Ilk
+     * kart sirasinin ust kenari 900 piksellik ekranda hala katlanin
+     * ustunde kaliyor.
      */
-    height: clamp(300px, 42vh, 400px);
+    height: clamp(320px, 48vh, 460px);
     background: linear-gradient(150deg, #17304f 0%, #23405f 55%, #2b4a73 100%);
     color: #fff;
 }
@@ -1022,10 +1028,10 @@ a.menu-oge.aktif::after,
  */
 .ana-duzen {
     display: grid;
-    /* Yan pencere 320'den 380'e cikti: genisleyen kapta sagdaki bosluk
-       aksi halde buyuyordu, "Son Eklenen" basliklari da iki satira
-       sikismak yerine rahat okunuyor. */
-    grid-template-columns: minmax(0, 1fr) 380px;
+    /* Yan pencere 340 piksel (22.10.2026'ya kadar 380): site sahibi ana
+       haber alaninin buyumesini istedi. Yan penceredeki en genis kutu
+       "Valentra Diyor ki…" da onceden 340 pikseldi. */
+    grid-template-columns: minmax(0, 1fr) 340px;
     gap: 30px;
     align-items: start;
 }
@@ -2595,35 +2601,11 @@ a.rg-madde:hover { color: var(--vurgu); }
 /* --- Valentra Diyor ki... (kose yazilari) -------------------------------- */
 
 /*
- * Ana sayfada manset ile ayni sira: manset solda daraliyor, "Valentra
- * Diyor ki..." kutusu onunla yan pencere arasinda. Kutu yan penceredeki
- * pencerelerle ayni gorunumde (.pencere + .sirali-liste). Kisaysa
- * mansetin boyuna uzuyor ve "Tum yazilar" en altta kaliyor; uzunsa
- * kirpilmiyor. 1200 pikselin altinda kutu mansetin altina iniyor.
+ * Yan pencerenin en ustundeki kutu (22.10.2026'ya kadar ana sayfada
+ * mansetle ayni siradaydi). Gorunum oteki pencerelerle ayni
+ * (.pencere + .sirali-liste); kutu kendi boyunda, yazilar kirpilmiyor.
  */
-.manset-sirasi {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: 20px;
-    align-items: stretch;
-    margin-bottom: 10px;
-}
-
-.manset-sirasi-sol { min-width: 0; }
-
-.manset-sirasi .kaydirak { margin-bottom: 10px; }
-
-.kose-kutu {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-
-    /* Yuksekligi manset belirliyor: kutu kendi boyunu siraya
-       dayatmiyor, stretch ile mansetin boyuna uzuyor. Sigmayan yazilar
-       kose_kutu.php'deki betikle gizleniyor (yarim kesilmiyor). */
-    contain: size;
-    overflow: hidden;
-}
+.kose-kutu { min-width: 0; }
 
 .kose-kutu-baslik {
     display: flex;
@@ -2641,17 +2623,7 @@ a.rg-madde:hover { color: var(--vurgu); }
     white-space: nowrap;
 }
 
-.kose-kutu .sirali-liste {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: hidden;
-}
-
-/* .sirali-liste li'nin display:flex'i hidden niteligini ezerdi. */
-.kose-kutu .sirali-liste li[hidden] { display: none; }
-
-/* Baslik en fazla iki, konu tek satir, aralik biraz daha sik: dort yazi
-   1440x900 ekranda mansetin boyuna (444 piksel) sigsin. */
+/* Baslik en fazla iki, konu tek satir, aralik biraz daha sik. */
 .kose-kutu .pencere-baslik { margin-bottom: 8px; }
 
 .kose-kutu .sirali-liste li { padding: 8px 0; }
@@ -2679,7 +2651,7 @@ a.rg-madde:hover { color: var(--vurgu); }
 }
 
 .kose-kutu-tumu {
-    margin-top: auto;
+    margin: 10px 0 0;
     padding-top: 10px;
     border-top: 1px solid var(--cizgi);
     font-size: .8rem;
@@ -2716,12 +2688,6 @@ a.rg-madde:hover { color: var(--vurgu); }
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-}
-
-@media (max-width: 1200px) {
-    .manset-sirasi { grid-template-columns: 1fr; }
-    .kose-kutu { margin-bottom: 18px; contain: none; }
-    .kose-kutu .sirali-liste { overflow: visible; }
 }
 
 /* Tum yazilar listesi ve "gunun diger yazilari" */
