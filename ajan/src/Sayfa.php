@@ -70,6 +70,7 @@ final class Sayfa
 
         $gorsel = $this->gorseliBul($html, $url);
         $video  = self::videoBul($html);
+        $tarif  = self::tarifVerisi($html);
 
         // Metin taşımayan bloklar önce tamamen atılır.
         $html = (string) preg_replace(
@@ -126,11 +127,148 @@ final class Sayfa
 
         $sonuc = trim(implode("\n", $satirlar));
 
+        // Tarifin yapilandirilmis verisi metnin BASINA: kirpilsa da kalsin.
+        if ($tarif !== '') {
+            $sonuc = $tarif . "\n\n" . $sonuc;
+        }
+
         return [
             'metin'  => mb_substr($sonuc, 0, $enFazlaKarakter, 'UTF-8'),
             'gorsel' => $gorsel,
             'video'  => $video,
         ];
+    }
+
+    /**
+     * Sayfadaki schema.org Recipe verisi (JSON-LD), okunur metin olarak.
+     *
+     * Tarif sitelerinin cogu malzeme listesini ve adimlari bu blokta
+     * eksiksiz veriyor. Gövde metni ise yetmiyordu: satir suzgeci 40
+     * karakterden kisa ve sayisiz satirlari (menu artigi diye) atiyor;
+     * "Tuz", "Yarım demet maydanoz" gibi malzeme satirlari da gidiyordu.
+     * Model "malzeme listesi eksik" deyip tarifleri eliyordu (22.10.2026).
+     * Tarif yoksa bos dizge.
+     */
+    public static function tarifVerisi(string $html): string
+    {
+        if (stripos($html, 'application/ld+json') === false) {
+            return '';
+        }
+
+        preg_match_all('#<script[^>]+application/ld\+json[^>]*>(.*?)</script>#is', $html, $bloklar);
+
+        foreach ($bloklar[1] as $json) {
+            $veri  = json_decode(trim(html_entity_decode($json, ENT_QUOTES | ENT_HTML5, 'UTF-8')), true);
+            $tarif = is_array($veri) ? self::tarifBul($veri) : null;
+
+            if ($tarif !== null) {
+                return self::tarifMetni($tarif);
+            }
+        }
+
+        return '';
+    }
+
+    /** @param array<mixed> $veri */
+    private static function tarifBul(array $veri, int $derinlik = 0): ?array
+    {
+        if ($derinlik > 6) {
+            return null;
+        }
+
+        $tur = $veri['@type'] ?? null;
+
+        if ($tur === 'Recipe' || (is_array($tur) && in_array('Recipe', $tur, true))) {
+            return $veri;
+        }
+
+        foreach ($veri as $alt) {
+            if (is_array($alt) && ($bulunan = self::tarifBul($alt, $derinlik + 1)) !== null) {
+                return $bulunan;
+            }
+        }
+
+        return null;
+    }
+
+    /** @param array<string,mixed> $t */
+    private static function tarifMetni(array $t): string
+    {
+        $duz = static fn (mixed $x): string => is_scalar($x)
+            ? trim((string) preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags((string) $x), ENT_QUOTES | ENT_HTML5, 'UTF-8')))
+            : '';
+
+        // ISO 8601 sure (PT1H30M) -> "1 sa 30 dk"
+        $sure = static function (mixed $x) use ($duz): string {
+            $s = $duz($x);
+
+            if (preg_match('/^P(?:T)?(?:(\d+)H)?(?:(\d+)M)?$/i', $s, $m) === 1) {
+                return trim((($m[1] ?? '') !== '' ? $m[1] . ' sa ' : '') . (($m[2] ?? '') !== '' ? $m[2] . ' dk' : ''));
+            }
+
+            return $s;
+        };
+
+        $satirlar = ['TARİF VERİSİ (sayfanın yapılandırılmış verisi):', 'Ad: ' . $duz($t['name'] ?? '')];
+
+        $porsiyon = $t['recipeYield'] ?? '';
+        $porsiyon = is_array($porsiyon) ? $duz(reset($porsiyon)) : $duz($porsiyon);
+
+        foreach (['Porsiyon' => $porsiyon, 'Hazırlık' => $sure($t['prepTime'] ?? ''),
+                  'Pişirme' => $sure($t['cookTime'] ?? ''), 'Toplam süre' => $sure($t['totalTime'] ?? '')] as $ad => $deger) {
+            if ($deger !== '') {
+                $satirlar[] = $ad . ': ' . $deger;
+            }
+        }
+
+        $malzemeler = array_values(array_filter(array_map($duz, (array) ($t['recipeIngredient'] ?? $t['ingredients'] ?? []))));
+
+        if ($malzemeler !== []) {
+            $satirlar[] = 'Malzemeler:';
+
+            foreach ($malzemeler as $m) {
+                $satirlar[] = '- ' . $m;
+            }
+        }
+
+        $adimlar = [];
+        $topla = static function (mixed $x) use (&$topla, &$adimlar, $duz): void {
+            if (is_string($x)) {
+                foreach (preg_split('/\R+/u', $x) ?: [] as $parca) {
+                    if (($p = $duz($parca)) !== '') {
+                        $adimlar[] = $p;
+                    }
+                }
+            } elseif (is_array($x)) {
+                if (isset($x['itemListElement'])) {
+                    if (($ad = $duz($x['name'] ?? '')) !== '') {
+                        $adimlar[] = '[' . $ad . ']';
+                    }
+                    $topla($x['itemListElement']);
+                } elseif (isset($x['text'])) {
+                    $topla((string) $x['text']);
+                } else {
+                    foreach ($x as $alt) {
+                        $topla($alt);
+                    }
+                }
+            }
+        };
+        $topla($t['recipeInstructions'] ?? []);
+
+        if ($adimlar !== []) {
+            $satirlar[] = 'Yapılışı:';
+
+            $no = 0;
+
+            foreach ($adimlar as $a) {
+                // Bolum basligi ("[Hamuru için]") numara almiyor.
+                $satirlar[] = str_starts_with($a, '[') ? $a : (++$no) . '. ' . $a;
+            }
+        }
+
+        // Ne malzeme ne adim varsa veri ise yaramaz.
+        return $malzemeler === [] && $adimlar === [] ? '' : implode("\n", $satirlar);
     }
 
     /**
