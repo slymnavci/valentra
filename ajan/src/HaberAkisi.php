@@ -43,8 +43,9 @@ final class HaberAkisi
         'teknoloji'    => 6,
         'saglik'       => 5,
         'kultur-sanat' => 5,
-        // Tarifler haber degil; az ama surekli (22.10.2026).
-        'yemek-tarifleri' => 4,
+        // Tarifler haber degil; surekli. 4'ten 12'ye (22.10.2026, site
+        // sahibinin istegi: "yemek tarifi sayisini artiralim"; 7 kaynak).
+        'yemek-tarifleri' => 12,
     ];
 
     /**

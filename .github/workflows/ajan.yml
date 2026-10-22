@@ -50,7 +50,7 @@ on:
         description: 'Kac saat geriye bakilsin'
         default: '36'
       enfazla:
-        description: 'En fazla kac aday islensin (bos: basliklarin paylarinin toplami, 60)'
+        description: 'En fazla kac aday islensin (bos: basliklarin paylarinin toplami, 72)'
         default: ''
       aday:
         description: 'kaynak-testi: DB disi aday adresler  (Ad=https://..., Ad=https://...|yol:/bolum/)'
@@ -274,7 +274,7 @@ jobs:
           # demekti; simdi degil.
           #
           # 22.10.2026: aday sayisi verilmezse ajan basliklarin paylarinin
-          # toplamini kullaniyor (HaberAkisi::PAYLAR, 60); haberler baslik
+          # toplamini kullaniyor (HaberAkisi::PAYLAR, 72); haberler baslik
           # baslik isleniyor.
           BAYRAKLAR="--saat=${{ inputs.saat || '30' }}"
 

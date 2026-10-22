@@ -27,8 +27,8 @@ $adet       = 12;   // izgaradaki kart sayisi
  * site sahibinin istegiyle 20'ye cikti. "Bugun bilmeniz gerekenler"
  * kutusu mansetle birlikte duruyor; manset sayisini azaltmayi
  * gerektirmiyor. Kaydirak tukettigi haberleri izgaradan dusuyor, yani
- * ilk sayfadaki izgara 21. haberden basliyor. Secici dugmeler 10'arli iki
- * satir (assets/style.css, .kaydirak-sayfalar).
+ * ilk sayfadaki izgara 21. haberden basliyor. Secici dugmeler tek satir;
+ * telefonda numarasiz noktalar (assets/style.css, .kaydirak-sayfalar).
  */
 $mansetAdet = 20;   // kaydiraktaki haber sayisi
 

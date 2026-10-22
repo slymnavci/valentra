@@ -53,7 +53,8 @@ if (($mansetler ?? []) === []) {
     </div>
 </section>
 
-<div class="kaydirak-sayfalar" id="kaydirakSayfalar" role="tablist" aria-label="Haber seç">
+<div class="kaydirak-sayfalar" id="kaydirakSayfalar" role="tablist" aria-label="Haber seç"
+     style="--adet: <?= count($mansetler) ?>">
     <?php foreach ($mansetler as $sira => $haber): ?>
         <button type="button" role="tab"
                 data-sira="<?= (int) $sira ?>"
