@@ -933,17 +933,23 @@ a.menu-oge.aktif::after,
 .kaydirak-ok.sol  { left: 14px; }
 .kaydirak-ok.sag  { right: 14px; }
 
+/*
+ * Manset 20 haber (22.10.2026): dugmeler 10 sutunlu izgarada, 10'arli
+ * iki duzgun satir. Sutunlar daralabiliyor (minmax 0): dar telefonda
+ * dugmeler kuculuyor, satir kirilmiyor.
+ */
 .kaydirak-sayfalar {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(10, minmax(0, 30px));
     justify-content: center;
-    flex-wrap: wrap;
     gap: 7px;
     padding: 0 0 26px;
 }
 
 .kaydirak-sayfalar button {
-    width: 30px;
-    height: 30px;
+    width: 100%;
+    aspect-ratio: 1;
+    padding: 0;
     border: 1px solid var(--cizgi);
     border-radius: 50%;
     background: var(--kart);
@@ -964,34 +970,25 @@ a.menu-oge.aktif::after,
 }
 
 /*
- * Dar ekranda on dugme tek satira sigmali.
+ * Dar ekranda her satirda on dugme (manset 20 habere cikinca iki satir).
  *
  * Manset 10 habere cikinca dugmeler 10 x 30px + 9 x 7px = 363 piksel
  * istiyor; .sinirli iki yandan 24'er piksel aliyor. 411 pikselin
  * altindaki her telefonda (390, 375, 360, 320 olculdu) bir iki dugme
  * ikinci satira dusuyor ve secici egri gorunuyordu.
  *
- * Kucuk ekranda dugme 26px, aralik 4px: 296 piksel, 360'lik ekrana
- * (312 piksel yer) rahat sigiyor. Satir kirilmiyor; daha da dar
- * ekranlarda (320) dugmeler 22 piksele kadar kuculuyor ve
- * aspect-ratio sayesinde yuvarlak kaliyor. Gezinme icin iki yandaki
- * oklar da duruyor.
+ * Kucuk ekranda dugme 26px, aralik 4px: satir 296 piksel, 360'lik
+ * ekrana (312 piksel yer) rahat sigiyor. Daha dar ekranlarda (320)
+ * izgara sutunlari daraliyor, dugmeler aspect-ratio sayesinde yuvarlak
+ * kaliyor. Gezinme icin iki yandaki oklar da duruyor.
  */
 @media (max-width: 480px) {
     .kaydirak-sayfalar {
-        flex-wrap: nowrap;
+        grid-template-columns: repeat(10, minmax(0, 26px));
         gap: 4px;
     }
 
-    .kaydirak-sayfalar button {
-        flex: 0 1 26px;
-        width: auto;
-        min-width: 22px;
-        height: auto;
-        aspect-ratio: 1;
-        padding: 0;
-        font-size: .8rem;
-    }
+    .kaydirak-sayfalar button { font-size: .8rem; }
 }
 
 /* --- Kategori basligi ---------------------------------------------------- */
