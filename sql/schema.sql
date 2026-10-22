@@ -1816,3 +1816,26 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) V
     ('Yemek.com',         'https://yemek.com',               'https://yemek.com/rss.xml',              'rss', 'yemek-tarifleri', 1),
     ('Hürriyet Lezizz',   'https://www.hurriyet.com.tr',     'https://www.hurriyet.com.tr/rss/lezizz', 'rss', 'yemek-tarifleri', 1),
     ('Kevserin Mutfağı',  'https://www.kevserinmutfagi.com', 'https://www.kevserinmutfagi.com/feed',   'rss', 'yemek-tarifleri', 1);
+
+-- Ek tarif kaynaklari — 22.10.2026, site sahibinin istegi ("ekle").
+-- Uc kaynak testinde (kaynak_dene --aday, 31 aday adres) calisan ve tarif
+-- veren uc liste sayfasi. Uclu de haber sitelerinin tarif bolumu; RSS'leri
+-- yok, kazimayla okunuyor:
+--   Haberturk /yemek-tarifleri: 40 baglanti, guncel tarifler (falafel,
+--     sogan dolmasi, katmer...) arasinda pratik bilgi yazilari da var;
+--     tarif olmayani baslik suzgeci ve model eliyor.
+--   Sabah /yemek-tarifleri (yol:/yemek-tarifleri/): 25 tarif. Secicisiz
+--     sayfadaki yazar kosesi baglantilarini seciyordu.
+--   CNN Turk /yemek-tarifleri (yol:/yemek-tarifleri/): 40 baglanti.
+-- Bu tur tarifler eskimiyor; tarihi eski olanlar da aliniyor, kopya engeli
+-- ayni tarifin ikinci kez girmesini onluyor.
+-- Calismayanlar (bu yuzden eklenmedi): Lezzetler ve Nefis Yemek Tarifleri
+-- 403; Takvim 410; Mynet, Milliyet Pembenar, Sozcu, Hurriyet, Aksam, Star
+-- tarif adresleri 404; NTV N-Lezzetler bos; Refika, Oktay Usta, Aysenur
+-- Altan ve tahmin edilen diger blog adresleri cozulmuyor ya da beslemesi
+-- yok; Mutfak Sirlari ve kolayyemektarifleri.com beslemeleri haftalardir
+-- guncellenmiyor.
+INSERT IGNORE INTO kaynaklar (ad, site_url, liste_url, liste_secici, tur, kategori, aktif) VALUES
+    ('Habertürk Yemek Tarifleri', 'https://www.haberturk.com', 'https://www.haberturk.com/yemek-tarifleri', NULL,                    'web', 'yemek-tarifleri', 1),
+    ('Sabah Yemek Tarifleri',     'https://www.sabah.com.tr',  'https://www.sabah.com.tr/yemek-tarifleri',  'yol:/yemek-tarifleri/', 'web', 'yemek-tarifleri', 1),
+    ('CNN Türk Yemek Tarifleri',  'https://www.cnnturk.com',   'https://www.cnnturk.com/yemek-tarifleri',   'yol:/yemek-tarifleri/', 'web', 'yemek-tarifleri', 1);

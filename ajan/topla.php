@@ -694,7 +694,9 @@ function tarif_basligi_mi(string $baslik): bool
 
     return preg_match(
         '/nerede yenir|en iyi|tatl[ıi]c[ıi]lar[ıi]|men[üu]s[üu]|men[üu] [öo]neri|g[üu]n[üu]n men[üu]|'
-        . 'yan[ıi]na ne gider|yerine ne kullan[ıi]l[ıi]r|nas[ıi]l saklan[ıi]r|ka[çc] kalori|faydalar[ıi]|restoran/iu',
+        . 'yan[ıi]na ne gider|yerine ne kullan[ıi]l[ıi]r|nas[ıi]l saklan[ıi]r|ka[çc] kalori|faydalar[ıi]|restoran|'
+        // Haber sitelerinin tarif bolumlerindeki pratik bilgi yazilari
+        . 'nas[ıi]l se[çc]ilir|taze tut|nas[ıi]l ha[şs]lan[ıi]r|ka[çc] dakika|ne yap[ıi]l[ıi]r|[çc]e[şs]itleri nelerdir|kurtarman[ıi]n/iu',
         $baslik
     ) !== 1;
 }
