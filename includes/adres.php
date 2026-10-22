@@ -166,6 +166,27 @@ function piyasalar_yolu(): string
     return temiz_adres_acik() ? '/piyasalar' : '/piyasalar.php';
 }
 
+/**
+ * Şirket sayfasının adresi; kod boşsa şirket listesi. Dönem sorgu
+ * dizesinde (varsayilan donem adreste yazilmiyor).
+ */
+function sirket_yolu(string $kod = '', string $donem = ''): string
+{
+    if ($kod === '') {
+        $yol = temiz_adres_acik() ? '/sirket' : '/sirket.php';
+    } else {
+        $yol = temiz_adres_acik()
+            ? '/sirket/' . rawurlencode($kod)
+            : '/sirket.php?kod=' . rawurlencode($kod);
+    }
+
+    if ($donem !== '' && $donem !== '1y') {
+        $yol .= (str_contains($yol, '?') ? '&' : '?') . 'donem=' . rawurlencode($donem);
+    }
+
+    return $yol;
+}
+
 function kose_liste_yolu(int $sayfa = 1): string
 {
     $yol = temiz_adres_acik() ? '/valentra-diyor-ki' : '/kose-yazilari.php';

@@ -103,6 +103,7 @@ const VERI_UCLARI = [
     // kendisi okuyor; buradan yalnizca tani (kaynak_dene --ham) icin.
     'www.tff.org',
     'query1.finance.yahoo.com',
+    'www.isyatirim.com.tr',   // sirket sayfasi: sirket karti, gunluk veri
 ];
 
 if (in_array($sunucu, VERI_UCLARI, true)) {

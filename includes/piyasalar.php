@@ -111,13 +111,18 @@ function yahoo_grafik_coz(string $ham): ?array
     $meta     = is_array($sonuc['meta'] ?? null) ? $sonuc['meta'] : [];
     $zamanlar = is_array($sonuc['timestamp'] ?? null) ? $sonuc['timestamp'] : [];
     $kapanis  = $sonuc['indicators']['quote'][0]['close'] ?? [];
+    $hacim    = $sonuc['indicators']['quote'][0]['volume'] ?? [];
     $noktalar = [];
+    $hacimler = [];
 
     foreach ($zamanlar as $i => $t) {
         $d = $kapanis[$i] ?? null;
 
         if (is_numeric($d) && (float) $d > 0) {
             $noktalar[] = [(int) $t, round((float) $d, 4)];
+            // Hacim sirket sayfasi icin (ortalama islem hacmi); kapanisla
+            // ayni noktalarda tutuluyor.
+            $hacimler[] = is_numeric($hacim[$i] ?? null) ? (int) $hacim[$i] : 0;
         }
     }
 
@@ -138,7 +143,16 @@ function yahoo_grafik_coz(string $ham): ?array
         return null;
     }
 
-    return ['fiyat' => $fiyat, 'degisim' => $degisim, 'noktalar' => $noktalar];
+    return [
+        'fiyat'    => $fiyat,
+        'degisim'  => $degisim,
+        'noktalar' => $noktalar,
+        'hacimler' => $hacimler,
+        'ad'       => (string) ($meta['longName'] ?? $meta['shortName'] ?? ''),
+        'para'     => (string) ($meta['currency'] ?? ''),
+        'yuksek52' => isset($meta['fiftyTwoWeekHigh']) ? (float) $meta['fiftyTwoWeekHigh'] : null,
+        'dusuk52'  => isset($meta['fiftyTwoWeekLow']) ? (float) $meta['fiftyTwoWeekLow'] : null,
+    ];
 }
 
 /**

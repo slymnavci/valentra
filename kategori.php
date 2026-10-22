@@ -82,6 +82,14 @@ require __DIR__ . '/includes/sayfa_ust.php';
              */
             echo '<p class="piyasa-bag"><a href="' . e(piyasalar_yolu()) . '">'
                . 'Piyasalar: BIST 100, döviz, altın, borsa şirketleri ve ekonomik göstergeler &rarr;</a></p>';
+
+            // BIST 100 grafigi ve sirket secici (22.10.2026, site sahibinin
+            // istegi: "ekonomi haberlerini verirken BIST 100 grafikleri de
+            // olsun; bir sirket secip gecmisini gorelim"). Yalnizca ilk sayfada.
+            if ($sayfa === 1) {
+                require_once __DIR__ . '/includes/sirket_panel.php';
+                echo sirket_bist_bolumu_html();
+            }
         }
 
         if ($canliPanel !== '') {

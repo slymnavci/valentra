@@ -51,6 +51,7 @@ function site_menusu(): array
                 ['ad' => 'Piyasalar (BIST, Döviz, Altın)', 'anahtar' => 'piyasalar',        'href' => $piyasa,                          'adet' => 0],
                 ['ad' => 'Ekonomik Göstergeler',          'anahtar' => 'ekonomi-gosterge', 'href' => $piyasa . '#gostergeler',         'adet' => 0],
                 ['ad' => 'Borsa İstanbul Şirketleri',     'anahtar' => 'ekonomi-borsa',    'href' => $piyasa . '#borsa',               'adet' => 0],
+                ['ad' => 'Şirket Analizi (10 Yıllık Geçmiş)', 'anahtar' => 'ekonomi-sirket', 'href' => sirket_yolu(),                  'adet' => 0],
                 ['ad' => 'Günlük Ekonomi Haberleri',      'anahtar' => 'ekonomi-haberler', 'href' => (string) $oge['href'],           'adet' => 0],
             ];
         }

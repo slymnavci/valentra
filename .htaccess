@@ -142,6 +142,15 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^piyasalar/?$ piyasalar.php [L,QSA]
 
+    # Sirket sayfasi: /sirket (liste), /sirket/THYAO
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^sirket/?$ sirket.php [L,QSA]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^sirket/([A-Za-z0-9]+)/?$ sirket.php?kod=$1 [L,QSA]
+
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^kanun/([^/]+)/?$ kanun.php?k=$1 [L,QSA]
