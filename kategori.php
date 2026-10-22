@@ -73,7 +73,9 @@ if ($kategori['slug'] === 'spor') {
             default        => 'spor',
         };
 
-        $ligAdi = futbol_api_acik() ? (string) (futbol_lig($sporP['lig'])['ad'] ?? '') : 'Süper Lig';
+        $ligAdi = futbol_api_acik()
+            ? (futbol_lig_katalog_adi($sporP['lig']) ?: (string) (futbol_lig($sporP['lig'])['ad'] ?? ''))
+            : 'Süper Lig';
         $baslik = SPOR_BOLUMLERI[$sporBolum] ?? SPOR_ALT_BOLUMLER[$sporBolum];
 
         $sayfaBasligi  = trim($ligAdi . ' ' . $baslik) . ' — Valentra';
@@ -100,7 +102,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
 </div>
 
 <?php if ($kategori['slug'] === 'spor'): ?>
-    <?= spor_sekmeleri_html($sporBolum, (int) $sporP['lig']) ?>
+    <?= spor_sekmeleri_html($sporBolum, (string) $sporP['lig']) ?>
     <?php if (isset(SPOR_BOLUMLERI[$sporBolum])): ?>
         <?= spor_secici_html($sporBolum, $sporP) ?>
     <?php endif; ?>
@@ -139,8 +141,8 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <?php if ($sporBolum !== '' && $canliPanel === ''): ?>
             <div class="bos-durum">
                 <?php if (!futbol_api_acik() && !in_array($sporBolum, ['puan-durumu', 'fikstur'], true)): ?>
-                    <strong>Bu bölüm henüz açık değil.</strong>
-                    Dünya ligleri, kulüp ve maç ayrıntıları spor veri servisi bağlanınca görünecek.
+                    <strong>Bu bölüm şu an kapalı.</strong>
+                    Dünya ligleri, kulüp ve maç ayrıntıları spor veri kaynağı açılınca görünecek.
                 <?php else: ?>
                     <strong>Veri şu an alınamıyor.</strong>
                     Birkaç dakika sonra sayfayı yenileyin.

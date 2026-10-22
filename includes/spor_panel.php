@@ -6,17 +6,17 @@ declare(strict_types=1);
  *
  *   (bos)          spor haberleri (kategori.php kendisi ciziyor)
  *   puan-durumu    secilen ligin puan durumu
- *   fikstur        secilen ligin haftalari, canli skorlar
+ *   fikstur        secilen ligin maç gunleri, canli skorlar
  *   gol-kralligi   secilen ligin gol kralligi
  *   kulup          kulubun analizi, son maclari ve golleri
- *   mac            macin golleri, kartlari, istatistigi ve kadrolari
+ *   mac            macin golleri, kartlari ve istatistigi
  *
  * Gecmis: 22.10.2026 TFF'den Super Lig (tek sayfa); 23.10.2026 bolumler
- * ayri sayfa; ayni gun site sahibinin istegiyle dunyanin butun ligleri,
- * kulup ve mac sayfalari (API-Football, includes/futbol.php).
+ * ayri sayfa; ayni gun site sahibinin istegiyle dunyanin liglerini, kulup
+ * ve mac sayfalari (ESPN, includes/futbol.php).
  *
- * API anahtari girilmemisse puan durumu ve fikstur eskisi gibi TFF'den
- * Super Lig; diger bolumler anahtar istedigini soyler.
+ * ESPN panelden kapatilmissa puan durumu ve fikstur TFF'den Super Lig;
+ * diger bolumler kapali oldugunu soyler.
  *
  * Sayfa (kategori.php) ve canli yenileme ucu (api/spor.php) ayni HTML'i
  * spor_paneli_html()'den aliyor. Lig secici bunun DISINDA: yenileme
@@ -39,29 +39,29 @@ const SPOR_ALT_BOLUMLER = [
     'mac'   => 'Maç',
 ];
 
-/** İstatistik adlarının Türkçesi (API İngilizce veriyor). */
+/**
+ * İstatistik adlarının Türkçesi (ESPN adıyla). Listede olmayan istatistik
+ * gösterilmiyor: ESPN bazen ayni seyi iki adla veriyor.
+ */
 const SPOR_ISTATISTIK_ADLARI = [
-    'Ball Possession'  => 'Topla oynama',
-    'expected_goals'   => 'Gol beklentisi (xG)',
-    'Total Shots'      => 'Toplam şut',
-    'Shots on Goal'    => 'İsabetli şut',
-    'Shots off Goal'   => 'İsabetsiz şut',
-    'Blocked Shots'    => 'Engellenen şut',
-    'Shots insidebox'  => 'Ceza sahası içi şut',
-    'Corner Kicks'     => 'Korner',
-    'Offsides'         => 'Ofsayt',
-    'Fouls'            => 'Faul',
-    'Yellow Cards'     => 'Sarı kart',
-    'Red Cards'        => 'Kırmızı kart',
-    'Goalkeeper Saves' => 'Kaleci kurtarışı',
-    'Total passes'     => 'Pas',
-    'Passes %'         => 'Pas isabeti',
+    'possessionPct'  => 'Topla oynama (%)',
+    'totalShots'     => 'Toplam şut',
+    'shotsOnTarget'  => 'İsabetli şut',
+    'wonCorners'     => 'Korner',
+    'foulsCommitted' => 'Faul',
+    'offsides'       => 'Ofsayt',
+    'saves'          => 'Kaleci kurtarışı',
+    'yellowCards'    => 'Sarı kart',
+    'redCards'       => 'Kırmızı kart',
+    'totalPasses'    => 'Pas',
+    'accuratePasses' => 'İsabetli pas',
+    'passPct'        => 'Pas isabeti',
 ];
 
 /**
  * Spor bölümünün adresi; bölüm boşsa spor haberleri.
  *
- * @param array<string,scalar> $ek  lig, tur, takim, mac, ulke
+ * @param array<string,scalar> $ek  lig, tur, takim, mac, gun, ulke
  */
 function spor_bolum_yolu(string $bolum = '', array $ek = []): string
 {
@@ -78,21 +78,27 @@ function spor_bolum_yolu(string $bolum = '', array $ek = []): string
 /**
  * İstekteki spor parametreleri, doğrulanmış.
  *
- * @return array{lig:int,tur:string,takim:int,mac:int,ulke:string}
+ * @return array{lig:string,tur:string,takim:int,mac:int,gun:string,ulke:string}
  */
 function spor_parametreleri(array $kaynak): array
 {
+    $lig = strtolower(trim((string) ($kaynak['lig'] ?? '')));
+    $tur = trim((string) ($kaynak['tur'] ?? ''));
+    $gun = trim((string) ($kaynak['gun'] ?? ''));
+    $ulke = trim((string) ($kaynak['ulke'] ?? ''));
+
     return [
-        'lig'   => max(0, (int) ($kaynak['lig'] ?? 0)) ?: FUTBOL_VARSAYILAN_LIG,
-        'tur'   => mb_substr(trim((string) ($kaynak['tur'] ?? '')), 0, 80),
+        'lig'   => futbol_lig_kodu_gecerli($lig) ? $lig : FUTBOL_VARSAYILAN_LIG,
+        'tur'   => preg_match('/^\d{8}-\d{8}$/', $tur) ? $tur : '',
         'takim' => max(0, (int) ($kaynak['takim'] ?? 0)),
         'mac'   => max(0, (int) ($kaynak['mac'] ?? 0)),
-        'ulke'  => mb_substr(trim((string) ($kaynak['ulke'] ?? '')), 0, 60),
+        'gun'   => preg_match('/^\d{8}$/', $gun) ? $gun : '',
+        'ulke'  => isset(FUTBOL_LIGLER[$ulke]) ? $ulke : '',
     ];
 }
 
 /** Bölümler arasında geçiş sekmeleri. */
-function spor_sekmeleri_html(string $aktif, int $lig): string
+function spor_sekmeleri_html(string $aktif, string $lig): string
 {
     $sekmeler = SPOR_BOLUMLERI + ['' => 'Spor Haberleri'];
 
@@ -120,7 +126,7 @@ function spor_sekmeleri_html(string $aktif, int $lig): string
  * sorgu parametreleri gizli alan olarak tasiniyor (GET formu action'daki
  * sorguyu siler).
  *
- * @param array{lig:int,tur:string,takim:int,mac:int,ulke:string} $p
+ * @param array{lig:string,tur:string,takim:int,mac:int,gun:string,ulke:string} $p
  */
 function spor_secici_html(string $bolum, array $p): string
 {
@@ -128,9 +134,8 @@ function spor_secici_html(string $bolum, array $p): string
         return '';
     }
 
-    $lig    = futbol_lig($p['lig']);
-    $ulke   = $p['ulke'] !== '' ? $p['ulke'] : (string) ($lig['ulke'] ?? '');
-    $ligler = futbol_ulke_ligleri($ulke);
+    $ulke   = $p['ulke'] !== '' ? $p['ulke'] : (futbol_lig_ulkesi($p['lig']) ?: 'Türkiye');
+    $ligler = FUTBOL_LIGLER[$ulke] ?? [];
 
     $hedef = kategori_yolu('spor');
     [$yol, $sorgu] = array_pad(explode('?', $hedef, 2), 2, '');
@@ -140,8 +145,8 @@ function spor_secici_html(string $bolum, array $p): string
     ?>
     <div class="lig-secici">
         <div class="lig-hizli">
-            <?php foreach (FUTBOL_ONE_CIKAN_LIGLER as $id => $ad): ?>
-                <a href="<?= e(spor_bolum_yolu($bolum, ['lig' => $id])) ?>"<?= $id === $p['lig'] ? ' class="aktif"' : '' ?>><?= e($ad) ?></a>
+            <?php foreach (FUTBOL_ONE_CIKAN_LIGLER as $kod => $ad): ?>
+                <a href="<?= e(spor_bolum_yolu($bolum, ['lig' => $kod])) ?>"<?= $kod === $p['lig'] ? ' class="aktif"' : '' ?>><?= e($ad) ?></a>
             <?php endforeach; ?>
         </div>
 
@@ -154,8 +159,8 @@ function spor_secici_html(string $bolum, array $p): string
             <label>
                 <span>Ülke</span>
                 <select name="ulke" onchange="this.form.lig.value='';this.form.submit()">
-                    <?php foreach (futbol_ulkeler() as $u): ?>
-                        <option value="<?= e($u['ad']) ?>"<?= $u['ad'] === $ulke ? ' selected' : '' ?>><?= e($u['ad']) ?></option>
+                    <?php foreach (array_keys(FUTBOL_LIGLER) as $u): ?>
+                        <option value="<?= e($u) ?>"<?= $u === $ulke ? ' selected' : '' ?>><?= e($u) ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
@@ -163,11 +168,8 @@ function spor_secici_html(string $bolum, array $p): string
             <label>
                 <span>Lig</span>
                 <select name="lig" onchange="this.form.submit()">
-                    <?php if ($ligler === []): ?>
-                        <option value="">—</option>
-                    <?php endif; ?>
-                    <?php foreach ($ligler as $l): ?>
-                        <option value="<?= (int) $l['id'] ?>"<?= $l['id'] === $p['lig'] ? ' selected' : '' ?>><?= e($l['ad']) ?></option>
+                    <?php foreach ($ligler as $kod => $ad): ?>
+                        <option value="<?= e($kod) ?>"<?= $kod === $p['lig'] ? ' selected' : '' ?>><?= e($ad) ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
@@ -183,19 +185,15 @@ function spor_secici_html(string $bolum, array $p): string
 /**
  * Ülke değişti ama lig o ülkenin değilse ülkenin ilk ligi.
  *
- * @param array{lig:int,tur:string,takim:int,mac:int,ulke:string} $p
- * @return array{lig:int,tur:string,takim:int,mac:int,ulke:string}
+ * @param array{lig:string,tur:string,takim:int,mac:int,gun:string,ulke:string} $p
+ * @return array{lig:string,tur:string,takim:int,mac:int,gun:string,ulke:string}
  */
 function spor_ulke_ligine_uyarla(array $p): array
 {
-    if ($p['ulke'] === '' || !futbol_api_acik()) {
-        return $p;
-    }
+    $ligler = FUTBOL_LIGLER[$p['ulke']] ?? [];
 
-    $ligler = futbol_ulke_ligleri($p['ulke']);
-
-    if ($ligler !== [] && !in_array($p['lig'], array_column($ligler, 'id'), true)) {
-        $p['lig'] = (int) $ligler[0]['id'];
+    if ($ligler !== [] && !isset($ligler[$p['lig']])) {
+        $p['lig'] = (string) array_key_first($ligler);
         $p['tur'] = '';
     }
 
@@ -205,7 +203,7 @@ function spor_ulke_ligine_uyarla(array $p): array
 /**
  * Bir bölümün HTML'i. Veri yoksa boş (sayfa "alınamıyor" der).
  *
- * @param array{lig:int,tur:string,takim:int,mac:int,ulke:string} $p
+ * @param array{lig:string,tur:string,takim:int,mac:int,gun:string,ulke:string} $p
  */
 function spor_paneli_html(string $bolum, array $p): string
 {
@@ -218,7 +216,7 @@ function spor_paneli_html(string $bolum, array $p): string
     }
 
     if ($bolum === 'mac') {
-        return spor_mac_html($p['mac']);
+        return spor_mac_html($p['mac'], $p['lig'], $p['gun']);
     }
 
     if ($bolum === 'kulup') {
@@ -227,8 +225,9 @@ function spor_paneli_html(string $bolum, array $p): string
 
     $lig = futbol_lig($p['lig']);
 
-    if ($lig === null || $lig['sezon'] === 0) {
-        return '';
+    if ($lig === null) {
+        // ESPN Super Lig'i veremiyorsa TFF'ye dus.
+        return $p['lig'] === FUTBOL_VARSAYILAN_LIG ? spor_tff_paneli_html($bolum) : '';
     }
 
     [$govde, $zaman, $yenile] = match ($bolum) {
@@ -238,7 +237,7 @@ function spor_paneli_html(string $bolum, array $p): string
     };
 
     if ($govde === '') {
-        return '';
+        return $p['lig'] === FUTBOL_VARSAYILAN_LIG ? spor_tff_paneli_html($bolum) : '';
     }
 
     $canli = '/api/spor.php?' . http_build_query(['bolum' => $bolum, 'lig' => $lig['id'], 'tur' => $p['tur']]);
@@ -251,7 +250,7 @@ function spor_paneli_html(string $bolum, array $p): string
                 <?php if ($lig['logo'] !== ''): ?><img src="<?= e($lig['logo']) ?>" alt="" class="lig-logo" loading="lazy" width="28" height="28"><?php endif; ?>
                 <?= e($lig['ad']) ?> &middot; <?= e(SPOR_BOLUMLERI[$bolum]) ?>
             </h2>
-            <span class="canli-not"><?= e($lig['ulke']) ?> &middot; <?= (int) $lig['sezon'] ?>-<?= (int) $lig['sezon'] + 1 ?> &middot; güncelleme <?= e(canli_zaman_yazi($zaman)) ?></span>
+            <span class="canli-not"><?= e($lig['sezon']) ?> &middot; kaynak ESPN &middot; güncelleme <?= e(canli_zaman_yazi($zaman)) ?></span>
         </div>
 
         <?= $govde ?>
@@ -261,12 +260,12 @@ function spor_paneli_html(string $bolum, array $p): string
     return (string) ob_get_clean();
 }
 
-// --- API: puan durumu, fikstür, gol krallığı -------------------------------
+// --- Puan durumu, fikstür, gol krallığı ------------------------------------
 
 /** @return array{0:string,1:int,2:bool} html, zaman, canli yenilensin mi */
 function spor_api_puan_html(array $lig): array
 {
-    $kayit = futbol_puan_durumu($lig['id'], $lig['sezon']);
+    $kayit = futbol_puan_durumu($lig['id']);
 
     if ($kayit['veri'] === null) {
         return ['', 0, false];
@@ -295,7 +294,6 @@ function spor_api_puan_html(array $lig): array
                             <th scope="col" title="Yenilen" class="genis">Y</th>
                             <th scope="col" title="Averaj">AV</th>
                             <th scope="col" title="Puan" class="puan">P</th>
-                            <th scope="col" title="Son beş maç" class="genis">Form</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -317,7 +315,6 @@ function spor_api_puan_html(array $lig): array
                                 <td class="genis"><?= $s['y'] ?></td>
                                 <td><?= $s['av'] > 0 ? '+' : '' ?><?= $s['av'] ?></td>
                                 <td class="puan"><?= $s['p'] ?></td>
-                                <td class="genis"><?= spor_form_html($s['form']) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -354,21 +351,21 @@ function spor_form_html(string $form): string
 /** @return array{0:string,1:int,2:bool} */
 function spor_api_fikstur_html(array $lig, string $tur): array
 {
-    $turlar = futbol_turlar($lig['id'], $lig['sezon'])['veri'] ?? [];
-    $guncel = futbol_guncel_tur($lig['id'], $lig['sezon']);
+    $turlar = futbol_turlar_takvimden($lig['takvim']);
+    $guncel = futbol_guncel_tur($turlar);
 
     if ($tur === '' || !in_array($tur, $turlar, true)) {
-        $tur = $guncel !== '' ? $guncel : (string) ($turlar[0] ?? '');
+        $tur = $guncel;
     }
 
     if ($tur === '') {
         return ['', 0, false];
     }
 
-    $kayit  = futbol_tur_maclari($lig['id'], $lig['sezon'], $tur);
-    $maclar = $kayit['veri'] ?? [];
-    $sira   = array_search($tur, $turlar, true);
-    $onceki = $sira !== false && $sira > 0 ? $turlar[$sira - 1] : '';
+    $kayit   = futbol_tarih_maclari($lig['id'], $tur);
+    $maclar  = $kayit['veri'] ?? [];
+    $sira    = array_search($tur, $turlar, true);
+    $onceki  = $sira !== false && $sira > 0 ? $turlar[$sira - 1] : '';
     $sonraki = $sira !== false && isset($turlar[$sira + 1]) ? $turlar[$sira + 1] : '';
 
     ob_start();
@@ -387,7 +384,7 @@ function spor_api_fikstur_html(array $lig, string $tur): array
         </div>
 
         <?php if ($maclar === []): ?>
-            <p class="canli-not">Bu turun maçları alınamadı.</p>
+            <p class="canli-not">Bu günlerin maçları alınamadı.</p>
         <?php endif; ?>
 
         <?php $gun = ''; ?>
@@ -404,7 +401,7 @@ function spor_api_fikstur_html(array $lig, string $tur): array
 
         <?php if (count($turlar) > 1): ?>
             <details class="tur-listesi">
-                <summary>Bütün turlar</summary>
+                <summary>Sezonun bütün maç günleri</summary>
                 <p>
                     <?php foreach ($turlar as $t): ?>
                         <a href="<?= e(spor_bolum_yolu('fikstur', ['lig' => $lig['id'], 'tur' => $t])) ?>"<?= $t === $tur ? ' class="aktif"' : '' ?>><?= e(futbol_tur_adi($t)) ?></a>
@@ -415,7 +412,7 @@ function spor_api_fikstur_html(array $lig, string $tur): array
     </div>
     <?php
 
-    // Yalnizca oynanan ya da bugunku maci olan tur canli yenileniyor.
+    // Yalnizca canli ya da bugunku maci olan tur yenileniyor.
     $yenile = false;
 
     foreach ($maclar as $m) {
@@ -428,11 +425,12 @@ function spor_api_fikstur_html(array $lig, string $tur): array
 }
 
 /** Fikstür ve kulüp sayfasındaki maç satırı. */
-function spor_mac_satiri_html(array $m, int $lig, string $ust = ''): string
+function spor_mac_satiri_html(array $m, string $lig, string $ust = ''): string
 {
-    $canli = in_array($m['durum'], FUTBOL_CANLI, true);
+    $canli   = in_array($m['durum'], FUTBOL_CANLI, true);
     $oynandi = $canli || in_array($m['durum'], FUTBOL_BITTI, true);
-    $kulup = static fn (int $id): string => spor_bolum_yolu('kulup', ['takim' => $id, 'lig' => $m['lig_id'] ?: $lig]);
+    $macLig  = futbol_lig_kodu_gecerli((string) $m['lig_id']) ? (string) $m['lig_id'] : $lig;
+    $kulup   = static fn (int $id): string => spor_bolum_yolu('kulup', ['takim' => $id, 'lig' => $macLig]);
 
     ob_start();
     ?>
@@ -441,7 +439,7 @@ function spor_mac_satiri_html(array $m, int $lig, string $ust = ''): string
             <span class="mac-zaman"><?= e($ust) ?><?= $canli ? ' <b class="canli-rozet">' . ($m['durum'] === 'HT' ? 'Devre arası' : (int) $m['dakika'] . "'") . '</b>' : '' ?></span>
         <?php endif; ?>
         <a class="mac-ev" href="<?= e($kulup($m['ev_id'])) ?>"><?= e($m['ev']) ?></a>
-        <a class="mac-skor<?= $oynandi ? '' : ' oynanmadi' ?>" href="<?= e(spor_bolum_yolu('mac', ['mac' => $m['id']])) ?>"><?= e(futbol_skor_yazi($m)) ?></a>
+        <a class="mac-skor<?= $oynandi ? '' : ' oynanmadi' ?>" href="<?= e(spor_bolum_yolu('mac', ['mac' => $m['id'], 'lig' => $macLig, 'gun' => futbol_espn_gunu($m['zaman'])])) ?>"><?= e(futbol_skor_yazi($m)) ?></a>
         <a class="mac-dep" href="<?= e($kulup($m['dep_id'])) ?>"><?= e($m['dep']) ?></a>
     </li>
     <?php
@@ -452,7 +450,7 @@ function spor_mac_satiri_html(array $m, int $lig, string $ust = ''): string
 /** @return array{0:string,1:int,2:bool} */
 function spor_api_gol_html(array $lig): array
 {
-    $kayit = futbol_gol_kralligi($lig['id'], $lig['sezon']);
+    $kayit = futbol_gol_kralligi($lig['id']);
 
     if ($kayit['veri'] === null) {
         return ['', 0, false];
@@ -471,14 +469,13 @@ function spor_api_gol_html(array $lig): array
                         <th scope="col" title="Maç">M</th>
                         <th scope="col" title="Gol" class="puan">Gol</th>
                         <th scope="col" title="Asist">Asist</th>
-                        <th scope="col" title="Penaltı golü" class="genis">Pen.</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($kayit['veri'] as $i => $o): ?>
                         <tr>
                             <td class="sira"><?= $i + 1 ?></td>
-                            <td class="takim"><?= e($o['oyuncu']) ?> <small class="soluk"><?= e($o['uyruk']) ?></small></td>
+                            <td class="takim"><?= e($o['oyuncu']) ?></td>
                             <td class="takim genis">
                                 <a href="<?= e(spor_bolum_yolu('kulup', ['takim' => $o['takim_id'], 'lig' => $lig['id']])) ?>">
                                     <?php if ($o['logo'] !== ''): ?><img src="<?= e($o['logo']) ?>" alt="" loading="lazy" width="18" height="18"><?php endif; ?>
@@ -488,7 +485,6 @@ function spor_api_gol_html(array $lig): array
                             <td><?= $o['mac'] ?></td>
                             <td class="puan"><?= $o['gol'] ?></td>
                             <td><?= $o['asist'] ?></td>
-                            <td class="genis"><?= $o['penalti'] ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -502,30 +498,18 @@ function spor_api_gol_html(array $lig): array
 
 // --- Kulüp: analiz, son maçlar ve golleri ----------------------------------
 
-function spor_kulup_html(int $takim, int $ligId): string
+function spor_kulup_html(int $takim, string $lig): string
 {
     if ($takim <= 0) {
         return '';
     }
 
-    $lig      = futbol_lig($ligId);
-    $ist      = $lig !== null ? (futbol_kulup_istatistigi($lig['id'], $lig['sezon'], $takim)['veri'] ?? null) : null;
-    $maclar   = futbol_kulup_maclari($takim);
-    $ayrinti  = futbol_mac_ayrintilari(array_column($maclar['son'], 'id'));
+    $maclar  = futbol_kulup_maclari($takim, $lig);
+    $ayrinti = futbol_mac_ayrintilari(array_slice($maclar['son'], 0, 15));
+    $ist     = futbol_kulup_analizi($takim, $maclar['son'], $ayrinti, $maclar['ad'], $maclar['logo'], $lig);
 
-    if ($ist === null && $maclar['son'] === []) {
+    if ($maclar['ad'] === '' && $maclar['son'] === [] && $maclar['sirada'] === []) {
         return '';
-    }
-
-    // Kulubun adi ve logosu: istatistikten, yoksa ilk mactan.
-    $ad = $ist['takim'] ?? '';
-    $logo = $ist['logo'] ?? '';
-
-    foreach ($maclar['son'] as $m) {
-        if ($ad === '') {
-            $ad   = $m['ev_id'] === $takim ? $m['ev'] : $m['dep'];
-            $logo = $m['ev_id'] === $takim ? $m['ev_logo'] : $m['dep_logo'];
-        }
     }
 
     // Son maclarin gollerinden golcu listesi (kendi kalesine atilan haric).
@@ -533,27 +517,27 @@ function spor_kulup_html(int $takim, int $ligId): string
 
     foreach ($ayrinti as $a) {
         foreach ($a['olaylar'] as $o) {
-            if ($o['tip'] === 'Goal' && $o['takim'] === $takim && $o['detay'] !== 'Own Goal' && $o['detay'] !== 'Missed Penalty' && $o['oyuncu'] !== '') {
+            if ($o['tip'] === 'Goal' && $o['takim'] === $takim && $o['detay'] !== 'Own Goal' && $o['oyuncu'] !== '') {
                 $golculer[$o['oyuncu']] = ($golculer[$o['oyuncu']] ?? 0) + 1;
             }
         }
     }
 
     arsort($golculer);
-
-    $son = $maclar['son'];
-    usort($son, static fn (array $a, array $b): int => $b['zaman'] <=> $a['zaman']);
+    $son = array_slice($maclar['son'], 0, 15);
 
     ob_start();
     ?>
-    <section class="spor-panel kulup-panel" aria-label="<?= e($ad) ?>">
+    <section class="spor-panel kulup-panel" aria-label="<?= e($maclar['ad']) ?>">
         <div class="kulup-baslik">
-            <?php if ($logo !== ''): ?><img src="<?= e($logo) ?>" alt="" width="56" height="56"><?php endif; ?>
+            <?php if ($maclar['logo'] !== ''): ?><img src="<?= e($maclar['logo']) ?>" alt="" width="56" height="56"><?php endif; ?>
             <div>
-                <h2><?= e($ad) ?></h2>
-                <?php if ($lig !== null): ?>
-                    <span class="canli-not"><?= e($lig['ad']) ?> <?= (int) $lig['sezon'] ?>-<?= (int) $lig['sezon'] + 1 ?> &middot; güncelleme <?= e(canli_zaman_yazi($maclar['zaman'])) ?></span>
-                <?php endif; ?>
+                <h2><?= e($maclar['ad']) ?></h2>
+                <span class="canli-not">
+                    <?= e(futbol_lig_katalog_adi($lig) ?: $lig) ?>
+                    <?= $maclar['ozet'] !== '' ? ' &middot; ' . e($maclar['ozet']) : '' ?>
+                    &middot; kaynak ESPN &middot; güncelleme <?= e(canli_zaman_yazi($maclar['zaman'])) ?>
+                </span>
             </div>
         </div>
 
@@ -578,7 +562,7 @@ function spor_kulup_html(int $takim, int $ligId): string
                 <ul class="mac-listesi sonuclar kulup-maclari">
                     <?php foreach ($son as $m): ?>
                         <?php $harf = futbol_sonuc_harfi($m, $takim); ?>
-                        <?= spor_mac_satiri_html($m, $ligId, futbol_tarih($m['zaman']) . ' · ' . $m['lig']) ?>
+                        <?= spor_mac_satiri_html($m, $lig, futbol_tarih($m['zaman']) . ' · ' . $m['lig']) ?>
                         <?php if ($harf !== ''): ?>
                             <li class="mac-ek"><span class="form-dizi"><span class="form-<?= strtolower($harf) ?>"><?= $harf ?></span></span>
                                 <?= spor_gol_ozeti_html($ayrinti[$m['id']] ?? null, $m) ?>
@@ -594,7 +578,7 @@ function spor_kulup_html(int $takim, int $ligId): string
                 <h3>Sıradaki maçlar</h3>
                 <ul class="mac-listesi sonuclar">
                     <?php foreach ($maclar['sirada'] as $m): ?>
-                        <?= spor_mac_satiri_html($m, $ligId, futbol_tarih($m['zaman']) . ' · ' . $m['lig']) ?>
+                        <?= spor_mac_satiri_html($m, $lig, futbol_tarih($m['zaman']) . ' · ' . $m['lig']) ?>
                     <?php endforeach; ?>
                 </ul>
             </div>
@@ -615,7 +599,17 @@ function spor_gol_ozeti_html(?array $ayrinti, array $m): string
     $taraf = [$m['ev_id'] => [], $m['dep_id'] => []];
 
     foreach ($ayrinti['olaylar'] as $o) {
-        if ($o['tip'] !== 'Goal' || $o['detay'] === 'Missed Penalty' || !isset($taraf[$o['takim']])) {
+        if ($o['tip'] !== 'Goal') {
+            continue;
+        }
+
+        // Kendi kalesine gol, golu yiyen takimin oyuncusu adina geliyor:
+        // skor tablosunda karsi takimin hanesine yazilir.
+        $hane = $o['detay'] === 'Own Goal'
+            ? ($o['takim'] === $m['ev_id'] ? $m['dep_id'] : $m['ev_id'])
+            : $o['takim'];
+
+        if (!isset($taraf[$hane])) {
             continue;
         }
 
@@ -625,7 +619,7 @@ function spor_gol_ozeti_html(?array $ayrinti, array $m): string
             default    => '',
         };
 
-        $taraf[$o['takim']][] = $o['oyuncu'] . ' ' . $o['dk'] . ($o['ek'] > 0 ? '+' . $o['ek'] : '') . "'" . $ek;
+        $taraf[$hane][] = $o['oyuncu'] . ' ' . $o['dk'] . ($o['ek'] > 0 ? '+' . $o['ek'] : '') . "'" . $ek;
     }
 
     $ev  = implode(', ', $taraf[$m['ev_id']]);
@@ -638,7 +632,7 @@ function spor_gol_ozeti_html(?array $ayrinti, array $m): string
     return '<span class="gol-ozeti">' . e($ev !== '' ? $ev : '-') . ' &mdash; ' . e($dep !== '' ? $dep : '-') . '</span>';
 }
 
-/** Kulübün sezon analizi (API istatistiği). */
+/** Kulübün sezon analizi (maç sonuçlarından hesaplanan). */
 function spor_kulup_analiz_html(array $s): string
 {
     $sayi = static fn ($d): string => $d === null || $d === '' ? '-' : e((string) $d);
@@ -651,7 +645,7 @@ function spor_kulup_analiz_html(array $s): string
     ob_start();
     ?>
     <div class="kulup-ozet">
-        <div class="spor-kutu ozet-kart"><span>Form</span><?= spor_form_html($s['form']) ?: '-' ?></div>
+        <div class="spor-kutu ozet-kart"><span>Son 5 maç</span><?= spor_form_html($s['form']) ?: '-' ?></div>
         <div class="spor-kutu ozet-kart"><span>Galibiyet oranı</span><b><?= $galibiyetOrani !== null ? '%' . $galibiyetOrani : '-' ?></b></div>
         <div class="spor-kutu ozet-kart"><span>Maç başı gol</span><b><?= $sayi($s['atilan_ort']['top']) ?> / <?= $sayi($s['yenilen_ort']['top']) ?></b><small>atılan / yenilen</small></div>
         <div class="spor-kutu ozet-kart"><span>Gol yemeden</span><b><?= $sayi($s['gol_yemeden']['top']) ?></b><small>maç</small></div>
@@ -687,15 +681,14 @@ function spor_kulup_analiz_html(array $s): string
                 <li><span>En uzun mağlubiyet serisi</span><b><?= (int) $s['seri']['maglubiyet'] ?></b></li>
                 <li><span>En farklı galibiyet (iç / dış)</span><b><?= $sayi($s['en_farkli_galibiyet']['ic']) ?> / <?= $sayi($s['en_farkli_galibiyet']['dis']) ?></b></li>
                 <li><span>En farklı mağlubiyet (iç / dış)</span><b><?= $sayi($s['en_farkli_maglubiyet']['ic']) ?> / <?= $sayi($s['en_farkli_maglubiyet']['dis']) ?></b></li>
-                <li><span>Penaltı (atılan / kaçan)</span><b><?= (int) $s['penalti']['atilan'] ?> / <?= (int) $s['penalti']['kacan'] ?></b></li>
-                <?php if ($s['dizilisler'] !== []): ?>
-                    <li><span>Dizilişler</span><b><?= e(implode(', ', array_map(static fn (array $d): string => $d['dizilis'] . ' (' . $d['mac'] . ')', array_slice($s['dizilisler'], 0, 3)))) ?></b></li>
+                <?php if (($s['dakika'] ?? []) !== []): ?>
+                    <li><span>Penaltı golü</span><b><?= (int) $s['penalti']['atilan'] ?></b></li>
                 <?php endif; ?>
             </ul>
 
             <?php if (($s['dakika']['atilan'] ?? []) !== []): ?>
                 <h3>Gollerin dakikaları</h3>
-                <?php $enCok = max(1, ...array_values($s['dakika']['atilan']), ...array_values($s['dakika']['yenilen'] ?? [0])); ?>
+                <?php $enCok = max(1, ...array_values($s['dakika']['atilan']), ...array_values($s['dakika']['yenilen'])); ?>
                 <ul class="dakika-dagilimi">
                     <?php foreach ($s['dakika']['atilan'] as $aralik => $atilan): ?>
                         <?php $yenilen = (int) ($s['dakika']['yenilen'][$aralik] ?? 0); ?>
@@ -717,9 +710,9 @@ function spor_kulup_analiz_html(array $s): string
 
 // --- Maç ayrıntısı ------------------------------------------------------------
 
-function spor_mac_html(int $macId): string
+function spor_mac_html(int $macId, string $lig, string $gun): string
 {
-    $m = $macId > 0 ? futbol_mac_ayrintisi($macId) : null;
+    $m = $macId > 0 ? futbol_mac_ayrintisi($macId, $lig, $gun) : null;
 
     if ($m === null) {
         return '';
@@ -730,13 +723,12 @@ function spor_mac_html(int $macId): string
 
     ob_start();
     ?>
-    <section class="spor-panel mac-panel"<?= $canli ? ' data-canli-bolum="' . e('/api/spor.php?' . http_build_query(['bolum' => 'mac', 'mac' => $macId])) . '" data-canli-aralik="60"' : '' ?>>
+    <section class="spor-panel mac-panel"<?= $canli ? ' data-canli-bolum="' . e('/api/spor.php?' . http_build_query(['bolum' => 'mac', 'mac' => $macId, 'lig' => $lig, 'gun' => $gun])) . '" data-canli-aralik="60"' : '' ?>>
         <div class="spor-kutu mac-ust">
             <p class="canli-not">
-                <a href="<?= e(spor_bolum_yolu('fikstur', ['lig' => $m['lig_id'], 'tur' => $m['tur']])) ?>"><?= e($m['lig']) ?> &middot; <?= e(futbol_tur_adi($m['tur'])) ?></a>
+                <a href="<?= e(spor_bolum_yolu('fikstur', ['lig' => $m['lig_id']])) ?>"><?= e($m['lig']) ?></a>
                 &middot; <?= e(futbol_tarih($m['zaman'])) ?> <?= e(date('H:i', $m['zaman'])) ?>
                 <?= $m['stat'] !== '' ? ' &middot; ' . e($m['stat']) : '' ?>
-                <?= $m['hakem'] !== '' ? ' &middot; Hakem: ' . e($m['hakem']) : '' ?>
             </p>
             <div class="mac-skorbord">
                 <a href="<?= e($kulup($m['ev_id'])) ?>" class="takim">
@@ -747,8 +739,6 @@ function spor_mac_html(int $macId): string
                     <b><?= e(futbol_skor_yazi($m)) ?></b>
                     <?php if ($canli): ?>
                         <span class="canli-rozet"><?= $m['durum'] === 'HT' ? 'Devre arası' : (int) $m['dakika'] . "'" ?></span>
-                    <?php elseif ($m['iy_ev'] !== null): ?>
-                        <small>İlk yarı <?= (int) $m['iy_ev'] ?> - <?= (int) $m['iy_dep'] ?></small>
                     <?php endif; ?>
                 </div>
                 <a href="<?= e($kulup($m['dep_id'])) ?>" class="takim">
@@ -765,43 +755,40 @@ function spor_mac_html(int $macId): string
                     <?php foreach ($m['olaylar'] as $o): ?>
                         <?php
                         $simge = match (true) {
-                            $o['tip'] === 'Goal' && $o['detay'] === 'Missed Penalty' => '✗',
-                            $o['tip'] === 'Goal'                                       => '⚽',
-                            $o['detay'] === 'Yellow Card'                              => '🟨',
-                            $o['detay'] === 'Red Card' || $o['detay'] === 'Second Yellow card' => '🟥',
-                            $o['tip'] === 'Var'                                        => 'VAR',
-                            default                                                    => '•',
+                            $o['tip'] === 'Goal'          => '⚽',
+                            $o['detay'] === 'Yellow Card' => '🟨',
+                            $o['detay'] === 'Red Card'    => '🟥',
+                            default                       => '•',
                         };
                         $detay = match ($o['detay']) {
-                            'Penalty'        => 'penaltı',
-                            'Own Goal'       => 'kendi kalesine',
-                            'Missed Penalty' => 'penaltı kaçtı',
-                            'Second Yellow card' => 'ikinci sarı',
-                            default          => $o['tip'] === 'Var' ? $o['detay'] : '',
+                            'Penalty'  => 'penaltı',
+                            'Own Goal' => 'kendi kalesine',
+                            default    => '',
                         };
                         ?>
                         <li class="<?= $o['takim'] === $m['ev_id'] ? 'ev' : 'dep' ?>">
                             <span class="dk"><?= $o['dk'] ?><?= $o['ek'] > 0 ? '+' . $o['ek'] : '' ?>'</span>
                             <span class="simge"><?= e($simge) ?></span>
-                            <span class="kim"><?= e($o['oyuncu']) ?><?= $detay !== '' ? ' <small>(' . e($detay) . ')</small>' : '' ?><?= $o['tip'] === 'Goal' && $o['asist'] !== '' ? ' <small>asist: ' . e($o['asist']) . '</small>' : '' ?></span>
+                            <span class="kim"><?= e($o['oyuncu']) ?><?= $detay !== '' ? ' <small>(' . e($detay) . ')</small>' : '' ?></span>
                         </li>
                     <?php endforeach; ?>
                 </ul>
             </div>
         <?php endif; ?>
 
-        <?php if ($m['istatistik'] !== []): ?>
+        <?php $istatistikVar = array_intersect_key(SPOR_ISTATISTIK_ADLARI, $m['istatistik']) !== []; ?>
+        <?php if ($istatistikVar): ?>
             <div class="spor-kutu">
                 <h3>İstatistikler</h3>
                 <table class="puan-tablosu mac-istatistik">
                     <thead><tr><th scope="col"><?= e($m['ev']) ?></th><th></th><th scope="col"><?= e($m['dep']) ?></th></tr></thead>
                     <tbody>
-                        <?php foreach (SPOR_ISTATISTIK_ADLARI as $api => $ad): ?>
-                            <?php if (!isset($m['istatistik'][$api])) { continue; } ?>
+                        <?php foreach (SPOR_ISTATISTIK_ADLARI as $kod => $ad): ?>
+                            <?php if (!isset($m['istatistik'][$kod])) { continue; } ?>
                             <tr>
-                                <td><?= e((string) ($m['istatistik'][$api][$m['ev_id']] ?? 0)) ?></td>
+                                <td><?= e((string) ($m['istatistik'][$kod][$m['ev_id']] ?? '-')) ?></td>
                                 <th scope="row"><?= e($ad) ?></th>
-                                <td><?= e((string) ($m['istatistik'][$api][$m['dep_id']] ?? 0)) ?></td>
+                                <td><?= e((string) ($m['istatistik'][$kod][$m['dep_id']] ?? '-')) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -809,26 +796,14 @@ function spor_mac_html(int $macId): string
             </div>
         <?php endif; ?>
 
-        <?php if ($m['kadrolar'] !== []): ?>
-            <div class="spor-izgara esit">
-                <?php foreach ([$m['ev_id'] => $m['ev'], $m['dep_id'] => $m['dep']] as $id => $ad): ?>
-                    <?php $k = $m['kadrolar'][$id] ?? null; ?>
-                    <?php if ($k === null) { continue; } ?>
-                    <div class="spor-kutu">
-                        <h3><?= e($ad) ?> <?= $k['dizilis'] !== '' ? '(' . e($k['dizilis']) . ')' : '' ?></h3>
-                        <ol class="kadro"><?php foreach ($k['ilk11'] as $oyuncu): ?><li><?= e($oyuncu) ?></li><?php endforeach; ?></ol>
-                        <?php if ($k['hoca'] !== ''): ?><p class="canli-not">Teknik direktör: <?= e($k['hoca']) ?></p><?php endif; ?>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
+        <p class="canli-not">Kaynak ESPN.</p>
     </section>
     <?php
 
     return (string) ob_get_clean();
 }
 
-// --- TFF (API anahtarı yokken): Süper Lig ------------------------------------
+// --- TFF (ESPN kapalıyken ya da Süper Lig veremediğinde) -------------------
 
 function spor_tff_paneli_html(string $bolum): string
 {
