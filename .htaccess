@@ -6,17 +6,17 @@
 # riski azaltiyor.
 #
 # 1) Iki acigin da bilinen giris yolu multipart (dosya yuklemeli) POST
-#    istegi; PHP govdeyi sayfa kodu calismadan once ayristiriyor. Sitede
-#    dosya alan yalnizca iki adres var, digerlerine gelen multipart
-#    istek PHP'ye hic ulasmadan 403 ile geri cevriliyor. api/.htaccess
-#    kendi RewriteEngine'ini actigi icin bu kurali miras almiyor; ayni
-#    kural orada da var. Yeni bir dosya yukleme adresi eklenirse
-#    buraya istisna olarak yazilmali.
+#    istegi; PHP govdeyi sayfa kodu calismadan, giris denetiminden once
+#    ayristiriyor. Bu yuzden istisna yok: butun multipart istekler PHP'ye
+#    hic ulasmadan 403 ile geri cevriliyor. Bedeli, PHP guncellenene
+#    kadar panelden kanun PDF'i (admin/kanunlar.php) ve egitim
+#    bolumune dosya (egitim/api/dosya_yukle.php) yuklenememesi.
+#    PHP yamali surume gecince bu blok kaldirilmali. api/.htaccess
+#    kendi RewriteEngine'ini actigi icin kurali miras almiyor; ayni kural
+#    orada da var.
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteCond %{HTTP:Content-Type} multipart/ [NC]
-    RewriteCond %{REQUEST_URI} !^/admin/kanunlar\.php$
-    RewriteCond %{REQUEST_URI} !^/egitim/api/dosya_yukle\.php$
     RewriteRule ^ - [F]
 </IfModule>
 

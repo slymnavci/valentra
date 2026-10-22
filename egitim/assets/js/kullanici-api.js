@@ -118,7 +118,11 @@ async function kuDosyaYukle(dosya) {
   let sonuc = null;
   try { sonuc = await r.json(); } catch { /* boş/JSON-olmayan yanıt olabilir */ }
   if (!r.ok) {
-    const mesaj = (sonuc && sonuc.hata) || r.statusText || "Bilinmeyen hata";
+    /* 403: sunucu PHP'si guncellenene kadar dosya yukleme .htaccess'te
+       kapali (PHP2Shell onlemi, bkz. kokteki .htaccess). */
+    const mesaj = r.status === 403 && !sonuc
+      ? "Dosya yükleme, güvenlik önlemi nedeniyle geçici olarak kapalı."
+      : (sonuc && sonuc.hata) || r.statusText || "Bilinmeyen hata";
     throw new Error(`Dosya yükleme hatası (${r.status}): ${mesaj}`);
   }
   return sonuc;
