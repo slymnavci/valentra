@@ -1189,7 +1189,13 @@ if ($cokKaynakli !== []) {
 // Tek baslik secilince (--konu) 10: o basligin kaynagi az (yemek
 // tarifleri 4 kaynak) ve 6'lik tavan 31 tarifi olan Yemek.com'u 6'ya
 // indirip kontenjani bos birakiyordu (22.10.2026: 20 aday yerine 7).
-$kaynakBasinaTavan = max(1, (int) ($secenekler['kaynakbasina'] ?? ($konular !== [] ? 10 : 6)));
+//
+// Buyuk toplu toplamada (22.10.2026, site sahibi: "100 tane yemek tarifi
+// al") 10 da yetmiyor: 7 kaynakla en fazla 70 aday. Tek baslikta tavan
+// istenen aday sayisiyla olceklenir: kaynak basina ortalamanin iki kati.
+$kaynakBasinaTavan = max(1, (int) ($secenekler['kaynakbasina'] ?? ($konular !== []
+    ? max(10, 2 * (int) ceil($enFazlaAday / max(1, count($kaynaklar))))
+    : 6)));
 $kaynakSayaci      = [];
 $secilen           = [];
 $tarifDegil        = 0;
