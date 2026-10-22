@@ -26,9 +26,10 @@ final class HaberAkisi
      *
      * Politika en buyuk pay (site sahibinin karari: once Turkiye
      * siyaseti). Dunya da 3: dunyanin onde gelen haber kuruluslari
-     * kaynak listesinde (site sahibinin istegi, 22.10.2026). Ekonomi kaynaklari sayica cok (eski ekonomi listesi
-     * acik kaldi); pay olmasa kontenjanin cogunu onlar yerdi. Bir
-     * baslikta aday kalmazsa payi otekilere geciyor.
+     * kaynak listesinde (site sahibinin istegi, 22.10.2026). Ekonomi
+     * kaynaklari sayica cok (eski ekonomi listesi acik kaldi); pay
+     * olmasa kontenjanin cogunu onlar yerdi. Bir baslikta aday kalmazsa
+     * payi otekilere geciyor.
      *
      * @var array<string,int>
      */

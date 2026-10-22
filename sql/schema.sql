@@ -628,12 +628,15 @@ UPDATE kategoriler SET ad = 'Genel Gündem', aktif = 1, ust_id = NULL, sira = 50
 UPDATE kategoriler SET ad = 'Ekonomik Gündem', aktif = 1, ust_id = NULL, sira = 30
  WHERE slug = 'ekonomi';
 
+-- "aktif = 1" bu iki satirdan cikarildi (22.10.2026): sema her
+-- calistiginda kaynaklari yeniden aciyordu; genel habere donuste
+-- kapatildilar (bkz. sondaki tek seferlik gecis).
 UPDATE kaynaklar
-   SET liste_url = 'https://www.oecd.org/en/topics/tax-policy.html', aktif = 1
+   SET liste_url = 'https://www.oecd.org/en/topics/tax-policy.html'
  WHERE ad = 'OECD Vergi';
 
 UPDATE kaynaklar
-   SET liste_url = 'https://www.ifrs.org/news-and-events/news/', aktif = 1
+   SET liste_url = 'https://www.ifrs.org/news-and-events/news/'
  WHERE ad = 'IFRS Foundation';
 
 -- ---------------------------------------------------------------------------
@@ -1423,6 +1426,13 @@ CREATE TABLE IF NOT EXISTS rehberler (
 -- ---------------------------------------------------------------------------
 -- Genel habere donus — 22.10.2026
 --
+-- TEK SEFERLIK GECIS. Asagidaki kapatma, kategori ipucu ve haber tasima
+-- adimlari 'gecis_genel_haber_2026_10' ayari yokken calisiyor; blogun
+-- sonunda ayar yaziliyor. Sema her degistiginde butun veri komutlari
+-- yeniden calistigi icin (sema_otomatik_yukselt) kosulsuz olsalardi
+-- panelden yeniden acilan bir kaynak sonraki sema degisikliginde yine
+-- kapanirdi. Yeni kaynak eklemeleri INSERT IGNORE, tekrar zarar vermiyor.
+--
 -- Site sahibinin karari: Valentra vergi/muhasebe yayinindan genel haber
 -- ozetlerine donuyor (MSN Haberler gibi: her haber kendi cumlelerimizle
 -- ozetleniyor, altinda kaynak adi ve haberin tamamina baglanti).
@@ -1462,8 +1472,9 @@ UPDATE haberler h
   LEFT JOIN kategoriler k ON k.id = h.kategori_id
    SET h.kategori_id = e.id,
        h.guncellendi = h.guncellendi
- WHERE k.id IS NULL
-    OR k.slug NOT IN ('gundem', 'politika', 'ekonomi', 'dunya', 'spor', 'teknoloji', 'saglik', 'kultur-sanat');
+ WHERE (k.id IS NULL
+        OR k.slug NOT IN ('gundem', 'politika', 'ekonomi', 'dunya', 'spor', 'teknoloji', 'saglik', 'kultur-sanat'))
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
 
 -- Yeni kaynaklar. Basliga gore ayrilmis beslemeler; kategori sutunu
 -- ajanin aday kontenjanini basliklara paylastirmasi icin ipucu.
@@ -1539,74 +1550,134 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) V
 
 -- Al Jazeera'nin beslemesi zaten genel haber beslemesi (all.xml); ekonomi
 -- yerine dunya basligiyla acik kaliyor.
-UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'Al Jazeera Ekonomi' AND kategori IS NULL;
+UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'Al Jazeera Ekonomi' AND kategori IS NULL
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
 
 -- Turkce yayin yapan yabanci kuruluslarin genel beslemeleri: dunya.
-UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'BBC Türkçe' AND kategori IS NULL;
-UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'DW Türkçe' AND kategori IS NULL;
-UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'VOA Türkçe' AND kategori IS NULL;
+UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'BBC Türkçe' AND kategori IS NULL
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'DW Türkçe' AND kategori IS NULL
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET kategori = 'dunya' WHERE ad = 'VOA Türkçe' AND kategori IS NULL
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
 
 -- Yalnizca vergi, muhasebe ve mesleki mevzuat yayinlayan kaynaklar
 -- kapatiliyor; ekonomi kaynaklari acik kaliyor (kategori ipucu bos =
 -- ekonomi). Tek tek yaziliyor: ajanin tohum okuyucusu (site
 -- erisilemediginde depodaki bu dosyadan liste kuruyor) yalnizca
 -- "WHERE ad = '...'" kalibini taniyor.
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Resmî Gazete';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Gelir İdaresi Başkanlığı';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Hazine ve Maliye Bakanlığı';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'KGK';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'TÜRMOB';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Alomaliye';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Muhasebe News';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Vergi Algı';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'MuhasebeTR';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'İSMMMO';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'BDDK';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'SPK';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Rekabet Kurumu';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'SGK';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Ticaret Bakanlığı';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'KOSGEB';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Deloitte Türkiye';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'PwC Türkiye';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'KPMG Türkiye';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'BDO Türkiye';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'EY Türkiye';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Grant Thornton Türkiye';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Vergi Dünyası';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'OECD Vergi';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Avrupa Komisyonu Vergi';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IFRS Foundation';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IAS Plus';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'EFRAG';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IRS';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Tax Foundation';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Accountancy Age';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Tax Justice Network';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'ICAEW';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IFAC';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Euronews Vergi';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Resmî Gazete'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Gelir İdaresi Başkanlığı'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Hazine ve Maliye Bakanlığı'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'KGK'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'TÜRMOB'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Alomaliye'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Muhasebe News'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Vergi Algı'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'MuhasebeTR'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'İSMMMO'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'BDDK'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'SPK'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Rekabet Kurumu'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'SGK'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Ticaret Bakanlığı'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'KOSGEB'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Deloitte Türkiye'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'PwC Türkiye'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'KPMG Türkiye'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'BDO Türkiye'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'EY Türkiye'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Grant Thornton Türkiye'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Vergi Dünyası'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'OECD Vergi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Avrupa Komisyonu Vergi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IFRS Foundation'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IAS Plus'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'EFRAG'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IRS'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Tax Foundation'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Accountancy Age'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Tax Justice Network'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'ICAEW'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IFAC'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Euronews Vergi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
 
 -- Ingilizce yayin yapan yabanci ekonomi kaynaklari da kapatiliyor: site
 -- Turkce genel haber ozetleri yayimliyor; dunya ve dunya ekonomisi
 -- haberleri Turkce kaynaklardan (AA, TRT, NTV, CNN Turk, BBC/DW
 -- Turkce) geliyor. Tarama suresi de yeni basliklarin kaynaklarina
 -- kaliyor. Gerekirse panelden tek tek acilabilir.
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IMF';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Reuters Business';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Bloomberg Ekonomi';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'BBC Business';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'The Guardian Business';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'The New York Times Business';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'The Economist Finans';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Financial Times';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'CNBC Ekonomi';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'MarketWatch';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'CNN Business';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'DW Business';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Associated Press İş';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Nikkei Asia Ekonomi';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Avrupa Merkez Bankası';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Federal Reserve';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Dünya Bankası';
-UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Bank for International Settlements';
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'IMF'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Reuters Business'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Bloomberg Ekonomi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'BBC Business'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'The Guardian Business'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'The New York Times Business'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'The Economist Finans'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Financial Times'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'CNBC Ekonomi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'MarketWatch'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'CNN Business'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'DW Business'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Associated Press İş'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Nikkei Asia Ekonomi'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Avrupa Merkez Bankası'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Federal Reserve'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Dünya Bankası'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Bank for International Settlements'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_genel_haber_2026_10');
+
+-- Gecis tamamlandi: yukaridaki tek seferlik adimlar bir daha calismaz.
+INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_genel_haber_2026_10', '22.10.2026');
