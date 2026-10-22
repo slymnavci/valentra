@@ -28,7 +28,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:where(:not([data-tema="acik"])) {
         --zemin:       #0d1522;
         --kart:        #151f30;
         --metin:       #eef2f8;
@@ -37,6 +37,16 @@
         --vurgu:       #7aa9e8;
         --golge:       0 1px 2px rgba(0, 0, 0, .4);
     }
+}
+
+:root:where([data-tema="koyu"]) {
+    --zemin:       #0d1522;
+    --kart:        #151f30;
+    --metin:       #eef2f8;
+    --metin-soluk: #97a3b8;
+    --cizgi:       #24314a;
+    --vurgu:       #7aa9e8;
+    --golge:       0 1px 2px rgba(0, 0, 0, .4);
 }
 
 * { box-sizing: border-box; }
@@ -169,8 +179,10 @@ body.okuma .sinirli { max-width: 1320px; }
 }
 
 @media (prefers-color-scheme: dark) {
-    .logo .ad { color: #e8edf5; }
+    :where(:root:not([data-tema="acik"])) .logo .ad { color: #e8edf5; }
 }
+
+:where(:root[data-tema="koyu"]) .logo .ad { color: #e8edf5; }
 
 @media (max-width: 480px) {
     .logo .alt { display: none; }
@@ -667,9 +679,12 @@ a.menu-oge.aktif::after,
 .menu-acilir a.aktif .adet { background: var(--altin); color: #14213a; }
 
 @media (prefers-color-scheme: dark) {
-    .menu-acilir a:hover { background: rgba(255, 255, 255, .07); color: #fff; }
-    .menu-acilir a.aktif { color: #fff; }
+    :where(:root:not([data-tema="acik"])) .menu-acilir a:hover { background: rgba(255, 255, 255, .07); color: #fff; }
+    :where(:root:not([data-tema="acik"])) .menu-acilir a.aktif { color: #fff; }
 }
+
+:where(:root[data-tema="koyu"]) .menu-acilir a:hover { background: rgba(255, 255, 255, .07); color: #fff; }
+:where(:root[data-tema="koyu"]) .menu-acilir a.aktif { color: #fff; }
 
 /* Dar ekranda acilir liste yatay kaydirmayi bozmasin: akisa gecer. */
 @media (max-width: 720px) {
@@ -1046,8 +1061,10 @@ a.menu-oge.aktif::after,
 }
 
 @media (prefers-color-scheme: dark) {
-    .pencere-baslik { color: var(--altin); }
+    :where(:root:not([data-tema="acik"])) .pencere-baslik { color: var(--altin); }
 }
+
+:where(:root[data-tema="koyu"]) .pencere-baslik { color: var(--altin); }
 
 .pencere-metin {
     margin: 0;
@@ -1159,8 +1176,10 @@ a.menu-oge.aktif::after,
 }
 
 @media (prefers-color-scheme: dark) {
-    .bulut-etiket { color: var(--metin); }
+    :where(:root:not([data-tema="acik"])) .bulut-etiket { color: var(--metin); }
 }
+
+:where(:root[data-tema="koyu"]) .bulut-etiket { color: var(--metin); }
 
 /* --- Alt pencereler: konu bloklari --------------------------------------- */
 
@@ -1183,8 +1202,10 @@ a.menu-oge.aktif::after,
 }
 
 @media (prefers-color-scheme: dark) {
-    .blok-baslik { color: var(--altin); }
+    :where(:root:not([data-tema="acik"])) .blok-baslik { color: var(--altin); }
 }
+
+:where(:root[data-tema="koyu"]) .blok-baslik { color: var(--altin); }
 
 .blok-baslik a {
     display: flex;
@@ -1508,8 +1529,10 @@ a.menu-oge.aktif::after,
 .kanun-uyari a { text-decoration: underline; }
 
 @media (prefers-color-scheme: dark) {
-    .kanun-uyari { background: #2d1a18; border-color: #5a2a25; color: #f3b5ae; }
+    :where(:root:not([data-tema="acik"])) .kanun-uyari { background: #2d1a18; border-color: #5a2a25; color: #f3b5ae; }
 }
+
+:where(:root[data-tema="koyu"]) .kanun-uyari { background: #2d1a18; border-color: #5a2a25; color: #f3b5ae; }
 
 /*
  * Kanun metni.
@@ -1545,11 +1568,16 @@ a.menu-oge.aktif::after,
 }
 
 @media (prefers-color-scheme: dark) {
-    .kanun-metin h1,
-    .kanun-metin h2,
-    .kanun-metin h3,
-    .kanun-metin h4 { color: var(--altin); }
+    :where(:root:not([data-tema="acik"])) .kanun-metin h1,
+    :where(:root:not([data-tema="acik"])) .kanun-metin h2,
+    :where(:root:not([data-tema="acik"])) .kanun-metin h3,
+    :where(:root:not([data-tema="acik"])) .kanun-metin h4 { color: var(--altin); }
 }
+
+:where(:root[data-tema="koyu"]) .kanun-metin h1,
+:where(:root[data-tema="koyu"]) .kanun-metin h2,
+:where(:root[data-tema="koyu"]) .kanun-metin h3,
+:where(:root[data-tema="koyu"]) .kanun-metin h4 { color: var(--altin); }
 
 .kanun-metin b,
 .kanun-metin strong { color: var(--metin); }
@@ -1627,8 +1655,10 @@ a.menu-oge.aktif::after,
 }
 
 @media (prefers-color-scheme: dark) {
-    .pratik-deger { color: var(--metin); }
+    :where(:root:not([data-tema="acik"])) .pratik-deger { color: var(--metin); }
 }
+
+:where(:root[data-tema="koyu"]) .pratik-deger { color: var(--metin); }
 
 .pratik-alt {
     display: flex;
@@ -1951,11 +1981,17 @@ a.menu-oge.aktif::after,
 .kanun-kopya-uyari a { color: var(--vurgu); text-decoration: underline; }
 
 @media (prefers-color-scheme: dark) {
-    .kanun-kopya-uyari {
+    :where(:root:not([data-tema="acik"])) .kanun-kopya-uyari {
         background: #2a2314;
         border-color: #4d3f22;
         color: #e8d3a4;
     }
+}
+
+:where(:root[data-tema="koyu"]) .kanun-kopya-uyari {
+    background: #2a2314;
+    border-color: #4d3f22;
+    color: #e8d3a4;
 }
 
 /* --- Yaklasan Tarihler (yan pencere) ------------------------------------- */
@@ -2224,8 +2260,10 @@ a.menu-oge.aktif::after,
 }
 
 @media (prefers-color-scheme: dark) {
-    .analiz-baslik { color: var(--altin); }
+    :where(:root:not([data-tema="acik"])) .analiz-baslik { color: var(--altin); }
 }
+
+:where(:root[data-tema="koyu"]) .analiz-baslik { color: var(--altin); }
 
 /* dd icindeki bicimli metin: paragraf ve kontrol listesi bosluk birakmasin. */
 .analiz-oge dd > p { margin: 0; }
@@ -2334,8 +2372,10 @@ a.menu-oge.aktif::after,
 }
 
 @media (prefers-color-scheme: dark) {
-    .uygulama-ornegi h2 { color: var(--altin); }
+    :where(:root:not([data-tema="acik"])) .uygulama-ornegi h2 { color: var(--altin); }
 }
+
+:where(:root[data-tema="koyu"]) .uygulama-ornegi h2 { color: var(--altin); }
 
 /* --- Ana sayfadaki Valentra Analiz kartlari ------------------------------ */
 
@@ -2403,8 +2443,10 @@ a.menu-oge.aktif::after,
 }
 
 @media (prefers-color-scheme: dark) {
-    .analiz-ozet dt { color: var(--altin); }
+    :where(:root:not([data-tema="acik"])) .analiz-ozet dt { color: var(--altin); }
 }
+
+:where(:root[data-tema="koyu"]) .analiz-ozet dt { color: var(--altin); }
 
 /* --- Resmi Gazete sayfasi ------------------------------------------------ */
 
@@ -2543,9 +2585,12 @@ a.rg-madde:hover { color: var(--vurgu); }
 .rg-not { margin: 18px 0 8px; }
 
 @media (prefers-color-scheme: dark) {
-    .rg-uyari { color: var(--altin); }
-    .rg-gunler a.aktif { background: var(--vurgu); border-color: var(--vurgu); color: #0d1522; }
+    :where(:root:not([data-tema="acik"])) .rg-uyari { color: var(--altin); }
+    :where(:root:not([data-tema="acik"])) .rg-gunler a.aktif { background: var(--vurgu); border-color: var(--vurgu); color: #0d1522; }
 }
+
+:where(:root[data-tema="koyu"]) .rg-uyari { color: var(--altin); }
+:where(:root[data-tema="koyu"]) .rg-gunler a.aktif { background: var(--vurgu); border-color: var(--vurgu); color: #0d1522; }
 
 /* --- Valentra Diyor ki... (kose yazilari) -------------------------------- */
 
@@ -2754,9 +2799,12 @@ a.rg-madde:hover { color: var(--vurgu); }
 }
 
 @media (prefers-color-scheme: dark) {
-    .kose-gundem,
-    .kose-ust-etiket { color: var(--altin); }
+    :where(:root:not([data-tema="acik"])) .kose-gundem,
+    :where(:root:not([data-tema="acik"])) .kose-ust-etiket { color: var(--altin); }
 }
+
+:where(:root[data-tema="koyu"]) .kose-gundem,
+:where(:root[data-tema="koyu"]) .kose-ust-etiket { color: var(--altin); }
 
 /* --- Hesaplama araclari ---------------------------------------------------- */
 
@@ -2881,6 +2929,35 @@ a.rg-madde:hover { color: var(--vurgu); }
 
 .ust-sag .ust-bilgi { margin: 0; white-space: nowrap; }
 
+/* Gece / gunduz dugmesi. Koyu temada gunes, acik temada ay gorunuyor:
+   dugme gecilecek temayi gosteriyor. */
+.tema-dugme {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid var(--cizgi);
+    border-radius: 999px;
+    background: var(--zemin);
+    color: var(--metin);
+    cursor: pointer;
+    transition: border-color .15s ease, color .15s ease;
+}
+
+.tema-dugme:hover { border-color: var(--vurgu); color: var(--vurgu); }
+.tema-dugme:focus-visible { outline: 2px solid var(--vurgu); outline-offset: 2px; }
+
+.tema-gunes { display: none; }
+.tema-dugme[aria-pressed="true"] .tema-ay { display: none; }
+.tema-dugme[aria-pressed="true"] .tema-gunes { display: block; }
+
+/* Elle secilen tema form ogelerine ve kaydirma cubuguna da yansisin. */
+:root[data-tema="koyu"] { color-scheme: dark; }
+:root[data-tema="acik"] { color-scheme: light; }
+
 .ust-arama {
     display: flex;
     align-items: center;
@@ -2989,8 +3066,10 @@ a.rg-madde:hover { color: var(--vurgu); }
 }
 
 @media (prefers-color-scheme: dark) {
-    .belge-turu { color: var(--altin); }
+    :where(:root:not([data-tema="acik"])) .belge-turu { color: var(--altin); }
 }
+
+:where(:root[data-tema="koyu"]) .belge-turu { color: var(--altin); }
 
 /* --- Bugun bilmeniz gerekenler + kisayollar ------------------------------ */
 
@@ -3020,8 +3099,10 @@ a.rg-madde:hover { color: var(--vurgu); }
 }
 
 @media (prefers-color-scheme: dark) {
-    .bugun-baslik { color: var(--altin); }
+    :where(:root:not([data-tema="acik"])) .bugun-baslik { color: var(--altin); }
 }
+
+:where(:root[data-tema="koyu"]) .bugun-baslik { color: var(--altin); }
 
 .bugun-liste ul {
     list-style: none;
@@ -3064,9 +3145,12 @@ a.rg-madde:hover { color: var(--vurgu); }
 .bugun-liste li.vurgu .bugun-metin { font-weight: 700; }
 
 @media (prefers-color-scheme: dark) {
-    .bugun-etiket { color: var(--altin); }
-    .bugun-liste li.vurgu .bugun-etiket { color: #ff8a80; }
+    :where(:root:not([data-tema="acik"])) .bugun-etiket { color: var(--altin); }
+    :where(:root:not([data-tema="acik"])) .bugun-liste li.vurgu .bugun-etiket { color: #ff8a80; }
 }
+
+:where(:root[data-tema="koyu"]) .bugun-etiket { color: var(--altin); }
+:where(:root[data-tema="koyu"]) .bugun-liste li.vurgu .bugun-etiket { color: #ff8a80; }
 
 .kisayollar {
     display: grid;
@@ -3103,9 +3187,12 @@ a.rg-madde:hover { color: var(--vurgu); }
 }
 
 @media (prefers-color-scheme: dark) {
-    .kisayollar a { color: var(--metin); }
-    .kisayollar svg { color: var(--altin); }
+    :where(:root:not([data-tema="acik"])) .kisayollar a { color: var(--metin); }
+    :where(:root:not([data-tema="acik"])) .kisayollar svg { color: var(--altin); }
 }
+
+:where(:root[data-tema="koyu"]) .kisayollar a { color: var(--metin); }
+:where(:root[data-tema="koyu"]) .kisayollar svg { color: var(--altin); }
 
 @media (max-width: 1100px) {
     .bugun-bant { grid-template-columns: 1fr; }
@@ -3235,9 +3322,12 @@ a.rg-madde:hover { color: var(--vurgu); }
 .dugme-arac:hover { background: var(--lacivert-acik); }
 
 @media (prefers-color-scheme: dark) {
-    .uyari-serit { background: #3a2f10; border-color: #6b5520; color: #f3e2b0; }
-    .rehber-iz { color: var(--altin); }
+    :where(:root:not([data-tema="acik"])) .uyari-serit { background: #3a2f10; border-color: #6b5520; color: #f3e2b0; }
+    :where(:root:not([data-tema="acik"])) .rehber-iz { color: var(--altin); }
 }
+
+:where(:root[data-tema="koyu"]) .uyari-serit { background: #3a2f10; border-color: #6b5520; color: #f3e2b0; }
+:where(:root[data-tema="koyu"]) .rehber-iz { color: var(--altin); }
 
 .arac-rehber { margin: -4px 0 14px; font-size: .92rem; }
 .arac-rehber a { color: var(--vurgu); font-weight: 600; }

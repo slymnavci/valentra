@@ -23,8 +23,10 @@
 }
 
 @media (prefers-color-scheme: dark) {
-    .grafik { --grafik-renk: #5f93da; }
+    :where(:root:not([data-tema="acik"])) .grafik { --grafik-renk: #5f93da; }
 }
+
+:where(:root[data-tema="koyu"]) .grafik { --grafik-renk: #5f93da; }
 
 .grafik [hidden] { display: none !important; }
 
@@ -326,5 +328,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-    .grafik-bayat { color: #fdba74; background: rgba(251, 146, 60, .12); border-left-color: #fb923c; }
+    :where(:root:not([data-tema="acik"])) .grafik-bayat { color: #fdba74; background: rgba(251, 146, 60, .12); border-left-color: #fb923c; }
 }
+
+:where(:root[data-tema="koyu"]) .grafik-bayat { color: #fdba74; background: rgba(251, 146, 60, .12); border-left-color: #fb923c; }

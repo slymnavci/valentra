@@ -28,10 +28,10 @@ function gunluk_isler(): array
     return [
         'piyasa'   => ['grup' => 'veri',  'ad' => 'Kurlar ve borsa',
                        'aciklama' => 'Dolar, euro ve BIST verisini şimdi yeniden çeker (normalde 2 dakikada bir kendiliğinden).'],
-        'grafik'   => ['grup' => 'veri',  'ad' => 'Grafikler',
-                       'aciklama' => 'Ana sayfadaki grafiklerin eskimiş verisini TCMB EVDS\'ten tazeler.'],
-        'rg'       => ['grup' => 'veri',  'ad' => 'Resmî Gazete',
-                       'aciklama' => 'Bugünün ve dünün Resmî Gazete fihristini çeker.'],
+        // Grafikler, Resmi Gazete ve pratik bilgiler listeden cikti
+        // (22.10.2026, site sahibinin karari: ajan yalnizca haber ve
+        // kose yazisi uretiyor; ana sayfada grafik yok). Islevleri
+        // asagida duruyor, geri almak icin satirlari eklemek yeterli.
         'gsc'      => ['grup' => 'arama', 'ad' => 'Search Console verisi',
                        'aciklama' => 'Google\'daki tıklama, gösterim ve dizin durumunu günceller.'],
         'indexnow' => ['grup' => 'arama', 'ad' => 'Bing ve Yandex\'e bildir',
@@ -40,14 +40,12 @@ function gunluk_isler(): array
                        'aciklama' => 'Google\'a site haritasını yeniden okumasını söyler.'],
         'teslim' => ['grup' => 'ajan', 'ad' => 'GitHub\'da bekleyen haberleri al',
                           'aciklama' => 'Ajan siteye ulaşamadığında yazdığı haberleri GitHub\'da bırakır; site onları buradan alır. Ziyaretçi geldikçe yarım saatte bir kendiliğinden de yapılır.'],
-        'ajan'     => ['grup' => 'ajan',  'ad' => 'Haberleri topla',
-                       'aciklama' => 'Ajan kaynakları tarar ve yayın politikasına uyan haberlerin özetlerini yazar. Hepsi onayınıza düşer.'],
+        'ajan'     => ['grup' => 'ajan',  'ad' => 'Haberleri topla ve köşe yazılarını yaz',
+                       'aciklama' => 'Ajan önce haberleri toplar, sonra en önemli haberlerden günün köşe yazılarını yazar. Hepsi onayınıza düşer.'],
         'ajan_haber'  => ['grup' => 'ajan', 'ad' => 'Yalnızca haberleri topla',
                           'aciklama' => 'Kaynakları tarar, yeni haberleri onay bekleyenlere ekler.'],
         'ajan_kose'   => ['grup' => 'ajan', 'ad' => 'Yalnızca köşe yazılarını yaz',
                           'aciklama' => 'Günün köşe yazılarını yazar (günlük tavan dolmuşsa yazmaz).'],
-        'ajan_pratik' => ['grup' => 'ajan', 'ad' => 'Pratik bilgileri yenile',
-                          'aciklama' => 'Asgari ücret, oranlar ve hadleri resmî kaynaklardan kontrol eder; değişen değerler onayınıza düşer.'],
     ];
 }
 
@@ -61,8 +59,6 @@ function gunluk_is_calistir(string $is): array
     try {
         return match ($is) {
             'piyasa'      => gunluk_piyasa(),
-            'grafik'      => gunluk_grafik(),
-            'rg'          => gunluk_rg(),
             'gsc'         => gunluk_gsc(),
             'indexnow'    => gunluk_indexnow(),
             'harita'      => gunluk_harita(),
@@ -70,7 +66,6 @@ function gunluk_is_calistir(string $is): array
             'ajan'        => gunluk_ajan('gunluk'),
             'ajan_haber'  => gunluk_ajan('topla'),
             'ajan_kose'   => gunluk_ajan('kose-yazisi'),
-            'ajan_pratik' => gunluk_ajan('pratik-bilgiler'),
             default       => ['tamam' => false, 'mesaj' => 'Bilinmeyen iş.'],
         };
     } catch (Throwable $e) {

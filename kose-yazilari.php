@@ -27,8 +27,8 @@ $gunAdlari = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 
 
 $aktifKategori = 'kose';
 $sayfaBasligi  = 'Valentra Diyor ki… — Tüm yazılar' . ($sayfa > 1 ? ' — Sayfa ' . $sayfa : '');
-$sayfaAciklama = 'Valentra\'nın her gün gündemin en önemli konularını değerlendirdiği '
-               . 'köşe yazıları: ekonomi, piyasalar, vergi ve mevzuat.';
+$sayfaAciklama = 'Valentra\'nın her gün gündemin ve dünyanın en önemli konularını '
+               . 'değerlendirdiği köşe yazıları.';
 $seoAdres      = site_adresi() . kose_liste_yolu($sayfa);
 
 require __DIR__ . '/includes/sayfa_ust.php';
@@ -37,8 +37,8 @@ require __DIR__ . '/includes/sayfa_ust.php';
 <div class="kategori-basligi">
     <h1>Valentra Diyor ki…</h1>
     <p>
-        Her gün gündemin en önemli 3-4 konusu, ayrı ayrı yazılarla:
-        ekonomi, piyasalar, vergi ve mevzuat.
+        Her gün Türkiye'nin ve dünyanın en önemli 3-4 konusu, ayrı ayrı
+        yazılarla değerlendiriliyor.
     </p>
 </div>
 

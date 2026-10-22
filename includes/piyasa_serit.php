@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Piyasa şeridi: dolar, euro, BIST 100.
+ * Piyasa şeridi: dolar, euro, gram altın, ons altın, BIST 100.
  *
  * Ilk deger sunucu tarafinda basiliyor; JavaScript kapali olsa da serit
  * dolu geliyor. Sonrasini 2 dakikada bir tarayici tazeliyor.
@@ -16,7 +16,8 @@ require_once __DIR__ . '/piyasa.php';
 $piyasa = piyasa_verisi();
 
 // Hicbir deger yoksa serit hic cizilmesin; bos bir cubuk kotu durur.
-if ($piyasa['usd'] === null && $piyasa['eur'] === null && $piyasa['bist'] === null) {
+if ($piyasa['usd'] === null && $piyasa['eur'] === null && $piyasa['bist'] === null
+    && ($piyasa['altin'] ?? null) === null && ($piyasa['ons'] ?? null) === null) {
     return;
 }
 
@@ -77,6 +78,22 @@ $yon = static function (?float $degisim, string $ad) : string {
                 </span>
             <?php endif; ?>
 
+            <?php if (($piyasa['altin'] ?? null) !== null): ?>
+                <span class="piyasa-oge">
+                    <span class="ad">GRAM ALTIN</span>
+                    <span class="deger" data-piyasa="altin"><?= e($bicimle($piyasa['altin'], 2)) ?></span>
+                    <?= $yon($piyasa['altin_degisim'] ?? null, 'altin_degisim') ?>
+                </span>
+            <?php endif; ?>
+
+            <?php if (($piyasa['ons'] ?? null) !== null): ?>
+                <span class="piyasa-oge">
+                    <span class="ad">ONS ($)</span>
+                    <span class="deger" data-piyasa="ons"><?= e($bicimle($piyasa['ons'], 2)) ?></span>
+                    <?= $yon($piyasa['ons_degisim'] ?? null, 'ons_degisim') ?>
+                </span>
+            <?php endif; ?>
+
             <?php if ($piyasa['bist'] !== null): ?>
                 <span class="piyasa-oge">
                     <span class="ad">BIST 100</span>
@@ -124,10 +141,12 @@ $yon = static function (?float $degisim, string $ad) : string {
                 if (v.usd !== null)  { yaz('usd', bicimle(v.usd, 4)); }
                 if (v.eur !== null)  { yaz('eur', bicimle(v.eur, 4)); }
                 if (v.bist !== null) { yaz('bist', bicimle(v.bist, 2)); }
+                if (v.altin !== null && v.altin !== undefined) { yaz('altin', bicimle(v.altin, 2)); }
+                if (v.ons !== null && v.ons !== undefined) { yaz('ons', bicimle(v.ons, 2)); }
 
-                // Uc kalem de ayni sekilde tazeleniyor; PHP tarafindaki
+                // Butun kalemler ayni sekilde tazeleniyor; PHP tarafindaki
                 // $yon islevinin JavaScript karsiligi.
-                ['usd_degisim', 'eur_degisim', 'bist_degisim'].forEach(function (ad) {
+                ['usd_degisim', 'eur_degisim', 'altin_degisim', 'ons_degisim', 'bist_degisim'].forEach(function (ad) {
                     var d = v[ad];
 
                     if (d === null || d === undefined) { return; }
