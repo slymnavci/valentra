@@ -112,6 +112,12 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         <priority>0.7</priority>
     </url>
 
+    <url>
+        <loc><?= e($taban . piyasalar_yolu()) ?></loc>
+        <changefreq>hourly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
     <?php
     /*
      * Kose yazilari: yalnizca yayindakiler. Tablo henuz yoksa (sema

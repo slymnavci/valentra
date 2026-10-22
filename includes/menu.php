@@ -40,6 +40,23 @@ function site_menusu(): array
     require_once __DIR__ . '/spor_panel.php';
 
     foreach ($menu as $i => $oge) {
+        /*
+         * Ekonomi acilir menu (22.10.2026, site sahibinin istegi):
+         * piyasalar (BIST, doviz, altin, grafikler), ekonomik
+         * gostergeler, borsa sirketleri ve gunluk ekonomi haberleri ayri
+         * ayri. Ilk ucu Piyasalar sayfasinin bolumleri.
+         */
+        if ($oge['anahtar'] === 'ekonomi') {
+            $piyasa = piyasalar_yolu();
+            $menu[$i]['href']   = null;
+            $menu[$i]['altlar'] = [
+                ['ad' => 'Piyasalar (BIST, Döviz, Altın)', 'anahtar' => 'piyasalar',        'href' => $piyasa,                          'adet' => 0],
+                ['ad' => 'Ekonomik Göstergeler',          'anahtar' => 'ekonomi-gosterge', 'href' => $piyasa . '#gostergeler',         'adet' => 0],
+                ['ad' => 'Borsa İstanbul Şirketleri',     'anahtar' => 'ekonomi-borsa',    'href' => $piyasa . '#borsa',               'adet' => 0],
+                ['ad' => 'Günlük Ekonomi Haberleri',      'anahtar' => 'ekonomi-haberler', 'href' => (string) $oge['href'],           'adet' => 0],
+            ];
+        }
+
         if ($oge['anahtar'] === 'spor') {
             $menu[$i]['href']   = null;
             $menu[$i]['altlar'] = [

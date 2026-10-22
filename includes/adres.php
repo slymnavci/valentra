@@ -160,6 +160,12 @@ function kose_yolu(string $slug): string
 }
 
 /** Tüm köşe yazıları, günlere göre. Sayfa numarası her iki biçimde sorguda. */
+/** Piyasalar sayfası: BIST, döviz, altın, şirketler ve ekonomik göstergeler. */
+function piyasalar_yolu(): string
+{
+    return temiz_adres_acik() ? '/piyasalar' : '/piyasalar.php';
+}
+
 function kose_liste_yolu(int $sayfa = 1): string
 {
     $yol = temiz_adres_acik() ? '/valentra-diyor-ki' : '/kose-yazilari.php';
