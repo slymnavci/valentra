@@ -37,12 +37,13 @@ require_once __DIR__ . '/src/Sayfa.php';
 require_once __DIR__ . '/src/Site.php';
 require_once __DIR__ . '/src/Depo.php';
 require_once __DIR__ . '/src/KotaBittiException.php';
+require_once __DIR__ . '/src/ModelErisimYokException.php';
 require_once __DIR__ . '/src/SemaliIstemci.php';
 require_once __DIR__ . '/src/Yazar.php';
 require_once __DIR__ . '/src/KoseYazari.php';
 require_once __DIR__ . '/src/Bildirim.php';
 
-use Valentra\Ajan\{Bildirim, Depo, Http, KoseYazari, KotaBittiException, Sayfa, Site, Yazar};
+use Valentra\Ajan\{Bildirim, Depo, Http, KoseYazari, KotaBittiException, ModelErisimYokException, Sayfa, Site, Yazar};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
@@ -156,6 +157,9 @@ $sayfa = new Sayfa(new Http());
 
 try {
     $maddeler = $kose->gundemSec($haberler, $malzeme['onceki'], $hedef);
+} catch (ModelErisimYokException $e) {
+    Bildirim::sorun($e->getMessage());
+    exit(0);
 } catch (KotaBittiException $e) {
     gunluk('Günlük model kotası dolu: ' . $e->getMessage());
     exit(0);
@@ -206,6 +210,9 @@ foreach ($maddeler as $i => $madde) {
 
     try {
         $yazi = $kose->yaz($madde, $haberler, $kaynakMetinleri);
+    } catch (ModelErisimYokException $e) {
+        Bildirim::sorun($e->getMessage());
+        break;
     } catch (KotaBittiException $e) {
         gunluk('Günlük model kotası doldu; kalan maddeler atlanıyor.');
         break;
