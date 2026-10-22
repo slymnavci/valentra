@@ -3608,3 +3608,10 @@ a.rg-madde:hover { color: var(--vurgu); }
     min-height: 0;
     background: #000;
 }
+
+/* Ekonomi haberleri ile Piyasalar sayfasi arasindaki bag. */
+.piyasa-bag { margin: 0 0 18px; font-size: .95rem; }
+.piyasa-bag a { color: var(--vurgu); font-weight: 700; }
+.piyasa-bag a:hover { text-decoration: underline; }
+#gostergeler, #borsa, #piyasa-grafikleri { scroll-margin-top: 70px; }
+.piyasa-sirketler { margin-bottom: 26px; }
