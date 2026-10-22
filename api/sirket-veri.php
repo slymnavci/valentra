@@ -24,7 +24,7 @@ if ($kod === null || !isset(sirket_donemleri()[$donem])) {
     exit;
 }
 
-$veri = sirket_seri($kod, $donem)['veri'];
+$veri = sirket_kod_izinli($kod) ? sirket_seri($kod, $donem)['veri'] : null;
 
 if ($veri === null || $veri['noktalar'] === []) {
     http_response_code(404);
