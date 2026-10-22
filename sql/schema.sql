@@ -1802,3 +1802,11 @@ INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_iha_2026_10_22', '22.
 -- ---------------------------------------------------------------------------
 INSERT IGNORE INTO kategoriler (ad, slug, aciklama, sira) VALUES
     ('Yemek Tarifleri', 'yemek-tarifleri', 'Türk ve dünya mutfağından tarifler: ana yemekler, çorbalar, tatlılar ve hamur işleri', 90);
+
+-- Tarif kaynaklari. Kaynak testinde (kaynak_dene --aday, 22.10.2026)
+-- calisan ve guncel olanlar: Ardanin Mutfagi RSS (son haftada 6 tarif).
+-- Nefis Yemek Tarifleri otomatik erisimi engelliyor (403); Yemek.com,
+-- Lezzet ve Milliyet adresleri 404; Sabah ve Hurriyet sayfalari eski
+-- yazar yazilari ve restoran listeleri getiriyor: eklenmedi.
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('Ardanın Mutfağı', 'https://www.ardaninmutfagi.com', 'https://www.ardaninmutfagi.com/feed/', 'rss', 'yemek-tarifleri', 1);
