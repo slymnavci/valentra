@@ -15,6 +15,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/seo.php';
 require_once __DIR__ . '/includes/pratik.php';
+require_once __DIR__ . '/includes/piyasalar.php';
 
 header('Content-Type: application/xml; charset=utf-8');
 
@@ -117,6 +118,14 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         <changefreq>hourly</changefreq>
         <priority>0.7</priority>
     </url>
+
+    <?php foreach (array_keys(piyasa_sirketleri()) as $sirketKodu): ?>
+        <url>
+            <loc><?= e($taban . sirket_yolu($sirketKodu)) ?></loc>
+            <changefreq>daily</changefreq>
+            <priority>0.5</priority>
+        </url>
+    <?php endforeach; ?>
 
     <?php
     /*

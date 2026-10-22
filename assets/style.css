@@ -3615,3 +3615,126 @@ a.rg-madde:hover { color: var(--vurgu); }
 .piyasa-bag a:hover { text-decoration: underline; }
 #gostergeler, #borsa, #piyasa-grafikleri { scroll-margin-top: 70px; }
 .piyasa-sirketler { margin-bottom: 26px; }
+
+/* --- Sirket sayfasi (22.10.2026) ------------------------------------------ */
+
+.sirket-secici {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 18px;
+    font-size: .9rem;
+}
+
+.sirket-secici label { font-weight: 700; }
+.sirket-secici-ya { color: var(--metin-soluk); font-size: .84rem; }
+
+.sirket-secici select,
+.sirket-secici input {
+    padding: 7px 10px;
+    border: 1px solid var(--cizgi);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--metin);
+    font: inherit;
+    min-width: 0;
+}
+
+.sirket-secici select { max-width: 100%; flex: 1 1 220px; }
+.sirket-secici input { width: 110px; text-transform: uppercase; }
+.sirket-secici select option { color: #111; }
+
+.sirket-secici button {
+    padding: 7px 16px;
+    border: 0;
+    border-radius: 6px;
+    background: var(--lacivert);
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.sirket-yol { margin: 0 0 4px; font-size: .84rem; color: var(--metin-soluk); }
+.sirket-yol a:hover { text-decoration: underline; }
+.sirket-kodu { font-size: .55em; color: var(--metin-soluk); font-weight: 700; letter-spacing: .04em; vertical-align: middle; }
+
+.sirket-fiyat { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin: 6px 0 0; }
+.sf-deger { font-size: 1.7rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.sirket-bolum { margin: 0 0 26px; scroll-margin-top: 70px; }
+.sirket-grafik { margin: 0 0 8px; }
+.sirket-alt-baslik { margin: 22px 0 8px; font-size: 1.02rem; scroll-margin-top: 70px; }
+
+.analiz-tablosu tbody th { text-align: left; font-weight: 600; font-size: .9rem; color: var(--metin); }
+.analiz-tablosu small { color: var(--metin-soluk); font-weight: 400; }
+
+.olcu-tablosu td.aciklama {
+    white-space: normal;
+    color: var(--metin-soluk);
+    font-size: .82rem;
+    min-width: 220px;
+}
+
+.kunye-tablosu td { white-space: normal; }
+.kunye-tablosu th { width: 34%; white-space: normal; }
+
+.pdeg { font-variant-numeric: tabular-nums; font-weight: 600; }
+.pdeg.arti { color: var(--artis); }
+.pdeg.eksi { color: var(--dusus); }
+.pdeg.bos, .pdeg.duz { color: var(--metin-soluk); }
+
+.temel-izgara {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.temel-kutu {
+    border: 1px solid var(--cizgi);
+    border-radius: 10px;
+    padding: 14px;
+    font-size: .9rem;
+}
+
+.temel-kutu h3 { margin: 0 0 8px; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--metin-soluk); }
+.temel-kutu p { margin: 0 0 4px; }
+.temel-buyuk { font-size: 1.35rem; font-weight: 800; }
+.temel-kutu .sirket-tablosu th, .temel-kutu .sirket-tablosu td { padding: 5px 4px; }
+
+.yasal-not {
+    margin: 10px 0 24px;
+    padding: 12px 14px;
+    border-left: 3px solid var(--vurgu);
+    background: color-mix(in srgb, var(--vurgu) 6%, transparent);
+    font-size: .84rem;
+    line-height: 1.55;
+}
+
+.yasal-not a { color: var(--vurgu); font-weight: 600; }
+
+.bist-bolumu { margin: 0 0 24px; }
+.bist-bolumu .piyasa-grafik { margin: 0 0 12px; }
+.bist-secici p { margin: 0 0 8px; font-size: .92rem; }
+
+.sirket-tablosu td a:hover { text-decoration: underline; color: var(--vurgu); }
+
+@media (max-width: 1100px) {
+    .temel-izgara { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 600px) {
+    .temel-izgara { grid-template-columns: 1fr; }
+    .sirket-secici select { flex-basis: 100%; }
+    .sirket-secici input { flex: 1 1 90px; }
+
+    /* Olcu tablosu dar ekranda: ad ve deger bir satirda, aciklama altinda. */
+    .olcu-tablosu, .olcu-tablosu tbody { display: block; width: 100%; }
+    .olcu-tablosu th { white-space: normal; }
+    .olcu-tablosu tr { display: grid; grid-template-columns: 1fr auto; border-bottom: 1px solid var(--cizgi); }
+    .olcu-tablosu th, .olcu-tablosu td { border-bottom: 0; }
+    .olcu-tablosu td.aciklama { grid-column: 1 / -1; min-width: 0; padding-top: 0; }
+    .kunye-tablosu tr { grid-template-columns: 1fr; }
+    .kunye-tablosu th { width: auto; padding-bottom: 0; }
+}

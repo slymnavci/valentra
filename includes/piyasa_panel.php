@@ -178,7 +178,7 @@ function piyasa_sirketler_html(): string
                 <tbody>
                     <?php foreach ($satirlar as $s): ?>
                         <tr>
-                            <td><?= e($s['ad']) ?></td>
+                            <td><a href="<?= e(sirket_yolu($s['kod'])) ?>"><?= e($s['ad']) ?></a></td>
                             <td class="kod"><?= e($s['kod']) ?></td>
                             <td class="sayi"><?= e(piyasa_sayi($s['fiyat'], 2)) ?> ₺</td>
                             <td class="sayi"><?= piyasa_degisim_html($s['degisim']) ?></td>
@@ -188,6 +188,7 @@ function piyasa_sirketler_html(): string
             </table>
         </div>
         <p class="canli-not">
+            Şirketin 10 yıllık geçmişi, getirileri ve çarpanları için adına tıklayın.
             Güncelleme <?= e(canli_zaman_yazi($kayit['zaman'])) ?> · Kaynak: Yahoo Finance · 15 dakikaya kadar
             gecikmeli olabilir. Yatırım tavsiyesi değildir.
         </p>
