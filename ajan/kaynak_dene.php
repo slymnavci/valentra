@@ -56,6 +56,43 @@ function yaz(string $mesaj = ''): void
 }
 
 /**
+ * JSON'un yapisini satir satir ozetler: her anahtar, dizilerin uzunlugu
+ * ve yalnizca ILK ogesi, yapraklarda kisaltilmis ornek deger. Derinlik
+ * ve satir sayisi sinirli; gunluk okunabilir kalsin.
+ *
+ * @return list<string>
+ */
+function json_yapisi(mixed $deger, string $girinti, int $derinlik, ?int &$sayac): array
+{
+    $sayac ??= 0;
+    $satirlar = [];
+
+    if ($derinlik > 7 || !is_array($deger)) {
+        return $satirlar;
+    }
+
+    $liste = array_is_list($deger);
+    $ogeler = $liste ? array_slice($deger, 0, 1, true) : $deger;
+
+    foreach ($ogeler as $anahtar => $alt) {
+        if (++$sayac > 260) {
+            return $satirlar;
+        }
+
+        $ad = $liste ? '[0] (' . count($deger) . ' öğe)' : (string) $anahtar;
+
+        if (is_array($alt)) {
+            $satirlar[] = $girinti . $ad . ':';
+            array_push($satirlar, ...json_yapisi($alt, $girinti . '  ', $derinlik + 1, $sayac));
+        } else {
+            $satirlar[] = $girinti . $ad . ' = ' . mb_substr(var_export($alt, true), 0, 60);
+        }
+    }
+
+    return $satirlar;
+}
+
+/**
  * Sutun hizalamasi icin dolgu.
  *
  * sprintf'in %-20s dolgusu bayt sayar; "Kazıma" gibi Turkce karakterli
@@ -328,6 +365,14 @@ if ($hamGirdi !== '') {
 
         if (is_array($json)) {
             yaz('  JSON: ' . mb_substr((string) json_encode($json, JSON_UNESCAPED_UNICODE), 0, 1500));
+
+            // Belgesiz uclar (ESPN) icin yapinin ozeti: anahtarlar, ilk
+            // ogeler ve ornek degerler; cozumleyici bundan yaziliyor.
+            yaz('  YAPI:');
+            $satirSayaci = 0;
+            foreach (json_yapisi($json, '    ', 0, $satirSayaci) as $satir) {
+                yaz($satir);
+            }
             yaz();
             continue;
         }
