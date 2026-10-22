@@ -1724,3 +1724,45 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, kategor
     ('Euronews',                    'https://www.euronews.com',     'https://www.euronews.com/rss?level=theme&name=news',      NULL, 'rss', 'dunya', 1);
 
 INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_tarafsiz_kaynaklar_2026_10', '22.10.2026');
+
+-- ---------------------------------------------------------------------------
+-- Kaynak onarimi — 22.10.2026
+--
+-- Ilk gercek calismada ve ardindan yapilan kaynak testinde (ajan.yml,
+-- mod=kaynak-testi) olculenler:
+--   - DHA'nin besleme adresi 404; besleme kaldirilmis. Ana sayfasi
+--     kazinabiliyor ve guncel haber bagliyor (40 baglanti): DHA artik
+--     ana sayfadan okunuyor.
+--   - TRT Haber bilim-teknoloji ve kultur-sanat beslemelerinin adinda
+--     tire degil alt cizgi var.
+--   - NTV Spor ve NTV Sanat baska adrese yonleniyor; yeni adreslerde
+--     haber degil puan durumu ve altin fiyati sayfalari var. Milliyet
+--     Spor beslemesi 404, bolum sayfasi foto galeri. Spor icin AA,
+--     TRT, Hurriyet, Habertürk ve CNN Turk yeterli: kapatiliyorlar.
+--   - Reuters (401) ve Associated Press (403) otomatik erisimi
+--     engelliyor: kapatiliyorlar. Bagimsiz uluslararasi haber France 24
+--     (AFP), DW, BBC ve UN News uzerinden geliyor.
+-- Tek seferlik ('gecis_kaynak_onarim_2026_10_22'); adres duzeltmeleri
+-- ayrica eski adresle sinirli, panelden degistirilen adres ezilmiyor.
+-- ---------------------------------------------------------------------------
+UPDATE kaynaklar SET besleme_url = NULL, liste_url = 'https://www.dha.com.tr/', tur = 'web' WHERE ad = 'DHA'
+   AND besleme_url = 'https://www.dha.com.tr/rss'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarim_2026_10_22');
+UPDATE kaynaklar SET besleme_url = 'https://www.trthaber.com/bilim_teknoloji_articles.rss' WHERE ad = 'TRT Haber Bilim-Teknoloji'
+   AND besleme_url = 'https://www.trthaber.com/bilim-teknoloji_articles.rss'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarim_2026_10_22');
+UPDATE kaynaklar SET besleme_url = 'https://www.trthaber.com/kultur_sanat_articles.rss' WHERE ad = 'TRT Haber Kültür-Sanat'
+   AND besleme_url = 'https://www.trthaber.com/kultur-sanat_articles.rss'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarim_2026_10_22');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'NTV Spor'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarim_2026_10_22');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'NTV Sanat'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarim_2026_10_22');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Milliyet Spor'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarim_2026_10_22');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Reuters'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarim_2026_10_22');
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Associated Press'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarim_2026_10_22');
+
+INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_kaynak_onarim_2026_10_22', '22.10.2026');
