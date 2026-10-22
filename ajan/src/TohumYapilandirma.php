@@ -35,7 +35,8 @@ final class TohumYapilandirma
     /**
      * @return array{kaynaklar:list<array<string,mixed>>,kategoriler:list<array<string,mixed>>,
      *               bilinen:list<string>,bilinen_url:list<string>,
-     *               bilinen_baslik:list<string>,son_basliklar:list<string>}|null
+     *               bilinen_baslik:list<string>,son_basliklar:list<string>,
+     *               son_kaynak_basliklari:list<string>}|null
      */
     public function oku(): ?array
     {
@@ -75,6 +76,7 @@ final class TohumYapilandirma
             'bilinen_url'    => [],
             'bilinen_baslik' => [],
             'son_basliklar'  => [],
+            'son_kaynak_basliklari' => [],
         ];
     }
 

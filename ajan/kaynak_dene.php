@@ -44,7 +44,7 @@ use Valentra\Ajan\{Besleme, Getirici, Http, Kodlama, ResmiGazete, Sayfa, Site, T
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
-$secenekler = getopt('', ['saat::', 'kaynak::', 'kanunlar', 'aday::', 'rg', 'metin::', 'evds::']);
+$secenekler = getopt('', ['saat::', 'kaynak::', 'kanunlar', 'aday::', 'rg', 'metin::', 'evds::', 'ham::']);
 $saat       = max(1, (int) ($secenekler['saat'] ?? 36));
 $suzgu      = trim((string) ($secenekler['kaynak'] ?? ''));
 $kanunModu  = isset($secenekler['kanunlar']);
@@ -250,6 +250,151 @@ if (isset($secenekler['rg'])) {
     }
 
     exit($girdiler === [] ? 1 : 0);
+}
+
+/*
+ * --ham='adres ; adres': sayfanin YAPISINI ozetler (22.10.2026).
+ *
+ * Yeni bir veri kaynagi (TFF puan durumu, piyasa grafigi ucu) icin
+ * cozumleyici yazmadan once sayfanin tablolarini ya da JSON yanitini
+ * gormek gerekiyor; gelistirme ortamindan dis sitelere cikis kapali.
+ * Once dogrudan, olmazsa site uzerinden alinir. HTML'de her tablonun
+ * sinifi, satir sayisi ve ilk satirlari; JSON'da ilk 1500 karakter.
+ */
+$hamGirdi = trim((string) ($secenekler['ham'] ?? ''));
+
+if ($hamGirdi !== '') {
+    foreach (array_filter(array_map('trim', explode(';', $hamGirdi))) as $adres) {
+        yaz('=== ' . $adres);
+
+        $yanit = $http->dene($adres);
+        $govde = null;
+
+        if ($yanit['govde'] !== null && $yanit['kod'] >= 200 && $yanit['kod'] < 300) {
+            $govde = (string) $yanit['govde'];
+            yaz(sprintf('  doğrudan: HTTP %d, %d bayt', $yanit['kod'], strlen($govde)));
+        } else {
+            yaz(sprintf('  doğrudan: HTTP %d %s', $yanit['kod'], $yanit['hata']));
+            $govde = $site->hamGetir($adres);
+            yaz($govde !== null
+                ? '  site üzerinden: ' . strlen($govde) . ' bayt'
+                : '  site üzerinden de alınamadı: ' . $site->sonHamHatasi());
+        }
+
+        if ($govde === null) {
+            yaz();
+            continue;
+        }
+
+        /*
+         * Sitenin canli bolumlerinin cozumleyicileri de ayni govdeyle
+         * sinaniyor: yayina almadan once gercek sayfada ne cikardiklari
+         * gorulsun (spor: TFF, ekonomi: Yahoo).
+         */
+        if (str_contains($adres, 'tff.org')) {
+            require_once __DIR__ . '/../includes/spor.php';
+            $tff = tff_sayfa_coz($govde);
+            yaz(sprintf('  TFF çözümleme: %d takım, hafta %s, haftanın maçları %d, fikstür %d hafta (son oynanan %s)',
+                count($tff['puan']), var_export($tff['hafta'], true), count($tff['haftanin_maclari']),
+                count($tff['fikstur']), var_export(spor_son_oynanan_hafta($tff['fikstur']), true)));
+
+            foreach (array_slice($tff['puan'], 0, 3) as $s) {
+                yaz(sprintf('     %d. %s  O%d P%d AV%d', $s['sira'], $s['takim'], $s['o'], $s['p'], $s['av']));
+            }
+
+            foreach (array_slice($tff['haftanin_maclari'], 0, 3) as $m) {
+                yaz('     ' . $m['tarih'] . ' ' . $m['saat'] . '  ' . $m['ev'] . ' ' . ($m['skor'] ?: '-') . ' ' . $m['dep']);
+            }
+        } elseif (str_contains($adres, 'finance.yahoo.com')) {
+            require_once __DIR__ . '/../includes/piyasalar.php';
+
+            if (str_contains($adres, '/spark')) {
+                $spark = yahoo_spark_coz($govde);
+                yaz('  Yahoo spark çözümleme: ' . count($spark) . ' sembol — '
+                    . mb_substr((string) json_encode($spark, JSON_UNESCAPED_UNICODE), 0, 300));
+            } else {
+                $g = yahoo_grafik_coz($govde);
+                yaz('  Yahoo grafik çözümleme: ' . ($g === null ? 'BOŞ' : sprintf(
+                    'fiyat %s, değişim %s, %d nokta', var_export($g['fiyat'], true),
+                    var_export($g['degisim'], true), count($g['noktalar'])
+                )));
+            }
+        }
+
+        $json = json_decode($govde, true);
+
+        if (is_array($json)) {
+            yaz('  JSON: ' . mb_substr((string) json_encode($json, JSON_UNESCAPED_UNICODE), 0, 1500));
+            yaz();
+            continue;
+        }
+
+        // Cozumleyici sinandiysa tablo dokumu gereksiz kalabalik.
+        if (str_contains($adres, 'tff.org')) {
+            yaz();
+            continue;
+        }
+
+        $dom = new DOMDocument();
+        @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $govde);
+
+        $baslik = $dom->getElementsByTagName('title')->item(0);
+        yaz('  başlık: ' . ($baslik !== null ? trim($baslik->textContent) : '-'));
+
+        $tablolar = $dom->getElementsByTagName('table');
+        yaz('  tablo sayısı: ' . $tablolar->length);
+
+        $temiz = static fn (string $m): string => trim(preg_replace('/\s+/u', ' ', $m) ?? $m);
+
+        foreach ($tablolar as $no => $tablo) {
+            $satirlar = $tablo->getElementsByTagName('tr');
+
+            if ($satirlar->length < 3) {
+                continue;
+            }
+
+            yaz(sprintf(
+                '  tablo %d: class="%s" id="%s", %d satır',
+                $no,
+                $tablo->getAttribute('class'),
+                $tablo->getAttribute('id'),
+                $satirlar->length
+            ));
+
+            for ($i = 0; $i < min(4, $satirlar->length); $i++) {
+                $hucreler = [];
+
+                foreach ($satirlar->item($i)->childNodes as $hucre) {
+                    if ($hucre instanceof DOMElement && in_array($hucre->tagName, ['td', 'th'], true)) {
+                        $hucreler[] = mb_substr($temiz($hucre->textContent), 0, 30);
+                    }
+                }
+
+                yaz('     ' . implode(' | ', $hucreler));
+            }
+
+            // Ilk veri satirinin ham HTML'i: sinif adlari ve baglantilar.
+            if ($satirlar->length > 1) {
+                yaz('     ham: ' . mb_substr($temiz($dom->saveHTML($satirlar->item(1)) ?: ''), 0, 600));
+            }
+        }
+
+        // Tablo yoksa ya da azsa: puan/fikstur/mac gecen baglantilar.
+        $gosterilen = 0;
+
+        foreach ($dom->getElementsByTagName('a') as $a) {
+            $metin = $temiz($a->textContent);
+
+            if ($gosterilen < 25 && preg_match('/puan|fikst|maç|mac|süper lig|hafta/iu', $metin . ' ' . $a->getAttribute('href'))) {
+                yaz('  bağlantı: ' . mb_substr($metin, 0, 50) . ' -> ' . $a->getAttribute('href'));
+                $gosterilen++;
+            }
+        }
+
+        yaz();
+    }
+
+    exit(0);
 }
 
 /*
@@ -509,7 +654,7 @@ function siteYolunuDene(Site $site, string $url): array
 {
     $ham = $site->hamGetir($url);
 
-    return ['tamam' => $ham !== null, 'boyut' => $ham !== null ? strlen($ham) : 0];
+    return ['tamam' => $ham !== null, 'boyut' => $ham !== null ? strlen($ham) : 0, 'govde' => $ham];
 }
 
 /*
@@ -777,6 +922,23 @@ foreach ($kaynaklar as $kaynak) {
 
                 if ($calisanYol === '') {
                     $calisanYol = 'Kazıma (site üzerinden)';
+                }
+
+                /*
+                 * Site uzerinden gelen sayfa da cozumleniyor (22.10.2026).
+                 * Eskiden yalnizca boyut yaziliyordu; GitHub'i engelleyen
+                 * bir kaynakta (IHA, 403) sayfadan haber cikip cikmadigi
+                 * gorulemiyordu. Ajan da ayni sayfayi ayni yoldan aliyor.
+                 */
+                $kabuller = kazima_haberleri_bul((string) $siteden['govde'], $listeUrl, $secici, $adayGirdi !== '' ? 12 : 3);
+                yaz(sprintf('       Site üzerinden alınan sayfada %d haber bağlantısı bulundu.', count($kabuller)));
+
+                foreach ($kabuller as $kabul) {
+                    yaz(sprintf(
+                        '       alınan: %s -> %s',
+                        mb_substr($kabul['baslik'], 0, 70),
+                        $kabul['baglanti']
+                    ));
                 }
             } else {
                 yaz('       Site sunucusu üzerinden de alınamadı.');

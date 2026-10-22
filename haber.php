@@ -182,14 +182,37 @@ require __DIR__ . '/includes/sayfa_ust.php';
         </section>
     <?php endif; ?>
 
+    <?php
+    /*
+     * Haberin videosu (ajanin kaynak sayfada buldugu YouTube / Vimeo /
+     * Dailymotion oynaticisi, 22.10.2026): metnin USTUNDE, 16:9. Video
+     * kaynak platformdan oynuyor; dosya kopyalanmiyor. Panelden elle
+     * girilen gomulu belge (video olmayan iframe) eskisi gibi metnin
+     * altinda.
+     */
+    $iframeUrl = guvenli_url((string) ($haber['iframe_url'] ?? ''));
+    $videoMu   = $iframeUrl !== '' && haber_video_adresi($iframeUrl) !== '';
+    ?>
+    <?php if ($videoMu): ?>
+        <div class="gomulu-icerik video">
+            <iframe
+                src="<?= e($iframeUrl) ?>"
+                title="<?= e($haber['baslik']) ?> — video"
+                loading="lazy"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allow="fullscreen; encrypted-media; picture-in-picture"
+                allowfullscreen>
+            </iframe>
+        </div>
+    <?php endif; ?>
+
     <div class="icerik">
         <?php foreach (preg_split('/\n\s*\n/u', trim($haber['icerik'])) ?: [] as $paragraf): ?>
             <p><?= nl2br(e(trim($paragraf))) ?></p>
         <?php endforeach; ?>
     </div>
 
-    <?php $iframeUrl = guvenli_url((string) ($haber['iframe_url'] ?? '')); ?>
-    <?php if ($iframeUrl !== ''): ?>
+    <?php if ($iframeUrl !== '' && !$videoMu): ?>
         <div class="gomulu-icerik">
             <iframe
                 src="<?= e($iframeUrl) ?>"

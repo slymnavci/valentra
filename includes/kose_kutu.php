@@ -2,18 +2,18 @@
 declare(strict_types=1);
 
 /**
- * Ana sayfa: "Valentra Diyor ki…" kutusu.
+ * Yan pencerenin "Valentra Diyor ki…" kutusu (en ustte).
  *
- * Mansetin sagina, yan pencerenin soluna oturuyor (dar ekranda
- * mansetin altina) ve mansetle ayni boyda. Gorunum yan penceredeki
- * kutularla ayni aileden (numarali liste, baslik, altinda konu). Tarih
- * baslikta: bir gunun yazilari, her satirda ayni tarihi tekrarlamak yer
- * kaybi. En altta butun yazilarin listesine bag.
+ * 22.10.2026'ya kadar ana sayfada mansetle ayni siradaydi ve mansetin
+ * boyuna sigdiriliyordu; artik yan pencerede, kendi boyunda. Gorunum
+ * oteki pencerelerle ayni aileden (numarali liste, baslik, altinda
+ * konu). Tarih baslikta: bir gunun yazilari, her satirda ayni tarihi
+ * tekrarlamak yer kaybi. En altta butun yazilarin listesine bag.
  *
- * Yayinda yazi yoksa HICBIR SEY basilmiyor ve manset eski genisligiyle
- * kaliyor: bos bir kutu siteyi eksik gosterir.
+ * Yayinda yazi yoksa HICBIR SEY basilmiyor: bos bir kutu siteyi eksik
+ * gosterir.
  *
- * $koseYazilari'ni cagiran doldurur (index.php).
+ * $koseYazilari'ni cagiran doldurur (includes/yan_pencere.php).
  */
 
 if (($koseYazilari ?? []) === []) {
@@ -46,33 +46,3 @@ if (($koseYazilari ?? []) === []) {
     </p>
 </section>
 
-<?php
-/*
- * Kutu mansetle AYNI boyda (CSS: contain: size). Ekran kisaysa sigmayan
- * yazilar yarim kesik gorunmesin diye tamamen gizleniyor; hepsi "Tum
- * yazilar" sayfasinda. Kutu mansetin altina indiginde (dar ekran) hepsi
- * gorunur, olcum de o durumda hicbir seyi gizlemez.
- */
-?>
-<script>
-(function () {
-    var liste = document.querySelector('.kose-kutu .sirali-liste');
-    if (!liste) { return; }
-
-    function sigdir() {
-        var ogeler = liste.children;
-        for (var i = 0; i < ogeler.length; i++) { ogeler[i].hidden = false; }
-        var sinir = liste.getBoundingClientRect().bottom + 1;
-        for (var j = 1; j < ogeler.length; j++) {
-            if (ogeler[j].getBoundingClientRect().bottom > sinir) {
-                for (var k = j; k < ogeler.length; k++) { ogeler[k].hidden = true; }
-                break;
-            }
-        }
-    }
-
-    sigdir();
-    window.addEventListener('load', sigdir);
-    window.addEventListener('resize', sigdir);
-})();
-</script>

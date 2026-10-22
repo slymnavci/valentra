@@ -4,9 +4,15 @@ declare(strict_types=1);
 /**
  * Ana sayfanin ve haber sayfasinin yan penceresi.
  *
- * Ana kolonda haberler tarih sirasiyla akiyor; buradaki pencereler
- * okuyucuya farkli bir giris kapisi veriyor: konu basliklari ve
+ * Ana kolonda haberler onem sirasiyla akiyor; buradaki pencereler
+ * okuyucuya farkli bir giris kapisi veriyor: gunun kose yazilari ve
  * etiketler.
+ *
+ * 22.10.2026: "Konular" penceresi kaldirildi, yerine "Valentra Diyor
+ * ki…" (kose yazilari) geldi (site sahibinin istegi). Konu basliklari
+ * zaten ust menude. Altinda "En Cok Okunanlar": son iki gunde en cok
+ * okuyucunun actigi yayindaki haberler (sitenin kendi ziyaret sayaci;
+ * uc haberden azsa pencere basilmiyor).
  *
  * Ekim 2026: site genel haber ozetlerine dondu. Vergiye ozgu iki
  * pencere kaldirildi: "Onemli Duzenlemeler" (mevzuat kategorileri) ve
@@ -14,31 +20,38 @@ declare(strict_types=1);
  * burada gosterilmiyor.
  */
 
-$yanMenu   = haber_akis_kategorileri();
-$etiketler = haber_etiket_bulutu(12);
+require_once __DIR__ . '/kose.php';
+require_once __DIR__ . '/ziyaret.php';
 
-// Konu listesinde bos gruplari gostermek anlamsiz.
-$yanMenu = array_values(array_filter(
-    $yanMenu,
-    static fn (array $grup): bool => $grup['adet'] > 0
-));
+$etiketler = haber_etiket_bulutu(12);
+$enCokOkunanlar = haber_en_cok_okunanlar(6);
+
+$koseYazilari = [];
+
+try {
+    $koseYazilari = kose_son_gun();
+} catch (PDOException $e) {
+    error_log('[valentra] kose yazilari okunamadi: ' . $e->getMessage());
+}
 ?>
 <aside class="yan-pencere">
 
-    <?php if ($yanMenu !== []): ?>
-        <section class="pencere">
-            <h2 class="pencere-baslik">Konular</h2>
+    <?php require __DIR__ . '/kose_kutu.php'; ?>
 
-            <ul class="konu-listesi">
-                <?php foreach ($yanMenu as $grup): ?>
+    <?php if (count($enCokOkunanlar) >= 3): ?>
+        <section class="pencere" aria-labelledby="cok-okunan-baslik">
+            <h2 class="pencere-baslik" id="cok-okunan-baslik">En Çok Okunanlar</h2>
+
+            <ol class="sirali-liste">
+                <?php foreach ($enCokOkunanlar as $sira => $haber): ?>
                     <li>
-                        <a href="<?= e(kategori_yolu((string) $grup['slug'])) ?>">
-                            <?= e($grup['ad']) ?>
-                            <span class="adet"><?= $grup['adet'] ?></span>
+                        <span class="sira"><?= $sira + 1 ?></span>
+                        <a href="<?= e(haber_yolu($haber['slug'])) ?>">
+                            <span class="ad"><?= e($haber['baslik']) ?></span>
                         </a>
                     </li>
                 <?php endforeach; ?>
-            </ul>
+            </ol>
         </section>
     <?php endif; ?>
 

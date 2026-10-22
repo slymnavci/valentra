@@ -227,6 +227,10 @@ function sema_yukselt(array &$hatalar = []): array
      */
     $sutunEkle('haberler', 'url_parmak', 'CHAR(64) NULL AFTER kaynak_parmak');
     $sutunEkle('haberler', 'baslik_parmak', 'CHAR(64) NULL AFTER url_parmak');
+    // Kaynagin ozgun basligi: modelin yeniden yazdigi baslik ayni haberin
+    // baska sitedeki kopyasini yakalamiyordu (22.10.2026).
+    $sutunEkle('haberler', 'kaynak_baslik', "VARCHAR(300) NOT NULL DEFAULT '' AFTER baslik_parmak");
+    $sutunEkle('haberler', 'kaynak_baslik_parmak', 'CHAR(64) NULL AFTER kaynak_baslik');
     /*
      * Valentra Analiz alanlari.
      *
@@ -305,7 +309,8 @@ function sema_yukselt(array &$hatalar = []): array
     // Kopya sorgulari bu iki alan uzerinden calisiyor; indekssiz
     // arama arsiv buyudukce her aday icin tam tarama demek olurdu.
     foreach ([['url_parmak', 'ix_haber_url_parmak'],
-              ['baslik_parmak', 'ix_haber_baslik_parmak']] as [$sutun, $indeks]) {
+              ['baslik_parmak', 'ix_haber_baslik_parmak'],
+              ['kaynak_baslik_parmak', 'ix_haber_kaynak_baslik_parmak']] as [$sutun, $indeks]) {
         $adim('haberler.' . $indeks . ' indeksi', static function () use ($sutun, $indeks): bool {
             if (!sema_sutun_var('haberler', $sutun) || sema_indeks_var('haberler', $indeks)) {
                 return false;
@@ -494,6 +499,10 @@ function sema_guncel_mi(): bool
             ['kaynaklar', 'kategori'],
             // Ana sayfa siralamasi ve haber_taslak_ekle() bu sutunu kullaniyor.
             ['haberler', 'onem'],
+            // haber_taslak_ekle() ve api/kaynaklar.php kopya denetiminde
+            // bu sutunlari kullaniyor.
+            ['haberler', 'kaynak_baslik'],
+            ['haberler', 'kaynak_baslik_parmak'],
             // pratik_aday_yaz bu sutunu dogrudan sorguluyor; yukseltme
             // dustuyse panel "guncel" dememeli.
             ['pratik_bilgiler', 'seri'],

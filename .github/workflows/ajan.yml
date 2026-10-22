@@ -50,8 +50,8 @@ on:
         description: 'Kac saat geriye bakilsin'
         default: '36'
       enfazla:
-        description: 'En fazla kac aday islensin'
-        default: '25'
+        description: 'En fazla kac aday islensin (bos: basliklarin paylarinin toplami, 60)'
+        default: ''
       aday:
         description: 'kaynak-testi: DB disi aday adresler  (Ad=https://..., Ad=https://...|yol:/bolum/)'
         default: ''
@@ -64,6 +64,9 @@ on:
         default: ''
       evds:
         description: 'kaynak-testi: EVDS sorgusu, site uzerinden (yol ; yol)'
+        default: ''
+      ham:
+        description: 'kaynak-testi: sayfa yapisini ozetle (adres ; adres)'
         default: ''
 
 # Ayni anda iki ajan calismasin; ust uste binerse kopya istek olusur.
@@ -184,6 +187,7 @@ jobs:
           RG:    ${{ inputs.rg }}
           METIN: ${{ inputs.metin }}
           EVDS:  ${{ inputs.evds }}
+          HAM:   ${{ inputs.ham }}
         # Aday adresleri once SINANIR, sonra schema.sql'e yazilir.
         # Tersi sira denendi ve listede 32 bozuk adres birikti.
         #
@@ -209,7 +213,11 @@ jobs:
             php kaynak_dene.php --evds="$EVDS" || durum=1
           fi
 
-          if [ "$RG" != "true" ] && [ -z "$METIN" ] && [ -z "$ADAY" ] && [ -z "$EVDS" ]; then
+          if [ -n "$HAM" ]; then
+            php kaynak_dene.php --ham="$HAM" || durum=1
+          fi
+
+          if [ "$RG" != "true" ] && [ -z "$METIN" ] && [ -z "$ADAY" ] && [ -z "$EVDS" ] && [ -z "$HAM" ]; then
             php kaynak_dene.php --saat="$SAAT" || durum=1
           fi
 
@@ -259,7 +267,15 @@ jobs:
           # daha once gelen haber modele hic sorulmuyor. Onceden bu
           # pencereyi genisletmek ayni haberi tekrar tekrar yazdirmak
           # demekti; simdi degil.
-          BAYRAKLAR="--saat=${{ inputs.saat || '30' }} --enfazla=${{ inputs.enfazla || '40' }}"
+          #
+          # 22.10.2026: aday sayisi verilmezse ajan basliklarin paylarinin
+          # toplamini kullaniyor (HaberAkisi::PAYLAR, 60); haberler baslik
+          # baslik isleniyor.
+          BAYRAKLAR="--saat=${{ inputs.saat || '30' }}"
+
+          if [ -n "${{ inputs.enfazla }}" ]; then
+            BAYRAKLAR="$BAYRAKLAR --enfazla=${{ inputs.enfazla }}"
+          fi
 
           if [ "${{ inputs.kuru }}" = "true" ]; then
             BAYRAKLAR="$BAYRAKLAR --kuru"

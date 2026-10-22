@@ -74,6 +74,9 @@ final class Site
             'bilinen_url'    => $veri['bilinen_url'] ?? [],
             'bilinen_baslik' => $veri['bilinen_baslik'] ?? [],
             'son_basliklar'  => $veri['son_basliklar'] ?? [],
+            // Kaynaklarin ozgun basliklari (22.10.2026): yalnizca kelime
+            // benzerliginde kullaniliyor, modele gosterilmiyor.
+            'son_kaynak_basliklari' => $veri['son_kaynak_basliklari'] ?? [],
         ];
     }
 

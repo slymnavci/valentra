@@ -53,7 +53,8 @@ mb_internal_encoding('UTF-8');
 $secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::', 'sitetavani::', 'sitearaligi::', 'kaynakbasina::']);
 $kuruCalisma = isset($secenekler['kuru']);
 $saat        = max(1, (int) ($secenekler['saat'] ?? 36));
-$enFazlaAday = max(1, (int) ($secenekler['enfazla'] ?? 25));
+// Varsayilan: basliklarin paylarinin toplami (bkz. HaberAkisi::PAYLAR).
+$enFazlaAday = max(1, (int) ($secenekler['enfazla'] ?? array_sum(HaberAkisi::PAYLAR)));
 
 function gunluk(string $mesaj): void
 {
@@ -203,9 +204,15 @@ if ($yapilandirmaKaynagi !== 'site') {
         foreach ($bekleyenler as $eski) {
             $url    = (string) ($eski['kaynak_url'] ?? '');
             $baslik = (string) ($eski['baslik'] ?? '');
+            $kaynakBaslik = (string) ($eski['kaynak_baslik'] ?? '');
 
             if ($url !== '') {
                 $yapilandirma['bilinen_url'][] = url_parmak($url);
+            }
+
+            if ($kaynakBaslik !== '') {
+                $yapilandirma['bilinen_baslik'][] = baslik_parmak($kaynakBaslik);
+                $yapilandirma['son_kaynak_basliklari'][] = $kaynakBaslik;
             }
 
             if ($baslik !== '') {
@@ -295,7 +302,13 @@ $bilinenBaslik = array_fill_keys($yapilandirma['bilinen_baslik'], true);
 /** @var list<array<string,bool>> Bilinen basliklarin kelime kumeleri */
 $bilinenKumeler = [];
 
-foreach ($yapilandirma['son_basliklar'] as $eskiBaslik) {
+/*
+ * Kaynaklarin ozgun basliklari da karsilastiriliyor (22.10.2026): beslemedeki
+ * aday ozgun baslikla geliyor, sitedeki baslik ise modelin yeniden yazdigi.
+ * Ayni ajans haberi baska bir sitede yeniden gorundugunde ancak ozgun
+ * basliga benziyor.
+ */
+foreach (array_merge($yapilandirma['son_basliklar'], $yapilandirma['son_kaynak_basliklari'] ?? []) as $eskiBaslik) {
     $kume = baslik_kumesi((string) $eskiBaslik);
 
     if ($kume !== []) {
@@ -1107,7 +1120,9 @@ if ($cokKaynakli !== []) {
  * Tavan sirlama SONRASI uygulaniyor; her kaynak en iyi birkac adayiyla
  * temsil ediliyor ve kalan yer digerlerine kaliyor.
  */
-$kaynakBasinaTavan = max(1, (int) ($secenekler['kaynakbasina'] ?? 4));
+// 4'ten 6'ya (22.10.2026): baslik paylari buyudu; az kaynakli
+// basliklar (saglik, kultur-sanat) payini doldurabilsin.
+$kaynakBasinaTavan = max(1, (int) ($secenekler['kaynakbasina'] ?? 6));
 $kaynakSayaci      = [];
 $secilen           = [];
 
@@ -1232,14 +1247,52 @@ $kotaBitti = false;
 // Ucretsiz katmanda istek sayisi sinirli oldugu icin her haber icin ayri
 // cagri yapmak kotayi hemen tuketiyor.
 $grupBoyu = max(1, (int) ($secenekler['grup'] ?? 5));
-$gruplar  = array_chunk($adaylar, $grupBoyu);
 
-gunluk(count($gruplar) . ' grup halinde işlenecek (grup başına en fazla ' . $grupBoyu . ' aday).');
+/*
+ * Baslik baslik (22.10.2026, site sahibinin istegi): once spor, sonra
+ * politika, yabanci haber kuruluslari, sanat, teknoloji, sonra
+ * digerleri (HaberAkisi::SIRA). Bir grup tek bir basligin adaylarindan
+ * olusuyor; baslik icinde kapsam/yenilik sirasi korunuyor. Resmi
+ * Gazete maddeleri basta, ayri grupta.
+ */
+$basliklar = ['resmi-gazete' => []] + array_fill_keys(HaberAkisi::SIRA, []);
+
+foreach ($adaylar as $aday) {
+    $konu = resmi_gazete_mi($aday['kaynak']) ? 'resmi-gazete' : HaberAkisi::kova($aday['kaynak']);
+    $basliklar[isset($basliklar[$konu]) ? $konu : 'ekonomi'][] = $aday;
+}
+
+$gruplar      = [];
+$grupBasligi  = [];
+$adaylar      = [];
+
+foreach ($basliklar as $konu => $konuAdaylari) {
+    foreach (array_chunk($konuAdaylari, $grupBoyu) as $parca) {
+        $gruplar[]     = $parca;
+        $grupBasligi[] = $konu;
+    }
+
+    // $adaylar grup sirasiyla yeniden diziliyor (kalan aday sayimi icin).
+    array_push($adaylar, ...$konuAdaylari);
+}
+
+gunluk(count($gruplar) . ' grup halinde, başlık başlık işlenecek (grup başına en fazla ' . $grupBoyu . ' aday).');
+
+$islenenAday = 0;
+$gorselsiz   = 0;
 
 foreach ($gruplar as $grupNo => $grup) {
     if ($grupNo > 0) {
         sleep(4);
     }
+
+    if ($grupNo === 0 || $grupBasligi[$grupNo] !== $grupBasligi[$grupNo - 1]) {
+        $konu = $grupBasligi[$grupNo];
+        $adet = count($basliklar[$konu]);
+        gunluk('— ' . (HaberAkisi::ADLAR[$konu] ?? 'Resmî Gazete') . ' (' . $adet . ' aday) —');
+    }
+
+    $islenenAday += count($grup);
 
     // Sayfa metinleri once toplanir; model cagrisi tek seferde yapilir.
     $modelAdaylari = [];
@@ -1247,7 +1300,22 @@ foreach ($gruplar as $grupNo => $grup) {
     /** @var array<int,string> Aday sirasina gore gorsel adresi */
     $gorseller = [];
 
-    foreach ($grup as $sira => $aday) {
+    /** @var array<int,string> Aday sirasina gore video oynatici adresi */
+    $videolar = [];
+
+    /*
+     * GORSELSIZ HABER ALINMIYOR (site sahibinin karari, 22.10.2026: "tum
+     * haberlerde goruntu olacak, goruntusuz haberleri alma").
+     *
+     * Gorselsiz aday modele hic gitmiyor; grup bu yuzden tutulanlarla
+     * YENIDEN kuruluyor. $grup, $modelAdaylari, $gorseller ve $videolar
+     * ayni sirayla birlikte dolduruluyor: model sonuclari siraya gore
+     * eslestirildigi icin biri digerinden ayri kisalirsa sonuclar kayar
+     * (asagidaki uyari).
+     */
+    $tutulan = [];
+
+    foreach ($grup as $aday) {
         /*
          * Sayfa genis okunuyor.
          *
@@ -1257,7 +1325,9 @@ foreach ($gruplar as $grupNo => $grup) {
          * giden miktari Yazar ayrica kendi sinirina gore kirpar.
          */
         /*
-         * Sayfa okumasi da kalkanli — ama ADAY ATLANMAZ.
+         * Sayfa okumasi da kalkanli — ama ADAY ATLANMAZ. (Gorselsiz aday
+         * ise bilerek atlaniyor; o durumda dort dizi birlikte kisaliyor,
+         * bkz. yukaridaki GORSELSIZ notu.)
          *
          * Hata yakalanip bos metinle devam ediliyor. Adayi listeden
          * duşurmek cazip gorunuyor ama TEHLIKELI: model sonuclari
@@ -1278,15 +1348,33 @@ foreach ($gruplar as $grupNo => $grup) {
                 mb_substr($aday['girdi']['baslik'], 0, 60),
                 $e->getMessage()
             ));
-            $okunan = ['metin' => '', 'gorsel' => ''];
+            $okunan = ['metin' => '', 'gorsel' => '', 'video' => ''];
         }
 
         // Gorsel once beslemeden, yoksa haber sayfasinin og:image'inden.
         // Besleme gorseli daha guvenilir: siteyi yazan kisi haberin
         // gorselini oraya koyuyor, og:image bazen genel site kapagi.
-        $gorseller[$sira] = ($aday['girdi']['gorsel'] ?? '') !== ''
+        $gorsel = ($aday['girdi']['gorsel'] ?? '') !== ''
             ? (string) $aday['girdi']['gorsel']
-            : $okunan['gorsel'];
+            : (string) $okunan['gorsel'];
+
+        if ($gorsel === '') {
+            $gorselsiz++;
+
+            // Sayfa okunduysa ve gorsel yine yoksa bir sonraki calismada
+            // da olmayacak: eleme hafizasina yaziliyor ki kontenjani her
+            // calismada yeniden yemesin. Sayfa OKUNAMADIYSA yazilmiyor;
+            // gecici bir hata olabilir.
+            if (trim((string) $okunan['metin']) !== '') {
+                $elenenler[url_parmak($aday['girdi']['baglanti'])] = time();
+            }
+
+            continue;
+        }
+
+        $tutulan[]   = $aday;
+        $gorseller[] = $gorsel;
+        $videolar[]  = (string) ($okunan['video'] ?? '');
 
         $modelAdaylari[] = [
             'girdi'      => $aday['girdi'],
@@ -1297,12 +1385,17 @@ foreach ($gruplar as $grupNo => $grup) {
         ];
     }
 
-    $no = $grupNo + 1;
+    $grup = $tutulan;
+    $no   = $grupNo + 1;
+
+    if ($grup === []) {
+        continue;
+    }
 
     try {
         $sonuclar = $yazar->topluIsle($modelAdaylari, $kategoriler, $modeleGosterilecek);
     } catch (KotaBittiException $e) {
-        $kalan = count($adaylar) - ($grupNo * $grupBoyu);
+        $kalan = count($adaylar) - $islenenAday + count($grup);
         gunluk("  [grup {$no}] günlük model kotası doldu — kalan {$kalan} aday atlanıyor.");
         gunluk('  ' . $e->getMessage());
         $kotaBitti = true;
@@ -1384,6 +1477,9 @@ foreach ($gruplar as $grupNo => $grup) {
             'kaynak_id'   => (int) $kaynak['id'],
             'kaynak_adi'  => (string) $kaynak['ad'],
             'kaynak_url'  => $girdi['baglanti'],
+            // Beslemedeki ozgun baslik: site kopya denetiminde bunu da
+            // kullaniyor (ayni haber baska sitede ayni baslikla gelirse).
+            'kaynak_baslik' => (string) $girdi['baslik'],
             'guven_skoru' => (int) ($sonuc['guven_skoru'] ?? 0),
             'onem'        => (int) ($sonuc['onem'] ?? 50),
             'ajan_notu'   => (string) ($sonuc['ajan_notu'] ?? ''),
@@ -1399,6 +1495,9 @@ foreach ($gruplar as $grupNo => $grup) {
             'uygulama_ornegi'  => (string) ($sonuc['uygulama_ornegi'] ?? ''),
             'resmi_dayanak'    => (string) ($sonuc['resmi_dayanak'] ?? ''),
             'gorsel_url'  => $gorseller[$sira] ?? '',
+            // Haber sayfasinin gomdugu YouTube/Vimeo/Dailymotion oynaticisi
+            // (bkz. Sayfa::videoBul); haber sayfasinda gorselin altinda.
+            'iframe_url'  => $videolar[$sira] ?? '',
         ];
 
         /*
@@ -1426,6 +1525,11 @@ if (!$kuruCalisma) {
 // --- 5. Siteye gönder ------------------------------------------------------
 
 gunluk('---');
+
+if ($gorselsiz > 0) {
+    gunluk($gorselsiz . ' aday görseli olmadığı için alınmadı (görselsiz haber yayımlanmıyor).');
+}
+
 gunluk(
     count($haberler) . ' haber yazıldı, ' . $elenen . ' eleme'
     . ($yinelenen > 0 ? ' (' . $yinelenen . ' yinelenen)' : '')

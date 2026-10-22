@@ -61,8 +61,31 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
 <div class="ana-duzen">
     <div class="ana-kolon">
-        <div class="bolum-basligi">
-            <h2><?= $toplam ?> Haber</h2>
+        <?php
+        /*
+         * Canli bolumler (22.10.2026, site sahibinin istegi): Spor'da
+         * Super Lig puan durumu ve fikstur (TFF), Ekonomi'de piyasa
+         * kartlari, grafikleri ve borsa sirketleri. Yalnizca ilk sayfada;
+         * veri yoksa bolum hic basilmiyor.
+         */
+        $canliPanel = '';
+
+        if ($sayfa === 1 && $kategori['slug'] === 'spor') {
+            require_once __DIR__ . '/includes/spor_panel.php';
+            $canliPanel = spor_paneli_html();
+        } elseif ($sayfa === 1 && $kategori['slug'] === 'ekonomi') {
+            require_once __DIR__ . '/includes/piyasa_panel.php';
+            $canliPanel = piyasa_paneli_html((string) ($_GET['donem'] ?? '3a'));
+        }
+
+        if ($canliPanel !== '') {
+            require_once __DIR__ . '/includes/canli_betik.php';
+            echo $canliPanel, canli_betik();
+        }
+        ?>
+
+        <div class="bolum-basligi" id="<?= e((string) $kategori['slug']) ?>-haberleri">
+            <h2><?= $canliPanel !== '' ? 'Güncel ' . e((string) $kategori['ad']) . ' Haberleri' : $toplam . ' Haber' ?></h2>
             <span class="cizgi"></span>
         </div>
 

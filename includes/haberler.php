@@ -39,7 +39,15 @@ const HABER_RG_KOSULU = "COALESCE(h.kaynak_url, '') LIKE '%resmigazete.gov.tr%'"
 const HABER_AKIS_KATEGORILERI = [
     'gundem', 'politika', 'ekonomi', 'dunya',
     'spor', 'teknoloji', 'saglik', 'kultur-sanat',
+    // Yemek tarifleri (22.10.2026, site sahibinin istegi): menunun en
+    // sonunda. Haber degil; ana sayfanin manset ve haber izgarasina
+    // girmiyor (bkz. haber_ana_akis_kosulu), kendi sayfasi ve ana
+    // sayfanin alttaki konu bloklarinda.
+    'yemek-tarifleri',
 ];
+
+/** Haber olmayan, ana sayfa akisina girmeyen basliklar. */
+const HABER_AKIS_DISI = ['yemek-tarifleri'];
 
 /*
  * Haber sirasi: onemden onemsize (site sahibinin karari, 22.10.2026).
@@ -61,7 +69,8 @@ const HABER_SIRASI = 'h.one_cikan DESC,
     h.id DESC';
 
 /**
- * Ana sayfa akisinin kosulu: Resmi Gazete kaynakli olmayan her haber.
+ * Ana sayfa akisinin kosulu: Resmi Gazete kaynakli olmayan, haber olan
+ * (yemek tarifi gibi akis disi bir baslikta olmayan) her haber.
  *
  * Eski vergi ve muhasebe haberleri de akista KALIYOR (site sahibinin
  * karari, 22.10.2026: "eski haberleri kaldirma, onlar da kalsin"). Yeni
@@ -70,7 +79,14 @@ const HABER_SIRASI = 'h.one_cikan DESC,
  */
 function haber_ana_akis_kosulu(): string
 {
-    return 'NOT (' . HABER_RG_KOSULU . ')';
+    $disarida = implode(', ', array_map(
+        static fn (string $slug): string => db()->quote($slug),
+        HABER_AKIS_DISI
+    ));
+
+    return 'NOT (' . HABER_RG_KOSULU . ')'
+        . ' AND (h.kategori_id IS NULL OR h.kategori_id NOT IN'
+        . ' (SELECT id FROM kategoriler WHERE slug IN (' . $disarida . ')))';
 }
 
 /**
@@ -210,9 +226,18 @@ function haber_baslik_parmak(string $baslik): string
  *
  * Durum farketmez: reddedilmis bir haberi yeniden yazdirmak da
  * istemiyoruz, yoksa ayni haber her calismada geri gelirdi.
+ *
+ * Basliklar CAPRAZ karsilastiriliyor: yeni haberin yeniden yazilmis ve
+ * ozgun basligi, kayitli haberlerin hem yeniden yazilmis hem ozgun
+ * basligiyla. Ayni ajans haberi baska bir sitede ozgun basligiyla
+ * geldiginde ancak kayitli haberin ozgun basligina benziyor.
  */
-function haber_kopya_bul(string $parmak, string $urlParmak, string $baslikParmak): ?int
-{
+function haber_kopya_bul(
+    string $parmak,
+    string $urlParmak,
+    string $baslikParmak,
+    string $kaynakBaslikParmak = ''
+): ?int {
     $kosullar = ['kaynak_parmak = :p'];
     $degerler = ['p' => $parmak];
 
@@ -221,9 +246,16 @@ function haber_kopya_bul(string $parmak, string $urlParmak, string $baslikParmak
         $degerler['u'] = $urlParmak;
     }
 
-    if ($baslikParmak !== '') {
-        $kosullar[] = 'baslik_parmak = :b';
-        $degerler['b'] = $baslikParmak;
+    $basliklar = array_values(array_unique(array_filter(
+        [$baslikParmak, $kaynakBaslikParmak],
+        static fn (string $b): bool => $b !== ''
+    )));
+
+    foreach ($basliklar as $i => $b) {
+        $kosullar[] = 'baslik_parmak = :b' . $i;
+        $kosullar[] = 'kaynak_baslik_parmak = :kb' . $i;
+        $degerler['b' . $i]  = $b;
+        $degerler['kb' . $i] = $b;
     }
 
     $ifade = db()->prepare(
@@ -305,6 +337,26 @@ function haber_benzersiz_slug(string $baslik, ?int $haricId = null): string
 }
 
 /**
+ * Ajanın gönderdiği video adresi, izinli bir oynatıcıysa; değilse boş.
+ *
+ * Ajan haber sayfasinin gomdugu videoyu gonderiyor (ajan/src/Sayfa.php,
+ * videoBul). Sayfada iframe olarak gosterilecegi icin serbest adres
+ * kabul edilmiyor: yalnizca YouTube (gizlilik modu), Vimeo ve
+ * Dailymotion'in resmi gomme adresleri. Panelden elle girilen adres bu
+ * kisittan muaf (yonetici ne gomdugunu biliyor).
+ */
+function haber_video_adresi(string $adres): string
+{
+    $adres = trim($adres);
+
+    $izinli = preg_match('#^https://www\.youtube-nocookie\.com/embed/[A-Za-z0-9_-]{11}$#', $adres)
+        || preg_match('#^https://player\.vimeo\.com/video/\d{6,12}$#', $adres)
+        || preg_match('#^https://www\.dailymotion\.com/embed/video/[A-Za-z0-9]{5,12}$#', $adres);
+
+    return $izinli ? $adres : '';
+}
+
+/**
  * Ajanin buldugu haberi taslak olarak kaydeder.
  *
  * @return array{durum:string,id:?int} durum: 'eklendi' | 'yinelenen'
@@ -323,6 +375,10 @@ function haber_taslak_ekle(array $veri): array
     $urlParmak    = haber_url_parmak($kaynakUrl);
     $baslikParmak = haber_baslik_parmak($baslik);
 
+    // Kaynagin ozgun basligi (eski ajan surumu gondermiyor olabilir).
+    $kaynakBaslik       = mb_substr(trim((string) ($veri['kaynak_baslik'] ?? '')), 0, 300, 'UTF-8');
+    $kaynakBaslikParmak = $kaynakBaslik !== '' ? haber_baslik_parmak($kaynakBaslik) : '';
+
     /*
      * Uc olcut de deneniyor ve biri tutarsa haber eklenmiyor.
      *
@@ -331,7 +387,7 @@ function haber_taslak_ekle(array $veri): array
      * geldiginde yeniden yaziliyordu. Basliga da bakmak ayni haberin
      * iki kaynaktan gelen kopyasini da yakaliyor.
      */
-    $mevcutId = haber_kopya_bul($parmak, $urlParmak, $baslikParmak);
+    $mevcutId = haber_kopya_bul($parmak, $urlParmak, $baslikParmak, $kaynakBaslikParmak);
 
     if ($mevcutId !== null) {
         return ['durum' => 'yinelenen', 'id' => $mevcutId];
@@ -346,13 +402,13 @@ function haber_taslak_ekle(array $veri): array
         'INSERT INTO haberler
             (baslik, slug, ozet, icerik, gorsel_url, etiketler, durum, kategori_id,
              kaynak_id, kaynak_adi, kaynak_url, kaynak_parmak, url_parmak,
-             baslik_parmak, guven_skoru, onem, ajan_notu,
+             baslik_parmak, kaynak_baslik, kaynak_baslik_parmak, iframe_url, guven_skoru, onem, ajan_notu,
              analiz_degisen, analiz_etkilenen, analiz_zaman, analiz_islem,
              isletme_etkisi, uygulama_ornegi, resmi_dayanak)
          VALUES
             (:baslik, :slug, :ozet, :icerik, :gorsel_url, :etiketler, :durum, :kategori_id,
              :kaynak_id, :kaynak_adi, :kaynak_url, :kaynak_parmak, :url_parmak,
-             :baslik_parmak, :guven_skoru, :onem, :ajan_notu,
+             :baslik_parmak, :kaynak_baslik, :kaynak_baslik_parmak, :iframe_url, :guven_skoru, :onem, :ajan_notu,
              :analiz_degisen, :analiz_etkilenen, :analiz_zaman, :analiz_islem,
              :isletme_etkisi, :uygulama_ornegi, :resmi_dayanak)'
     );
@@ -372,6 +428,11 @@ function haber_taslak_ekle(array $veri): array
         'kaynak_parmak' => $parmak,
         'url_parmak'    => $urlParmak !== '' ? $urlParmak : null,
         'baslik_parmak' => $baslikParmak !== '' ? $baslikParmak : null,
+        'kaynak_baslik'        => $kaynakBaslik,
+        'kaynak_baslik_parmak' => $kaynakBaslikParmak !== '' ? $kaynakBaslikParmak : null,
+        // Ajanin buldugu video: yalnizca izinli oynaticilar (bkz.
+        // haber_video_adresi); baska her sey bos.
+        'iframe_url'           => haber_video_adresi((string) ($veri['iframe_url'] ?? '')) ?: null,
         'guven_skoru'   => max(0, min(100, (int) ($veri['guven_skoru'] ?? 0))),
         // Eski ajan surumu puan gondermezse orta deger.
         'onem'          => max(0, min(100, (int) ($veri['onem'] ?? 50))),
@@ -1075,7 +1136,7 @@ function kategori_bloklari(int $grupBasiHaber = 4, int $enFazlaGrup = 6): array
            JOIN kategoriler k ON k.id = h.kategori_id
           WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . '
             AND k.aktif = 1
-            AND ' . haber_ana_akis_kosulu() . '
+            AND NOT (' . HABER_RG_KOSULU . ')
             AND ' . haber_akis_kategori_kosulu() . '
           ORDER BY k.sira, k.ad, ' . HABER_SIRASI
     )->fetchAll();

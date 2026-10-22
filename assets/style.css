@@ -751,8 +751,14 @@ a.menu-oge.aktif::after,
      * 42vh / en fazla 400px: ayni ekranda manset 378 piksele, ilk
      * kart 507 pikseline iniyor; izgaranin ust siri katlanin ustunde
      * basliyor.
+     *
+     * 22.10.2026: site sahibi ana haber alaninin buyumesini istedi.
+     * Manset artik ana kolonun tam genisliginde (kose yazilari kutusu
+     * yan pencereye gecti); yukseklik de 48vh / en fazla 460px. Ilk
+     * kart sirasinin ust kenari 900 piksellik ekranda hala katlanin
+     * ustunde kaliyor.
      */
-    height: clamp(300px, 42vh, 400px);
+    height: clamp(320px, 48vh, 460px);
     background: linear-gradient(150deg, #17304f 0%, #23405f 55%, #2b4a73 100%);
     color: #fff;
 }
@@ -1022,10 +1028,10 @@ a.menu-oge.aktif::after,
  */
 .ana-duzen {
     display: grid;
-    /* Yan pencere 320'den 380'e cikti: genisleyen kapta sagdaki bosluk
-       aksi halde buyuyordu, "Son Eklenen" basliklari da iki satira
-       sikismak yerine rahat okunuyor. */
-    grid-template-columns: minmax(0, 1fr) 380px;
+    /* Yan pencere 340 piksel (22.10.2026'ya kadar 380): site sahibi ana
+       haber alaninin buyumesini istedi. Yan penceredeki en genis kutu
+       "Valentra Diyor ki…" da onceden 340 pikseldi. */
+    grid-template-columns: minmax(0, 1fr) 340px;
     gap: 30px;
     align-items: start;
 }
@@ -2595,35 +2601,11 @@ a.rg-madde:hover { color: var(--vurgu); }
 /* --- Valentra Diyor ki... (kose yazilari) -------------------------------- */
 
 /*
- * Ana sayfada manset ile ayni sira: manset solda daraliyor, "Valentra
- * Diyor ki..." kutusu onunla yan pencere arasinda. Kutu yan penceredeki
- * pencerelerle ayni gorunumde (.pencere + .sirali-liste). Kisaysa
- * mansetin boyuna uzuyor ve "Tum yazilar" en altta kaliyor; uzunsa
- * kirpilmiyor. 1200 pikselin altinda kutu mansetin altina iniyor.
+ * Yan pencerenin en ustundeki kutu (22.10.2026'ya kadar ana sayfada
+ * mansetle ayni siradaydi). Gorunum oteki pencerelerle ayni
+ * (.pencere + .sirali-liste); kutu kendi boyunda, yazilar kirpilmiyor.
  */
-.manset-sirasi {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: 20px;
-    align-items: stretch;
-    margin-bottom: 10px;
-}
-
-.manset-sirasi-sol { min-width: 0; }
-
-.manset-sirasi .kaydirak { margin-bottom: 10px; }
-
-.kose-kutu {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-
-    /* Yuksekligi manset belirliyor: kutu kendi boyunu siraya
-       dayatmiyor, stretch ile mansetin boyuna uzuyor. Sigmayan yazilar
-       kose_kutu.php'deki betikle gizleniyor (yarim kesilmiyor). */
-    contain: size;
-    overflow: hidden;
-}
+.kose-kutu { min-width: 0; }
 
 .kose-kutu-baslik {
     display: flex;
@@ -2641,17 +2623,7 @@ a.rg-madde:hover { color: var(--vurgu); }
     white-space: nowrap;
 }
 
-.kose-kutu .sirali-liste {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: hidden;
-}
-
-/* .sirali-liste li'nin display:flex'i hidden niteligini ezerdi. */
-.kose-kutu .sirali-liste li[hidden] { display: none; }
-
-/* Baslik en fazla iki, konu tek satir, aralik biraz daha sik: dort yazi
-   1440x900 ekranda mansetin boyuna (444 piksel) sigsin. */
+/* Baslik en fazla iki, konu tek satir, aralik biraz daha sik. */
 .kose-kutu .pencere-baslik { margin-bottom: 8px; }
 
 .kose-kutu .sirali-liste li { padding: 8px 0; }
@@ -2679,7 +2651,7 @@ a.rg-madde:hover { color: var(--vurgu); }
 }
 
 .kose-kutu-tumu {
-    margin-top: auto;
+    margin: 10px 0 0;
     padding-top: 10px;
     border-top: 1px solid var(--cizgi);
     font-size: .8rem;
@@ -2716,12 +2688,6 @@ a.rg-madde:hover { color: var(--vurgu); }
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-}
-
-@media (max-width: 1200px) {
-    .manset-sirasi { grid-template-columns: 1fr; }
-    .kose-kutu { margin-bottom: 18px; contain: none; }
-    .kose-kutu .sirali-liste { overflow: visible; }
 }
 
 /* Tum yazilar listesi ve "gunun diger yazilari" */
@@ -3333,3 +3299,312 @@ a.rg-madde:hover { color: var(--vurgu); }
 .arac-rehber a { color: var(--vurgu); font-weight: 600; }
 .arac-rehber a:hover { text-decoration: underline; }
 .rehber-tablo th:not(:first-child) { text-align: right; }
+
+/* --- Canli bolumler: Super Lig (Spor) ve Piyasalar (Ekonomi) -------------- */
+
+/*
+ * 22.10.2026, site sahibinin istegi. Kutu dili sitenin pencereleriyle ayni
+ * (.pencere: kart zemini, golge, yuvarlak kose); renkler degiskenlerden,
+ * koyu tema kendiliginden geliyor. Yukselis/dusus renkleri iki temada da
+ * okunur olsun diye ayri tanimli.
+ */
+:root {
+    --artis: #157a43;
+    --dusus: #c23a2e;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:where(:not([data-tema="acik"])) { --artis: #57d38c; --dusus: #ff8a80; }
+}
+
+:root:where([data-tema="koyu"]) { --artis: #57d38c; --dusus: #ff8a80; }
+
+.spor-panel,
+.piyasa-panel { margin: 0 0 26px; }
+
+.canli-panel-ust {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin: 0 0 12px;
+}
+
+.canli-panel-ust h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: var(--metin);
+}
+
+.canli-not {
+    margin: 8px 0 0;
+    font-size: .8rem;
+    color: var(--metin-soluk);
+}
+
+.canli-not a { color: var(--vurgu); }
+.canli-not a:hover { text-decoration: underline; }
+
+.tablo-kaydir { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Super Lig */
+.spor-izgara {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.spor-kutu {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    padding: 14px 16px;
+    min-width: 0;
+}
+
+.spor-kutu h3 {
+    margin: 0 0 10px;
+    font-size: .9rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--metin);
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--altin);
+}
+
+.spor-kutu h3 + ul + h3,
+.spor-kutu ul + h3 { margin-top: 18px; }
+
+.puan-tablosu {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .9rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.puan-tablosu th,
+.puan-tablosu td {
+    padding: 6px 6px;
+    text-align: center;
+    border-bottom: 1px solid var(--cizgi);
+    white-space: nowrap;
+}
+
+.puan-tablosu th {
+    font-size: .76rem;
+    color: var(--metin-soluk);
+    font-weight: 700;
+}
+
+.puan-tablosu .takim { text-align: left; width: 100%; }
+.puan-tablosu td.takim { font-weight: 600; color: var(--metin); }
+.puan-tablosu .sira { color: var(--metin-soluk); width: 1%; }
+.puan-tablosu .puan { font-weight: 800; color: var(--metin); }
+.puan-tablosu tbody tr:last-child td { border-bottom: 0; }
+
+/* Ilk dort (Avrupa) ve son uc (kume dusme) satiri ince bir serit. */
+.puan-tablosu tbody tr:nth-child(-n+4) td.sira { box-shadow: inset 3px 0 0 var(--artis); }
+.puan-tablosu tbody tr:nth-last-child(-n+3) td.sira { box-shadow: inset 3px 0 0 var(--dusus); }
+
+.mac-listesi {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: .9rem;
+}
+
+.mac-listesi li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas: "zaman zaman zaman" "ev skor dep";
+    align-items: center;
+    gap: 2px 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--cizgi);
+}
+
+.mac-listesi.sonuclar li { grid-template-areas: "ev skor dep"; }
+.mac-listesi li:last-child { border-bottom: 0; }
+
+.mac-zaman { grid-area: zaman; font-size: .76rem; color: var(--metin-soluk); }
+.mac-ev    { grid-area: ev; text-align: right; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mac-dep   { grid-area: dep; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.mac-skor {
+    grid-area: skor;
+    min-width: 52px;
+    text-align: center;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: var(--lacivert);
+    color: #fff;
+}
+
+.mac-skor.oynanmadi {
+    background: transparent;
+    color: var(--metin-soluk);
+    border: 1px solid var(--cizgi);
+}
+
+@media (max-width: 1100px) {
+    .spor-izgara { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+    .puan-tablosu .genis { display: none; }
+    .puan-tablosu th, .puan-tablosu td { padding: 6px 4px; }
+}
+
+/* Piyasalar */
+.piyasa-kartlar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0 0 18px;
+}
+
+.piyasa-kart {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "ad deg" "deger deger" "kivrim kivrim";
+    gap: 2px 8px;
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    padding: 12px 14px 8px;
+    min-width: 0;
+}
+
+.pk-ad    { grid-area: ad; font-size: .8rem; font-weight: 700; color: var(--metin-soluk); letter-spacing: .04em; }
+.pk-deger { grid-area: deger; font-size: 1.35rem; font-weight: 800; color: var(--metin); font-variant-numeric: tabular-nums; }
+.piyasa-kart .pdeg { grid-area: deg; }
+
+.pdeg { font-size: .82rem; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pdeg.arti { color: var(--artis); }
+.pdeg.eksi { color: var(--dusus); }
+.pdeg.duz  { color: var(--metin-soluk); }
+
+.kivrim {
+    grid-area: kivrim;
+    width: 100%;
+    height: 40px;
+    margin-top: 4px;
+}
+
+.kivrim path { fill: none; stroke: var(--vurgu); stroke-width: 1.6; }
+.kivrim.arti path { stroke: var(--artis); }
+.kivrim.eksi path { stroke: var(--dusus); }
+
+.piyasa-kart-not { grid-column: 1 / -1; margin: 0; }
+
+.donem-secici {
+    display: flex;
+    gap: 6px;
+    margin: 0 0 10px;
+}
+
+.donem-secici a {
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--cizgi);
+    font-size: .84rem;
+    font-weight: 600;
+    color: var(--metin-soluk);
+}
+
+.donem-secici a:hover { color: var(--metin); border-color: var(--metin-soluk); }
+
+.donem-secici a[aria-current="true"] {
+    background: var(--lacivert);
+    border-color: var(--lacivert);
+    color: #fff;
+}
+
+.piyasa-grafikler {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin: 0 0 18px;
+}
+
+.piyasa-grafik {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    padding: 12px 14px;
+    min-width: 0;
+}
+
+.piyasa-grafik .grafik { margin: 0; }
+
+.piyasa-sirketler {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    padding: 14px 16px;
+}
+
+.piyasa-sirketler h3 {
+    margin: 0 0 10px;
+    font-size: .9rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--metin);
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--altin);
+}
+
+.sirket-tablosu {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .9rem;
+}
+
+.sirket-tablosu th,
+.sirket-tablosu td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--cizgi);
+    text-align: left;
+    white-space: nowrap;
+}
+
+.sirket-tablosu th { font-size: .76rem; color: var(--metin-soluk); font-weight: 700; }
+.sirket-tablosu .kod { color: var(--metin-soluk); font-weight: 600; font-size: .82rem; }
+.sirket-tablosu .sayi { text-align: right; font-variant-numeric: tabular-nums; }
+.sirket-tablosu tbody tr:last-child td { border-bottom: 0; }
+
+@media (max-width: 1100px) {
+    .piyasa-kartlar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .piyasa-grafikler { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+    .piyasa-kartlar { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .pk-deger { font-size: 1.1rem; }
+    .sirket-tablosu .kod { display: none; }
+}
+
+/* Acilir menuden gelinen bolumler sabit menunun altinda kalmasin. */
+#puan-durumu, #fikstur, [id$="-haberleri"] { scroll-margin-top: 70px; }
+
+/* Haber videosu (YouTube/Vimeo/Dailymotion): belge iframe'i gibi
+   ekran boyu degil, 16:9. */
+.gomulu-icerik.video {
+    min-height: 0;
+    aspect-ratio: 16 / 9;
+    margin: 0 0 24px;
+    background: #000;
+}
+
+.gomulu-icerik.video iframe {
+    height: 100%;
+    min-height: 0;
+    background: #000;
+}

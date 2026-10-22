@@ -34,7 +34,7 @@ final class Sayfa
      * İkisi ayrı metot olsaydı aynı sayfa iki kez inecekti; kaynak
      * sitelere gereksiz yük ve çalışma süresi demek.
      *
-     * @return array{metin:string,gorsel:string}
+     * @return array{metin:string,gorsel:string,video:string}
      */
     public function oku(string $url, int $enFazlaKarakter = 6000): array
     {
@@ -46,7 +46,7 @@ final class Sayfa
         $html = $this->http->indir($url, 12_000_000);
 
         if ($html === null) {
-            return ['metin' => '', 'gorsel' => ''];
+            return ['metin' => '', 'gorsel' => '', 'video' => ''];
         }
 
         /*
@@ -61,6 +61,7 @@ final class Sayfa
             return [
                 'metin'  => mb_substr($metin, 0, $enFazlaKarakter, 'UTF-8'),
                 'gorsel' => '',
+                'video'  => '',
             ];
         }
 
@@ -68,6 +69,7 @@ final class Sayfa
         $html = Kodlama::utf8($html);
 
         $gorsel = $this->gorseliBul($html, $url);
+        $video  = self::videoBul($html);
 
         // Metin taşımayan bloklar önce tamamen atılır.
         $html = (string) preg_replace(
@@ -127,7 +129,60 @@ final class Sayfa
         return [
             'metin'  => mb_substr($sonuc, 0, $enFazlaKarakter, 'UTF-8'),
             'gorsel' => $gorsel,
+            'video'  => $video,
         ];
+    }
+
+    /**
+     * Haberin videosu: YouTube, Vimeo ya da Dailymotion oynatıcı adresi.
+     *
+     * Site sahibinin istegi (22.10.2026): "videolari da alabiliyor muyuz".
+     * Video DOSYASI indirilmiyor ve kopyalanmiyor: telif kaynakta. Yalnizca
+     * haber sayfasinin kendi gomdugu, gomulmeye izin veren platformlarin
+     * resmi oynaticisi aliniyor; video yine o platformdan oynuyor. Haber
+     * sitelerinin kendi oynaticilari (kendi sunucularindaki mp4, reklamli
+     * oynaticilar) alinmiyor: onlari baska sitede gostermek izinsiz
+     * kullanim olur.
+     *
+     * Once sayfanin paylasim bildirimi (og:video, twitter:player), sonra
+     * govdedeki ilk iframe. YouTube adresi gizlilik modlu alana
+     * (youtube-nocookie.com) cevriliyor: oynatilmadikca cerez yazilmiyor.
+     */
+    public static function videoBul(string $html): string
+    {
+        $adaylar = [];
+
+        foreach ([
+            '#<meta[^>]+(?:property|name)=["\'](?:og:video(?::secure_url|:url)?|twitter:player)["\'][^>]+content=["\']([^"\']+)["\']#i',
+            '#<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:property|name)=["\'](?:og:video(?::secure_url|:url)?|twitter:player)["\']#i',
+            '#<iframe[^>]+src=["\']([^"\']+)["\']#i',
+        ] as $desen) {
+            if (preg_match_all($desen, $html, $eslesmeler) > 0) {
+                array_push($adaylar, ...$eslesmeler[1]);
+            }
+        }
+
+        foreach ($adaylar as $aday) {
+            $aday = html_entity_decode(trim($aday), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+            if (str_starts_with($aday, '//')) {
+                $aday = 'https:' . $aday;
+            }
+
+            if (preg_match('#^https?://(?:www\.|m\.)?(?:youtube(?:-nocookie)?\.com/(?:embed/|watch\?(?:.*&)?v=|shorts/)|youtu\.be/)([A-Za-z0-9_-]{11})#', $aday, $e)) {
+                return 'https://www.youtube-nocookie.com/embed/' . $e[1];
+            }
+
+            if (preg_match('#^https?://(?:player\.)?vimeo\.com/(?:video/)?(\d{6,12})#', $aday, $e)) {
+                return 'https://player.vimeo.com/video/' . $e[1];
+            }
+
+            if (preg_match('#^https?://(?:www\.)?dailymotion\.com/(?:embed/)?video/([A-Za-z0-9]{5,12})#', $aday, $e)) {
+                return 'https://www.dailymotion.com/embed/video/' . $e[1];
+            }
+        }
+
+        return '';
     }
 
     /**

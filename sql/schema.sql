@@ -98,6 +98,13 @@ CREATE TABLE IF NOT EXISTS haberler (
     url_parmak      CHAR(64)      NULL,
     baslik_parmak   CHAR(64)      NULL,
 
+    -- Kaynagin KENDI basligi (22.10.2026). baslik modelin yeniden
+    -- yazdigi baslik; ayni ajans haberi saatler sonra baska bir sitede
+    -- ozgun basligiyla gorundugunde ona benzemiyor ve haber ikinci kez
+    -- toplanabiliyordu. Kopya denetimi bu ikisine de bakar.
+    kaynak_baslik        VARCHAR(300) NOT NULL DEFAULT '',
+    kaynak_baslik_parmak CHAR(64)     NULL,
+
     guven_skoru     TINYINT UNSIGNED NOT NULL DEFAULT 0,
     -- Onem puani (0-100): ana sayfa ve konu sayfalarinda son 24 saatin
     -- haberleri bu puana gore siralaniyor. Ajan veriyor, panelden degisir.
@@ -130,6 +137,7 @@ CREATE TABLE IF NOT EXISTS haberler (
     UNIQUE KEY uq_haber_parmak (kaynak_parmak),
     KEY ix_haber_url_parmak (url_parmak),
     KEY ix_haber_baslik_parmak (baslik_parmak),
+    KEY ix_haber_kaynak_baslik_parmak (kaynak_baslik_parmak),
     KEY ix_haber_durum_tarih (durum, yayin_tarihi),
     KEY ix_haber_bekleyen (durum, olusturuldu),
     KEY ix_haber_kategori (kategori_id, durum, yayin_tarihi),
@@ -1766,3 +1774,45 @@ UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Associated Press'
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarim_2026_10_22');
 
 INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_kaynak_onarim_2026_10_22', '22.10.2026');
+
+-- ---------------------------------------------------------------------------
+-- IHA ana sayfadan — 22.10.2026
+--
+-- IHA GitHub'dan gelen istegi 403 ile engelliyor; site uzerinden alinan
+-- /rss adresi besleme degil HTML donduruyor (0 girdi, "yeni girdi yok").
+-- Kaynak testi (kaynak_dene, site uzerinden kazima): ana sayfada 12
+-- guncel haber baglantisi. IHA artik ana sayfadan okunuyor (DHA gibi).
+-- Tek seferlik ('gecis_iha_2026_10_22') ve eski adresle sinirli:
+-- panelden degistirilen adres ezilmiyor.
+-- ---------------------------------------------------------------------------
+UPDATE kaynaklar SET besleme_url = NULL, liste_url = 'https://www.iha.com.tr/', tur = 'web' WHERE ad = 'İHA'
+   AND besleme_url = 'https://www.iha.com.tr/rss'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_iha_2026_10_22');
+
+INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_iha_2026_10_22', '22.10.2026');
+
+-- ---------------------------------------------------------------------------
+-- Yemek tarifleri — 22.10.2026
+--
+-- Site sahibinin istegi: "en sona yemek tarifleri toplayalim, bunun icin
+-- bir menu hazirla". Menunun en sonunda; haber olmadigi icin ana sayfanin
+-- manset ve haber izgarasina girmiyor (HABER_AKIS_DISI). Ajan tarifi
+-- kendi cumleleriyle yaziyor (malzemeler + yapilis), altinda kaynak ve
+-- tarifin tamamina baglanti.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kategoriler (ad, slug, aciklama, sira) VALUES
+    ('Yemek Tarifleri', 'yemek-tarifleri', 'Türk ve dünya mutfağından tarifler: ana yemekler, çorbalar, tatlılar ve hamur işleri', 90);
+
+-- Tarif kaynaklari. Iki kaynak testinde (kaynak_dene --aday, 22.10.2026)
+-- calisan ve guncel olanlar (son bir haftadaki girdi sayisiyla):
+-- Yemek.com RSS (46), Hurriyet Lezizz RSS (20), Kevserin Mutfagi RSS
+-- (10), Ardanin Mutfagi RSS (6). Yemek.com ve Lezizz beslemelerinde
+-- restoran listeleri ve gida haberleri de var; tarif olmayani editor
+-- talimati eliyor (YEMEK TARIFLERI bolumu). Nefis Yemek Tarifleri ve
+-- yemektarifleri.com otomatik erisimi engelliyor (403); Lezzet,
+-- Milliyet ve Sabah'ta guncel tarif listesi bulunamadi: eklenmedi.
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('Ardanın Mutfağı',   'https://www.ardaninmutfagi.com',  'https://www.ardaninmutfagi.com/feed/',   'rss', 'yemek-tarifleri', 1),
+    ('Yemek.com',         'https://yemek.com',               'https://yemek.com/rss.xml',              'rss', 'yemek-tarifleri', 1),
+    ('Hürriyet Lezizz',   'https://www.hurriyet.com.tr',     'https://www.hurriyet.com.tr/rss/lezizz', 'rss', 'yemek-tarifleri', 1),
+    ('Kevserin Mutfağı',  'https://www.kevserinmutfagi.com', 'https://www.kevserinmutfagi.com/feed',   'rss', 'yemek-tarifleri', 1);

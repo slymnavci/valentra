@@ -66,7 +66,8 @@ final class Yazar implements SemaliIstemci
 
         Konu başlıkları: gündem, politika, ekonomi, dünya, spor,
         teknoloji, sağlık, kültür-sanat. Politikada öncelik Türkiye
-        siyasetidir.
+        siyasetidir. Ayrıca yemek tarifleri yayımlanır (aşağıda YEMEK
+        TARİFLERİ bölümü; tarifler haber kurallarının dışındadır).
 
         Sana bir haber kaynağından başlık, özet ve sayfa metni verilecek.
         İki iş yapacaksın:
@@ -236,6 +237,8 @@ final class Yazar implements SemaliIstemci
           -> "ekonomi".
         - Diğerleri kendi başlıklarına: "spor", "teknoloji", "saglik",
           "kultur-sanat".
+        - Yemek tarifi -> "yemek-tarifleri" (yalnızca tarifler; yemek
+          kültürü haberi, restoran ya da gıda sektörü haberi değil).
 
         AJAN NOTU: Haberi onaylayacak editöre tek cümlelik not. Neyi
         kontrol etmesi gerektiğini söyle; hassas bir yön varsa (isim,
@@ -245,6 +248,28 @@ final class Yazar implements SemaliIstemci
 
         Yayımlanamıyorsa baslik, ozet, icerik, etiketler boş kalsın ve
         red_nedeni'ni tek cümleyle doldur.
+
+        YEMEK TARİFLERİ: Aday bir yemek tarifiyse (çoğunlukla tarif
+        sitelerinden gelir) yukarıdaki haber kuralları yerine bunlar
+        geçerlidir.
+        - YAYIMLANIR: malzemesi ve yapılışı kaynakta belli olan gerçek bir
+          tarif (ana yemek, çorba, tatlı, hamur işi, içecek...).
+        - YAYIMLANMAZ: ürün ya da marka tanıtımı, kampanya, restoran
+          reklamı; "en iyi tatlıcılar", "nerede yenir" gibi mekân
+          listeleri; yalnızca yemek adlarını sıralayan günlük menüler;
+          mutfak eşyası rehberleri; "zayıflatır, şifa verir, hastalığı
+          önler" gibi sağlık iddiası taşıyan içerik; malzemesi ya da
+          yapılışı eksik sayfa.
+        - baslik: tarifin adı (ör. "Fırında Sebzeli Tavuk").
+        - ozet: tek cümle; tarifin ne olduğu, kaynakta varsa kaç kişilik
+          ve ne kadar sürede hazırlandığı.
+        - icerik: kısa bir giriş paragrafı; boş satır; "Malzemeler"
+          satırı ve her malzeme ayrı satırda "- " ile; boş satır;
+          "Yapılışı" satırı ve numaralı adımlar (1., 2., ...) KENDİ
+          CÜMLELERİNLE. Kaynakta olmayan malzeme ya da ölçü ekleme.
+        - kategori "yemek-tarifleri"; onem 20-40 (tarifler haberlerin
+          önüne geçmemeli); etiketler ana malzeme ve yemek türü (ör.
+          tavuk, fırın yemeği, tatlı).
         METIN;
 
     /**
@@ -277,7 +302,7 @@ final class Yazar implements SemaliIstemci
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
             'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı, en fazla 90 karakter'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
-            'icerik'      => ['type' => 'string',  'description' => '3-5 paragraflık tarafsız özet, paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok'],
+            'icerik'      => ['type' => 'string',  'description' => '3-5 paragraflık tarafsız özet, paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
             'etiketler'   => [
                 'type'  => 'array',
                 'items' => ['type' => 'string'],
@@ -319,7 +344,7 @@ final class Yazar implements SemaliIstemci
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
             'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı, en fazla 90 karakter'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
-            'icerik'      => ['type' => 'string',  'description' => '3-5 paragraflık tarafsız özet, paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok'],
+            'icerik'      => ['type' => 'string',  'description' => '3-5 paragraflık tarafsız özet, paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
             'etiketler'   => [
                 'type'  => 'array',
                 'items' => ['type' => 'string'],

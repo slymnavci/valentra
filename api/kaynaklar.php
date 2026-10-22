@@ -103,6 +103,19 @@ $baslikParmaklari = $sutun(
 );
 
 /*
+ * Kaynaklarin ozgun basliklari da "bilinen baslik" (22.10.2026).
+ *
+ * Sitedeki baslik modelin yeniden yazdigi baslik. Ajan ise beslemedeki
+ * OZGUN basligi karsilastiriyor; ayni ajans haberi saatler sonra baska
+ * bir sitede ayni basligiyla geldiginde yeniden yazilmis basliga
+ * benzemiyor ve haber ikinci kez toplanabiliyordu.
+ */
+$baslikParmaklari = array_values(array_unique(array_merge($baslikParmaklari, $sutun(
+    'SELECT kaynak_baslik_parmak FROM haberler
+      WHERE kaynak_baslik_parmak IS NOT NULL AND ' . $pencere
+))));
+
+/*
  * Duz basliklar da gidiyor.
  *
  * Parmak izi yalnizca BIREBIR ayni basligi yakalar. Ayni tebligi iki
@@ -113,6 +126,19 @@ $baslikParmaklari = $sutun(
 $sonBasliklar = $sutun(
     'SELECT baslik FROM haberler
       WHERE ' . $pencere . '
+      ORDER BY id DESC
+      LIMIT 600'
+);
+
+/*
+ * Ozgun kaynak basliklari ayri listede: ajan bunlari yalnizca kelime
+ * benzerliginde kullaniyor. Modele gosterilen "daha once yayimlananlar"
+ * listesi son_basliklar'dan geliyor ve okuyucunun gordugu basliklar
+ * olarak kalmali.
+ */
+$sonKaynakBasliklari = $sutun(
+    "SELECT kaynak_baslik FROM haberler
+      WHERE kaynak_baslik <> '' AND " . $pencere . '
       ORDER BY id DESC
       LIMIT 600'
 );
@@ -133,4 +159,5 @@ ajan_json(200, [
     'bilinen_url'    => $urlParmaklari,
     'bilinen_baslik' => $baslikParmaklari,
     'son_basliklar'  => $sonBasliklar,
+    'son_kaynak_basliklari' => $sonKaynakBasliklari,
 ]);

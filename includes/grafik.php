@@ -40,7 +40,7 @@ const GRAFIK_BOY  = 300;
  * Seriyi çizer; gösterilecek HTML'i döndürür.
  *
  * @param list<array{0:string,1:float}> $seri    tarihe gore sirali ["Y-m-d", deger]
- * @param array{tur?:string,birim?:string,baslik?:string,kaynak?:string,ad?:string,sifirdan?:bool} $ayar
+ * @param array{tur?:string,birim?:string,baslik?:string,kaynak?:string,ad?:string,sifirdan?:bool,hane?:int} $ayar
  */
 function grafik_ciz(array $seri, array $ayar = []): string
 {
@@ -64,8 +64,9 @@ function grafik_ciz(array $seri, array $ayar = []): string
      * da cizilmiyor — dolgu olmadan dar eksen yaniltici degil.
      */
     $sifirdan = (bool) ($ayar['sifirdan'] ?? true);
-    // TCMB kurlari dort haneyle yayimliyor; oranlar iki haneyle.
-    $hane     = $birim === 'tl' ? 4 : 2;
+    // TCMB kurlari dort haneyle yayimliyor; oranlar iki haneyle. Cagiran
+    // degistirebilir (gram altin TL ama iki hane).
+    $hane     = (int) ($ayar['hane'] ?? ($birim === 'tl' ? 4 : 2));
 
     // --- olcekler ----------------------------------------------------------
 
@@ -493,6 +494,8 @@ function grafik_deger(float $deger, string $birim, int $hane): string
     return match ($birim) {
         'yuzde' => '%' . $metin,
         'tl'    => $metin . ' TL',
+        // Dolar cinsinden piyasa serileri (ons altin, Brent).
+        'usd'   => '$' . $metin,
         default => $metin,
     };
 }
@@ -566,7 +569,7 @@ const GRAFIK_BETIK = <<<'JS'
 
     function bicimle(d, birim, hane) {
         var s = d.toLocaleString('tr-TR', { minimumFractionDigits: hane, maximumFractionDigits: hane });
-        return birim === 'yuzde' ? '%' + s : (birim === 'tl' ? s + ' TL' : s);
+        return birim === 'yuzde' ? '%' + s : (birim === 'tl' ? s + ' TL' : (birim === 'usd' ? '$' + s : s));
     }
 
     /*
