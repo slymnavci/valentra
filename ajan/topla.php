@@ -681,6 +681,25 @@ function resmi_gazete_mi(array $kaynak): bool
 }
 
 /**
+ * Tarif kaynagindan gelen baslik bir tarif olabilir mi?
+ *
+ * Mekan listeleri, gunluk menuler ve mutfak ipuclari basligindan belli;
+ * bunlar modele gitmiyor. Supheli durumda true: karar modelin.
+ */
+function tarif_basligi_mi(string $baslik): bool
+{
+    if (preg_match('/tarif/iu', $baslik) === 1) {
+        return true;
+    }
+
+    return preg_match(
+        '/nerede yenir|en iyi|tatl[ıi]c[ıi]lar[ıi]|men[üu]s[üu]|men[üu] [öo]neri|g[üu]n[üu]n men[üu]|'
+        . 'yan[ıi]na ne gider|yerine ne kullan[ıi]l[ıi]r|nas[ıi]l saklan[ıi]r|ka[çc] kalori|faydalar[ıi]|restoran/iu',
+        $baslik
+    ) !== 1;
+}
+
+/**
  * Kontenjanı konulara paylaştırarak aday seçer.
  *
  * Puana gore duz siralama bir konu turunu sistematik olarak aciz
@@ -1345,6 +1364,16 @@ foreach ($gruplar as $grupNo => $grup) {
     $tutulan = [];
 
     foreach ($grup as $aday) {
+        // Tarif kaynaklarinin tarif olmadigi basligindan belli olan
+        // icerigi ("... Nerede Yenir", "Günün Menüsü") modele hic
+        // gondermiyoruz; model zaten eliyor, istek bosa gidiyordu.
+        if (HaberAkisi::kova($aday['kaynak']) === 'yemek-tarifleri' && !tarif_basligi_mi($aday['girdi']['baslik'])) {
+            $elenen++;
+            $elenenler[url_parmak($aday['girdi']['baglanti'])] = time();
+            gunluk('  tarif değil, atlandı — ' . mb_substr($aday['girdi']['baslik'], 0, 60, 'UTF-8'));
+            continue;
+        }
+
         /*
          * Sayfa genis okunuyor.
          *
@@ -1493,6 +1522,20 @@ foreach ($gruplar as $grupNo => $grup) {
                 gunluk("  konu dışı — {$kisaBaslik} ({$neden})");
             }
 
+            continue;
+        }
+
+        /*
+         * Tarif kaynaklarindan YALNIZCA tarif (site sahibi, 22.10.2026:
+         * "yemek tarifi toplamaya calisiyorum ama yemekle ilgili haber
+         * topluyor"). Lezizz gibi beslemeler yoresel urun, cografi isaret,
+         * hasat haberi de veriyor; model bunlari gundem/ekonomi haberi
+         * olarak kabul ediyordu.
+         */
+        if (HaberAkisi::kova($kaynak) === 'yemek-tarifleri' && ($sonuc['kategori'] ?? '') !== 'yemek-tarifleri') {
+            $elenen++;
+            $elenenler[url_parmak($girdi['baglanti'])] = time();
+            gunluk("  konu dışı — {$kisaBaslik} (tarif kaynağından gelen, tarif olmayan içerik)");
             continue;
         }
 
