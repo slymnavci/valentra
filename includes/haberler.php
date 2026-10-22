@@ -402,6 +402,51 @@ function haber_video_adresi(string $adres): string
 }
 
 /**
+ * Videolu haber kosulu: haber_video_adresi() ile ayni uc oynatici.
+ *
+ * Panelden elle girilen video olmayan iframe (belge, harita) sayilmiyor;
+ * haber.php de onu video olarak gostermiyor.
+ */
+const HABER_VIDEO_KOSULU = "(h.iframe_url LIKE 'https://www.youtube-nocookie.com/embed/%'
+    OR h.iframe_url LIKE 'https://player.vimeo.com/video/%'
+    OR h.iframe_url LIKE 'https://www.dailymotion.com/embed/video/%')";
+
+/**
+ * Video sayfasi ve ana sayfadaki video seridi (22.10.2026, site
+ * sahibinin istegi: "videolu haberler normal haberlerin icinde de olsun,
+ * ayrica okuyucu videolari bir arada izleyebilsin; gorsel de olsun").
+ * Haber kendi konu sayfasinda da kaliyor; burasi yalnizca bir gorunum.
+ * En yeni once: video sayfasi bir akis, onem sirasi konu sayfalarinda.
+ */
+function haber_videolular(int $limit = 12, int $atla = 0): array
+{
+    $ifade = db()->prepare(
+        'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
+           FROM haberler h
+           LEFT JOIN kategoriler k ON k.id = h.kategori_id
+          WHERE h.durum = :durum AND ' . HABER_VIDEO_KOSULU . '
+          ORDER BY h.yayin_tarihi DESC, h.id DESC
+          LIMIT :limit OFFSET :atla'
+    );
+    $ifade->bindValue('durum', HABER_YAYINDA);
+    $ifade->bindValue('limit', $limit, PDO::PARAM_INT);
+    $ifade->bindValue('atla', $atla, PDO::PARAM_INT);
+    $ifade->execute();
+
+    return $ifade->fetchAll();
+}
+
+function haber_videolu_sayisi(): int
+{
+    $ifade = db()->prepare(
+        'SELECT COUNT(*) FROM haberler h WHERE h.durum = :durum AND ' . HABER_VIDEO_KOSULU
+    );
+    $ifade->execute(['durum' => HABER_YAYINDA]);
+
+    return (int) $ifade->fetchColumn();
+}
+
+/**
  * Ajanin buldugu haberi taslak olarak kaydeder.
  *
  * @return array{durum:string,id:?int} durum: 'eklendi' | 'yinelenen'

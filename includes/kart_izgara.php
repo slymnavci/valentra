@@ -9,11 +9,20 @@ if (($izgaraHaberleri ?? []) === []) {
 ?>
 <section class="kart-izgara">
     <?php foreach ($izgaraHaberleri as $haber): ?>
-        <?php $kartGorsel = guvenli_url($haber['gorsel_url'] ?? ''); ?>
-        <article class="kart <?= $kartGorsel === '' ? 'yazili' : '' ?>">
+        <?php
+        $kartGorsel = guvenli_url($haber['gorsel_url'] ?? '');
+        // Videolu haber: gorselin ustunde oynat isareti (bkz. video.php).
+        $kartVideo  = haber_video_adresi((string) ($haber['iframe_url'] ?? '')) !== '';
+        ?>
+        <article class="kart <?= $kartGorsel === '' ? 'yazili' : '' ?> <?= $kartVideo ? 'videolu' : '' ?>">
             <a href="<?= e(haber_yolu((string) $haber['slug'])) ?>">
                 <?php if ($kartGorsel !== ''): ?>
-                    <img class="gorsel" src="<?= e($kartGorsel) ?>" alt="" loading="lazy">
+                    <div class="gorsel-kap">
+                        <img class="gorsel" src="<?= e($kartGorsel) ?>" alt="" loading="lazy">
+                        <?php if ($kartVideo): ?>
+                            <span class="oynat" aria-hidden="true"></span>
+                        <?php endif; ?>
+                    </div>
                 <?php endif; ?>
                 <div class="govde">
                     <?php if (!empty($haber['kategori_adi'])): ?>
@@ -25,7 +34,7 @@ if (($izgaraHaberleri ?? []) === []) {
                         <?php endif; ?>
                     <?php endif; ?>
 
-                    <h3><?= e($haber['baslik']) ?></h3>
+                    <h3><?php if ($kartVideo): ?><span class="video-isaret">&#9654; Video</span> <?php endif; ?><?= e($haber['baslik']) ?></h3>
                     <p class="ozet"><?= e(kisalt($haber['ozet'], 120)) ?></p>
 
                     <div class="kart-alt">
