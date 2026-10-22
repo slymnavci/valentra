@@ -225,6 +225,7 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
         <script>
         (function () {
             var gruplar = document.querySelectorAll('.menu-grup');
+            var darEkran = window.matchMedia('(max-width: 720px)');
 
             function hepsiniKapat(haric) {
                 gruplar.forEach(function (g) {
@@ -237,12 +238,24 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
 
             gruplar.forEach(function (grup) {
                 var dugme = grup.querySelector('button');
+                var acilir = grup.querySelector('.menu-acilir');
 
                 dugme.addEventListener('click', function (olay) {
                     olay.stopPropagation();
                     var acik = grup.classList.toggle('acik');
                     dugme.setAttribute('aria-expanded', acik ? 'true' : 'false');
                     hepsiniKapat(grup);
+
+                    /* Dar ekranda .menu-acilir position:fixed'e geciyor;
+                       CSS'teki top:100% o zaman "butonun altı" degil
+                       "ekranın en altı" demek oluyor (panel gorunmez
+                       kaliyor). Acilirken butonun gercek ekran konumunu
+                       JS ile hesaplayip top'u ona gore sabitliyoruz. */
+                    if (acilir) {
+                        acilir.style.top = (acik && darEkran.matches)
+                            ? (dugme.getBoundingClientRect().bottom + 6) + 'px'
+                            : '';
+                    }
                 });
             });
 
