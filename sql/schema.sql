@@ -685,6 +685,18 @@ CREATE TABLE IF NOT EXISTS ziyaretler (
     KEY ix_ziyaret_kisi (ziyaretci, zaman)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Son 24 saatin okunma ozeti (ana sayfa sirasi icin).
+--
+-- Ana sayfa her acilista ziyaretler tablosunun son 24 saatini haber
+-- haber sayiyordu (COUNT DISTINCT), hem manset hem izgara icin. Ozet
+-- 10 dakikada bir, ziyaretciye yanit gonderildikten sonra yeniden
+-- yaziliyor (bkz. includes/haberler.php -> haber_okunma_birlesimi).
+CREATE TABLE IF NOT EXISTS haber_okunma_ozet (
+    haber_id INT UNSIGNED NOT NULL,
+    okuyucu  INT UNSIGNED NOT NULL,
+    PRIMARY KEY (haber_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ---------------------------------------------------------------------------
 -- Pratik bilgiler
 --
