@@ -41,10 +41,11 @@ require_once __DIR__ . '/includes/seo.php';
 $seoTur  = 'article';
 $seoSema = seo_haber_semasi($haber);
 
-$haberGorseli = guvenli_url((string) ($haber['gorsel_url'] ?? ''));
+// Gorsel sitenin kendi sunucusundan (bkz. includes/gorsel_onbellek.php).
+$haberGorseli = haber_gorsel($haber);
 
 if ($haberGorseli !== '') {
-    $seoGorsel = $haberGorseli;
+    $seoGorsel = site_adresi() . $haberGorseli;
 }
 
 /*
@@ -115,8 +116,9 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <?php endif; ?>
     </div>
 
-    <?php if (!empty($haber['gorsel_url'])): ?>
-        <img src="<?= e(guvenli_url($haber['gorsel_url'])) ?>" alt="" style="border-radius:8px;margin-bottom:22px;">
+    <?php if ($haberGorseli !== ''): ?>
+        <img src="<?= e($haberGorseli) ?>" alt="" referrerpolicy="no-referrer"
+             onerror="this.remove()" style="border-radius:8px;margin-bottom:22px;">
     <?php endif; ?>
 
     <?php if ($haber['ozet'] !== ''): ?>
