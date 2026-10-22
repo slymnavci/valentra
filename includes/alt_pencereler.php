@@ -24,7 +24,7 @@ if ($altBloklar === []) {
         <?php
         $haberler  = $blok['haberler'];
         $ilk       = array_shift($haberler);
-        $ilkGorsel = guvenli_url($ilk['gorsel_url'] ?? '');
+        $ilkGorsel = haber_gorsel($ilk);
         ?>
         <section class="pencere blok">
             <h3 class="blok-baslik">
@@ -36,7 +36,8 @@ if ($altBloklar === []) {
 
             <a class="blok-one-cikan" href="<?= e(haber_yolu((string) $ilk['slug'])) ?>">
                 <?php if ($ilkGorsel !== ''): ?>
-                    <img src="<?= e($ilkGorsel) ?>" alt="" loading="lazy">
+                    <img src="<?= e($ilkGorsel) ?>" alt="" loading="lazy" referrerpolicy="no-referrer"
+                         onerror="this.remove()">
                 <?php endif; ?>
                 <h4><?= e($ilk['baslik']) ?></h4>
                 <p><?= e(kisalt((string) $ilk['ozet'], 110)) ?></p>

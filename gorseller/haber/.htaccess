@@ -1,0 +1,31 @@
+# Haber gorselleri onbellegi (bkz. includes/gorsel_onbellek.php).
+#
+# Yalnizca resim dosyalari sunuluyor; ".yok" isaretleri ve yarim
+# ".tmp" dosyalari kapali, klasorde PHP calismiyor. Her yonerge IfModule
+# icinde: paylasimli hostingde modul yoksa ya da yonergeye izin
+# verilmiyorsa klasor 500 ile duser ve hicbir gorsel acilmazdi.
+# "Options -Indexes" bu yuzden yok; liste yerine bos index.html var.
+
+<IfModule mod_authz_core.c>
+    <FilesMatch "\.(yok|tmp|php\d?|phtml|phar)$">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+    <FilesMatch "\.(yok|tmp|php\d?|phtml|phar)$">
+        Order deny,allow
+        Deny from all
+    </FilesMatch>
+</IfModule>
+
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set Cache-Control "public, max-age=2592000"
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>

@@ -9,11 +9,13 @@ if (($izgaraHaberleri ?? []) === []) {
 ?>
 <section class="kart-izgara">
     <?php foreach ($izgaraHaberleri as $haber): ?>
-        <?php $kartGorsel = guvenli_url($haber['gorsel_url'] ?? ''); ?>
+        <?php $kartGorsel = haber_gorsel($haber); ?>
         <article class="kart <?= $kartGorsel === '' ? 'yazili' : '' ?>">
             <a href="<?= e(haber_yolu((string) $haber['slug'])) ?>">
                 <?php if ($kartGorsel !== ''): ?>
-                    <img class="gorsel" src="<?= e($kartGorsel) ?>" alt="" loading="lazy">
+                    <img class="gorsel" src="<?= e($kartGorsel) ?>" alt="" loading="lazy"
+                         referrerpolicy="no-referrer"
+                         onerror="this.closest('.kart').classList.add('yazili');this.remove()">
                 <?php endif; ?>
                 <div class="govde">
                     <?php if (!empty($haber['kategori_adi'])): ?>

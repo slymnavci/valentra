@@ -97,10 +97,12 @@ function seo_haber_semasi(array $haber): string
         $sema['dateModified'] = date('c', $guncelZamani);
     }
 
-    $gorsel = guvenli_url((string) ($haber['gorsel_url'] ?? ''));
+    require_once __DIR__ . '/gorsel_onbellek.php';
+
+    $gorsel = haber_gorsel($haber);
 
     if ($gorsel !== '') {
-        $sema['image'] = [$gorsel];
+        $sema['image'] = [str_starts_with($gorsel, '/') ? site_adresi() . $gorsel : $gorsel];
     }
 
     if (!empty($haber['kategori_adi'])) {

@@ -44,6 +44,7 @@ function db(): PDO
 
 require_once __DIR__ . '/haberler.php';
 require_once __DIR__ . '/adres.php';
+require_once __DIR__ . '/gorsel_onbellek.php';
 
 /*
  * Sema dosyasi degistiyse veritabanini kendiliginden yukselt.

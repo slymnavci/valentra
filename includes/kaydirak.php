@@ -19,13 +19,14 @@ if (($mansetler ?? []) === []) {
 
     <div class="kaydirak-pencere" id="kaydirakPencere">
         <?php foreach ($mansetler as $sira => $haber): ?>
-            <?php $gorsel = guvenli_url($haber['gorsel_url'] ?? ''); ?>
+            <?php $gorsel = haber_gorsel($haber); ?>
             <article class="kaydirak-slayt <?= $gorsel !== '' ? 'gorselli' : '' ?>"
                      aria-roledescription="slide"
                      aria-label="<?= (int) $sira + 1 ?> / <?= count($mansetler) ?>">
                 <a href="<?= e(haber_yolu((string) $haber['slug'])) ?>">
                     <?php if ($gorsel !== ''): ?>
-                        <img class="ust-gorsel" src="<?= e($gorsel) ?>" alt=""
+                        <img class="ust-gorsel" src="<?= e($gorsel) ?>" alt="" referrerpolicy="no-referrer"
+                             onerror="this.closest('.kaydirak-slayt').classList.remove('gorselli');this.remove()"
                              loading="<?= $sira === 0 ? 'eager' : 'lazy' ?>">
                     <?php endif; ?>
 
