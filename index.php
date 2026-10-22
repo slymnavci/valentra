@@ -106,6 +106,25 @@ require __DIR__ . '/includes/sayfa_ust.php';
                 <?php require __DIR__ . '/includes/kart_izgara.php'; ?>
             <?php endif; ?>
 
+            <?php
+            /*
+             * Video haberler seridi (22.10.2026): en yeni dort videolu
+             * haber, tamami Video sayfasinda. Yalnizca ilk sayfada; videolu
+             * haber yoksa bolum hic basilmiyor.
+             */
+            $videoluHaberler = $sayfa === 1 ? haber_videolular(4) : [];
+            ?>
+            <?php if ($videoluHaberler !== []): ?>
+                <div class="bolum-basligi" id="video-haberler">
+                    <h2>Video Haberler</h2>
+                    <span class="cizgi"></span>
+                    <a class="bolum-bag" href="<?= e(video_yolu()) ?>">Tüm videolar &rarr;</a>
+                </div>
+
+                <?php $izgaraHaberleri = $videoluHaberler; ?>
+                <?php require __DIR__ . '/includes/kart_izgara.php'; ?>
+            <?php endif; ?>
+
             <?php if ($sonSayfa > 1): ?>
                 <nav class="kart-alt" style="justify-content:center;margin:32px 0;gap:14px;">
                     <?php if ($sayfa > 1): ?>

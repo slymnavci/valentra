@@ -67,6 +67,10 @@ function site_menusu(): array
         }
     }
 
+    // Video haberler (22.10.2026): haber basliklarindan sonra, kose
+    // yazilarindan once. Haberler kendi basliklarinda da duruyor.
+    $menu[] = ['ad' => 'Video', 'anahtar' => 'video', 'href' => video_yolu(), 'altlar' => []];
+
     // Kose yazilari: gunun en onemli konularinin yorumu (yapay zeka ile
     // yaziliyor, onaydan geciyor). Haber basliklarinin sonunda.
     $menu[] = ['ad' => 'Köşe Yazıları', 'anahtar' => 'kose', 'href' => kose_liste_yolu(), 'altlar' => []];

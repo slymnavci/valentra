@@ -187,6 +187,18 @@ function sirket_yolu(string $kod = '', string $donem = ''): string
     return $yol;
 }
 
+/** Video haberler sayfası. Sayfa numarası her iki biçimde sorguda. */
+function video_yolu(int $sayfa = 1): string
+{
+    $yol = temiz_adres_acik() ? '/video' : '/video.php';
+
+    if ($sayfa > 1) {
+        $yol .= '?sayfa=' . $sayfa;
+    }
+
+    return $yol;
+}
+
 function kose_liste_yolu(int $sayfa = 1): string
 {
     $yol = temiz_adres_acik() ? '/valentra-diyor-ki' : '/kose-yazilari.php';

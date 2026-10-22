@@ -119,6 +119,12 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         <priority>0.7</priority>
     </url>
 
+    <url>
+        <loc><?= e($taban . video_yolu()) ?></loc>
+        <changefreq>hourly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
     <?php foreach (array_keys(piyasa_sirketleri()) as $sirketKodu): ?>
         <url>
             <loc><?= e($taban . sirket_yolu($sirketKodu)) ?></loc>

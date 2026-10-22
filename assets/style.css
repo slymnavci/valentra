@@ -3609,6 +3609,71 @@ a.rg-madde:hover { color: var(--vurgu); }
     background: #000;
 }
 
+/* --- Video haberler (22.10.2026) ------------------------------------------
+   Kartta gorselin ustunde oynat isareti, basligin onunde "Video"; video
+   sayfasinda en yeni video oynaticiyla ustte. */
+.kart .gorsel-kap { position: relative; }
+.kart .gorsel-kap .gorsel { display: block; }
+
+.kart .oynat {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 54px;
+    height: 54px;
+    margin: -27px 0 0 -27px;
+    border-radius: 50%;
+    background: rgba(16, 26, 44, .72);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, .85);
+    transition: background .15s ease, transform .15s ease;
+}
+
+.kart .oynat::after {
+    content: "";
+    position: absolute;
+    left: 21px;
+    top: 16px;
+    border-style: solid;
+    border-width: 11px 0 11px 18px;
+    border-color: transparent transparent transparent #fff;
+}
+
+.kart.videolu:hover .oynat { background: var(--altin); transform: scale(1.06); }
+
+.video-isaret {
+    display: inline-block;
+    margin-right: 4px;
+    padding: 1px 7px;
+    border-radius: 4px;
+    background: var(--altin);
+    color: #14213a;
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    vertical-align: 2px;
+    text-transform: uppercase;
+}
+
+.video-one-cikan {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    overflow: hidden;
+    padding: 0 0 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.video-one-cikan .gomulu-icerik.video { margin: 0 0 6px; border: 0; border-radius: 0; }
+.video-one-cikan > :not(.gomulu-icerik) { margin-left: 18px; margin-right: 18px; }
+.video-one-cikan h2 { margin-top: 0; margin-bottom: 0; font-size: 1.4rem; line-height: 1.3; }
+.video-one-cikan h2 a:hover { text-decoration: underline; }
+.video-one-cikan .etiket { align-self: flex-start; }
+
+.bolum-basligi .bolum-bag { flex: none; color: var(--vurgu); font-size: .92rem; font-weight: 700; }
+.bolum-basligi .bolum-bag:hover { text-decoration: underline; }
+
 /* Ekonomi haberleri ile Piyasalar sayfasi arasindaki bag. */
 .piyasa-bag { margin: 0 0 18px; font-size: .95rem; }
 .piyasa-bag a { color: var(--vurgu); font-weight: 700; }
