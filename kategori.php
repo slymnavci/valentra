@@ -73,9 +73,15 @@ require __DIR__ . '/includes/sayfa_ust.php';
         if ($sayfa === 1 && $kategori['slug'] === 'spor') {
             require_once __DIR__ . '/includes/spor_panel.php';
             $canliPanel = spor_paneli_html();
-        } elseif ($sayfa === 1 && $kategori['slug'] === 'ekonomi') {
-            require_once __DIR__ . '/includes/piyasa_panel.php';
-            $canliPanel = piyasa_paneli_html((string) ($_GET['donem'] ?? '3a'));
+        } elseif ($kategori['slug'] === 'ekonomi') {
+            /*
+             * Ekonomi sayfasi yalnizca HABERLER (22.10.2026, site
+             * sahibinin istegi: piyasa ve gunluk ekonomi haberleri ayri
+             * ayri). Piyasa kartlari, grafikler ve sirketler Piyasalar
+             * sayfasinda; burada ona bir bag.
+             */
+            echo '<p class="piyasa-bag"><a href="' . e(piyasalar_yolu()) . '">'
+               . 'Piyasalar: BIST 100, döviz, altın, borsa şirketleri ve ekonomik göstergeler &rarr;</a></p>';
         }
 
         if ($canliPanel !== '') {
@@ -85,7 +91,9 @@ require __DIR__ . '/includes/sayfa_ust.php';
         ?>
 
         <div class="bolum-basligi" id="<?= e((string) $kategori['slug']) ?>-haberleri">
-            <h2><?= $canliPanel !== '' ? 'Güncel ' . e((string) $kategori['ad']) . ' Haberleri' : $toplam . ' Haber' ?></h2>
+            <h2><?= $canliPanel !== '' || $kategori['slug'] === 'ekonomi'
+                ? 'Güncel ' . e((string) $kategori['ad']) . ' Haberleri'
+                : $toplam . ' Haber' ?></h2>
             <span class="cizgi"></span>
         </div>
 

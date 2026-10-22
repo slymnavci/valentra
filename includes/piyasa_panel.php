@@ -163,7 +163,7 @@ function piyasa_sirketler_html(): string
 
     ob_start();
     ?>
-    <div class="piyasa-sirketler" data-canli-bolum="/api/piyasalar.php?bolum=sirketler" data-canli-aralik="120">
+    <div class="piyasa-sirketler" id="borsa" data-canli-bolum="/api/piyasalar.php?bolum=sirketler" data-canli-aralik="120">
         <h3>Borsa İstanbul — Büyük Şirketler</h3>
         <div class="tablo-kaydir">
             <table class="sirket-tablosu">
@@ -197,18 +197,56 @@ function piyasa_sirketler_html(): string
     return (string) ob_get_clean();
 }
 
-function piyasa_paneli_html(string $donem): string
+/**
+ * Ekonomik göstergeler: panelden yayına alınan grafikler (TCMB EVDS,
+ * Dünya Bankası, IMF: enflasyon, politika faizi, büyüme...).
+ *
+ * Ana sayfadaki "Ekonomik Gostergeler" bolumu Ekim 2026'da kaldirildi
+ * (site sahibinin karari); grafikler panelde duruyordu. Piyasalar
+ * sayfasinda YAYINDAKI hepsi gosteriliyor (ana sayfa isaretine
+ * bakilmadan). Bayat seriler sayfa gonderildikten sonra tazeleniyor.
+ */
+function piyasa_gostergeleri_html(): string
 {
-    $kartlar   = piyasa_kartlari_html();
-    $grafikler = piyasa_grafikleri_html($donem);
-    $sirketler = piyasa_sirketler_html();
+    require_once __DIR__ . '/grafikler.php';
 
-    if ($kartlar === '' && $grafikler === '' && $sirketler === '') {
+    try {
+        $satirlar = db()->query(
+            'SELECT * FROM grafikler
+              WHERE yayinda = 1 AND seri IS NOT NULL
+              ORDER BY sira, id'
+        )->fetchAll();
+    } catch (Throwable $e) {
+        error_log('[valentra] gosterge grafikleri okunamadi: ' . $e->getMessage());
+
         return '';
     }
 
-    return '<section class="piyasa-panel" aria-label="Piyasalar">'
-        . '<div class="canli-panel-ust"><h2>Piyasalar</h2></div>'
-        . $kartlar . $grafikler . $sirketler
+    grafik_sayfa_sonunda_tazele();
+
+    $kartlar = '';
+
+    foreach ($satirlar as $g) {
+        $seri = pratik_seri_oku((string) $g['seri']);
+
+        if (count($seri) < 2) {
+            continue;
+        }
+
+        $guncellik = grafik_guncellik($g);
+
+        $kartlar .= '<article class="ana-grafik-kart"><h3>' . e((string) $g['baslik']) . '</h3>'
+            . grafik_ciz($seri, grafik_ciz_ayari($g))
+            . (!$guncellik['guncel'] ? '<p class="grafik-bayat" role="note">' . e($guncellik['mesaj']) . '</p>' : '')
+            . '</article>';
+    }
+
+    if ($kartlar === '') {
+        return '';
+    }
+
+    return '<section class="ana-grafikler" id="gostergeler" aria-labelledby="gosterge-baslik">'
+        . '<div class="bolum-basligi"><h2 id="gosterge-baslik">Ekonomik Göstergeler</h2><span class="cizgi"></span></div>'
+        . '<div class="ana-grafikler-izgara">' . $kartlar . '</div>'
         . '</section>';
 }
