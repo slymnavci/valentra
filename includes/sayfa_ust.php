@@ -240,6 +240,8 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
 
                 dugme.addEventListener('click', function (olay) {
                     olay.stopPropagation();
+                    // Dar ekranda liste position:fixed; dugmenin hemen altina.
+                    grup.style.setProperty('--menu-alt', Math.round(dugme.getBoundingClientRect().bottom) + 'px');
                     var acik = grup.classList.toggle('acik');
                     dugme.setAttribute('aria-expanded', acik ? 'true' : 'false');
                     hepsiniKapat(grup);
@@ -247,6 +249,13 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
             });
 
             document.addEventListener('click', function () { hepsiniKapat(null); });
+
+            // Dar ekranda menu yatay kayinca ya da sayfa kayinca sabit liste
+            // dugmeden kopmasin: kapat.
+            document.querySelector('.menu-satir').addEventListener('scroll', function () { hepsiniKapat(null); });
+            window.addEventListener('scroll', function () {
+                if (window.matchMedia('(max-width: 720px)').matches) { hepsiniKapat(null); }
+            }, { passive: true });
 
             document.addEventListener('keydown', function (olay) {
                 if (olay.key === 'Escape') { hepsiniKapat(null); }
