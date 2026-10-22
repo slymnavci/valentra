@@ -509,6 +509,14 @@ final class Yazar implements SemaliIstemci
                 ? (string) ($veri['error']['message'] ?? ('HTTP ' . $kod))
                 : ('HTTP ' . $kod . ': ' . mb_substr($ham, 0, 300, 'UTF-8'));
 
+            // Kredi bitti / anahtar gecersiz: beklemekle duzelmez,
+            // yonetici bir sey yapmali (bkz. ModelErisimYokException).
+            $erisimYok = ModelErisimYokException::aciklama($kod, $sonMesaj);
+
+            if ($erisimYok !== null) {
+                throw new ModelErisimYokException($erisimYok);
+            }
+
             // Gunluk kota bittiyse beklemenin anlami yok: kalan adaylar
             // da ayni duvara carpar. Cagrani bilgilendirip cikiyoruz.
             if ($kod === 429 && $this->gunlukKotaBitti($sonMesaj)) {

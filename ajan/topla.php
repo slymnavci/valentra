@@ -40,11 +40,12 @@ require_once __DIR__ . '/src/ResmiGazete.php';
 require_once __DIR__ . '/src/HaberAkisi.php';
 require_once __DIR__ . '/src/Site.php';
 require_once __DIR__ . '/src/KotaBittiException.php';
+require_once __DIR__ . '/src/ModelErisimYokException.php';
 require_once __DIR__ . '/src/SemaliIstemci.php';
 require_once __DIR__ . '/src/Yazar.php';
 require_once __DIR__ . '/src/Bildirim.php';
 
-use Valentra\Ajan\{Besleme, Bildirim, Depo, Getirici, HaberAkisi, Http, Kazima, KotaBittiException, ResmiGazete, Sayfa, Site, TohumYapilandirma, Yazar};
+use Valentra\Ajan\{Besleme, Bildirim, Depo, Getirici, HaberAkisi, Http, Kazima, KotaBittiException, ModelErisimYokException, ResmiGazete, Sayfa, Site, TohumYapilandirma, Yazar};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
@@ -1269,6 +1270,7 @@ $elenen    = 0;
 $yinelenen = 0;
 $hatali    = 0;
 $kotaBitti = false;
+$modelErisimYok = '';   // doluysa: kredi bitti / anahtar gecersiz (bkz. ModelErisimYokException)
 
 // Adaylar gruplar halinde islenir: tek istekte birden cok haber.
 // Ucretsiz katmanda istek sayisi sinirli oldugu icin her haber icin ayri
@@ -1421,6 +1423,11 @@ foreach ($gruplar as $grupNo => $grup) {
 
     try {
         $sonuclar = $yazar->topluIsle($modelAdaylari, $kategoriler, $modeleGosterilecek);
+    } catch (ModelErisimYokException $e) {
+        gunluk("  [grup {$no}] model kullanılamıyor — çalışma erken bitiyor.");
+        gunluk('  ' . $e->getMessage());
+        $modelErisimYok = $e->getMessage();
+        break;
     } catch (KotaBittiException $e) {
         $kalan = count($adaylar) - $islenenAday + count($grup);
         gunluk("  [grup {$no}] günlük model kotası doldu — kalan {$kalan} aday atlanıyor.");
@@ -1574,7 +1581,10 @@ if ($kullanim['istek'] > 0) {
     ));
 }
 
-if ($kotaBitti) {
+if ($modelErisimYok !== '') {
+    // Calismayi kirmiziya cevirir; panel de bu satiri gosterir.
+    Bildirim::sorun($modelErisimYok);
+} elseif ($kotaBitti) {
     Bildirim::uyari('Günlük model (Gemini) kotası doldu; bu çalışmada adayların bir kısmı işlenmedi. '
         . 'Kota yenilenince ajan kaldığı yerden devam eder.');
     gunluk('Günlük model kotası dolduğu için çalışma erken bitti.');

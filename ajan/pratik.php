@@ -31,12 +31,14 @@ require_once __DIR__ . '/src/Getirici.php';
 require_once __DIR__ . '/src/Sayfa.php';
 require_once __DIR__ . '/src/Site.php';
 require_once __DIR__ . '/src/KotaBittiException.php';
+require_once __DIR__ . '/src/ModelErisimYokException.php';
+require_once __DIR__ . '/src/Bildirim.php';
 require_once __DIR__ . '/src/SemaliIstemci.php';
 require_once __DIR__ . '/src/Yazar.php';
 require_once __DIR__ . '/src/DegerOkuyucu.php';
 require_once __DIR__ . '/../includes/ekonomi.php';
 
-use Valentra\Ajan\{DegerOkuyucu, Http, KotaBittiException, Sayfa, Site, Yazar};
+use Valentra\Ajan\{Bildirim, DegerOkuyucu, Http, KotaBittiException, ModelErisimYokException, Sayfa, Site, Yazar};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
@@ -501,6 +503,9 @@ function degerleriOku(
 
         try {
             $cikti = $okuyucu->oku($grup);
+        } catch (ModelErisimYokException $e) {
+            Bildirim::sorun($e->getMessage());
+            break;
         } catch (KotaBittiException $e) {
             gunluk("  [grup {$no}] günlük model kotası doldu, çalışma erken bitiyor.");
             break;

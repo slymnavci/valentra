@@ -10,6 +10,6 @@ namespace Valentra\Ajan;
  * çarpar ve çalışma boşuna uzar. Toplayıcı bunu yakalayıp o ana kadar
  * yazılanları gönderir ve çalışmayı sonlandırır.
  */
-final class KotaBittiException extends \RuntimeException
+class KotaBittiException extends \RuntimeException
 {
 }
