@@ -53,7 +53,8 @@ mb_internal_encoding('UTF-8');
 $secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::', 'sitetavani::', 'sitearaligi::', 'kaynakbasina::']);
 $kuruCalisma = isset($secenekler['kuru']);
 $saat        = max(1, (int) ($secenekler['saat'] ?? 36));
-$enFazlaAday = max(1, (int) ($secenekler['enfazla'] ?? 25));
+// Varsayilan: basliklarin paylarinin toplami (bkz. HaberAkisi::PAYLAR).
+$enFazlaAday = max(1, (int) ($secenekler['enfazla'] ?? array_sum(HaberAkisi::PAYLAR)));
 
 function gunluk(string $mesaj): void
 {
@@ -1119,7 +1120,9 @@ if ($cokKaynakli !== []) {
  * Tavan sirlama SONRASI uygulaniyor; her kaynak en iyi birkac adayiyla
  * temsil ediliyor ve kalan yer digerlerine kaliyor.
  */
-$kaynakBasinaTavan = max(1, (int) ($secenekler['kaynakbasina'] ?? 4));
+// 4'ten 6'ya (22.10.2026): baslik paylari buyudu; az kaynakli
+// basliklar (saglik, kultur-sanat) payini doldurabilsin.
+$kaynakBasinaTavan = max(1, (int) ($secenekler['kaynakbasina'] ?? 6));
 $kaynakSayaci      = [];
 $secilen           = [];
 
@@ -1244,14 +1247,51 @@ $kotaBitti = false;
 // Ucretsiz katmanda istek sayisi sinirli oldugu icin her haber icin ayri
 // cagri yapmak kotayi hemen tuketiyor.
 $grupBoyu = max(1, (int) ($secenekler['grup'] ?? 5));
-$gruplar  = array_chunk($adaylar, $grupBoyu);
 
-gunluk(count($gruplar) . ' grup halinde işlenecek (grup başına en fazla ' . $grupBoyu . ' aday).');
+/*
+ * Baslik baslik (22.10.2026, site sahibinin istegi): once spor, sonra
+ * politika, yabanci haber kuruluslari, sanat, teknoloji, sonra
+ * digerleri (HaberAkisi::SIRA). Bir grup tek bir basligin adaylarindan
+ * olusuyor; baslik icinde kapsam/yenilik sirasi korunuyor. Resmi
+ * Gazete maddeleri basta, ayri grupta.
+ */
+$basliklar = ['resmi-gazete' => []] + array_fill_keys(HaberAkisi::SIRA, []);
+
+foreach ($adaylar as $aday) {
+    $konu = resmi_gazete_mi($aday['kaynak']) ? 'resmi-gazete' : HaberAkisi::kova($aday['kaynak']);
+    $basliklar[isset($basliklar[$konu]) ? $konu : 'ekonomi'][] = $aday;
+}
+
+$gruplar      = [];
+$grupBasligi  = [];
+$adaylar      = [];
+
+foreach ($basliklar as $konu => $konuAdaylari) {
+    foreach (array_chunk($konuAdaylari, $grupBoyu) as $parca) {
+        $gruplar[]     = $parca;
+        $grupBasligi[] = $konu;
+    }
+
+    // $adaylar grup sirasiyla yeniden diziliyor (kalan aday sayimi icin).
+    array_push($adaylar, ...$konuAdaylari);
+}
+
+gunluk(count($gruplar) . ' grup halinde, başlık başlık işlenecek (grup başına en fazla ' . $grupBoyu . ' aday).');
+
+$islenenAday = 0;
 
 foreach ($gruplar as $grupNo => $grup) {
     if ($grupNo > 0) {
         sleep(4);
     }
+
+    if ($grupNo === 0 || $grupBasligi[$grupNo] !== $grupBasligi[$grupNo - 1]) {
+        $konu = $grupBasligi[$grupNo];
+        $adet = count($basliklar[$konu]);
+        gunluk('— ' . (HaberAkisi::ADLAR[$konu] ?? 'Resmî Gazete') . ' (' . $adet . ' aday) —');
+    }
+
+    $islenenAday += count($grup);
 
     // Sayfa metinleri once toplanir; model cagrisi tek seferde yapilir.
     $modelAdaylari = [];
@@ -1314,7 +1354,7 @@ foreach ($gruplar as $grupNo => $grup) {
     try {
         $sonuclar = $yazar->topluIsle($modelAdaylari, $kategoriler, $modeleGosterilecek);
     } catch (KotaBittiException $e) {
-        $kalan = count($adaylar) - ($grupNo * $grupBoyu);
+        $kalan = count($adaylar) - $islenenAday + count($grup);
         gunluk("  [grup {$no}] günlük model kotası doldu — kalan {$kalan} aday atlanıyor.");
         gunluk('  ' . $e->getMessage());
         $kotaBitti = true;

@@ -509,7 +509,7 @@ function siteYolunuDene(Site $site, string $url): array
 {
     $ham = $site->hamGetir($url);
 
-    return ['tamam' => $ham !== null, 'boyut' => $ham !== null ? strlen($ham) : 0];
+    return ['tamam' => $ham !== null, 'boyut' => $ham !== null ? strlen($ham) : 0, 'govde' => $ham];
 }
 
 /*
@@ -777,6 +777,23 @@ foreach ($kaynaklar as $kaynak) {
 
                 if ($calisanYol === '') {
                     $calisanYol = 'Kazıma (site üzerinden)';
+                }
+
+                /*
+                 * Site uzerinden gelen sayfa da cozumleniyor (22.10.2026).
+                 * Eskiden yalnizca boyut yaziliyordu; GitHub'i engelleyen
+                 * bir kaynakta (IHA, 403) sayfadan haber cikip cikmadigi
+                 * gorulemiyordu. Ajan da ayni sayfayi ayni yoldan aliyor.
+                 */
+                $kabuller = kazima_haberleri_bul((string) $siteden['govde'], $listeUrl, $secici, $adayGirdi !== '' ? 12 : 3);
+                yaz(sprintf('       Site üzerinden alınan sayfada %d haber bağlantısı bulundu.', count($kabuller)));
+
+                foreach ($kabuller as $kabul) {
+                    yaz(sprintf(
+                        '       alınan: %s -> %s',
+                        mb_substr($kabul['baslik'], 0, 70),
+                        $kabul['baglanti']
+                    ));
                 }
             } else {
                 yaz('       Site sunucusu üzerinden de alınamadı.');

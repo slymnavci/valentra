@@ -22,26 +22,50 @@ final class HaberAkisi
     ];
 
     /**
-     * Her turda basliga dusen aday sayisi.
+     * Bir calismada basliga dusen aday sayisi.
      *
-     * Politika en buyuk pay (site sahibinin karari: once Turkiye
-     * siyaseti). Dunya da 3: dunyanin onde gelen haber kuruluslari
-     * kaynak listesinde (site sahibinin istegi, 22.10.2026). Ekonomi
-     * kaynaklari sayica cok (eski ekonomi listesi acik kaldi); pay
-     * olmasa kontenjanin cogunu onlar yerdi. Bir baslikta aday kalmazsa
-     * payi otekilere geciyor.
+     * 22.10.2026: site sahibi "her basligi ayri ayri toplayalim, butun
+     * haberleri cekelim" dedi. Kontenjan 25'ten 60'a cikti ve her baslik
+     * kendi payini aliyor; adaylar da baslik baslik (SIRA) modele gidiyor.
+     * Politika ve dunya en buyuk pay (once Turkiye siyaseti; dunyanin
+     * onde gelen haber kuruluslari). Bir baslikta aday kalmazsa payi
+     * otekilere geciyor.
      *
      * @var array<string,int>
      */
     public const PAYLAR = [
-        'politika'     => 3,
-        'gundem'       => 2,
-        'ekonomi'      => 2,
-        'dunya'        => 3,
-        'spor'         => 2,
-        'teknoloji'    => 1,
-        'saglik'       => 1,
-        'kultur-sanat' => 1,
+        'politika'     => 10,
+        'gundem'       => 8,
+        'ekonomi'      => 8,
+        'dunya'        => 10,
+        'spor'         => 8,
+        'teknoloji'    => 6,
+        'saglik'       => 5,
+        'kultur-sanat' => 5,
+    ];
+
+    /**
+     * Basliklarin modele gidis sirasi (site sahibinin istegi, 22.10.2026):
+     * spor, politika, yabanci haber kuruluslari (dunya), sanat,
+     * teknoloji, sonra digerleri. Her baslik kendi gruplariyla, digerine
+     * karismadan isleniyor; model kotasi biterse sonda kalan basliklar
+     * bir sonraki calismaya kaliyor.
+     */
+    public const SIRA = [
+        'spor', 'politika', 'dunya', 'kultur-sanat',
+        'teknoloji', 'gundem', 'saglik', 'ekonomi',
+    ];
+
+    /** Gunluge yazilacak baslik adi. */
+    public const ADLAR = [
+        'gundem'       => 'Gündem',
+        'politika'     => 'Politika',
+        'ekonomi'      => 'Ekonomi',
+        'dunya'        => 'Dünya',
+        'spor'         => 'Spor',
+        'teknoloji'    => 'Teknoloji',
+        'saglik'       => 'Sağlık',
+        'kultur-sanat' => 'Kültür-Sanat',
     ];
 
     /**

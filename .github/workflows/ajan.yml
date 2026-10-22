@@ -50,8 +50,8 @@ on:
         description: 'Kac saat geriye bakilsin'
         default: '36'
       enfazla:
-        description: 'En fazla kac aday islensin'
-        default: '25'
+        description: 'En fazla kac aday islensin (bos: basliklarin paylarinin toplami, 60)'
+        default: ''
       aday:
         description: 'kaynak-testi: DB disi aday adresler  (Ad=https://..., Ad=https://...|yol:/bolum/)'
         default: ''
@@ -259,7 +259,15 @@ jobs:
           # daha once gelen haber modele hic sorulmuyor. Onceden bu
           # pencereyi genisletmek ayni haberi tekrar tekrar yazdirmak
           # demekti; simdi degil.
-          BAYRAKLAR="--saat=${{ inputs.saat || '30' }} --enfazla=${{ inputs.enfazla || '40' }}"
+          #
+          # 22.10.2026: aday sayisi verilmezse ajan basliklarin paylarinin
+          # toplamini kullaniyor (HaberAkisi::PAYLAR, 60); haberler baslik
+          # baslik isleniyor.
+          BAYRAKLAR="--saat=${{ inputs.saat || '30' }}"
+
+          if [ -n "${{ inputs.enfazla }}" ]; then
+            BAYRAKLAR="$BAYRAKLAR --enfazla=${{ inputs.enfazla }}"
+          fi
 
           if [ "${{ inputs.kuru }}" = "true" ]; then
             BAYRAKLAR="$BAYRAKLAR --kuru"
