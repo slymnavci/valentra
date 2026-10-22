@@ -286,10 +286,51 @@ if ($hamGirdi !== '') {
             continue;
         }
 
+        /*
+         * Sitenin canli bolumlerinin cozumleyicileri de ayni govdeyle
+         * sinaniyor: yayina almadan once gercek sayfada ne cikardiklari
+         * gorulsun (spor: TFF, ekonomi: Yahoo).
+         */
+        if (str_contains($adres, 'tff.org')) {
+            require_once __DIR__ . '/../includes/spor.php';
+            $tff = tff_sayfa_coz($govde);
+            yaz(sprintf('  TFF çözümleme: %d takım, hafta %s, haftanın maçları %d, fikstür %d hafta (son oynanan %s)',
+                count($tff['puan']), var_export($tff['hafta'], true), count($tff['haftanin_maclari']),
+                count($tff['fikstur']), var_export(spor_son_oynanan_hafta($tff['fikstur']), true)));
+
+            foreach (array_slice($tff['puan'], 0, 3) as $s) {
+                yaz(sprintf('     %d. %s  O%d P%d AV%d', $s['sira'], $s['takim'], $s['o'], $s['p'], $s['av']));
+            }
+
+            foreach (array_slice($tff['haftanin_maclari'], 0, 3) as $m) {
+                yaz('     ' . $m['tarih'] . ' ' . $m['saat'] . '  ' . $m['ev'] . ' ' . ($m['skor'] ?: '-') . ' ' . $m['dep']);
+            }
+        } elseif (str_contains($adres, 'finance.yahoo.com')) {
+            require_once __DIR__ . '/../includes/piyasalar.php';
+
+            if (str_contains($adres, '/spark')) {
+                $spark = yahoo_spark_coz($govde);
+                yaz('  Yahoo spark çözümleme: ' . count($spark) . ' sembol — '
+                    . mb_substr((string) json_encode($spark, JSON_UNESCAPED_UNICODE), 0, 300));
+            } else {
+                $g = yahoo_grafik_coz($govde);
+                yaz('  Yahoo grafik çözümleme: ' . ($g === null ? 'BOŞ' : sprintf(
+                    'fiyat %s, değişim %s, %d nokta', var_export($g['fiyat'], true),
+                    var_export($g['degisim'], true), count($g['noktalar'])
+                )));
+            }
+        }
+
         $json = json_decode($govde, true);
 
         if (is_array($json)) {
             yaz('  JSON: ' . mb_substr((string) json_encode($json, JSON_UNESCAPED_UNICODE), 0, 1500));
+            yaz();
+            continue;
+        }
+
+        // Cozumleyici sinandiysa tablo dokumu gereksiz kalabalik.
+        if (str_contains($adres, 'tff.org')) {
             yaz();
             continue;
         }

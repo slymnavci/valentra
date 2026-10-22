@@ -1774,3 +1774,19 @@ UPDATE kaynaklar SET aktif = 0 WHERE ad = 'Associated Press'
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarim_2026_10_22');
 
 INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_kaynak_onarim_2026_10_22', '22.10.2026');
+
+-- ---------------------------------------------------------------------------
+-- IHA ana sayfadan — 22.10.2026
+--
+-- IHA GitHub'dan gelen istegi 403 ile engelliyor; site uzerinden alinan
+-- /rss adresi besleme degil HTML donduruyor (0 girdi, "yeni girdi yok").
+-- Kaynak testi (kaynak_dene, site uzerinden kazima): ana sayfada 12
+-- guncel haber baglantisi. IHA artik ana sayfadan okunuyor (DHA gibi).
+-- Tek seferlik ('gecis_iha_2026_10_22') ve eski adresle sinirli:
+-- panelden degistirilen adres ezilmiyor.
+-- ---------------------------------------------------------------------------
+UPDATE kaynaklar SET besleme_url = NULL, liste_url = 'https://www.iha.com.tr/', tur = 'web' WHERE ad = 'İHA'
+   AND besleme_url = 'https://www.iha.com.tr/rss'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_iha_2026_10_22');
+
+INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_iha_2026_10_22', '22.10.2026');

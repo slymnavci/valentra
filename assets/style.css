@@ -3299,3 +3299,294 @@ a.rg-madde:hover { color: var(--vurgu); }
 .arac-rehber a { color: var(--vurgu); font-weight: 600; }
 .arac-rehber a:hover { text-decoration: underline; }
 .rehber-tablo th:not(:first-child) { text-align: right; }
+
+/* --- Canli bolumler: Super Lig (Spor) ve Piyasalar (Ekonomi) -------------- */
+
+/*
+ * 22.10.2026, site sahibinin istegi. Kutu dili sitenin pencereleriyle ayni
+ * (.pencere: kart zemini, golge, yuvarlak kose); renkler degiskenlerden,
+ * koyu tema kendiliginden geliyor. Yukselis/dusus renkleri iki temada da
+ * okunur olsun diye ayri tanimli.
+ */
+:root {
+    --artis: #157a43;
+    --dusus: #c23a2e;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:where(:not([data-tema="acik"])) { --artis: #57d38c; --dusus: #ff8a80; }
+}
+
+:root:where([data-tema="koyu"]) { --artis: #57d38c; --dusus: #ff8a80; }
+
+.spor-panel,
+.piyasa-panel { margin: 0 0 26px; }
+
+.canli-panel-ust {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin: 0 0 12px;
+}
+
+.canli-panel-ust h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: var(--metin);
+}
+
+.canli-not {
+    margin: 8px 0 0;
+    font-size: .8rem;
+    color: var(--metin-soluk);
+}
+
+.canli-not a { color: var(--vurgu); }
+.canli-not a:hover { text-decoration: underline; }
+
+.tablo-kaydir { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Super Lig */
+.spor-izgara {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.spor-kutu {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    padding: 14px 16px;
+    min-width: 0;
+}
+
+.spor-kutu h3 {
+    margin: 0 0 10px;
+    font-size: .9rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--metin);
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--altin);
+}
+
+.spor-kutu h3 + ul + h3,
+.spor-kutu ul + h3 { margin-top: 18px; }
+
+.puan-tablosu {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .9rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.puan-tablosu th,
+.puan-tablosu td {
+    padding: 6px 6px;
+    text-align: center;
+    border-bottom: 1px solid var(--cizgi);
+    white-space: nowrap;
+}
+
+.puan-tablosu th {
+    font-size: .76rem;
+    color: var(--metin-soluk);
+    font-weight: 700;
+}
+
+.puan-tablosu .takim { text-align: left; width: 100%; }
+.puan-tablosu td.takim { font-weight: 600; color: var(--metin); }
+.puan-tablosu .sira { color: var(--metin-soluk); width: 1%; }
+.puan-tablosu .puan { font-weight: 800; color: var(--metin); }
+.puan-tablosu tbody tr:last-child td { border-bottom: 0; }
+
+/* Ilk dort (Avrupa) ve son uc (kume dusme) satiri ince bir serit. */
+.puan-tablosu tbody tr:nth-child(-n+4) td.sira { box-shadow: inset 3px 0 0 var(--artis); }
+.puan-tablosu tbody tr:nth-last-child(-n+3) td.sira { box-shadow: inset 3px 0 0 var(--dusus); }
+
+.mac-listesi {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: .9rem;
+}
+
+.mac-listesi li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas: "zaman zaman zaman" "ev skor dep";
+    align-items: center;
+    gap: 2px 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--cizgi);
+}
+
+.mac-listesi.sonuclar li { grid-template-areas: "ev skor dep"; }
+.mac-listesi li:last-child { border-bottom: 0; }
+
+.mac-zaman { grid-area: zaman; font-size: .76rem; color: var(--metin-soluk); }
+.mac-ev    { grid-area: ev; text-align: right; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mac-dep   { grid-area: dep; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.mac-skor {
+    grid-area: skor;
+    min-width: 52px;
+    text-align: center;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: var(--lacivert);
+    color: #fff;
+}
+
+.mac-skor.oynanmadi {
+    background: transparent;
+    color: var(--metin-soluk);
+    border: 1px solid var(--cizgi);
+}
+
+@media (max-width: 1100px) {
+    .spor-izgara { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+    .puan-tablosu .genis { display: none; }
+    .puan-tablosu th, .puan-tablosu td { padding: 6px 4px; }
+}
+
+/* Piyasalar */
+.piyasa-kartlar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0 0 18px;
+}
+
+.piyasa-kart {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "ad deg" "deger deger" "kivrim kivrim";
+    gap: 2px 8px;
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    padding: 12px 14px 8px;
+    min-width: 0;
+}
+
+.pk-ad    { grid-area: ad; font-size: .8rem; font-weight: 700; color: var(--metin-soluk); letter-spacing: .04em; }
+.pk-deger { grid-area: deger; font-size: 1.35rem; font-weight: 800; color: var(--metin); font-variant-numeric: tabular-nums; }
+.piyasa-kart .pdeg { grid-area: deg; }
+
+.pdeg { font-size: .82rem; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pdeg.arti { color: var(--artis); }
+.pdeg.eksi { color: var(--dusus); }
+.pdeg.duz  { color: var(--metin-soluk); }
+
+.kivrim {
+    grid-area: kivrim;
+    width: 100%;
+    height: 40px;
+    margin-top: 4px;
+}
+
+.kivrim path { fill: none; stroke: var(--vurgu); stroke-width: 1.6; }
+.kivrim.arti path { stroke: var(--artis); }
+.kivrim.eksi path { stroke: var(--dusus); }
+
+.piyasa-kart-not { grid-column: 1 / -1; margin: 0; }
+
+.donem-secici {
+    display: flex;
+    gap: 6px;
+    margin: 0 0 10px;
+}
+
+.donem-secici a {
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--cizgi);
+    font-size: .84rem;
+    font-weight: 600;
+    color: var(--metin-soluk);
+}
+
+.donem-secici a:hover { color: var(--metin); border-color: var(--metin-soluk); }
+
+.donem-secici a[aria-current="true"] {
+    background: var(--lacivert);
+    border-color: var(--lacivert);
+    color: #fff;
+}
+
+.piyasa-grafikler {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin: 0 0 18px;
+}
+
+.piyasa-grafik {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    padding: 12px 14px;
+    min-width: 0;
+}
+
+.piyasa-grafik .grafik { margin: 0; }
+
+.piyasa-sirketler {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    padding: 14px 16px;
+}
+
+.piyasa-sirketler h3 {
+    margin: 0 0 10px;
+    font-size: .9rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--metin);
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--altin);
+}
+
+.sirket-tablosu {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .9rem;
+}
+
+.sirket-tablosu th,
+.sirket-tablosu td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--cizgi);
+    text-align: left;
+    white-space: nowrap;
+}
+
+.sirket-tablosu th { font-size: .76rem; color: var(--metin-soluk); font-weight: 700; }
+.sirket-tablosu .kod { color: var(--metin-soluk); font-weight: 600; font-size: .82rem; }
+.sirket-tablosu .sayi { text-align: right; font-variant-numeric: tabular-nums; }
+.sirket-tablosu tbody tr:last-child td { border-bottom: 0; }
+
+@media (max-width: 1100px) {
+    .piyasa-kartlar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .piyasa-grafikler { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+    .piyasa-kartlar { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .pk-deger { font-size: 1.1rem; }
+    .sirket-tablosu .kod { display: none; }
+}
