@@ -59,6 +59,7 @@
                     'Arama motoru ayarları'    => 'seo.php',
                 ],
                 'Site'          => [
+                    'Spor verisi'  => 'spor.php',
                     'Ziyaretçiler' => 'istatistik.php',
                     'Veritabanı'   => 'veritabani.php',
                     'Siteyi gör ↗' => '/',

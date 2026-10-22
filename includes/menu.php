@@ -45,8 +45,17 @@ function site_menusu(): array
             $menu[$i]['altlar'] = [
                 ['ad' => 'Puan Durumu',           'anahtar' => 'spor-puan',     'href' => spor_bolum_yolu('puan-durumu'), 'adet' => 0],
                 ['ad' => 'Fikstür',               'anahtar' => 'spor-fikstur',  'href' => spor_bolum_yolu('fikstur'),     'adet' => 0],
+                ['ad' => 'Gol Krallığı',          'anahtar' => 'spor-gol',      'href' => spor_bolum_yolu('gol-kralligi'), 'adet' => 0],
                 ['ad' => 'Güncel Spor Haberleri', 'anahtar' => 'spor-haberler', 'href' => spor_bolum_yolu(),              'adet' => 0],
             ];
+
+            // Gol kralligi yalnizca spor veri servisiyle (TFF'den yok).
+            if (!futbol_api_acik()) {
+                $menu[$i]['altlar'] = array_values(array_filter(
+                    $menu[$i]['altlar'],
+                    static fn (array $alt): bool => $alt['anahtar'] !== 'spor-gol'
+                ));
+            }
         }
     }
 
