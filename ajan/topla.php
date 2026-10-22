@@ -50,11 +50,24 @@ date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
 /** Komut satırı seçenekleri */
-$secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::', 'sitetavani::', 'sitearaligi::', 'kaynakbasina::']);
+$secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::', 'sitetavani::', 'sitearaligi::', 'kaynakbasina::', 'konu::']);
 $kuruCalisma = isset($secenekler['kuru']);
 $saat        = max(1, (int) ($secenekler['saat'] ?? 36));
-// Varsayilan: basliklarin paylarinin toplami (bkz. HaberAkisi::PAYLAR).
-$enFazlaAday = max(1, (int) ($secenekler['enfazla'] ?? array_sum(HaberAkisi::PAYLAR)));
+/*
+ * --konu=spor[,politika]: yalnizca bu basliklarin kaynaklari taranir ve
+ * kontenjanin tamami onlara gider (site sahibinin istegi, 22.10.2026:
+ * "haber toplamayi sirayla yapalim"; panelde baslik secilerek
+ * calistiriliyor). Bos ya da gecersizse butun basliklar.
+ */
+$konular = array_values(array_intersect(
+    HaberAkisi::KATEGORILER,
+    array_map('trim', explode(',', (string) ($secenekler['konu'] ?? '')))
+));
+
+// Varsayilan: basliklarin paylarinin toplami (bkz. HaberAkisi::PAYLAR);
+// tek baslik secildiyse baslik basina 20 aday.
+$enFazlaAday = max(1, (int) ($secenekler['enfazla']
+    ?? ($konular !== [] ? 20 * count($konular) : array_sum(HaberAkisi::PAYLAR))));
 
 function gunluk(string $mesaj): void
 {
@@ -276,6 +289,18 @@ if (!$siteyeUlasilir) {
 }
 
 $kaynaklar   = $yapilandirma['kaynaklar'];
+
+if ($konular !== []) {
+    $kaynaklar = array_values(array_filter(
+        $kaynaklar,
+        static fn (array $k): bool => in_array(HaberAkisi::kova($k), $konular, true)
+    ));
+
+    gunluk('Yalnızca şu başlıklar toplanıyor: ' . implode(', ', array_map(
+        static fn (string $k): string => HaberAkisi::ADLAR[$k] ?? $k,
+        $konular
+    )) . ' (' . count($kaynaklar) . ' kaynak, en fazla ' . $enFazlaAday . ' aday).');
+}
 $kategoriler = $yapilandirma['kategoriler'];
 
 /*
@@ -1183,7 +1208,9 @@ if ($kopyaElenen > 0) {
  * politika, ekonomi, dunya, spor, teknoloji, saglik ve kultur-sanat
  * basliklarina gecti; politika en buyuk pay.
  */
-$konuPaylari = HaberAkisi::PAYLAR;
+$konuPaylari = $konular !== []
+    ? array_intersect_key(HaberAkisi::PAYLAR, array_flip($konular))
+    : HaberAkisi::PAYLAR;
 $adaylar     = array_merge(
     $rgTekil,
     konu_kontenjani($digerTekil, $konuPaylari, max(0, $enFazlaAday - count($rgTekil)))

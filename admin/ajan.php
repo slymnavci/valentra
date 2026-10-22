@@ -58,13 +58,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $sonuc = ajan_tetikle(
                 $islem === 'calistir_kuru',
                 max(1, (int) ($_POST['saat'] ?? 36)),
-                max(1, (int) ($_POST['enfazla'] ?? 25)),
+                // Bos birakilirsa ajanin varsayilani (0).
+                max(0, (int) ($_POST['enfazla'] ?? 0)),
                 match ($islem) {
                     'kaynak_testi' => 'kaynak-testi',
                     'kanun_testi'  => 'kanun-testi',
                     'pratik_topla' => 'pratik-bilgiler',
                     default        => 'topla',
                 },
+                (string) ($_POST['konu'] ?? ''),
             );
 
             if ($sonuc['tamam']) {
@@ -125,13 +127,32 @@ require __DIR__ . '/ust.php';
 
                 <div class="alan" style="margin-bottom:0;">
                     <label for="enfazla">En fazla kaç aday</label>
-                    <input type="text" id="enfazla" name="enfazla" value="25" style="width:110px;">
+                    <input type="text" id="enfazla" name="enfazla" value="" placeholder="otomatik" style="width:110px;">
+                </div>
+
+                <?php
+                /*
+                 * Baslik secimi (22.10.2026, site sahibinin istegi: "haber
+                 * toplamayi sirayla yapalim"). "Hepsi" butun basliklari
+                 * sirayla isler (spor, politika, dunya, sanat, teknoloji,
+                 * sonra digerleri; 60 aday). Bir baslik secilince yalnizca
+                 * onun kaynaklari taranir ve 20 aday ona ayrilir.
+                 */
+                ?>
+                <div class="alan" style="margin-bottom:0;">
+                    <label for="konu">Başlık</label>
+                    <select id="konu" name="konu" style="padding:8px 10px;border:1px solid var(--cizgi);border-radius:7px;font-family:inherit;">
+                        <option value="">Hepsi (sırayla)</option>
+                        <?php foreach (haber_akis_kategorileri() as $k): ?>
+                            <option value="<?= e($k['slug']) ?>"><?= e($k['ad']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
             </div>
 
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
                 <button type="submit" name="islem" value="calistir"
-                        class="dugme dugme-ana">Ajanı şimdi çalıştır</button>
+                        class="dugme dugme-ana">Haber topla</button>
 
                 <button type="submit" name="islem" value="calistir_kuru"
                         class="dugme">Kuru çalıştır (kaydetmeden dene)</button>

@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id    = (int) ($_POST['id'] ?? 0);
 
     if ($islem === 'yaz') {
-        $tetikMesaji = ajan_tetikle(false, 36, 25, 'kose-yazisi');
+        $tetikMesaji = ajan_tetikle(false, 36, 0, 'kose-yazisi');
     } elseif ($id > 0 && kose_bul($id) !== null) {
         $bildirim = null;
         $sekme    = $durum;
