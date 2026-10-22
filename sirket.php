@@ -82,18 +82,28 @@ if ($kod === null) {
 
 // --- veri ------------------------------------------------------------------
 
-$anlik  = sirket_seri($kod, '1d')['veri'];
-$yilKayit = sirket_seri($kod, '1y');
+// Secki disindaki kod once dogrulaniyor (bkz. sirket_kod_izinli); olmayan
+// ya da kotayi asan kod icin kaynaga gidilmiyor, onbellek satiri acilmiyor.
+$izinli  = sirket_kod_izinli($kod);
+$bos     = ['veri' => null, 'zaman' => 0];
+
+$anlikKayit = $izinli ? sirket_seri($kod, '1d') : $bos;
+$yilKayit   = $izinli ? sirket_seri($kod, '1y') : $bos;
+$anlik  = $anlikKayit['veri'];
 $gunluk = $yilKayit['veri'];
-$aylik  = sirket_seri($kod, '10y')['veri'];
-$secili = match ($donem) {
-    '1y'    => $gunluk,
-    '10y'   => $aylik,
-    default => sirket_seri($kod, $donem)['veri'],
+$aylik  = $izinli ? sirket_seri($kod, '10y')['veri'] : null;
+$secili = match (true) {
+    !$izinli        => null,
+    $donem === '1y'  => $gunluk,
+    $donem === '10y' => $aylik,
+    default          => sirket_seri($kod, $donem)['veri'],
 };
 
-$fiyat   = $anlik['fiyat'] ?? $gunluk['fiyat'] ?? null;
-$degisim = $anlik['degisim'] ?? $gunluk['degisim'] ?? null;
+// Fiyat, degisim ve guncelleme zamani AYNI kayittan: gun ici (2 dk) varsa
+// o, yoksa yillik seri (1 saat).
+$fiyatKayit = ($anlik['fiyat'] ?? null) !== null ? $anlikKayit : $yilKayit;
+$fiyat   = $fiyatKayit['veri']['fiyat'] ?? null;
+$degisim = $fiyatKayit['veri']['degisim'] ?? null;
 $ad      = sirket_adi($kod, (string) ($gunluk['ad'] ?? $aylik['ad'] ?? ''));
 $listede = isset(piyasa_sirketleri()[$kod]);
 $veriVar = $gunluk !== null || $aylik !== null || $anlik !== null;
@@ -125,7 +135,7 @@ if ($gunluk !== null || $aylik !== null) {
     }
 }
 
-$temelKayit = sirket_temel($kod);
+$temelKayit = $izinli ? sirket_temel($kod) : $bos;
 $temel      = $temelKayit['veri'];
 $oneri      = $temel['oneri'] ?? null;
 $potansiyel = ($oneri !== null && $oneri['hedef'] !== null) ? sirket_yuzde($fiyat, (float) $oneri['hedef']) : null;
@@ -161,7 +171,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <p class="sirket-fiyat">
             <span class="sf-deger"><?= e(piyasa_sayi((float) $fiyat, 2)) ?> ₺</span>
             <?= piyasa_degisim_html($degisim !== null ? (float) $degisim : null) ?>
-            <span class="canli-not">güncelleme <?= e(canli_zaman_yazi($yilKayit['zaman'])) ?> · 15 dakikaya kadar gecikmeli olabilir</span>
+            <span class="canli-not">güncelleme <?= e(canli_zaman_yazi($fiyatKayit['zaman'])) ?> · 15 dakikaya kadar gecikmeli olabilir</span>
         </p>
     <?php endif; ?>
 </div>

@@ -47,6 +47,70 @@ function sirket_kod_temiz(string $kod): ?string
     return preg_match('/^[A-Z0-9]{3,6}$/', $kod) ? $kod : null;
 }
 
+/** Seçki dışında doğrulanmış en fazla bu kadar kod hatırlanıyor. */
+const SIRKET_BILINEN_SINIR = 800;
+
+/** Seçki dışı yeni kod sorgusu: saatte en fazla bu kadar. */
+const SIRKET_YENI_KOD_SAATLIK = 30;
+
+/**
+ * Bu kod için kaynağa gidilebilir mi?
+ *
+ * Kod adresten geliyor (herkes yazabilir). Her yeni kod yeni onbellek ve
+ * deneme satirlari acar; rastgele kodlarla gelen biri hem Yahoo'ya hem
+ * Is Yatirim'a sinirsiz istek attirir, hem ayarlar tablosunu sisirirdi
+ * (Codex incelemesi, #53). Bu yuzden:
+ *   - secki (piyasa_sirketleri) her zaman acik,
+ *   - secki disindaki kod once onbelleksiz tek bir istekle Yahoo'da
+ *     dogrulaniyor; gecerliyse tek bir ayar satirindaki listeye ekleniyor
+ *     (Borsa Istanbul'da ~600 sirket var, liste sinirli),
+ *   - yeni kod dogrulamasi saatte SIRKET_YENI_KOD_SAATLIK ile sinirli.
+ * Gecersiz kod hicbir satir acmiyor.
+ */
+function sirket_kod_izinli(string $kod): bool
+{
+    if (isset(piyasa_sirketleri()[$kod])) {
+        return true;
+    }
+
+    try {
+        $bilinen = json_decode(ayar_oku('sirket_bilinen_kodlar', '[]'), true);
+        $bilinen = is_array($bilinen) ? $bilinen : [];
+
+        if (in_array($kod, $bilinen, true)) {
+            return true;
+        }
+
+        [$saat, $adet] = array_pad(explode('|', ayar_oku('sirket_yeni_kod_sayaci')), 2, '0');
+        $buSaat = date('YmdH');
+        $adet   = $saat === $buSaat ? (int) $adet : 0;
+
+        if ($adet >= SIRKET_YENI_KOD_SAATLIK) {
+            return false;
+        }
+
+        ayar_yaz('sirket_yeni_kod_sayaci', $buSaat . '|' . ($adet + 1));
+    } catch (Throwable $e) {
+        return false;
+    }
+
+    $veri = yahoo_grafik($kod . '.IS', '5d', '1d');
+
+    if ($veri === null || $veri['noktalar'] === []) {
+        return false;
+    }
+
+    $bilinen[] = $kod;
+
+    try {
+        ayar_yaz('sirket_bilinen_kodlar', (string) json_encode(array_slice($bilinen, -SIRKET_BILINEN_SINIR)));
+    } catch (Throwable $e) {
+        error_log('[valentra] bilinen sirket kodlari yazilamadi: ' . $e->getMessage());
+    }
+
+    return true;
+}
+
 /** Şirketin adı: seçkideki ad, yoksa kaynağın verdiği ad, yoksa kod. */
 function sirket_adi(string $kod, string $kaynaktaki = ''): string
 {
