@@ -135,7 +135,7 @@ require __DIR__ . '/ust.php';
                  * Baslik secimi (22.10.2026, site sahibinin istegi: "haber
                  * toplamayi sirayla yapalim"). "Hepsi" butun basliklari
                  * sirayla isler (spor, politika, dunya, sanat, teknoloji,
-                 * sonra digerleri; 60 aday). Bir baslik secilince yalnizca
+                 * sonra digerleri; 72 aday). Bir baslik secilince yalnizca
                  * onun kaynaklari taranir ve 20 aday ona ayrilir.
                  */
                 ?>

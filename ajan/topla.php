@@ -741,6 +741,22 @@ function konu_kontenjani(array $adaylar, array $paylar, int $enFazla): array
         $kovalar[$konu][] = $aday;
     }
 
+    /*
+     * Sinir paylarin toplamindan kucukse paylar ORANTILANIYOR, her baslik
+     * en az 1. Once ilk tur sirayla tam pay veriyordu: panelin "Haberleri
+     * topla" dugmesi 25 aday isterken politika 10, gundem 8, ekonomi 7
+     * hepsini aldi ve yemek tarifleri dahil alti baslik 0 aday aldi
+     * (22.10.2026). Kalan yer sonraki turlarda yine sirayla dagiliyor.
+     */
+    $toplamPay = array_sum($paylar);
+
+    if ($toplamPay > 0 && $enFazla < $toplamPay) {
+        $paylar = array_map(
+            static fn (int $pay): int => max(1, (int) floor($pay * $enFazla / $toplamPay)),
+            $paylar
+        );
+    }
+
     $secilen = [];
 
     while (count($secilen) < $enFazla) {
