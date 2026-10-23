@@ -224,6 +224,7 @@ function haber_son_dakika_id(): ?int
                     ' . haber_yas_dakika_ifadesi() . ' AS yas
                FROM haberler h
               WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . haber_ana_akis_kosulu() . "
+                AND h.kaynak_tarihi IS NOT NULL
                 AND (h.kategori_id IS NULL OR h.kategori_id NOT IN
                      (SELECT id FROM kategoriler WHERE slug IN ('teknoloji', 'kultur-sanat')))
               ORDER BY h.olusturuldu DESC, h.id DESC
@@ -1134,10 +1135,19 @@ const HABER_OTOMATIK_GUVEN_ESIGI = 80;
  */
 const HABER_OTOMATIK_GUVEN_ESIGI_OPENAI = 70;
 
+/*
+ * TARIHSIZ HABER GUVENSIZ (site sahibi, 23.10.2026: "tarih yoksa
+ * guvensiz; bunu son dakika yapamayiz"). Kaynakta yayin zamani
+ * bulunamayan haber (kaynak_tarihi bos) guven puani ne olursa olsun
+ * otomatik yayina girmiyor, onayda bekliyor; son dakika da olamiyor
+ * (haber_son_dakika_id). Haberin ne zaman yayimlandigi bilinmiyorsa
+ * dunku bir mac "bugun" diye one cikabiliyor.
+ */
+
 /** Otomatik yayin icin guven kosulu (SQL); haberler tablosu takma adsiz. */
 function haber_guven_esigi_kosulu(): string
 {
-    return "guven_skoru >= IF(ajan_modeli LIKE 'gpt-%', "
+    return "kaynak_tarihi IS NOT NULL AND guven_skoru >= IF(ajan_modeli LIKE 'gpt-%', "
         . HABER_OTOMATIK_GUVEN_ESIGI_OPENAI . ', ' . HABER_OTOMATIK_GUVEN_ESIGI . ')';
 }
 

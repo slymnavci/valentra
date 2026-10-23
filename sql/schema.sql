@@ -1863,3 +1863,15 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) V
     ('Habertürk (video)',   'https://www.youtube.com', 'https://www.youtube.com/@haberturktv', 'rss', 'gundem',  1),
     ('Bloomberg HT (video)','https://www.youtube.com', 'https://www.youtube.com/@BloombergHT', 'rss', 'ekonomi', 1),
     ('TRT Spor (video)',    'https://www.youtube.com', 'https://www.youtube.com/@trtspor',     'rss', 'spor',    1);
+
+-- ---------------------------------------------------------------------------
+-- YouTube videolarinin tarihi duzeltmeden once "updated"tan alinmisti
+-- (23.10.2026): YouTube bunu eski videolarda da yeniliyor ve sali oynanan
+-- macin videosu persembe son dakika oldu. O zamana kadar gelen videolu
+-- haberlerin yayin zamani bilinmiyor sayiliyor: son dakika olamazlar,
+-- yaslari toplandiklari andan. Tekrar calismasi zararsiz (sabit tarih).
+-- ---------------------------------------------------------------------------
+UPDATE haberler SET kaynak_tarihi = NULL
+ WHERE kaynak_url LIKE 'https://www.youtube.com/%'
+   AND kaynak_tarihi IS NOT NULL
+   AND olusturuldu < '2026-10-23 13:00:00';

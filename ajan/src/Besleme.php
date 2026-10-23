@@ -255,7 +255,14 @@ final class Besleme
                     'baslik'   => $this->metin($oge->title),
                     'baglanti' => $baglanti,
                     'ozet'     => $ozet,
-                    'zaman'    => $this->zaman($this->metin($oge->updated) ?: $this->metin($oge->published)),
+                    /*
+                     * Once YAYIN zamani (published), yoksa guncelleme.
+                     * YouTube "updated"i eski videolarda da yeniliyor
+                     * (izlenme, aciklama); sali oynanan macin videosu
+                     * persembe "bugun" sayilip son dakika olmustu
+                     * (site sahibi, 23.10.2026).
+                     */
+                    'zaman'    => $this->zaman($this->metin($oge->published) ?: $this->metin($oge->updated)),
                     'gorsel'   => $this->gorsel($oge),
                 ];
             }
