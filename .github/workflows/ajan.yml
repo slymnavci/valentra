@@ -2,8 +2,9 @@ name: Haber ajani
 
 on:
   schedule:
-    # Gunde 5 kez, Turkiye saatiyle 05:20 / 09:20 / 13:20 / 17:20 /
-    # 21:20. Cron UTC calisir, Turkiye UTC+3: 02:20 UTC = 05:20 TR.
+    # Gunde 12 kez, iki saatte bir, Turkiye saatiyle 01:20, 03:20, ...
+    # 23:20 (Cron UTC calisir, Turkiye UTC+3). Asagidaki not, bir ara
+    # gunde 5'e indirilmesinin gerekcesi:
     #
     # ONCEDEN GUNDE 10'DU. Iki sebeple yariya indirildi:
     #
@@ -24,7 +25,13 @@ on:
     #
     # Dakika 20: saat basi GitHub'da yogun ve zamanlanmis isler
     # gecikebiliyor.
-    - cron: '20 2,6,10,14,18 * * *'
+    #
+    # IKI SAATTE BIR (23.10.2026, site sahibinin karari: "artik bu haber
+    # sitesi; gun icinde en son haber, saat ve dakika onemli; her 2 saatte
+    # bir haberler yenilensin"). Gece de calisiyor: dunya haberleri gece
+    # geliyor. Kopya denetimi sayesinde ayni haber ikinci kez modele
+    # gitmiyor; maliyeti yeni haber sayisi belirliyor.
+    - cron: '20 */2 * * *'
     # Pratik bilgilerin haftalik calismasi kaldirildi (22.10.2026, site
     # sahibinin karari: ajan yalnizca haber ve kose yazisi uretiyor).
     # Panelden "pratik-bilgiler" moduyla elle calistirilabiliyor.

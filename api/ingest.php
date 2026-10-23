@@ -49,6 +49,6 @@ ajan_json(200, [
     'yinelenen' => $sonuc['yinelenen'],
     'hatalar'   => $sonuc['hatalar'],
     'not'       => $otomatik
-        ? 'Haberler yayına alındı (otomatik yayın açık).'
+        ? 'Güven puanı %' . HABER_OTOMATIK_GUVEN_ESIGI . ' ve üzeri olanlar yayına alındı; diğerleri onay bekliyor.'
         : 'Haberler taslak olarak kaydedildi, yönetici onayı bekliyor.',
 ]);

@@ -103,9 +103,42 @@ function haber_gun_ifadesi(bool $kategoriBilinir = true): string
     $pencere   = $kategoriBilinir
         ? "CASE WHEN k.slug = 'spor' THEN " . max($gunDakika, 720) . ' ELSE ' . $gunDakika . ' END'
         : (string) $gunDakika;
-    $yas = 'TIMESTAMPDIFF(MINUTE, LEAST(h.olusturuldu, COALESCE(h.kaynak_tarihi, h.olusturuldu)), NOW())';
+    $yas = haber_yas_dakika_ifadesi();
 
     return 'GREATEST(0, CEIL((' . $yas . ' - ' . $pencere . ') / 1440))';
+}
+
+/**
+ * Haberin yasi (dakika): kaynagin yayin ani ile toplanma aninin erken olani
+ * (bkz. haber_gun_ifadesi).
+ */
+function haber_yas_dakika_ifadesi(): string
+{
+    return 'TIMESTAMPDIFF(MINUTE, LEAST(h.olusturuldu, COALESCE(h.kaynak_tarihi, h.olusturuldu)), NOW())';
+}
+
+/*
+ * GUNCELLIK PUANI (site sahibinin istegi, 23.10.2026: "en son yayinlanan
+ * habere ek puan ver; guncel olmasi aslinda en onemli madde; gun icinde
+ * saat ve dakika da onemli").
+ *
+ * Onem puanina ekleniyor: yeni haber +50, saatte 5 puan azaliyor (dakika
+ * dakika), 10 saatte sifir. Ajanin onem puani cogunlukla 25-75; bir saat
+ * once gelen orta onemli haber (onem 50 + 45), sabah gelen cok onemli
+ * haberin (onem 75 + 10) ustune cikabiliyor, ama gercekten buyuk bir
+ * haber birkac saat ustte kaliyor.
+ *
+ * Puan sorgu aninda hesaplaniyor: her sayfa acilisinda eskiler dahil butun
+ * haberler o anki saate gore yeniden siralaniyor; ayrica bir yeniden
+ * puanlama isi gerekmiyor.
+ */
+const HABER_GUNCELLIK_TAVANI   = 50;
+const HABER_GUNCELLIK_DAKIKASI = 12;   // 12 dakikada 1 puan = saatte 5
+
+function haber_guncellik_ifadesi(): string
+{
+    return 'GREATEST(0, ' . HABER_GUNCELLIK_TAVANI . ' - '
+        . haber_yas_dakika_ifadesi() . ' / ' . HABER_GUNCELLIK_DAKIKASI . ')';
 }
 
 function haber_sirasi(bool $anaSayfa = false): string
@@ -137,10 +170,11 @@ function haber_sirasi_temel(bool $anaSayfa): string
      * kultur en sonda"). Konu sayfalarinda ikisi de yok: orada hepsi ayni
      * baslikta.
      */
+    $guncellik = haber_guncellik_ifadesi();
     $puan = $anaSayfa
         ? '(k.slug IN (\'teknoloji\', \'kultur-sanat\')) ASC,
-           h.onem + LEAST(30, 10 * LOG2(1 + COALESCE(zo.okuyucu, 0))) DESC'
-        : 'h.onem DESC';
+           h.onem + ' . $guncellik . ' + LEAST(30, 10 * LOG2(1 + COALESCE(zo.okuyucu, 0))) DESC'
+        : 'h.onem + ' . $guncellik . ' DESC';
 
     return '(h.one_cikan = 1 AND ' . $gun . ' = 0) DESC,
         ' . $gun . ' ASC,
@@ -247,12 +281,7 @@ function haber_okunma_birlesimi(): string
 
 /**
  * Ana sayfa akisinin kosulu: Resmi Gazete kaynakli olmayan, haber olan
- * (yemek tarifi gibi akis disi bir baslikta olmayan) her haber.
- *
- * Eski vergi ve muhasebe haberleri de akista KALIYOR (site sahibinin
- * karari, 22.10.2026: "eski haberleri kaldirma, onlar da kalsin"). Yeni
- * haberler geldikce tarih sirasiyla asagi kayiyorlar. Menu ve konu
- * bloklari ise yalnizca haber akisi basliklarini gosteriyor.
+ * (yemek tarifi gibi akis disi bir baslikta olmayan), GUNUN haberi.
  */
 function haber_ana_akis_kosulu(): string
 {
@@ -261,9 +290,23 @@ function haber_ana_akis_kosulu(): string
         HABER_AKIS_DISI
     ));
 
+    /*
+     * YALNIZCA GUNUN HABERLERI (site sahibinin karari, 23.10.2026: "ana
+     * sayfada sadece gunluk haberler kalacak"). Onceki karar (22.10:
+     * "eski haberler de akista kalsin") boylece kalkti; eski haberler
+     * konu sayfalarinda ve kendi adreslerinde duruyor.
+     *
+     * "Gun" Istanbul gece yarisindan, ama en az son 12 saat: gece
+     * yarisindan sonra ana sayfa bosalmasin, aksam haberleri sabaha
+     * kadar dursun. Yas, kaynagin yayin ani ile toplanma aninin erken
+     * olani (haber_yas_dakika_ifadesi).
+     */
+    $pencere = max(haber_bugun_dakika(), 720);
+
     return 'NOT (' . HABER_RG_KOSULU . ')'
         . ' AND (h.kategori_id IS NULL OR h.kategori_id NOT IN'
-        . ' (SELECT id FROM kategoriler WHERE slug IN (' . $disarida . ')))';
+        . ' (SELECT id FROM kategoriler WHERE slug IN (' . $disarida . ')))'
+        . ' AND ' . haber_yas_dakika_ifadesi() . ' <= ' . $pencere;
 }
 
 /**
@@ -892,13 +935,24 @@ function haber_onayla(int $id, int $yoneticiId): bool
  * ve panelden onaylanmadikca ana sayfaya cikmiyordu; sabah toplanan
  * haberler onaysiz kalinca ana sayfada dunkuler duruyordu.
  *
- * Aciksa ajanin gonderdigi haber geldigi anda yayina giriyor; bugun
+ * Aciksa ajanin gonderdigi GUVENLI haber (bkz. HABER_OTOMATIK_GUVEN_ESIGI)
+ * geldigi anda yayina giriyor; guveni dusuk olan onay bekliyor. Bugun
  * toplanip taslakta kalmis haberler de ana sayfa acildiginda topluca
  * yayina aliniyor (index.php). Panelden (Ajan sayfasi) kapatilabilir;
  * kapaliyken her sey eskisi gibi onay bekler. Kopya denetimi ve gorselsiz
  * haber engeli ayni: yalnizca onay adimi kalkiyor.
  */
 const HABER_OTOMATIK_YAYIN_AYARI = 'haber_otomatik_yayin';
+
+/*
+ * GUVEN ESIGI (site sahibinin karari, 23.10.2026: "guvenli haberleri
+ * onaylamadan yayinla, guvensiz haberleri onaya dusur"). Otomatik yayin
+ * yalnizca ajanin guven puani bu esikte ya da ustundeki haberleri
+ * aliyor; altindakiler taslakta kaliyor ve panelde onay bekliyor.
+ * Ajanin kabul ettigi haberlerde guven cogunlukla 85-95; 70'ler
+ * kaynagi zayif ya da ayrintisi eksik haberler.
+ */
+const HABER_OTOMATIK_GUVEN_ESIGI = 80;
 
 function haber_otomatik_yayin_acik(): bool
 {
@@ -907,7 +961,12 @@ function haber_otomatik_yayin_acik(): bool
     return ayar_oku(HABER_OTOMATIK_YAYIN_AYARI, '1') === '1';
 }
 
-/** Taslagi yonetici olmadan yayina alir (onaylayan bos kalir). */
+/**
+ * Taslagi yonetici olmadan yayina alir (onaylayan bos kalir).
+ *
+ * Yalnizca guven puani HABER_OTOMATIK_GUVEN_ESIGI ve ustundeyse; degilse
+ * taslakta kalir (false) ve onay bekler.
+ */
 function haber_otomatik_yayinla(int $id): bool
 {
     $ifade = db()->prepare(
@@ -915,9 +974,10 @@ function haber_otomatik_yayinla(int $id): bool
             SET durum = :yayinda,
                 onay_tarihi = NOW(),
                 yayin_tarihi = COALESCE(yayin_tarihi, NOW())
-          WHERE id = :id AND durum = :taslak'
+          WHERE id = :id AND durum = :taslak AND guven_skoru >= :esik'
     );
-    $ifade->execute(['yayinda' => HABER_YAYINDA, 'taslak' => HABER_TASLAK, 'id' => $id]);
+    $ifade->execute(['yayinda' => HABER_YAYINDA, 'taslak' => HABER_TASLAK, 'id' => $id,
+                     'esik' => HABER_OTOMATIK_GUVEN_ESIGI]);
 
     if ($ifade->rowCount() === 0) {
         return false;
@@ -943,10 +1003,11 @@ function haber_bugunku_taslaklari_yayinla(): int
     $ifade = db()->prepare(
         'SELECT id FROM haberler
           WHERE durum = :taslak
+            AND guven_skoru >= :esik
             AND olusturuldu >= NOW() - INTERVAL ' . haber_bugun_dakika() . ' MINUTE
           ORDER BY id'
     );
-    $ifade->execute(['taslak' => HABER_TASLAK]);
+    $ifade->execute(['taslak' => HABER_TASLAK, 'esik' => HABER_OTOMATIK_GUVEN_ESIGI]);
 
     $adet = 0;
 
