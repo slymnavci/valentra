@@ -349,30 +349,29 @@ function piyasa_sirketler_html(): string
     ?>
     <div class="piyasa-sirketler" id="borsa" data-canli-bolum="/api/piyasalar.php?bolum=sirketler" data-canli-aralik="120">
         <h3>Borsa İstanbul — Büyük Şirketler</h3>
-        <div class="tablo-kaydir">
-            <table class="sirket-tablosu">
-                <thead>
-                    <tr>
-                        <th scope="col">Şirket</th>
-                        <th scope="col" class="kod">Kod</th>
-                        <th scope="col" class="sayi">Son Fiyat</th>
-                        <th scope="col" class="sayi">Günlük</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($satirlar as $s): ?>
-                        <tr>
-                            <td><a href="<?= e(sirket_yolu($s['kod'])) ?>"><?= e($s['ad']) ?></a></td>
-                            <td class="kod"><?= e($s['kod']) ?></td>
-                            <td class="sayi"><?= e(piyasa_sayi($s['fiyat'], 2)) ?> ₺</td>
-                            <td class="sayi"><?= piyasa_degisim_html($s['degisim']) ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
+        <?php
+        /*
+         * Sik izgara (site sahibinin istegi, 23.10.2026: "cok genis
+         * gorunuyor; kullanici analiz yapacak, hepsini bir arada gormesi
+         * daha uygun; sirketler tiklanabilir olmali"). Onceden 30 satirlik
+         * tek tabloydu. Her kutu sirket sayfasina gidiyor; en cok yukselen
+         * basta.
+         */
+        ?>
+        <ul class="sirket-izgara">
+            <?php foreach ($satirlar as $s): ?>
+                <li>
+                    <a href="<?= e(sirket_yolu($s['kod'])) ?>" title="<?= e($s['ad']) ?> — 10 yıllık geçmiş ve analiz">
+                        <span class="si-kod"><?= e($s['kod']) ?></span>
+                        <?= piyasa_degisim_html($s['degisim']) ?>
+                        <span class="si-fiyat"><?= e(piyasa_sayi($s['fiyat'], 2)) ?> ₺</span>
+                        <span class="si-ad"><?= e($s['ad']) ?></span>
+                    </a>
+                </li>
+            <?php endforeach; ?>
+        </ul>
         <p class="canli-not">
-            Şirketin 10 yıllık geçmişi, getirileri ve çarpanları için adına tıklayın.
+            Şirketin 10 yıllık geçmişi, getirileri ve çarpanları için kutusuna tıklayın.
             Güncelleme <?= e(canli_zaman_yazi($kayit['zaman'])) ?> · Kaynak: Yahoo Finance · 15 dakikaya kadar
             gecikmeli olabilir. Yatırım tavsiyesi değildir.
         </p>
