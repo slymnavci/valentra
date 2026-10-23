@@ -91,9 +91,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <?= canli_betik() ?>
         <?php endif; ?>
 
-        <p class="piyasa-bag">
-            <a href="<?= e(kategori_yolu('ekonomi')) ?>">Günlük ekonomi haberleri &rarr;</a>
-        </p>
+        <?= ekonomi_haberleri_html() ?>
     </div>
 
     <?php /* Yan pencere yok: grafik ve tablolar tam genislikte (23.10.2026). */ ?>
