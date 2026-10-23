@@ -790,6 +790,23 @@ a.menu-oge.aktif::after,
     position: relative;
     justify-content: flex-end;
     background: #17304f;
+    /* Bulanik arka gorsel kutudan tasmasin. */
+    overflow: hidden;
+}
+
+/*
+ * Arka plan: ayni gorselin bulanik, koyulastirilmis kopyasi. Ondeki
+ * gorsel artik KIRPILMIYOR (asagida, contain); kutunun gorselden genis
+ * kalan yanlari bununla doluyor, bos serit gorunmuyor.
+ */
+.kaydirak-slayt .arka-gorsel {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(22px) brightness(.55) saturate(1.1);
+    transform: scale(1.12);
 }
 
 .kaydirak-slayt .ust-gorsel {
@@ -797,10 +814,17 @@ a.menu-oge.aktif::after,
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    /*
+     * KIRPMA YOK (site sahibinin istegi, 23.10.2026: "haberlerde
+     * Putin'in basi yarim gorunuyor; arka planda tam gorunecek sekilde
+     * ayarla"). Kutu ~2,6:1, haber gorselleri cogunlukla 16:9; cover ile
+     * gorselin ustu ve alti ucte bir kesiliyordu. Gorsel artik tamami
+     * gorunecek sekilde (contain) ortada, yanlari .arka-gorsel dolduruyor.
+     */
+    object-fit: contain;
 
     /*
-     * Kirpma ortadan degil USTTEN.
+     * (Eski not, cover icin.) Kirpma ortadan degil USTTEN.
      *
      * Kutu, haber gorsellerinin cogundan daha genis bir orana sahip
      * (yaklasik 2:1'e karsi 16:9). object-fit: cover genisligi
@@ -814,7 +838,7 @@ a.menu-oge.aktif::after,
      * Ayni ayar kart ve manset gorsellerine UYGULANMADI: onlarin kutu
      * oranlari farkli ve sikayet yalnizca kaydiraktaydi.
      */
-    object-position: center 35%;
+    object-position: center;
     /*
      * Eskiden .5 idi. Kaynak sitelerin paylasim gorsellerinde baslik
      * cogu zaman resmin icine gomulu oluyor; yariya indirilmis resim
@@ -822,7 +846,7 @@ a.menu-oge.aktif::after,
      * Resim netlesince fotograf gibi okunuyor, metnin okunurlugunu ise
      * asagidaki koyu gecis sagliyor.
      */
-    opacity: .85;
+    opacity: 1;
 }
 
 .kaydirak-govde {
@@ -1260,6 +1284,8 @@ a.menu-oge.aktif::after,
     width: 100%;
     height: 132px;
     object-fit: cover;
+    /* Dar kutu: kirpma ustten agir olsun, yuzler kesilmesin. */
+    object-position: center 25%;
     border-radius: 6px;
     margin-bottom: 10px;
 }
