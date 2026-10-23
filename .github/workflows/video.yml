@@ -19,7 +19,7 @@ on:
         default: false
       saat:
         description: 'Kac saat geriye bakilsin'
-        default: '12'
+        default: '2'
       enfazla:
         description: 'En fazla kac video islensin'
         default: '24'
@@ -88,7 +88,7 @@ jobs:
           OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
-          SAAT:                ${{ inputs.saat || '12' }}
+          SAAT:                ${{ inputs.saat || '2' }}
           ENFAZLA:             ${{ inputs.enfazla || '24' }}
           KURU:                ${{ inputs.kuru }}
         run: |

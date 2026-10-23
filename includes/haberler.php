@@ -68,7 +68,7 @@ const HABER_AKIS_DISI = ['yemek-tarifleri'];
  *   4. Esitlerde yeni olan once.
  *
  * Ana sayfada ayrica 1. yerde son dakika (haber_son_dakika_id) ve
- * kaydirakta spor kotasi var; yalnizca bugun ve dunun haberleri.
+ * kaydirakta spor kotasi var; yalnizca kaynakta bugun yayimlanmis haberler.
  *
  * Onceki "son 24 saat" penceresi sabah 08'de dun 08'den sonraki her
  * haberi yeni sayiyordu; dunun gun boyu okunma toplamis haberleri bu
@@ -125,7 +125,7 @@ function haber_yas_dakika_ifadesi(): string
  * karari, 23.10.2026: "haberin onem derecesi yayin tarihine de bakarak
  * karar verilmeli; eski haberlerin onem degeri gitgide azalsin; 4 saat
  * gectiyse %10 azalsin; dunun haberiyse 50 altinda olsun"). Ana sayfada
- * dunun haberleri yalnizca bugunkulerin ardindan (bkz. haber_sirasi_temel).
+ * dunun haberleri yok (haber_ana_akis_kosulu); tavan konu sayfalari icin.
  *
  *   - Bugunun haberi: saatte %2,5 (4 saatte %10, 8 saatte %20, 12 saatte
  *     %30). Onem 75, 4 saatlik haber 67,5; yeni gelen onem 70 haber onun
@@ -307,13 +307,10 @@ function haber_sirasi_temel(bool $anaSayfa): string
         : $onem . ' DESC';
 
     /*
-     * ONCE BUGUN, SONRA DUN (site sahibi, 23.10.2026: "once puanlamayi
-     * yap, ondan sonra sirayla ana sayfaya gelsin; bugun yeterince haber
-     * yoksa dunun haberleri siradan devam edebilir, oncelik bugunun
-     * haberlerinde"). Gun basamagi once, kendi icinde puan sirasi: bugunun
-     * en dusuk puanli haberi bile dunun en yuksek puanlisinin onunde.
-     * Dunun haberleri ancak bugunkuler bitince (sonraki slaytlar, izgara)
-     * geliyor. Spor icin dun aksamki mac "bugun" (bkz. haber_gun_ifadesi).
+     * Gun basamagi once, kendi icinde puan sirasi. Ana sayfada yalnizca
+     * bugun var (haber_ana_akis_kosulu); konu sayfalarinda bugunun
+     * haberleri dunkulerin ve eskilerin onunde. Spor icin dun aksamki mac
+     * konu sayfasinda "bugun" (bkz. haber_gun_ifadesi).
      */
     return '(h.one_cikan = 1 AND ' . $gun . ' = 0) DESC,
         ' . $gun . ' ASC,
@@ -429,8 +426,8 @@ function haber_okunma_birlesimi(): string
 
 /**
  * Ana sayfa akisinin kosulu: Resmi Gazete kaynakli olmayan, haber olan
- * (yemek tarifi gibi akis disi bir baslikta olmayan), bugunun ya da dunun
- * haberi.
+ * (yemek tarifi gibi akis disi bir baslikta olmayan), kaynakta BUGUN
+ * yayimlanmis haber.
  */
 function haber_ana_akis_kosulu(): string
 {
@@ -440,21 +437,24 @@ function haber_ana_akis_kosulu(): string
     ));
 
     /*
-     * BUGUN VE DUN (site sahibi, 23.10.2026: "bugun yeterince haber yoksa
-     * dunun haberleri siradan devam edebilir; oncelik bugunun
-     * haberlerinde"). Sira bugunu once aliyor (bkz. haber_sirasi_temel);
-     * dunun haberleri bugunkulerin ardindan geliyor, daha eskiler ana
-     * sayfada yok (konu sayfalarinda ve kendi adreslerinde duruyorlar).
-     * Yas, kaynagin yayin ani ile toplanma aninin erken olani
-     * (haber_yas_dakika_ifadesi).
+     * YALNIZCA BUGUN (site sahibi, 23.10.2026: "ana sayfaya sadece bugunun
+     * haberlerini koyalim; diger haberler ilgili sayfasinda arsivde
+     * kalacak"). Istanbul gece yarisindan beri KAYNAKTA yayimlanmis
+     * haberler; dunku ve daha eskiler konu sayfalarinda ve kendi
+     * adreslerinde. Gece yarisindan hemen sonra ana sayfa bos ya da az
+     * haberli olabilir: bu bilerek.
+     *
+     * Kaynakta yayin tarihi bilinmeyen haber (kaynak_tarihi bos) ana
+     * sayfaya girmiyor ("haberlerin tarihleri cok onemli"): yasi toplandigi
+     * andan sayilinca dunku haber "bugunun" gorunuyordu (bir gunluk faiz
+     * karari haberi 2. siradaydi). Yas, kaynagin yayin ani ile toplanma
+     * aninin erken olani (haber_yas_dakika_ifadesi).
      */
-    $pencere = haber_bugun_dakika() + 1440;
-    $yas     = haber_yas_dakika_ifadesi();
-
     return 'NOT (' . HABER_RG_KOSULU . ')'
         . ' AND (h.kategori_id IS NULL OR h.kategori_id NOT IN'
         . ' (SELECT id FROM kategoriler WHERE slug IN (' . $disarida . ')))'
-        . ' AND ' . $yas . ' <= ' . $pencere;
+        . ' AND h.kaynak_tarihi IS NOT NULL'
+        . ' AND ' . haber_yas_dakika_ifadesi() . ' <= ' . haber_bugun_dakika();
 }
 
 /**

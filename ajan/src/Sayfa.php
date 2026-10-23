@@ -165,6 +165,7 @@ final class Sayfa
             '~<meta[^>]+(?:property|name)\s*=\s*["\'](?:article:published_time|og:published_time)["\'][^>]*content\s*=\s*["\']([^"\']+)~i',
             '~<meta[^>]+content\s*=\s*["\']([^"\']+)["\'][^>]*(?:property|name)\s*=\s*["\'](?:article:published_time|og:published_time)["\']~i',
             '~"datePublished"\s*:\s*"([^"]+)"~i',
+            '~"(?:uploadDate|publishDate)"\s*:\s*"([^"]+)"~',
             '~<meta[^>]+(?:itemprop|name)\s*=\s*["\'](?:datePublished|pubdate|publish-date|publishdate|sailthru\.date|parsely-pub-date|dc\.date\.issued)["\'][^>]*content\s*=\s*["\']([^"\']+)~i',
             '~<time[^>]+datetime\s*=\s*["\']([^"\']+)~i',
         ];

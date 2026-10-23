@@ -222,6 +222,8 @@ function sema_yukselt(array &$hatalar = []): array
 
     // Kaynagin yayin zamani (23.10.2026; bkz. haber_gun_ifadesi).
     $sutunEkle('haberler', 'kaynak_tarihi', 'DATETIME NULL AFTER yayin_tarihi');
+    // Tarih denetimi (23.10.2026; bkz. api/tarih-denetim.php).
+    $sutunEkle('haberler', 'tarih_denetlendi', 'DATETIME NULL AFTER kaynak_tarihi');
     // Haberi yazan model; otomatik yayin esigi buna gore (23.10.2026).
     $sutunEkle('haberler', 'ajan_modeli', "VARCHAR(80) NOT NULL DEFAULT '' AFTER ajan_notu");
 

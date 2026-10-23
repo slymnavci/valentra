@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $sonuc = ajan_tetikle(
                 $islem === 'calistir_kuru',
-                max(1, (int) ($_POST['saat'] ?? 5)),
+                max(1, (int) ($_POST['saat'] ?? 2)),
                 // Bos birakilirsa ajanin varsayilani (0).
                 max(0, (int) ($_POST['enfazla'] ?? 0)),
                 match ($islem) {
@@ -153,7 +153,7 @@ require __DIR__ . '/ust.php';
             <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;">
                 <div class="alan" style="margin-bottom:0;">
                     <label for="saat">Kaç saat geriye bakılsın</label>
-                    <input type="text" id="saat" name="saat" value="5" style="width:110px;">
+                    <input type="text" id="saat" name="saat" value="2" style="width:110px;">
                 </div>
 
                 <div class="alan" style="margin-bottom:0;">

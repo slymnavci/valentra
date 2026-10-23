@@ -452,6 +452,40 @@ final class Site
         return (int) ($veri['guncellenen'] ?? 0);
     }
 
+    /**
+     * Tarihi denetlenecek haberler (api/tarih-denetim.php).
+     *
+     * @return list<array{id:int,url:string}>
+     */
+    public function tarihDenetimListesi(): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/tarih-denetim.php');
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Denetim listesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return array_values((array) ($veri['haberler'] ?? []));
+    }
+
+    /**
+     * Sayfalardan okunan yayın zamanlarını yazar; düzeltilen sayısını döndürür.
+     *
+     * @param list<array{id:int,zaman:?int}> $tarihler zaman null: sayfada tarih yok
+     */
+    public function tarihDenetimGonder(array $tarihler): int
+    {
+        [$kod, $govde] = $this->istek('POST', '/api/tarih-denetim.php', (string) json_encode(['tarihler' => $tarihler]));
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Denetim sonucu yazılamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return (int) ($veri['duzeltilen'] ?? 0);
+    }
+
     /** Yazar fotoğrafını yükler. */
     public function portreGonder(string $anahtar, string $ikili): void
     {
