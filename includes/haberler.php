@@ -50,71 +50,60 @@ const HABER_AKIS_KATEGORILERI = [
 const HABER_AKIS_DISI = ['yemek-tarifleri'];
 
 /*
- * Haber sirasi: GUNDEM PUANI, zamanla azalarak (site sahibinin istegi,
- * 23.10.2026: "haberlerde halen dunku haberler on planda; her gun
- * reytingi yuksek haberlere bakip onlari onceliklendir").
+ * Haber sirasi: ONCE BUGUN TOPLANANLAR, kendi icinde EN ONEMLIDEN
+ * ONEMSIZE (site sahibinin istegi, 23.10.2026: "halen eski haberler
+ * duruyor; bugun toplananlari on plana getir, oncelik en onemli
+ * haberden onemsize").
  *
- * Onceki sira "son 24 saat, kendi icinde onem/okunma" idi. Sabah 08'de
- * dun 08'den sonraki her haber hala "yeni" sayiliyordu; dunku haberler
- * gun boyu okunma topladigi icin bu sabahin henuz okunmamis haberlerinin
- * USTUNDE kaliyordu.
+ *   1. Panelden "one cikarilan" haberler — yalnizca bugun toplananlar.
+ *      Onceden suresizdi; bir kez one cikarilan haber gunlerce en
+ *      ustte kaliyordu.
+ *   2. Gun gun: bugun toplananlar, sonra dun, sonra evvelki gun...
+ *      "Gun" Istanbul saatiyle gece yarisindan; haberin yasi TOPLANDIGI
+ *      andan (olusturuldu). Yayin tarihi onay ani: dun toplanip bu sabah
+ *      onaylanan haber "bugunku" sayilmamali.
+ *   3. Ayni gunun icinde onem puanina gore (ajan veriyor, panelden
+ *      degisir; ayni olayi veren kaynak sayisi icinde). Ana sayfada
+ *      okunma da ekleniyor (bkz. haber_sirasi).
+ *   4. Esitlerde yeni olan once.
  *
- * Simdi haber sitelerinin "gundemdekiler" siralamasi:
- *
- *   puan / (yas_saat + 3) ^ 1.2
- *
- *   puan     onem (ajan veriyor, panelden degisir; ayni olayi veren
- *            kaynak sayisi icinde) + 10. Ana sayfada okunma da ekleniyor.
- *   yas_saat haberin TOPLANDIGI andan beri (olusturuldu). Yayin tarihi
- *            onay ani: dun toplanip bu sabah onaylanan haber "bugunku"
- *            sayilmamali.
- *
- * Ayni gun icinde puani yuksek haber one cikiyor; dunun en cok okunan
- * haberi bile bu sabahin haberlerinin altina iniyor. Ornek (08.00):
- * bu sabahki onem 60, 2 saatlik -> 70/6.9 = 10.1; dunku onem 90 + 30
- * okunma, 20 saatlik -> 130/43 = 3.0.
- *
- *   1. Panelden "one cikarilan" haberler — yalnizca ilk 24 saat. Onceden
- *      suresizdi; bir kez one cikarilan haber gunlerce en ustte kaliyordu.
- *   2. Son 48 saat gundem puanina gore.
- *   3. Daha eski haberler tarih sirasiyla.
+ * Onceki "son 24 saat" penceresi sabah 08'de dun 08'den sonraki her
+ * haberi yeni sayiyordu; dunun gun boyu okunma toplamis haberleri bu
+ * sabahin haberlerinin ustunde kaliyordu.
  *
  * Manset ve izgara AYNI sirayi kullanmali: izgara mansetin tukettigi
  * kadar haberi atliyor.
  */
-const HABER_YAS_SAAT = '(GREATEST(0, TIMESTAMPDIFF(MINUTE, h.olusturuldu, NOW())) / 60)';
+function haber_sirasi(bool $anaSayfa = false): string
+{
+    /*
+     * Istanbul gece yarisindan beri gecen dakika PHP'den: veritabaninin
+     * saat dilimi bilinmiyor (paylasimli sunucu), NOW() ile farki ise
+     * dilimden bagimsiz. Gun numarasi: 0 bugun, 1 dun, 2 evvelki gun...
+     */
+    $simdi = new DateTimeImmutable('now', new DateTimeZone('Europe/Istanbul'));
+    $gunDakika = (int) $simdi->format('G') * 60 + (int) $simdi->format('i');
+    $gun = 'GREATEST(0, CEIL((TIMESTAMPDIFF(MINUTE, h.olusturuldu, NOW()) - ' . $gunDakika . ') / 1440))';
 
-const HABER_SIRASI = '(h.one_cikan = 1 AND h.olusturuldu >= NOW() - INTERVAL 1 DAY) DESC,
-    (h.olusturuldu >= NOW() - INTERVAL 2 DAY) DESC,
-    CASE WHEN h.olusturuldu >= NOW() - INTERVAL 2 DAY
-         THEN (h.onem + 10) / POW(' . HABER_YAS_SAAT . ' + 3, 1.2) ELSE 0 END DESC,
-    h.yayin_tarihi DESC,
-    h.id DESC';
+    /*
+     * Ana sayfada puana okunma da giriyor (son 24 saatte haberi acan
+     * farkli okuyucu: 1 okuyucu +10, 3 okuyucu +20, 7 ve uzeri +30;
+     * haber_okunma_birlesimi, "zo"). Teknoloji ve kultur-sanat gunun
+     * sonunda (site sahibinin karari, 22.10.2026: "teknoloji, sanat ve
+     * kultur en sonda"). Konu sayfalarinda ikisi de yok: orada hepsi ayni
+     * baslikta.
+     */
+    $puan = $anaSayfa
+        ? '(k.slug IN (\'teknoloji\', \'kultur-sanat\')) ASC,
+           h.onem + LEAST(30, 10 * LOG2(1 + COALESCE(zo.okuyucu, 0))) DESC'
+        : 'h.onem DESC';
 
-/*
- * ANA SAYFA sirasi: HABER_SIRASI'nin aynisi, puana iki ek.
- *
- *   - Okunma (son 24 saatte haberi acan farkli okuyucu): 1 okuyucu +10,
- *     3 okuyucu +20, 7 ve uzeri +30 puan. Sitenin kendi sayacindan
- *     (ziyaretler tablosu; bkz. includes/ziyaret.php).
- *   - Teknoloji ve kultur-sanat puanin %35'i (site sahibinin karari,
- *     22.10.2026: "teknoloji, sanat ve kultur en sonda"). Onceden kesin
- *     olarak sondaydi; bu dunun gundem haberini bugunun teknoloji
- *     haberinin ustunde tutuyordu.
- *
- * Konu sayfalari HABER_SIRASI'ni kullaniyor: orada hepsi ayni baslikta.
- *
- * $okunma: haber_okunma_birlesimi()'nin "zo" takma adi.
- */
-const HABER_ANA_SAYFA_SIRASI = '(h.one_cikan = 1 AND h.olusturuldu >= NOW() - INTERVAL 1 DAY) DESC,
-    (h.olusturuldu >= NOW() - INTERVAL 2 DAY) DESC,
-    CASE WHEN h.olusturuldu >= NOW() - INTERVAL 2 DAY
-         THEN (h.onem + 10 + LEAST(30, 10 * LOG2(1 + COALESCE(zo.okuyucu, 0))))
-              * (CASE WHEN k.slug IN (\'teknoloji\', \'kultur-sanat\') THEN 0.35 ELSE 1 END)
-              / POW(' . HABER_YAS_SAAT . ' + 3, 1.2)
-         ELSE 0 END DESC,
-    h.yayin_tarihi DESC,
-    h.id DESC';
+    return '(h.one_cikan = 1 AND ' . $gun . ' = 0) DESC,
+        ' . $gun . ' ASC,
+        ' . $puan . ',
+        h.olusturuldu DESC,
+        h.id DESC';
+}
 
 /**
  * Son 24 saatin okunma sayıları (farklı okuyucu), ana sayfa sırası için.
@@ -690,7 +679,7 @@ function haber_yayindakiler(int $limit = 20, int $atla = 0, bool $anaAkis = fals
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
            ' . ($anaAkis ? haber_okunma_birlesimi() : '') . '
           WHERE h.durum = :durum' . ($anaAkis ? ' AND ' . haber_ana_akis_kosulu() : '') . '
-          ORDER BY ' . ($anaAkis ? HABER_ANA_SAYFA_SIRASI : HABER_SIRASI) . '
+          ORDER BY ' . haber_sirasi($anaAkis) . '
           LIMIT :limit OFFSET :atla'
     );
     $ifade->bindValue('durum', HABER_YAYINDA);
@@ -1079,7 +1068,7 @@ function haber_kategoride(int $kategoriId, int $limit = 20, int $atla = 0): arra
            FROM haberler h
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
           WHERE h.durum = :durum AND h.kategori_id = :kategori
-          ORDER BY ' . HABER_SIRASI . '
+          ORDER BY ' . haber_sirasi() . '
           LIMIT :limit OFFSET :atla'
     );
     $ifade->bindValue('durum', HABER_YAYINDA);
@@ -1114,7 +1103,7 @@ function haber_manset(int $limit = 8, bool $anaAkis = false): array
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
            ' . ($anaAkis ? haber_okunma_birlesimi() : '') . '
           WHERE h.durum = :durum' . ($anaAkis ? ' AND ' . haber_ana_akis_kosulu() : '') . '
-          ORDER BY ' . ($anaAkis ? HABER_ANA_SAYFA_SIRASI : HABER_SIRASI) . '
+          ORDER BY ' . haber_sirasi($anaAkis) . '
           LIMIT :limit'
     );
     $ifade->bindValue('durum', HABER_YAYINDA);
@@ -1243,7 +1232,7 @@ function kategori_bloklari(int $grupBasiHaber = 4, int $enFazlaGrup = 6): array
             AND k.aktif = 1
             AND NOT (' . HABER_RG_KOSULU . ')
             AND ' . haber_akis_kategori_kosulu() . '
-          ORDER BY k.sira, k.ad, ' . HABER_SIRASI
+          ORDER BY k.sira, k.ad, ' . haber_sirasi()
     )->fetchAll();
 
     $bloklar = [];
