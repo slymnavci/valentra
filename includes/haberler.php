@@ -197,6 +197,17 @@ function haber_son_dakika_ifadesi(): string
  */
 const HABER_TOPLAMA_BOSLUGU_SANIYE = 600;
 
+/*
+ * Son dakika olabilmek icin haberin KAYNAKTA en fazla 3 saat once ve
+ * bugun yayimlanmis olmasi gerekiyor (site sahibi, 23.10.2026: Euronews'un
+ * dun 22:57'de yayimladigi deprem haberi ertesi sabah toplanip son dakika
+ * oldu; "bizde son dakika bu olur mu?"). Yas, kaynagin yayin ani ile
+ * toplanma aninin erken olani (haber_yas_dakika_ifadesi). Son toplamada
+ * bu kosulu tutan haber yoksa son dakika yeri bos kalir; sayfa puan
+ * sirasiyla baslar.
+ */
+const HABER_SON_DAKIKA_EN_FAZLA_DAKIKA = 180;
+
 function haber_son_dakika_id(): ?int
 {
     static $onbellek = false;
@@ -209,7 +220,8 @@ function haber_son_dakika_id(): ?int
 
     try {
         $satirlar = db()->query(
-            'SELECT h.id, h.onem, UNIX_TIMESTAMP(h.olusturuldu) AS zaman
+            'SELECT h.id, h.onem, UNIX_TIMESTAMP(h.olusturuldu) AS zaman,
+                    ' . haber_yas_dakika_ifadesi() . ' AS yas
                FROM haberler h
               WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . haber_ana_akis_kosulu() . "
                 AND (h.kategori_id IS NULL OR h.kategori_id NOT IN
@@ -225,6 +237,7 @@ function haber_son_dakika_id(): ?int
 
     $enIyiOnem = -1;
     $onceki    = null;
+    $enFazlaYas = min(HABER_SON_DAKIKA_EN_FAZLA_DAKIKA, haber_bugun_dakika());
 
     foreach ($satirlar as $satir) {
         $zaman = (int) $satir['zaman'];
@@ -233,8 +246,11 @@ function haber_son_dakika_id(): ?int
             break;
         }
 
+        // Toplama sinirini eski haberler de belirliyor; aday olamiyorlar.
+        $taze = (int) $satir['yas'] <= $enFazlaYas;
+
         // Yeniden eskiye gidiliyor: esitlikte ilk gorulen (en yeni) kalir.
-        if ((int) $satir['onem'] > $enIyiOnem) {
+        if ($taze && (int) $satir['onem'] > $enIyiOnem) {
             $enIyiOnem = (int) $satir['onem'];
             $onbellek  = (int) $satir['id'];
         }
