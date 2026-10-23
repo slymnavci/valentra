@@ -513,3 +513,101 @@ function ajan_video_calismalari(int $adet = 8): array
 
     return $liste;
 }
+
+/*
+ * SITE AJANI KENDISI TETIKLIYOR (23.10.2026). Site sahibi: "2 saatte bir
+ * haberleri ceksin". GitHub'in zamanlanmis calismalari guvenilmez cikti:
+ * 24 saatte 12 yerine 2 calisma basladi (GitHub yogunlukta zamanlanmis
+ * isleri atliyor). Ana sayfa acildiginda, sayfa okuyucuya gittikten SONRA,
+ * en fazla 10 dakikada bir GitHub'a bakiliyor: haber ajaninin son
+ * calismasi 2 saatten eskiyse ve su an calismiyorsa calistiriliyor; video
+ * ajani icin de ayni. GitHub'in kendi zamanlamasi yedek olarak duruyor.
+ * Panelde GitHub anahtari yoksa hicbir sey yapilmiyor.
+ */
+const AJAN_OTO_ARALIK_DAKIKA  = 120;
+const AJAN_OTO_KONTROL_SANIYE = 600;
+
+function ajan_otomatik_tetikle_arada(): void
+{
+    try {
+        if (!ajan_tetikleyebilir_mi()) {
+            return;
+        }
+
+        if (time() - (int) ayar_oku('ajan_oto_kontrol', '0') < AJAN_OTO_KONTROL_SANIYE) {
+            return;
+        }
+
+        // Once yaz: ayni anda gelen ikinci ziyaret tekrar tetiklemesin.
+        ayar_yaz('ajan_oto_kontrol', (string) time());
+
+        if (ajan_oto_zamani_geldi(AJAN_WORKFLOW)) {
+            // Kose yazilari zamanli calismadaki gibi ogleden sonra (bkz.
+            // ajan.yml, kose.php --zamanli); "gunluk" toplama + kose yazisi.
+            $saat  = (int) (new DateTimeImmutable('now', new DateTimeZone('Europe/Istanbul')))->format('G');
+            $sonuc = ajan_tetikle(false, 2, 0, $saat >= 12 ? 'gunluk' : 'topla');
+
+            if (!$sonuc['tamam']) {
+                error_log('[valentra] ajan otomatik tetiklenemedi: ' . $sonuc['mesaj']);
+            }
+        }
+
+        if (ajan_oto_zamani_geldi(AJAN_VIDEO_WORKFLOW)) {
+            $sonuc = ajan_video_tetikle(false, 2);
+
+            if (!$sonuc['tamam']) {
+                error_log('[valentra] video ajani otomatik tetiklenemedi: ' . $sonuc['mesaj']);
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('[valentra] ajan otomatik tetikleme: ' . $e->getMessage());
+    }
+}
+
+/** İş akışının son çalışması bitmiş ve 2 saatten eski mi (GitHub'a ulaşılamazsa hayır)? */
+function ajan_oto_zamani_geldi(string $isAkisi): bool
+{
+    $veri = ajan_github_json('https://api.github.com/repos/' . ajan_depo()
+        . '/actions/workflows/' . $isAkisi . '/runs?per_page=1');
+
+    if (!is_array($veri)) {
+        return false;
+    }
+
+    $son = $veri['workflow_runs'][0] ?? null;
+
+    // Hic calismamissa zamani gelmis.
+    if (!is_array($son)) {
+        return true;
+    }
+
+    // Calisiyor ya da sirada: bekle.
+    if (($son['status'] ?? '') !== 'completed') {
+        return false;
+    }
+
+    $basla = strtotime((string) ($son['run_started_at'] ?? $son['created_at'] ?? ''));
+
+    return $basla === false || time() - $basla >= (AJAN_OTO_ARALIK_DAKIKA - 5) * 60;
+}
+
+/**
+ * Ana sayfa yanıtı okuyucuya gittikten sonra ajan_otomatik_tetikle_arada
+ * çalıştırılır; okuyucu GitHub isteğini beklemez.
+ */
+function ajan_otomatik_tetikle_sayfa_sonunda(): void
+{
+    register_shutdown_function(static function (): void {
+        while (ob_get_level() > 0) {
+            @ob_end_flush();
+        }
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        } elseif (function_exists('litespeed_finish_request')) {
+            litespeed_finish_request();
+        }
+
+        ajan_otomatik_tetikle_arada();
+    });
+}
