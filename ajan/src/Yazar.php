@@ -370,9 +370,26 @@ final class Yazar implements SemaliIstemci
 
     public function __construct(private readonly string $apiKey, string $model = '')
     {
-        $ortam = (string) (getenv('GEMINI_MODEL') ?: '');
+        $ortam = trim((string) (getenv('GEMINI_MODEL') ?: ''));
+        $secilen = $model !== '' ? $model : $ortam;
 
-        $this->model = $model !== '' ? $model : ($ortam !== '' ? $ortam : self::VARSAYILAN_MODEL);
+        /*
+         * Model adi adrese yaziliyor (models/<ad>:generateContent). Gecersiz
+         * bir ad ("gemini model", sonda bosluk, Turkce karakter) butun
+         * istekleri "URL rejected: Malformed input" ile dusuruyordu
+         * (23.10.2026: 72 adayin 72'si hata, 0 haber). Ad gecersizse
+         * varsayilana donuluyor ve sebep gunluge yaziliyor.
+         */
+        $secilen = preg_replace('#^models/#', '', $secilen) ?? '';
+
+        if ($secilen !== '' && !preg_match('/^[a-z0-9][a-z0-9._-]{1,99}$/i', $secilen)) {
+            fwrite(STDERR, '[uyari] GEMINI_MODEL gecersiz ("' . mb_substr($secilen, 0, 40) . '"); varsayilan '
+                . self::VARSAYILAN_MODEL . ' kullaniliyor. GitHub -> Settings -> Secrets -> GEMINI_MODEL '
+                . 'degerini duzeltin ya da silin.' . PHP_EOL);
+            $secilen = '';
+        }
+
+        $this->model = $secilen !== '' ? $secilen : self::VARSAYILAN_MODEL;
     }
 
     /**
