@@ -301,23 +301,39 @@ final class Sayfa
         }
 
         foreach ($adaylar as $aday) {
-            $aday = html_entity_decode(trim($aday), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $adres = self::oynaticiAdresi(html_entity_decode(trim($aday), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
 
-            if (str_starts_with($aday, '//')) {
-                $aday = 'https:' . $aday;
+            if ($adres !== '') {
+                return $adres;
             }
+        }
 
-            if (preg_match('#^https?://(?:www\.|m\.)?(?:youtube(?:-nocookie)?\.com/(?:embed/|watch\?(?:.*&)?v=|shorts/)|youtu\.be/)([A-Za-z0-9_-]{11})#', $aday, $e)) {
-                return 'https://www.youtube-nocookie.com/embed/' . $e[1];
-            }
+        return '';
+    }
 
-            if (preg_match('#^https?://(?:player\.)?vimeo\.com/(?:video/)?(\d{6,12})#', $aday, $e)) {
-                return 'https://player.vimeo.com/video/' . $e[1];
-            }
+    /**
+     * Tek bir adres izinli bir platformun videosuysa resmi gomme adresi;
+     * degilse bos. Haber baglantisinin kendisi bir YouTube videosu
+     * oldugunda (YouTube kanal beslemeleri) video dogrudan buradan.
+     */
+    public static function oynaticiAdresi(string $aday): string
+    {
+        $aday = trim($aday);
 
-            if (preg_match('#^https?://(?:www\.)?dailymotion\.com/(?:embed/)?video/([A-Za-z0-9]{5,12})#', $aday, $e)) {
-                return 'https://www.dailymotion.com/embed/video/' . $e[1];
-            }
+        if (str_starts_with($aday, '//')) {
+            $aday = 'https:' . $aday;
+        }
+
+        if (preg_match('#^https?://(?:www\.|m\.)?(?:youtube(?:-nocookie)?\.com/(?:embed/|watch\?(?:.*&)?v=|shorts/)|youtu\.be/)([A-Za-z0-9_-]{11})#', $aday, $e)) {
+            return 'https://www.youtube-nocookie.com/embed/' . $e[1];
+        }
+
+        if (preg_match('#^https?://(?:player\.)?vimeo\.com/(?:video/)?(\d{6,12})#', $aday, $e)) {
+            return 'https://player.vimeo.com/video/' . $e[1];
+        }
+
+        if (preg_match('#^https?://(?:www\.)?dailymotion\.com/(?:embed/)?video/([A-Za-z0-9]{5,12})#', $aday, $e)) {
+            return 'https://www.dailymotion.com/embed/video/' . $e[1];
         }
 
         return '';

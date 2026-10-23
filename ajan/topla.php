@@ -1456,6 +1456,18 @@ foreach ($gruplar as $grupNo => $grup) {
             $okunan = ['metin' => '', 'gorsel' => '', 'video' => ''];
         }
 
+        /*
+         * Haberin kendisi bir video (YouTube kanal beslemesi): oynatici
+         * dogrudan baglantidan; modele sayfa metni yerine videonun
+         * aciklamasi gidiyor (YouTube sayfasinin metni betik artigi).
+         */
+        $baglantiVideo = Sayfa::oynaticiAdresi((string) $aday['girdi']['baglanti']);
+
+        if ($baglantiVideo !== '') {
+            $okunan['video'] = $baglantiVideo;
+            $okunan['metin'] = trim((string) ($aday['girdi']['ozet'] ?? ''));
+        }
+
         // Gorsel once beslemeden, yoksa haber sayfasinin og:image'inden.
         // Besleme gorseli daha guvenilir: siteyi yazan kisi haberin
         // gorselini oraya koyuyor, og:image bazen genel site kapagi.
