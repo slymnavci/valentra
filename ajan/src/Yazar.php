@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace Valentra\Ajan;
 
+require_once __DIR__ . '/OpenAiErisimYokException.php';
+require_once __DIR__ . '/OpenAiIstemci.php';
+
 /**
  * Aday haberi Gemini'ye verip iki soruyu birden yanıtlatır:
  * yayın politikasına göre yayımlanabilir mi, ve yayımlanabilirse
@@ -15,21 +18,20 @@ namespace Valentra\Ajan;
 final class Yazar implements SemaliIstemci
 {
     /**
-     * Haber toplamanin varsayilan modeli. GEMINI_MODEL ortam degiskeniyle
+     * Haber toplamanin Gemini modeli. GEMINI_MODEL ortam degiskeniyle
      * degistirilebilir; model adi degisirse kod duzenlemeye gerek kalmaz.
      *
-     * 23.10.2026 (site sahibinin karari): haber icin ucuz model, kose
-     * yazisi icin guclu model. Haber toplama asil token tuketimi (her
-     * calismada onlarca aday); okuma, eleme ve kisa metin "Lite" sinifi
-     * icin uygun is. Flash-Lite 1M token basina $0.25 / $1.50; 3.8 Flash
-     * $0.75 / $3.75 (1 Ocak 2027'den $1.50 / $7.50).
+     * 23.10.2026 (site sahibinin karari): haberler once OpenAI (GPT-6
+     * Luna) ile yaziliyor, Gemini YEDEK. Yedek olarak eskisi gibi 3.8
+     * Flash: yalnizca Luna dustugunde calistigi icin maliyeti kucuk,
+     * yazim kalitesi bilinen model. OpenAI anahtari yoksa butun is bunda.
      */
-    private const VARSAYILAN_MODEL = 'gemini-3.1-flash-lite';
+    private const VARSAYILAN_MODEL = 'gemini-3.8-flash';
 
     /**
-     * Kose yazilarinin varsayilan modeli; GEMINI_KOSE_MODEL ile
-     * degistirilebilir. Gundem secip yorumlu, akici yazi uretmek daha
-     * guclu yazim istiyor; gunde birkac yazi oldugu icin maliyeti kucuk.
+     * Kose yazilarinin modeli; GEMINI_KOSE_MODEL ile degistirilebilir.
+     * Gundem secip yorumlu, akici yazi uretmek daha guclu yazim istiyor;
+     * gunde birkac yazi oldugu icin maliyeti kucuk.
      */
     private const KOSE_VARSAYILAN_MODEL = 'gemini-3.8-flash';
 
@@ -419,14 +421,99 @@ final class Yazar implements SemaliIstemci
     /** Kullanilan model adi (gunluge yazmak icin). */
     public function model(): string
     {
-        return $this->model;
+        return $this->birincil !== null
+            ? $this->birincil->model() . ' (yedek: ' . $this->model . ')'
+            : $this->model;
     }
 
-    public function __construct(private readonly string $apiKey, string $model = '')
+    /*
+     * BIRINCIL MODEL: OpenAI (site sahibinin karari, 23.10.2026: "Luna
+     * ile calissin, basarisiz olursa Gemini ile devam etsin").
+     *
+     * OpenAI anahtari verilmisse her istek once ona gidiyor; hata olursa
+     * (ag, zaman asimi, kesik/bozuk yanit, bos sonuc) AYNI istek Gemini'ye
+     * gidiyor. Anahtar gecersiz ya da kredi bittiyse ya da ust uste
+     * BIRINCIL_HATA_SINIRI istek dustuyse OpenAI bu calismada bir daha
+     * denenmiyor; her istekte once onu bekleyip zaman kaybetmeyelim.
+     * Anahtar yoksa her sey eskisi gibi yalnizca Gemini.
+     */
+    private const OPENAI_VARSAYILAN_MODEL = 'gpt-6-luna';
+    private const BIRINCIL_HATA_SINIRI    = 3;
+
+    private ?OpenAiIstemci $birincil = null;
+    private int $birincilArdisikHata = 0;
+
+    /** @var array{birincil:int,yedek:int} Hangi saglayicinin kac istegi cevapladigi */
+    private array $saglayiciSayaci = ['birincil' => 0, 'yedek' => 0];
+
+    public function __construct(private readonly string $apiKey, string $model = '', string $openAiAnahtari = '')
     {
         // Model verilmediyse haber modeli (GEMINI_MODEL, yoksa varsayilan).
         $this->model = $model !== '' ? $model : self::ortamModeli('GEMINI_MODEL', self::VARSAYILAN_MODEL);
+
+        if (trim($openAiAnahtari) !== '') {
+            $this->birincil = new OpenAiIstemci(
+                trim($openAiAnahtari),
+                self::ortamModeli('OPENAI_MODEL', self::OPENAI_VARSAYILAN_MODEL),
+                trim((string) (getenv('OPENAI_API_TABAN') ?: ''))
+            );
+        }
     }
+
+    /**
+     * Önce birincil modele (OpenAI) sorar; olmazsa null döner ve çağıran
+     * aynı isteği Gemini'ye gönderir.
+     *
+     * @param array<string,mixed> $sema
+     * @param callable(array<string,mixed>):bool $gecerli yanit kullanilabilir mi
+     * @return array<string,mixed>|null
+     */
+    private function birincildenIste(string $yonerge, string $istem, array $sema, int $enFazlaToken, callable $gecerli): ?array
+    {
+        if ($this->birincil === null || $this->birincilKapali) {
+            return null;
+        }
+
+        try {
+            $veri = $this->birincil->jsonIstek($yonerge, $istem, $sema, $enFazlaToken);
+
+            if (!$gecerli($veri)) {
+                throw new \RuntimeException('yanıt beklenen alanları içermiyor');
+            }
+
+            $this->birincilArdisikHata = 0;
+            $this->saglayiciSayaci['birincil']++;
+
+            return $veri;
+        } catch (OpenAiErisimYokException $e) {
+            $this->birincilKapat('erişim yok (' . $e->getMessage() . ')');
+        } catch (\Throwable $e) {
+            $this->birincilArdisikHata++;
+            fwrite(STDERR, '[' . date('H:i:s') . '] ' . $this->birincil->model() . ' başarısız, Gemini ile devam: '
+                . mb_substr($e->getMessage(), 0, 300, 'UTF-8') . PHP_EOL);
+
+            if ($this->birincilArdisikHata >= self::BIRINCIL_HATA_SINIRI) {
+                $this->birincilKapat(self::BIRINCIL_HATA_SINIRI . ' istek üst üste düştü');
+            }
+        }
+
+        return null;
+    }
+
+    private function birincilKapat(string $neden): void
+    {
+        if ($this->birincil === null) {
+            return;
+        }
+
+        fwrite(STDERR, '[' . date('H:i:s') . '] ' . $this->birincil->model() . ' bu çalışmada kapatıldı: '
+            . mb_substr($neden, 0, 300, 'UTF-8') . '. Kalan istekler Gemini ile.' . PHP_EOL);
+
+        // Kullanimi kaybetmemek icin istemci tutuluyor; yalnizca kullanilmiyor.
+        $this->birincilKapali = true;
+    }
+
+    private bool $birincilKapali = false;
 
 
     /**
@@ -441,6 +528,13 @@ final class Yazar implements SemaliIstemci
         array $kategoriler,
     ): ?array {
         $istem = $this->istemHazirla($aday, $sayfaMetni, $kaynakAdi, $kaynakTuru, $kategoriler);
+
+        $birincil = $this->birincildenIste(self::YONERGE, $istem, self::SEMA, 8000,
+            static fn (array $v): bool => array_key_exists('ilgili', $v));
+
+        if ($birincil !== null) {
+            return $birincil;
+        }
 
         $govde = [
             'systemInstruction' => [
@@ -643,6 +737,13 @@ final class Yazar implements SemaliIstemci
         int $adayAdedi = 0,
         string $zorunluAlan = ''
     ): array {
+        $birincil = $this->birincildenIste($yonerge, $istem, $sema, $enFazlaToken,
+            fn (array $v): bool => $this->sonuclariAyikla($v, $adayAdedi, $zorunluAlan) !== []);
+
+        if ($birincil !== null) {
+            return $this->sonuclariAyikla($birincil, $adayAdedi, $zorunluAlan);
+        }
+
         $govde = [
             'systemInstruction' => [
                 'parts' => [['text' => $yonerge]],
@@ -676,35 +777,51 @@ final class Yazar implements SemaliIstemci
                 continue;
             }
 
-            $sonuclar = [];
-
-            foreach ($veri['sonuclar'] as $sonuc) {
-                if (!is_array($sonuc)) {
-                    continue;
-                }
-
-                if ($zorunluAlan !== '' && !array_key_exists($zorunluAlan, $sonuc)) {
-                    continue;
-                }
-
-                // Sira numarasi 1'den baslar; dizi indisine cevriliyor.
-                $sira = (int) ($sonuc['sira'] ?? 0) - 1;
-
-                if ($sira < 0) {
-                    continue;
-                }
-
-                if ($adayAdedi > 0 && $sira >= $adayAdedi) {
-                    continue;
-                }
-
-                $sonuclar[$sira] = $sonuc;
-            }
-
-            return $sonuclar;
+            return $this->sonuclariAyikla($veri, $adayAdedi, $zorunluAlan);
         }
 
         return [];
+    }
+
+    /**
+     * Yanıttaki "sonuclar" dizisini 0 tabanlı sıraya göre ayıklar.
+     * Gemini ve OpenAI yanıtı aynı denetimden geçiyor.
+     *
+     * @param array<string,mixed> $veri
+     * @return array<int,array<string,mixed>>
+     */
+    private function sonuclariAyikla(array $veri, int $adayAdedi, string $zorunluAlan): array
+    {
+        if (!isset($veri['sonuclar']) || !is_array($veri['sonuclar'])) {
+            return [];
+        }
+
+        $sonuclar = [];
+
+        foreach ($veri['sonuclar'] as $sonuc) {
+            if (!is_array($sonuc)) {
+                continue;
+            }
+
+            if ($zorunluAlan !== '' && !array_key_exists($zorunluAlan, $sonuc)) {
+                continue;
+            }
+
+            // Sira numarasi 1'den baslar; dizi indisine cevriliyor.
+            $sira = (int) ($sonuc['sira'] ?? 0) - 1;
+
+            if ($sira < 0) {
+                continue;
+            }
+
+            if ($adayAdedi > 0 && $sira >= $adayAdedi) {
+                continue;
+            }
+
+            $sonuclar[$sira] = $sonuc;
+        }
+
+        return $sonuclar;
     }
 
     /**
@@ -864,7 +981,37 @@ final class Yazar implements SemaliIstemci
      */
     public function kullanim(): array
     {
-        return $this->kullanim;
+        $toplam = $this->kullanim;
+
+        if ($this->birincil !== null) {
+            foreach ($this->birincil->kullanim() as $alan => $deger) {
+                $toplam[$alan] += $deger;
+            }
+        }
+
+        return $toplam;
+    }
+
+    /**
+     * Sağlayıcı dökümü: kaç isteği birincil (OpenAI) ve yedek (Gemini)
+     * yanıtladı, kaç token harcadılar. Birincil yoksa boş.
+     *
+     * @return array{birincil:string,yedek:string,birincil_istek:int,yedek_istek:int,birincil_kullanim:array{girdi:int,cikti:int,istek:int},yedek_kullanim:array{girdi:int,cikti:int,istek:int}}|array{}
+     */
+    public function saglayicilar(): array
+    {
+        if ($this->birincil === null) {
+            return [];
+        }
+
+        return [
+            'birincil'          => $this->birincil->model(),
+            'yedek'             => $this->model,
+            'birincil_istek'    => $this->saglayiciSayaci['birincil'],
+            'yedek_istek'       => $this->kullanim['istek'],
+            'birincil_kullanim' => $this->birincil->kullanim(),
+            'yedek_kullanim'    => $this->kullanim,
+        ];
     }
 
     /**

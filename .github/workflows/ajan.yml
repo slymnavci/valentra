@@ -255,6 +255,10 @@ jobs:
           # Model adi degisirse kod duzenlemeye gerek yok: bu secret'i
           # ekleyip istedigin model adini yazman yeterli.
           GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          # Haberler once OpenAI ile (varsayilan GPT-6 Luna), basarisizsa
+          # Gemini ile. OPENAI_API_KEY yoksa yalnizca Gemini (23.10.2026).
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
           # Ortam degiskeniyle: betige dogrudan yazilmasin.
@@ -333,7 +337,8 @@ jobs:
       #
       # Kose yazisi haberden ayri modelle (23.10.2026): varsayilan Gemini
       # 3.8 Flash; GEMINI_KOSE_MODEL gizli degeriyle degistirilebilir.
-      # Haber toplama varsayilan olarak Gemini 3.1 Flash-Lite (GEMINI_MODEL).
+      # Haber toplama once GPT-6 Luna (OPENAI_API_KEY), yedek Gemini 3.8
+      # Flash (GEMINI_MODEL).
       - name: Kose yazilarini yaz
         if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'kose-yazisi' || inputs.mod == 'gunluk') }}
         working-directory: ajan
