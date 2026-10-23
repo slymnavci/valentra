@@ -4302,3 +4302,6 @@ a.rg-madde:hover { color: var(--vurgu); }
 .yazar-basligi { display: flex; gap: 20px; align-items: center; }
 .yazar-basligi h1 { margin-bottom: 2px; }
 .yazar-basligi .yazar-alan { margin: 0 0 6px; font-weight: 700; color: var(--altin); }
+
+.yazar-portre.foto { object-fit: cover; }
+.yazar-basligi .yazar-not { margin: 6px 0 0; font-size: .8rem; color: var(--metin-soluk); }

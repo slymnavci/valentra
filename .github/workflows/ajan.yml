@@ -50,6 +50,7 @@ on:
           - kanun-testi
           - ag-tanisi
           - canli
+          - yazar-portre
       kuru:
         description: 'Kuru calisma (siteye gonderme, sadece ciktiyi goster)'
         type: boolean
@@ -339,6 +340,19 @@ jobs:
       # 3.8 Flash; GEMINI_KOSE_MODEL gizli degeriyle degistirilebilir.
       # Haber toplama once GPT-6 Luna (OPENAI_API_KEY), yedek Gemini 3.8
       # Flash (GEMINI_MODEL).
+      # Kose yazarlarinin fotograflari (23.10.2026, site sahibinin karari):
+      # fotografi olmayan yazar icin bir kez uretilip siteye yukleniyor;
+      # hepsi varsa hemen biter (bkz. ajan/portre.php).
+      - name: Yazar fotograflari
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'yazar-portre' || inputs.mod == 'kose-yazisi') }}
+        working-directory: ajan
+        env:
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_GORSEL_MODEL: ${{ secrets.GEMINI_GORSEL_MODEL }}
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: php portre.php
+
       - name: Kose yazilarini yaz
         if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'kose-yazisi' || inputs.mod == 'gunluk') }}
         working-directory: ajan

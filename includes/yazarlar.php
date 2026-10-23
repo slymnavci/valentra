@@ -11,6 +11,12 @@ declare(strict_types=1);
  * yazarin alaninda ve uslubuyla yaziyor (ajan/kose.php). Portreler
  * fotograf degil, asagida koddan uretilen cizim (yazar_portre_svg).
  *
+ * Portre: yazarin FOTOGRAFI varsa o (gorseller/yazar/<anahtar>.jpg; ajan
+ * bir kez uretip yukluyor, bkz. ajan/portre.php ve api/yazar-portre.php,
+ * gorunum alani uretim tarifi), yoksa cizim. Site sahibinin karari
+ * (23.10.2026): fotograflar gercekci; yazar sayfasinda tek satir not
+ * (yazar.php).
+ *
  * Sira: site sahibinin saydigi sira; "Valentra Yorumu" en sonda.
  * kategoriler: yazarin konusunu sectigi haber basliklari (bos: hepsi).
  * uslup: ajanin yazi istemine eklenen kalem tarifi.
@@ -23,6 +29,7 @@ const KOSE_YAZARLARI = [
         'tanitim'     => 'Faiz, enflasyon, kur, borsa ve şirketler: ekonomideki gelişmelerin cebimize ve işimize etkisini yazıyor.',
         'uslup'       => 'Veriye dayalı, sade ve öğretici. Rakamları ve kavramları okurun gündelik hayatından örneklerle açıklar; '
                        . '"bu kararın market fiyatına, krediye, maaşa etkisi ne?" sorusunu hep sorar. Yatırım tavsiyesi vermez.',
+        'gorunum'     => 'a Turkish man in his early fifties, short neatly side-parted brown hair, rectangular glasses, clean-shaven, wearing a dark navy suit and light blue shirt',
         'portre'      => ['zemin' => '#1f4e79', 'ten' => '#e8b98e', 'sac' => '#4a3426', 'sac_bicim' => 'yan', 'giysi' => '#26303f', 'gomlek' => '#dfe7f1', 'gozluk' => true, 'sakal' => false],
     ],
     'tekin-alp-sagduyulu' => [
@@ -32,6 +39,7 @@ const KOSE_YAZARLARI = [
         'tanitim'     => 'Türkiye siyasetinde günün gelişmelerini ölçülü bir dille, kararların içeriği ve olası etkileri üzerinden değerlendiriyor.',
         'uslup'       => 'Ölçülü, dengeli ve sağduyulu. Tarafların açıklanmış tutumlarını eşit mesafeden aktarır, hiçbir partiyi ya da '
                        . 'kişiyi övmez, yermez; kararın içeriğini, sürecini ve vatandaşa etkisini tartışır. Uzlaşmayı ve sağduyuyu öne çıkarır.',
+        'gorunum'     => 'a Turkish man in his early sixties, short silver-grey hair, short neatly trimmed white beard, wearing a charcoal jacket and white shirt',
         'portre'      => ['zemin' => '#7a2e2e', 'ten' => '#d9a47c', 'sac' => '#b8b8b8', 'sac_bicim' => 'kisa', 'giysi' => '#2e3440', 'gomlek' => '#f2f2f2', 'gozluk' => false, 'sakal' => true],
     ],
     'sevket-gurkan-cokyazar' => [
@@ -41,6 +49,7 @@ const KOSE_YAZARLARI = [
         'tanitim'     => 'Uluslararası gelişmeleri tarihsel arka planı ve bölgesel dengeleriyle ele alıyor; Türkiye\'ye olası yansımalarını yazıyor.',
         'uslup'       => 'Geniş perspektifli ve tarihsel bağlam kuran. Gelişmeyi bölgesel ve küresel dengeler içinde okur, '
                        . 'Türkiye\'ye olası yansımalarını ayrıca tartışır; kesin hüküm yerine senaryolar sunar.',
+        'gorunum'     => 'a Turkish man in his mid forties, short black hair, thin metal-framed glasses, light stubble, wearing a dark grey blazer and beige shirt',
         'portre'      => ['zemin' => '#2f5d50', 'ten' => '#c98f68', 'sac' => '#1e1e1e', 'sac_bicim' => 'kisa', 'giysi' => '#3b3f4a', 'gomlek' => '#e9e4d8', 'gozluk' => true, 'sakal' => false],
     ],
     'gamze-ilkmen-korukoylu' => [
@@ -50,6 +59,7 @@ const KOSE_YAZARLARI = [
         'tanitim'     => 'Gündemin insana dokunan yüzünü yazıyor: sağlık, eğitim, aile, şehir hayatı ve vatandaşın günlük yaşamı.',
         'uslup'       => 'İnsan odaklı, sıcak ama ölçülü. Gelişmeyi vatandaşın, ailelerin, öğrencilerin, hastaların gözünden anlatır; '
                        . 'pratik sonuçlarını ve dikkat edilmesi gerekenleri açıkça söyler.',
+        'gorunum'     => 'a Turkish woman in her mid forties, shoulder-length chestnut brown hair, warm expression, wearing a navy blazer and cream blouse',
         'portre'      => ['zemin' => '#8a5a9e', 'ten' => '#efc39f', 'sac' => '#6b3e26', 'sac_bicim' => 'uzun', 'giysi' => '#3d5a80', 'gomlek' => '#f5efe6', 'gozluk' => false, 'sakal' => false],
     ],
     'sirin-ebru-berrakgol' => [
@@ -59,6 +69,7 @@ const KOSE_YAZARLARI = [
         'tanitim'     => 'Kültür, sanat, teknoloji ve yaşamdaki yenilikleri; kitapları, sergileri ve gündelik hayatı değiştiren gelişmeleri yazıyor.',
         'uslup'       => 'Akıcı, merak uyandıran ve zarif. Gelişmeyi kültürel bağlamı içinde anlatır, okuru düşünmeye davet eder; '
                        . 'eleştiride bile kırıcı değildir.',
+        'gorunum'     => 'a Turkish woman in her mid thirties, dark brown hair in a loose bun, round tortoiseshell glasses, wearing a burgundy blouse',
         'portre'      => ['zemin' => '#b5651d', 'ten' => '#f3cfae', 'sac' => '#2b1b14', 'sac_bicim' => 'topuz', 'giysi' => '#5b2a4a', 'gomlek' => '#f0d9c4', 'gozluk' => true, 'sakal' => false],
     ],
     'hasan-yavuz-osmanoglu' => [
@@ -68,6 +79,7 @@ const KOSE_YAZARLARI = [
         'tanitim'     => 'Maçları, ligi ve sporun gündemini taktik ve teknik yönleriyle, hiçbir kulübün tarafını tutmadan yazıyor.',
         'uslup'       => 'Tutkulu ama tarafsız. Maçı ve gelişmeyi taktik, kadro ve istatistik üzerinden çözümler; hiçbir kulübü, '
                        . 'oyuncuyu ya da hakemi hedef göstermez, taraftar diliyle değil yorumcu diliyle yazar.',
+        'gorunum'     => 'a Turkish man in his early forties, short black hair, neatly trimmed full black beard, wearing a dark green crew-neck sweater',
         'portre'      => ['zemin' => '#2d6a4f', 'ten' => '#b97a56', 'sac' => '#111111', 'sac_bicim' => 'kisa', 'giysi' => '#1b4332', 'gomlek' => '#e8f1ea', 'gozluk' => false, 'sakal' => true],
     ],
     'valentra' => [
@@ -79,6 +91,22 @@ const KOSE_YAZARLARI = [
         'portre'      => null,
     ],
 ];
+
+/** Yazar fotoğraflarının klasörü (site kökünden). */
+const YAZAR_FOTO_YOLU = '/gorseller/yazar';
+
+/** Yazarın yüklenmiş fotoğrafı (site içi yol); yoksa null. */
+function yazar_foto(string $anahtar): ?string
+{
+    if (!preg_match('/^[a-z0-9-]+$/', $anahtar)) {
+        return null;
+    }
+
+    $dosya = dirname(__DIR__) . YAZAR_FOTO_YOLU . '/' . $anahtar . '.jpg';
+
+    // Surum: dosya yenilenince tarayici eskisini gostermesin.
+    return is_file($dosya) ? YAZAR_FOTO_YOLU . '/' . $anahtar . '.jpg?s=' . filemtime($dosya) : null;
+}
 
 /** Varsayılan yazar (eski yazılar, bilinmeyen anahtar). */
 const KOSE_VARSAYILAN_YAZAR = 'valentra';
@@ -105,7 +133,7 @@ function yazar_yolu(string $anahtar, int $sayfa = 1): string
 }
 
 /**
- * Yazarın çizim portresi (SVG, satır içi).
+ * Yazarın portresi: fotoğrafı varsa o (<img>), yoksa çizim (SVG, satır içi).
  *
  * Fotograf degil, duz renkli stilize bir bust: zemin dairesi, giysi,
  * boyun, bas, sac, goz, kas, gulumseme; yazara gore gozluk ve sakal.
@@ -116,6 +144,12 @@ function yazar_portre_svg(string $anahtar, int $boy = 64): string
 {
     $yazar = yazar_bul($anahtar);
     $p     = $yazar['portre'] ?? null;
+    $foto  = $yazar !== null ? yazar_foto($anahtar) : null;
+
+    if ($foto !== null) {
+        return '<img class="yazar-portre foto" src="' . e($foto) . '" alt="' . e((string) $yazar['ad']) . '" width="'
+            . $boy . '" height="' . $boy . '" loading="lazy">';
+    }
 
     if (!is_array($p)) {
         return '<img class="yazar-portre logo" src="/assets/logo.svg" alt="" width="' . $boy . '" height="' . $boy . '">';
