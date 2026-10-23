@@ -19,7 +19,7 @@ final class GorselUretici
     /** Varsayılan görüntü modeli. */
     public const VARSAYILAN_MODEL = 'imagen-4.0-generate-001';
 
-    private readonly string $model;
+    private string $model;
 
     public function __construct(private readonly string $apiKey, string $model = '')
     {
@@ -30,6 +30,56 @@ final class GorselUretici
     public function model(): string
     {
         return $this->model;
+    }
+
+    /** Sonraki üretimler bu modelle (bkz. gorselModelleri). */
+    public function modelSec(string $model): void
+    {
+        $this->model = $model;
+    }
+
+    /**
+     * Bu anahtarla görsel üretebilen modeller (ListModels), en uygunu önce.
+     *
+     * Varsayilan model bir hesapta yoksa (23.10.2026: imagen-4.0 icin 404)
+     * kullanilabilir olanlar buradan bulunuyor: once Imagen (:predict),
+     * sonra goruntu ureten Gemini modelleri (adinda "image" gecen,
+     * :generateContent). Adlar "models/" oneksiz.
+     *
+     * @return list<string>
+     */
+    public function gorselModelleri(): array
+    {
+        $ch = curl_init(self::API . '?pageSize=500');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => ['x-goog-api-key: ' . $this->apiKey],
+            CURLOPT_TIMEOUT        => 30,
+        ]);
+        $yanit = curl_exec($ch);
+        curl_close($ch);
+
+        $veri = is_string($yanit) ? json_decode($yanit, true) : null;
+        $imagen = [];
+        $gemini = [];
+
+        foreach ((array) ($veri['models'] ?? []) as $m) {
+            $ad      = preg_replace('#^models/#', '', (string) ($m['name'] ?? '')) ?? '';
+            $yontem  = (array) ($m['supportedGenerationMethods'] ?? []);
+
+            if (str_starts_with($ad, 'imagen') && in_array('predict', $yontem, true)) {
+                $imagen[] = $ad;
+            } elseif (str_contains($ad, 'image') && !str_contains($ad, 'embedding')
+                && in_array('generateContent', $yontem, true)) {
+                $gemini[] = $ad;
+            }
+        }
+
+        // Yeni surum once (ad sirasi tersine: 4.0 > 3.0, 3-pro > 2.5).
+        rsort($imagen);
+        rsort($gemini);
+
+        return array_values(array_merge($imagen, $gemini));
     }
 
     /** İstemden kare bir görsel üretir; ikili veri (PNG/JPEG). */
