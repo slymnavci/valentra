@@ -42,6 +42,24 @@ function canli_onbellek(string $anahtar, int $sure, callable $uret): array
     $kayit = canli_onbellek_oku($anahtar);
     $simdi = time();
 
+    /*
+     * Zorla tazeleme (api/canli-tazele.php): sure ve butceye bakmadan
+     * hemen cek. Ziyaretci gelmeyen saatlerde veri eskimesin diye ajan
+     * duzenli olarak durtuyor. Cekim basarisizsa son iyi veri kalir.
+     */
+    if (canli_zorla()) {
+        static $tazelenen = [];
+
+        // Ayni istekte ikinci kez cekme (altin, ons ve doları yeniden istiyor).
+        if (isset($tazelenen[$anahtar])) {
+            return $kayit ?? ['veri' => null, 'zaman' => 0];
+        }
+
+        $tazelenen[$anahtar] = true;
+
+        return canli_onbellek_uret($anahtar, $uret) ?? $kayit ?? ['veri' => null, 'zaman' => 0];
+    }
+
     if ($kayit !== null && $simdi - $kayit['zaman'] < $sure) {
         return $kayit;
     }
@@ -57,6 +75,38 @@ function canli_onbellek(string $anahtar, int $sure, callable $uret): array
     canli_sonra_tazele($anahtar, $uret);
 
     return $kayit ?? ['veri' => null, 'zaman' => 0];
+}
+
+/**
+ * Zorla tazeleme kipi: argumanla acilir/kapanir, argumansiz okunur.
+ *
+ * Yalnizca api/canli-tazele.php aciyor; sayfa isteklerinde hep kapali.
+ */
+function canli_zorla(?bool $ac = null): bool
+{
+    static $acik = false;
+
+    if ($ac !== null) {
+        $acik = $ac;
+    }
+
+    return $acik;
+}
+
+/**
+ * Tazeleme sayaci: zorla kipte kac kayit alindi / alinamadi.
+ *
+ * @return array{tamam:int,hata:int}
+ */
+function canli_sayac(?string $sonuc = null): array
+{
+    static $sayac = ['tamam' => 0, 'hata' => 0];
+
+    if ($sonuc !== null) {
+        $sayac[$sonuc]++;
+    }
+
+    return $sayac;
 }
 
 /** @return array{veri:array,zaman:int}|null */
@@ -88,7 +138,15 @@ function canli_onbellek_uret(string $anahtar, callable $uret): ?array
     }
 
     if (!is_array($veri) || $veri === []) {
+        if (canli_zorla()) {
+            canli_sayac('hata');
+        }
+
         return null;
+    }
+
+    if (canli_zorla()) {
+        canli_sayac('tamam');
     }
 
     $kayit = ['veri' => $veri, 'zaman' => time()];

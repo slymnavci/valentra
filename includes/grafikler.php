@@ -10,7 +10,7 @@ declare(strict_types=1);
  *
  * Veriyi SITE cekiyor, ajan degil: EVDS anahtari sitede kayitli ve site
  * Turkiye'de barindigi icin TCMB'ye ulasiyor. Ajan yalnizca "tazele"
- * diye durtuyor (api/grafik-tazele.php).
+ * diye durtuyor (api/canli-tazele.php?bolum=gostergeler).
  */
 
 require_once __DIR__ . '/ekonomi.php';

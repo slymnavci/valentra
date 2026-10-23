@@ -42,6 +42,7 @@ on:
           - kaynak-testi
           - kanun-testi
           - ag-tanisi
+          - canli
       kuru:
         description: 'Kuru calisma (siteye gonderme, sadece ciktiyi goster)'
         type: boolean
@@ -145,7 +146,7 @@ jobs:
       # Kurulum basarisiz olursa is DURMUYOR: ajan araci bulamazsa o
       # adaylari eskisi gibi baslik ve ozetle degerlendiriyor.
       - name: PDF araci kur
-        if: inputs.mod != 'ag-tanisi' && inputs.mod != 'kanun-testi'
+        if: inputs.mod != 'ag-tanisi' && inputs.mod != 'kanun-testi' && inputs.mod != 'canli'
         run: |
           sudo apt-get install -y -q poppler-utils \
             || (sudo apt-get update -q && sudo apt-get install -y -q poppler-utils) \
@@ -343,9 +344,20 @@ jobs:
 
           php kose.php $BAYRAKLAR
 
-      # Grafik tazeleme ve Resmi Gazete fihristi adimlari kaldirildi
-      # (22.10.2026): ana sayfada grafik yok, ajan yalnizca haber ve kose
-      # yazisi uretiyor. Kurlar ve BIST serit verisini site kendisi cekiyor.
+      # Sayfalardaki canli veri (23.10.2026, site sahibi: "haberleri ceken
+      # robot borsa grafiklerini, mac sonuclarini da ceksin; eski bilgi
+      # kalmasin"): piyasa seridi ve Piyasalar sayfasi (gosterge
+      # grafikleri dahil), spor sayfalari (puan durumu, fikstur, sonuclar,
+      # gol kralligi), Resmi Gazete fihristi. Eski "Grafikleri tazele"
+      # adiminin yerini aliyor. Veriyi SITE cekiyor (api/canli-tazele.php); ajan her
+      # calismada durtuyor, ayrica "Canli veri" is akisi gun icinde iki
+      # saatte bir. Istek basarisizsa sitedeki son iyi veri kalir.
+      - name: Canli verileri tazele
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'topla' || inputs.mod == 'gunluk' || inputs.mod == 'canli') }}
+        env:
+          VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: bash ajan/canli_tazele.sh
 
       # Google Search Console verisi. Veriyi SITE cekiyor (servis hesabi
       # anahtari panelde kayitli); site 20 saatten yeniyse hicbir sey yapmiyor,
