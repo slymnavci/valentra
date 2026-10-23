@@ -418,6 +418,17 @@ final class Yazar implements SemaliIstemci
         return $ad;
     }
 
+    /**
+     * Son istegi cevaplayan model (ornegin "gpt-6-luna" ya da
+     * "gemini-3.8-flash"). Site guven esigini buna gore seciyor: Luna
+     * guveni Gemini'den temkinli puanliyor (bkz. includes/haberler.php,
+     * haber_guven_esigi).
+     */
+    public function sonYanitlayan(): string
+    {
+        return $this->sonYanitlayan;
+    }
+
     /** Kullanilan model adi (gunluge yazmak icin). */
     public function model(): string
     {
@@ -445,6 +456,9 @@ final class Yazar implements SemaliIstemci
 
     /** @var array{birincil:int,yedek:int} Hangi saglayicinin kac istegi cevapladigi */
     private array $saglayiciSayaci = ['birincil' => 0, 'yedek' => 0];
+
+    /** Son istegi cevaplayan model; haberle birlikte siteye gidiyor. */
+    private string $sonYanitlayan = '';
 
     public function __construct(private readonly string $apiKey, string $model = '', string $openAiAnahtari = '')
     {
@@ -483,6 +497,7 @@ final class Yazar implements SemaliIstemci
 
             $this->birincilArdisikHata = 0;
             $this->saglayiciSayaci['birincil']++;
+            $this->sonYanitlayan = $this->birincil->model();
 
             return $veri;
         } catch (OpenAiErisimYokException $e) {
@@ -555,6 +570,7 @@ final class Yazar implements SemaliIstemci
         ];
 
         $yanit = $this->geminiIstegi($govde);
+        $this->sonYanitlayan = $this->model;
 
         $adaylar = $yanit['candidates'] ?? [];
         if (!is_array($adaylar) || $adaylar === []) {
@@ -760,6 +776,7 @@ final class Yazar implements SemaliIstemci
         ];
 
         $yanit    = $this->geminiIstegi($govde);
+        $this->sonYanitlayan = $this->model;
         $parcalar = $yanit['candidates'][0]['content']['parts'] ?? [];
 
         if (!is_array($parcalar)) {

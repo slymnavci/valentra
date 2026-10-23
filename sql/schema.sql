@@ -110,6 +110,9 @@ CREATE TABLE IF NOT EXISTS haberler (
     -- haberleri bu puana gore siralaniyor. Ajan veriyor, panelden degisir.
     onem            TINYINT UNSIGNED NOT NULL DEFAULT 50,
     ajan_notu       VARCHAR(600)  NOT NULL DEFAULT '',
+    -- Haberi yazan model (23.10.2026; ornegin gpt-6-luna, gemini-3.8-flash).
+    -- Otomatik yayin esigi buna gore seciliyor (bkz. haber_guven_esigi_kosulu).
+    ajan_modeli     VARCHAR(80)   NOT NULL DEFAULT '',
 
     -- Valentra Analiz: haberin "bana ne" karsiligi. Bos olabilir ve
     -- bos olmasi normaldir; model bilgiyi kaynakta bulamazsa

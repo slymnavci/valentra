@@ -703,13 +703,13 @@ function haber_taslak_ekle(array $veri): array
         'INSERT INTO haberler
             (baslik, slug, ozet, icerik, gorsel_url, etiketler, durum, kategori_id,
              kaynak_id, kaynak_adi, kaynak_url, kaynak_parmak, url_parmak,
-             baslik_parmak, kaynak_baslik, kaynak_baslik_parmak, iframe_url, guven_skoru, onem, ajan_notu,
+             baslik_parmak, kaynak_baslik, kaynak_baslik_parmak, iframe_url, guven_skoru, onem, ajan_notu, ajan_modeli,
              analiz_degisen, analiz_etkilenen, analiz_zaman, analiz_islem,
              isletme_etkisi, uygulama_ornegi, resmi_dayanak, kaynak_tarihi)
          VALUES
             (:baslik, :slug, :ozet, :icerik, :gorsel_url, :etiketler, :durum, :kategori_id,
              :kaynak_id, :kaynak_adi, :kaynak_url, :kaynak_parmak, :url_parmak,
-             :baslik_parmak, :kaynak_baslik, :kaynak_baslik_parmak, :iframe_url, :guven_skoru, :onem, :ajan_notu,
+             :baslik_parmak, :kaynak_baslik, :kaynak_baslik_parmak, :iframe_url, :guven_skoru, :onem, :ajan_notu, :ajan_modeli,
              :analiz_degisen, :analiz_etkilenen, :analiz_zaman, :analiz_islem,
              :isletme_etkisi, :uygulama_ornegi, :resmi_dayanak,
              IF(:kaynak_var = 1, NOW() - INTERVAL :kaynak_gecikme MINUTE, NULL))'
@@ -749,6 +749,7 @@ function haber_taslak_ekle(array $veri): array
         // Eski ajan surumu puan gondermezse orta deger.
         'onem'          => max(0, min(100, (int) ($veri['onem'] ?? 50))),
         'ajan_notu'     => mb_substr(trim((string) ($veri['ajan_notu'] ?? '')), 0, 600, 'UTF-8'),
+        'ajan_modeli'   => mb_substr(trim((string) ($veri['model'] ?? '')), 0, 80, 'UTF-8'),
 
         /*
          * Valentra Analiz alanlari. Sutunlar 600 karakter; model kisa
@@ -1065,6 +1066,22 @@ const HABER_OTOMATIK_YAYIN_AYARI = 'haber_otomatik_yayin';
  */
 const HABER_OTOMATIK_GUVEN_ESIGI = 80;
 
+/*
+ * OpenAI (GPT-6 Luna) icin ayri esik (site sahibinin karari, 23.10.2026).
+ * Luna guveni Gemini'den temkinli puanliyor: ayni gunun benzer
+ * haberlerine Gemini %85-95, Luna %65-76 verdi; tek esikle Luna'nin
+ * yazdigi neredeyse her haber onaya dusuyordu. Hangi modelin yazdigi
+ * haberler.ajan_modeli sutununda; bos (eski kayit) Gemini sayiliyor.
+ */
+const HABER_OTOMATIK_GUVEN_ESIGI_OPENAI = 70;
+
+/** Otomatik yayin icin guven kosulu (SQL); haberler tablosu takma adsiz. */
+function haber_guven_esigi_kosulu(): string
+{
+    return "guven_skoru >= IF(ajan_modeli LIKE 'gpt-%', "
+        . HABER_OTOMATIK_GUVEN_ESIGI_OPENAI . ', ' . HABER_OTOMATIK_GUVEN_ESIGI . ')';
+}
+
 function haber_otomatik_yayin_acik(): bool
 {
     require_once __DIR__ . '/ayarlar.php';
@@ -1075,7 +1092,7 @@ function haber_otomatik_yayin_acik(): bool
 /**
  * Taslagi yonetici olmadan yayina alir (onaylayan bos kalir).
  *
- * Yalnizca guven puani HABER_OTOMATIK_GUVEN_ESIGI ve ustundeyse; degilse
+ * Yalnizca guven puani esikte ve ustundeyse (bkz. haber_guven_esigi_kosulu); degilse
  * taslakta kalir (false) ve onay bekler.
  */
 function haber_otomatik_yayinla(int $id): bool
@@ -1085,10 +1102,9 @@ function haber_otomatik_yayinla(int $id): bool
             SET durum = :yayinda,
                 onay_tarihi = NOW(),
                 yayin_tarihi = COALESCE(yayin_tarihi, NOW())
-          WHERE id = :id AND durum = :taslak AND guven_skoru >= :esik'
+          WHERE id = :id AND durum = :taslak AND ' . haber_guven_esigi_kosulu()
     );
-    $ifade->execute(['yayinda' => HABER_YAYINDA, 'taslak' => HABER_TASLAK, 'id' => $id,
-                     'esik' => HABER_OTOMATIK_GUVEN_ESIGI]);
+    $ifade->execute(['yayinda' => HABER_YAYINDA, 'taslak' => HABER_TASLAK, 'id' => $id]);
 
     if ($ifade->rowCount() === 0) {
         return false;
@@ -1114,11 +1130,11 @@ function haber_bugunku_taslaklari_yayinla(): int
     $ifade = db()->prepare(
         'SELECT id FROM haberler
           WHERE durum = :taslak
-            AND guven_skoru >= :esik
+            AND ' . haber_guven_esigi_kosulu() . '
             AND olusturuldu >= NOW() - INTERVAL ' . haber_bugun_dakika() . ' MINUTE
           ORDER BY id'
     );
-    $ifade->execute(['taslak' => HABER_TASLAK, 'esik' => HABER_OTOMATIK_GUVEN_ESIGI]);
+    $ifade->execute(['taslak' => HABER_TASLAK]);
 
     $adet = 0;
 
