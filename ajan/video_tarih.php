@@ -38,11 +38,24 @@ function gunluk(string $mesaj): void
 function video_yayin_zamani(string $html): ?int
 {
     foreach ([
-        '#<meta[^>]+itemprop=["\'](?:datePublished|uploadDate)["\'][^>]+content=["\']([^"\']+)["\']#i',
-        '#"(?:publishDate|uploadDate)"\s*:\s*"([^"]+)"#',
+        '#<meta[^>]+itemprop=["\'](?:datePublished|uploadDate|startDate)["\'][^>]+content=["\']([^"\']+)["\']#i',
+        '#"(?:publishDate|uploadDate|startTimestamp)"\s*:\s*"([^"]+)"#',
     ] as $kalip) {
         if (preg_match($kalip, $html, $e) && ($z = strtotime($e[1])) !== false && $z > 0) {
             return $z;
+        }
+    }
+
+    // Yeni sayfa bicimi: yalnizca gorunen metin ("20 Eki 2026", "Canlı
+    // yayın tarihi: 20 Eki 2026"). Saat yok; gunun ogleni sayiliyor.
+    $aylar = ['oca' => 1, 'şub' => 2, 'mar' => 3, 'nis' => 4, 'may' => 5, 'haz' => 6,
+              'tem' => 7, 'ağu' => 8, 'eyl' => 9, 'eki' => 10, 'kas' => 11, 'ara' => 12];
+
+    if (preg_match('#"dateText"\s*:\s*\{\s*"simpleText"\s*:\s*"[^"]*?(\d{1,2})\s+(\p{L}{3})\p{L}*\.?\s+(\d{4})#u', $html, $e)) {
+        $ay = $aylar[mb_strtolower($e[2], 'UTF-8')] ?? 0;
+
+        if ($ay > 0) {
+            return mktime(12, 0, 0, $ay, (int) $e[1], (int) $e[3]) ?: null;
         }
     }
 
@@ -104,6 +117,28 @@ function video_sayfasi(string $url, ?string &$sebep): string
     return $html;
 }
 
+/** Sayfa indi ama tarih yok: video neden tarihsiz (canli, kaldirilmis...). */
+function video_tarihsiz_sebebi(string $html): string
+{
+    if (preg_match('#"playabilityStatus"\s*:\s*\{\s*"status"\s*:\s*"([A-Z_]+)"#', $html, $e) && $e[1] !== 'OK') {
+        return 'video oynatılamıyor: ' . $e[1];
+    }
+
+    if (str_contains($html, '"isLiveNow":true') || str_contains($html, '"isLive":true')) {
+        return 'sürekli canlı yayın';
+    }
+
+    $ipucu = [];
+
+    foreach (['publishDate', 'uploadDate', 'dateText', 'datePublished', 'liveBroadcastDetails', 'isLiveContent'] as $alan) {
+        if (str_contains($html, '"' . $alan . '"') || str_contains($html, $alan . '"')) {
+            $ipucu[] = $alan;
+        }
+    }
+
+    return 'sayfada tarih yok' . ($ipucu !== [] ? ' (alanlar: ' . implode(',', $ipucu) . ')' : '');
+}
+
 $site = new Site($siteUrl, $anahtar);
 
 try {
@@ -128,7 +163,7 @@ foreach ($eksikler as $v) {
 
     if ($zaman === null) {
         $okunamayan++;
-        $sebep = $sebep !== '' ? $sebep : 'sayfada yayın tarihi yok (' . strlen($html) . ' bayt)';
+        $sebep = $sebep !== '' ? $sebep : video_tarihsiz_sebebi($html);
         $sebepler[$sebep] = ($sebepler[$sebep] ?? 0) + 1;
         gunluk('  okunamadı — ' . $v['url'] . ' (' . $sebep . ')');
         continue;
