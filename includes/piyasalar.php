@@ -59,7 +59,8 @@ function piyasa_donemleri(): array
  * Şirket tablosu: Borsa İstanbul'un en büyük şirketlerinden bir seçki.
  *
  * BIST 30 bileseni donem donem degisiyor; liste "BIST 30" diye
- * sunulmuyor, "buyuk sirketler" diye sunuluyor.
+ * sunulmuyor, "buyuk sirketler" diye sunuluyor. 60 sirket: genis
+ * ekranda 10 sutunda 6 satir.
  *
  * @return array<string,string> kod => ad
  */
@@ -81,6 +82,25 @@ function piyasa_sirketleri(): array
         'TTKOM' => 'Türk Telekom',        'TUPRS' => 'Tüpraş',
         'ULKER' => 'Ülker',               'VAKBN' => 'Vakıfbank',
         'YKBNK' => 'Yapı Kredi',          'HALKB' => 'Halkbank',
+        // 23.10.2026 (site sahibinin istegi: "sayfanin alti bos kalmasin,
+        // sirket sayisini artiralim"): BIST 100'un buyuk ve sik islem
+        // goren diger sirketleri. Kaynakta verisi olmayan kod tabloda
+        // gorunmuyor (yahoo_spark_coz atliyor).
+        'AEFES' => 'Anadolu Efes',        'AGHOL' => 'Anadolu Grubu Holding',
+        'AKSA'  => 'Aksa Akrilik',        'AKSEN' => 'Aksa Enerji',
+        'ALBRK' => 'Albaraka Türk',       'ARCLK' => 'Arçelik',
+        'BRSAN' => 'Borusan Boru',        'BRYAT' => 'Borusan Yatırım',
+        'CCOLA' => 'Coca-Cola İçecek',    'CIMSA' => 'Çimsa',
+        'DOAS'  => 'Doğuş Otomotiv',      'DOHOL' => 'Doğan Holding',
+        'ECILC' => 'Eczacıbaşı İlaç',     'EGEEN' => 'Ege Endüstri',
+        'ENJSA' => 'Enerjisa Enerji',     'GESAN' => 'Girişim Elektrik',
+        'HEKTS' => 'Hektaş',              'ISMEN' => 'İş Yatırım',
+        'KONTR' => 'Kontrolmatik',        'MAVI'  => 'Mavi Giyim',
+        'MPARK' => 'MLP Sağlık',          'OTKAR' => 'Otokar',
+        'OYAKC' => 'Oyak Çimento',        'SKBNK' => 'Şekerbank',
+        'SOKM'  => 'Şok Marketler',       'TKFEN' => 'Tekfen Holding',
+        'TSKB'  => 'TSKB',                'TTRAK' => 'Türk Traktör',
+        'TURSG' => 'Türkiye Sigorta',     'VESTL' => 'Vestel',
     ];
 }
 

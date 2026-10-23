@@ -25,6 +25,10 @@ if (($mansetler ?? []) === []) {
                      aria-label="<?= (int) $sira + 1 ?> / <?= count($mansetler) ?>">
                 <a href="<?= e(haber_yolu((string) $haber['slug'])) ?>">
                     <?php if ($gorsel !== ''): ?>
+                        <?php // Ayni gorselin bulanik kopyasi: tam gorunen gorselin arkasini doldurur. ?>
+                        <img class="arka-gorsel" src="<?= e($gorsel) ?>" alt="" aria-hidden="true"
+                             referrerpolicy="no-referrer" onerror="this.remove()"
+                             loading="<?= $sira === 0 ? 'eager' : 'lazy' ?>">
                         <img class="ust-gorsel" src="<?= e($gorsel) ?>" alt="" referrerpolicy="no-referrer"
                              onerror="this.closest('.kaydirak-slayt').classList.remove('gorselli');this.remove()"
                              loading="<?= $sira === 0 ? 'eager' : 'lazy' ?>">
