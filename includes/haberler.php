@@ -316,7 +316,8 @@ function haber_sirasi_temel(bool $anaSayfa): string
      */
     return '(h.one_cikan = 1 AND ' . $gun . ' = 0) DESC,
         ' . $gun . ' ASC,
-        ' . ($anaSayfa ? haber_dalga_ifadesi() . ' ASC,
+        ' . ($anaSayfa ? '(h.onem >= ' . ANA_SAYFA_ONEM_ESIGI . ') DESC,
+        ' . haber_dalga_ifadesi() . ' ASC,
         ' : '') . $puan . ',
         h.olusturuldu DESC,
         h.id DESC';
@@ -338,6 +339,17 @@ function haber_sirasi_temel(bool $anaSayfa): string
  * sayfada yok (haber_ana_akis_kosulu).
  */
 const ANA_SAYFA_DALGA_DAKIKA = 120;
+
+/*
+ * ONEM ESIGI (site sahibinin karari, 23.10.2026: "onem %60 ve uzerinde
+ * olanlari ana sayfada basa al, digerlerini geriye atalim; yeni haber
+ * geldikce eskiler slayttan ciksin"). Ana sayfa once onemi 60 ve ustu
+ * haberleri diziyor (en yeni toplama once, her toplamanin icinde onem
+ * sirasi), onemi 60'in altindakiler hepsinin arkasinda ayni duzenle.
+ * Kaydirak ilk 20: yeni toplamanin onemli haberleri geldikce eski
+ * toplamalarinkiler 20'nin disina, izgaraya kayiyor.
+ */
+const ANA_SAYFA_ONEM_ESIGI = 60;
 
 function haber_dalga_ifadesi(): string
 {
