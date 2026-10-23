@@ -1,0 +1,120 @@
+name: Video haber ajani
+
+# Videolu haberler icin ayri ajan (23.10.2026, site sahibi: "videolu hic
+# haber gelmedi; videolu haberler icin ayri bir ajan kuralim, takip
+# edebileyim"). Yalnizca YouTube kanal kaynaklarini tarar (topla.php
+# --video). Her calismanin ozetinde kanal kanal kac video goruldugu ve
+# her videonun akibeti (sitede var, model eledi, yazildi...) tablo
+# olarak duruyor: Actions -> Video haber ajani -> calisma -> Summary.
+
+on:
+  schedule:
+    # Iki saatte bir, haber ajanindan (dakika 20) yarim saat sonra.
+    - cron: '50 */2 * * *'
+  workflow_dispatch:
+    inputs:
+      kuru:
+        description: 'Kuru calisma (siteye gonderme, sadece raporu goster)'
+        type: boolean
+        default: false
+      saat:
+        description: 'Kac saat geriye bakilsin'
+        default: '12'
+      enfazla:
+        description: 'En fazla kac video islensin'
+        default: '24'
+
+# Haber ajanindan AYRI grup: ayni grupta GitHub bekleyen tek isi tutuyor
+# ve video calismasi bekleyen haber calismasinin yerini alabilirdi.
+concurrency:
+  group: valentra-video
+  cancel-in-progress: false
+
+env:
+  AJAN_SORUN_DOSYASI: /tmp/valentra-video-sorunlar.txt
+
+jobs:
+  video:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Repository kodlarini al
+        uses: actions/checkout@v5
+
+      - name: PHP kur
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: curl, mbstring, simplexml, json
+          coverage: none
+
+      - name: Composer onbellegi
+        uses: actions/cache@v4
+        with:
+          path: ajan/vendor
+          key: ajan-vendor-${{ hashFiles('ajan/composer.json') }}
+          restore-keys: ajan-vendor-
+
+      # Haber ajaninin deposundan ayri: eleme hafizasi ve bekleyen
+      # gonderimler birbirine karismasin.
+      - name: Video ajani deposu
+        uses: actions/cache/restore@v4
+        with:
+          path: ajan/onbellek
+          key: video-depo-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: video-depo-
+
+      - name: Bagimliliklari kur
+        working-directory: ajan
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Videolu haberleri topla
+        working-directory: ajan
+        env:
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+          SAAT:                ${{ inputs.saat || '12' }}
+          ENFAZLA:             ${{ inputs.enfazla || '24' }}
+          KURU:                ${{ inputs.kuru }}
+        run: |
+          BAYRAKLAR="--video"
+
+          # Yalnizca rakam; kabuga baska bir sey gecmesin.
+          [[ "$SAAT" =~ ^[0-9]+$ ]] && BAYRAKLAR="$BAYRAKLAR --saat=$SAAT"
+          [[ "$ENFAZLA" =~ ^[0-9]+$ ]] && BAYRAKLAR="$BAYRAKLAR --enfazla=$ENFAZLA"
+          [ "$KURU" = "true" ] && BAYRAKLAR="$BAYRAKLAR --kuru"
+
+          php topla.php $BAYRAKLAR
+
+      - name: Video ajani deposunu kaydet
+        if: ${{ always() && hashFiles('ajan/onbellek/**') != '' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ajan/onbellek
+          key: video-depo-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Sorunlari bildir
+        if: always()
+        run: |
+          if [ ! -s "$AJAN_SORUN_DOSYASI" ]; then
+            echo "Sorun yok."
+            exit 0
+          fi
+
+          {
+            echo "## Dikkat: yapılması gereken bir şey var"
+            echo
+            awk '!gorulen[$0]++' "$AJAN_SORUN_DOSYASI" | sed 's/^/- /'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          awk '!gorulen[$0]++' "$AJAN_SORUN_DOSYASI" | while IFS= read -r satir; do
+            satir="${satir//'%'/'%25'}"
+            echo "::error title=Video haber ajanı::$satir"
+          done
+
+          exit 1
