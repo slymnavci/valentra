@@ -37,11 +37,23 @@ if (!in_array((string) $kategori['slug'], HABER_AKIS_KATEGORILERI, true)
     exit;
 }
 
-$sayfa    = max(1, (int) ($_GET['sayfa'] ?? 1));
-$adet     = 12;
-$toplam   = haber_kategoride_sayi((int) $kategori['id']);
-$sonSayfa = max(1, (int) ceil($toplam / $adet));
-$haberler = haber_kategoride((int) $kategori['id'], $adet, ($sayfa - 1) * $adet);
+/*
+ * Konu sayfasinin basinda ana sayfadaki gibi kayan manset (site
+ * sahibinin istegi, 23.10.2026: "spor haberlerine tikladim; ana sayfadaki
+ * gibi 10 haberlik bir slayt kaydirici gelsin, yalnizca spor haberlerini
+ * gostersin; ekonomide de yalnizca ekonomi haberleri"). Yalnizca ilk
+ * sayfada. Ana sayfadaki gibi kaydirak tukettigi haberleri izgaradan
+ * dusuyor: izgara 11. haberden basliyor, sonraki sayfalar da bu 10'u
+ * atliyor. Ikisi ayni sirayi kullaniyor (haber_kategoride).
+ */
+$mansetAdet = 10;
+$sayfa      = max(1, (int) ($_GET['sayfa'] ?? 1));
+$adet       = 12;
+$toplam     = haber_kategoride_sayi((int) $kategori['id']);
+$tuketilen  = min($mansetAdet, $toplam);
+$sonSayfa   = max(1, (int) ceil(max(0, $toplam - $tuketilen) / $adet));
+$mansetler  = $sayfa === 1 ? haber_kategoride((int) $kategori['id'], $mansetAdet, 0) : [];
+$haberler   = haber_kategoride((int) $kategori['id'], $adet, $tuketilen + ($sayfa - 1) * $adet);
 
 $aktifKategori = $kategori['slug'];
 $sayfaBasligi  = $kategori['ad'] . ' — Valentra';
@@ -110,6 +122,10 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
 <div class="ana-duzen">
     <div class="ana-kolon">
+        <?php if ($sporBolum === '' && $mansetler !== []): ?>
+            <?php require __DIR__ . '/includes/kaydirak.php'; ?>
+        <?php endif; ?>
+
         <?php
         /*
          * Canli bolumler (22.10.2026, site sahibinin istegi): Spor'un
@@ -166,7 +182,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <span class="cizgi"></span>
         </div>
 
-        <?php if ($haberler === []): ?>
+        <?php if ($haberler === [] && $mansetler === []): ?>
             <div class="bos-durum">
                 <strong>Bu grupta henüz haber yok.</strong>
                 Bu konuda gelişme olduğunda haberler burada listelenecek.

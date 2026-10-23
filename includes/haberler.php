@@ -82,14 +82,30 @@ function haber_bugun_dakika(): int
     return (int) $simdi->format('G') * 60 + (int) $simdi->format('i');
 }
 
-/** Haberin gunu: 0 bugun, 1 dun, 2 evvelki gun... (Istanbul gece yarisindan). */
-function haber_gun_ifadesi(): string
+/**
+ * Haberin gunu: 0 bugun, 1 dun, 2 evvelki gun... (Istanbul gece yarisindan).
+ *
+ * Zaman, kaynagin yayin zamani ile toplanma aninin ERKEN olani: ajan son
+ * 36 saati tariyor, carsamba yayimlanmis haber cuma sabahi toplanabiliyor.
+ * Eski kayitlarda (ve tarihsiz kaynaklarda) kaynak_tarihi yok; toplanma
+ * ani kullaniliyor.
+ *
+ * SPOR icin "bugun" en az son 12 saat (site sahibinin istegi, 23.10.2026:
+ * "onemli olan dunku maclar"). Maclar aksam oynaniyor; sabah okuyucusu
+ * icin dun aksamki mac bugunun haberi. Diger basliklarda gece yarisi.
+ * $kategoriBilinir: sorguda "k" (kategoriler) birlesimi var mi.
+ */
+function haber_gun_ifadesi(bool $kategoriBilinir = true): string
 {
-    /*
-     * Gece yarisindan beri gecen dakika PHP'den: veritabaninin saat dilimi
-     * bilinmiyor (paylasimli sunucu), NOW() ile farki ise dilimden bagimsiz.
-     */
-    return 'GREATEST(0, CEIL((TIMESTAMPDIFF(MINUTE, h.olusturuldu, NOW()) - ' . haber_bugun_dakika() . ') / 1440))';
+    // Gece yarisindan beri gecen dakika PHP'den: veritabaninin saat dilimi
+    // bilinmiyor (paylasimli sunucu), NOW() ile farki ise dilimden bagimsiz.
+    $gunDakika = haber_bugun_dakika();
+    $pencere   = $kategoriBilinir
+        ? "CASE WHEN k.slug = 'spor' THEN " . max($gunDakika, 720) . ' ELSE ' . $gunDakika . ' END'
+        : (string) $gunDakika;
+    $yas = 'TIMESTAMPDIFF(MINUTE, LEAST(h.olusturuldu, COALESCE(h.kaynak_tarihi, h.olusturuldu)), NOW())';
+
+    return 'GREATEST(0, CEIL((' . $yas . ' - ' . $pencere . ') / 1440))';
 }
 
 function haber_sirasi(bool $anaSayfa = false): string
@@ -565,14 +581,25 @@ function haber_taslak_ekle(array $veri): array
              kaynak_id, kaynak_adi, kaynak_url, kaynak_parmak, url_parmak,
              baslik_parmak, kaynak_baslik, kaynak_baslik_parmak, iframe_url, guven_skoru, onem, ajan_notu,
              analiz_degisen, analiz_etkilenen, analiz_zaman, analiz_islem,
-             isletme_etkisi, uygulama_ornegi, resmi_dayanak)
+             isletme_etkisi, uygulama_ornegi, resmi_dayanak, kaynak_tarihi)
          VALUES
             (:baslik, :slug, :ozet, :icerik, :gorsel_url, :etiketler, :durum, :kategori_id,
              :kaynak_id, :kaynak_adi, :kaynak_url, :kaynak_parmak, :url_parmak,
              :baslik_parmak, :kaynak_baslik, :kaynak_baslik_parmak, :iframe_url, :guven_skoru, :onem, :ajan_notu,
              :analiz_degisen, :analiz_etkilenen, :analiz_zaman, :analiz_islem,
-             :isletme_etkisi, :uygulama_ornegi, :resmi_dayanak)'
+             :isletme_etkisi, :uygulama_ornegi, :resmi_dayanak,
+             IF(:kaynak_var = 1, NOW() - INTERVAL :kaynak_gecikme MINUTE, NULL))'
     );
+
+    /*
+     * Kaynagin yayin zamani gecikme olarak yaziliyor (NOW() - N dakika):
+     * ajan Unix zamani gonderiyor, veritabaninin saat dilimi ise bilinmiyor
+     * (paylasimli sunucu). Gelecekteki ya da 30 gunden eski zaman yok
+     * sayiliyor: bozuk besleme tarihi haberi gomup ya da one cikarmasin.
+     */
+    $kaynakZamani  = (int) ($veri['kaynak_zamani'] ?? 0);
+    $kaynakGecikme = $kaynakZamani > 0 ? intdiv(time() - $kaynakZamani, 60) : -1;
+    $kaynakVar     = $kaynakGecikme >= 0 && $kaynakGecikme <= 30 * 1440;
 
     $ifade->execute([
         'baslik'        => mb_substr($baslik, 0, 300, 'UTF-8'),
@@ -608,6 +635,8 @@ function haber_taslak_ekle(array $veri): array
         'analiz_etkilenen' => mb_substr(trim((string) ($veri['analiz_etkilenen'] ?? '')), 0, 600, 'UTF-8'),
         'analiz_zaman'     => mb_substr(trim((string) ($veri['analiz_zaman'] ?? '')), 0, 600, 'UTF-8'),
         'analiz_islem'     => mb_substr(trim((string) ($veri['analiz_islem'] ?? '')), 0, 600, 'UTF-8'),
+        'kaynak_var'       => $kaynakVar ? 1 : 0,
+        'kaynak_gecikme'   => $kaynakVar ? $kaynakGecikme : 0,
     ] + haber_format_alanlari($veri));
 
     return ['durum' => 'eklendi', 'id' => (int) db()->lastInsertId()];
