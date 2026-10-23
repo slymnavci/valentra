@@ -73,6 +73,25 @@ $saat        = max(1, (int) ($secenekler['saat'] ?? 2));
 
 /** Tarif beslemelerinin geriye bakisi: tarifin yeni olmasi gerekmiyor. */
 const TARIF_SAATI = 36;
+
+/*
+ * Saglik ve kultur-sanat her toplamada alinsin (site sahibi, 23.10.2026:
+ * "saglik, kultur, yemek tarifi de her seferinde toplansin"). Bu
+ * basliklarin kaynaklari seyrek yayin yapiyor; 2 saatlik pencerede cogu
+ * zaman hic haber cikmiyordu. Geriye bakis bu basliklarda 8 saat; kopya
+ * engeli ayni haberi ikinci kez almiyor.
+ */
+const SEYREK_BASLIK_SAATI = 8;
+
+/** Kaynagin basligina gore geriye bakis (saat). */
+function kaynak_saati(array $kaynak, int $saat): int
+{
+    return match (HaberAkisi::kova($kaynak)) {
+        'yemek-tarifleri'         => max($saat, TARIF_SAATI),
+        'saglik', 'kultur-sanat'  => max($saat, SEYREK_BASLIK_SAATI),
+        default                   => $saat,
+    };
+}
 /*
  * --konu=spor[,politika]: yalnizca bu basliklarin kaynaklari taranir ve
  * kontenjanin tamami onlara gider (site sahibinin istegi, 22.10.2026:
@@ -1119,7 +1138,7 @@ foreach ($kaynaklar as $kaynak) {
         if ($girdiler === [] && $beslemeUrl !== '') {
             $girdiler = $besleme->oku(
                 $beslemeUrl,
-                HaberAkisi::kova($kaynak) === 'yemek-tarifleri' ? max($saat, TARIF_SAATI) : $saat
+                kaynak_saati($kaynak, $saat)
             );
             $yontem   = 'besleme';
         }
@@ -1680,7 +1699,7 @@ foreach ($gruplar as $grupNo => $grup) {
             continue;
         }
 
-        if ($adayZamani > 0 && $adayZamani < time() - $saat * 3600 && !$tarif) {
+        if ($adayZamani > 0 && $adayZamani < time() - kaynak_saati($aday['kaynak'], $saat) * 3600 && !$tarif) {
             $eskiElenen++;
             $elenenler[url_parmak($aday['girdi']['baglanti'])] = time();
             video_kaydet($aday['girdi'], $aday['kaynak'], 'eski — yayın ' . date('d.m H:i', $adayZamani));
