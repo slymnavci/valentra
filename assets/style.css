@@ -688,29 +688,41 @@ a.menu-oge.aktif::after,
 
 /* Dar ekranda acilir liste yatay kaydirmayi bozmasin: akisa gecer. */
 @media (max-width: 720px) {
-    /* Dar ekranda yatay kaydirma; acilir liste position:fixed oldugu icin
-       kirpilmadan gorunur. */
+    /* Dar ekranda menu yatay kayiyor. */
     .menu-satir {
         flex-wrap: nowrap;
         overflow-x: auto;
         scrollbar-width: none;
-        -webkit-overflow-scrolling: touch;
     }
 
     .menu-satir::-webkit-scrollbar { display: none; }
     .menu-oge { padding: 0 14px; min-height: 44px; font-size: .94rem; }
-    /* top: masaustundeki 100% burada ekran yuksekligi olur ve liste
-       ekranin altina, gorunmeyen yere acilir. Gercek deger menudeki
-       betikle dugmenin alt kenarindan veriliyor (--menu-alt). */
+
+    /*
+     * Acilir liste MENU BANDINA gore konumlaniyor, kayan seride gore
+     * degil: .menu-grup ve .menu-satir konumsuz (static), en yakin
+     * konumlu ata yapiskan .menu-bant. Kapsayici blogu kayan seridin
+     * DISINDA kalan oge o seridin overflow'u ile kirpilmaz; liste bandin
+     * hemen altinda, tam genislikte acilir ve serit kaysa da yerinde
+     * durur.
+     *
+     * Onceden position:fixed + betikle hesaplanan top vardi (#62).
+     * Chromium'da calisiyordu ama telefonda (iPhone/Safari) liste yine
+     * gorunmuyordu: WebKit kayan seridin icindeki sabit konumlu ogeyi
+     * kirpabiliyor (ozellikle -webkit-overflow-scrolling ile). Bu
+     * yontem hesap da betik de gerektirmiyor.
+     */
+    .menu-grup { position: static; }
+
     .menu-acilir {
-        position: fixed;
-        top: var(--menu-alt, 96px);
+        top: 100%;
         left: 8px;
         right: 8px;
         min-width: 0;
-        max-height: calc(100vh - var(--menu-alt, 96px) - 8px);
+        max-height: 70vh;
         overflow-y: auto;
     }
+
     .menu-grup:hover .menu-acilir { opacity: 0; visibility: hidden; }
     .menu-grup.acik .menu-acilir { opacity: 1; visibility: visible; }
 }
