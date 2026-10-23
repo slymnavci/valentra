@@ -50,51 +50,69 @@ const HABER_AKIS_KATEGORILERI = [
 const HABER_AKIS_DISI = ['yemek-tarifleri'];
 
 /*
- * Haber sirasi: onemden onemsize (site sahibinin karari, 22.10.2026).
+ * Haber sirasi: GUNDEM PUANI, zamanla azalarak (site sahibinin istegi,
+ * 23.10.2026: "haberlerde halen dunku haberler on planda; her gun
+ * reytingi yuksek haberlere bakip onlari onceliklendir").
  *
- *   1. Panelden "one cikarilan" haberler.
- *   2. Son 24 saatin haberleri, onem puanina gore (ajan veriyor,
- *      panelden degistirilebilir); esitlerde yeni olan once.
+ * Onceki sira "son 24 saat, kendi icinde onem/okunma" idi. Sabah 08'de
+ * dun 08'den sonraki her haber hala "yeni" sayiliyordu; dunku haberler
+ * gun boyu okunma topladigi icin bu sabahin henuz okunmamis haberlerinin
+ * USTUNDE kaliyordu.
+ *
+ * Simdi haber sitelerinin "gundemdekiler" siralamasi:
+ *
+ *   puan / (yas_saat + 3) ^ 1.2
+ *
+ *   puan     onem (ajan veriyor, panelden degisir; ayni olayi veren
+ *            kaynak sayisi icinde) + 10. Ana sayfada okunma da ekleniyor.
+ *   yas_saat haberin TOPLANDIGI andan beri (olusturuldu). Yayin tarihi
+ *            onay ani: dun toplanip bu sabah onaylanan haber "bugunku"
+ *            sayilmamali.
+ *
+ * Ayni gun icinde puani yuksek haber one cikiyor; dunun en cok okunan
+ * haberi bile bu sabahin haberlerinin altina iniyor. Ornek (08.00):
+ * bu sabahki onem 60, 2 saatlik -> 70/6.9 = 10.1; dunku onem 90 + 30
+ * okunma, 20 saatlik -> 130/43 = 3.0.
+ *
+ *   1. Panelden "one cikarilan" haberler — yalnizca ilk 24 saat. Onceden
+ *      suresizdi; bir kez one cikarilan haber gunlerce en ustte kaliyordu.
+ *   2. Son 48 saat gundem puanina gore.
  *   3. Daha eski haberler tarih sirasiyla.
  *
- * Onem puani tek basina siralama olsaydi dunun onemli haberi bugunun
- * haberlerinin ustunde kalirdi; 24 saatlik pencere guncelligi koruyor.
  * Manset ve izgara AYNI sirayi kullanmali: izgara mansetin tukettigi
  * kadar haberi atliyor.
  */
-const HABER_SIRASI = 'h.one_cikan DESC,
-    (h.yayin_tarihi >= NOW() - INTERVAL 1 DAY) DESC,
-    CASE WHEN h.yayin_tarihi >= NOW() - INTERVAL 1 DAY THEN h.onem ELSE 0 END DESC,
+const HABER_YAS_SAAT = '(GREATEST(0, TIMESTAMPDIFF(MINUTE, h.olusturuldu, NOW())) / 60)';
+
+const HABER_SIRASI = '(h.one_cikan = 1 AND h.olusturuldu >= NOW() - INTERVAL 1 DAY) DESC,
+    (h.olusturuldu >= NOW() - INTERVAL 2 DAY) DESC,
+    CASE WHEN h.olusturuldu >= NOW() - INTERVAL 2 DAY
+         THEN (h.onem + 10) / POW(' . HABER_YAS_SAAT . ' + 3, 1.2) ELSE 0 END DESC,
     h.yayin_tarihi DESC,
     h.id DESC';
 
 /*
- * ANA SAYFA sirasi (site sahibinin karari, 22.10.2026): "en cok okunan
- * haberleri ve gundemi en cok mesgul eden, gundemde kalma olasiligi
- * yuksek haberleri one koyalim; teknoloji, sanat ve kultur en sonda".
+ * ANA SAYFA sirasi: HABER_SIRASI'nin aynisi, puana iki ek.
  *
- *   1. Panelden "one cikarilan" haberler.
- *   2. Son 24 saatin haberleri; bunlarin icinde:
- *      a. teknoloji ve kultur-sanat EN SONA,
- *      b. gundem puanina gore: onem (ajan veriyor; ayni olayi veren
- *         kaynak sayisi bunun icinde) + okunma (son 24 saatte haberi
- *         acan farkli okuyucu: 1 okuyucu +10, 3 okuyucu +20, 7 ve
- *         uzeri +30 puan).
- *   3. Daha eski haberler tarih sirasiyla.
+ *   - Okunma (son 24 saatte haberi acan farkli okuyucu): 1 okuyucu +10,
+ *     3 okuyucu +20, 7 ve uzeri +30 puan. Sitenin kendi sayacindan
+ *     (ziyaretler tablosu; bkz. includes/ziyaret.php).
+ *   - Teknoloji ve kultur-sanat puanin %35'i (site sahibinin karari,
+ *     22.10.2026: "teknoloji, sanat ve kultur en sonda"). Onceden kesin
+ *     olarak sondaydi; bu dunun gundem haberini bugunun teknoloji
+ *     haberinin ustunde tutuyordu.
  *
- * Okunma sayisi sitenin kendi sayacindan (ziyaretler tablosu; bkz.
- * includes/ziyaret.php). Yeni haberin okuyucusu yok; onem puani onu
- * yine de one tasiyor, okundukca yukseliyor. Konu sayfalari eski
- * HABER_SIRASI'ni kullaniyor: orada hepsi ayni baslikta.
+ * Konu sayfalari HABER_SIRASI'ni kullaniyor: orada hepsi ayni baslikta.
  *
  * $okunma: haber_okunma_birlesimi()'nin "zo" takma adi.
  */
-const HABER_ANA_SAYFA_SIRASI = 'h.one_cikan DESC,
-    (h.yayin_tarihi >= NOW() - INTERVAL 1 DAY) DESC,
-    CASE WHEN h.yayin_tarihi >= NOW() - INTERVAL 1 DAY
-         THEN (k.slug IN (\'teknoloji\', \'kultur-sanat\')) ELSE 0 END ASC,
-    CASE WHEN h.yayin_tarihi >= NOW() - INTERVAL 1 DAY
-         THEN h.onem + LEAST(30, 10 * LOG2(1 + COALESCE(zo.okuyucu, 0))) ELSE 0 END DESC,
+const HABER_ANA_SAYFA_SIRASI = '(h.one_cikan = 1 AND h.olusturuldu >= NOW() - INTERVAL 1 DAY) DESC,
+    (h.olusturuldu >= NOW() - INTERVAL 2 DAY) DESC,
+    CASE WHEN h.olusturuldu >= NOW() - INTERVAL 2 DAY
+         THEN (h.onem + 10 + LEAST(30, 10 * LOG2(1 + COALESCE(zo.okuyucu, 0))))
+              * (CASE WHEN k.slug IN (\'teknoloji\', \'kultur-sanat\') THEN 0.35 ELSE 1 END)
+              / POW(' . HABER_YAS_SAAT . ' + 3, 1.2)
+         ELSE 0 END DESC,
     h.yayin_tarihi DESC,
     h.id DESC';
 
