@@ -4193,6 +4193,31 @@ a.rg-madde:hover { color: var(--vurgu); }
     letter-spacing: .03em;
 }
 
+/* Kaydiragin 1. slayti: son toplamanin en onemli haberi (23.10.2026). */
+.son-dakika-rozet {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    margin-right: 6px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    background: #d50000;
+    color: #fff;
+    font-size: .76rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    animation: son-dakika-nabiz 1.6s ease-in-out infinite;
+}
+
+@keyframes son-dakika-nabiz {
+    50% { opacity: .72; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .son-dakika-rozet { animation: none; }
+}
+
 .ekonomi-haberleri { margin-top: 34px; }
 .ekonomi-haberleri h2 a { color: inherit; }
 

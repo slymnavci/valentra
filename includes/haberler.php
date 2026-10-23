@@ -178,6 +178,75 @@ function haber_son_dakika_ifadesi(): string
         . haber_yas_dakika_ifadesi() . ' / ' . HABER_GUNCELLIK_DAKIKASI . ') ELSE 0 END';
 }
 
+/*
+ * SON DAKIKA YUVASI (site sahibinin karari, 23.10.2026: "en basa en yeni
+ * haberleri koyup son dakika yapalim; bir sonrakinde onem derecesine
+ * gore geri gitsin, oradaki haber son dakika olsun; her seferinde en
+ * onemli haber son dakika olarak en one gelsin").
+ *
+ * Kaydiragin 1. slayti: SON TOPLAMADA gelen haberlerin en onemlisi,
+ * "SON DAKIKA" etiketiyle. Ajan iki saatte bir calisiyor; bir sonraki
+ * toplamada yeni gelenlerin en onemlisi bu yere geciyor, onceki son
+ * dakika etiketini kaybedip etkin onemine gore sirasina donuyor.
+ *
+ * "Son toplama": en son toplanan haberden geriye, aralarinda 10
+ * dakikadan uzun bosluk olmayan haberler. Bir calismanin haberleri
+ * birkac dakika icinde geliyor; panelden 15 dakika sonra yeniden
+ * toplanirsa o da ayri bir toplama sayiliyor. Bunlar ayni anda
+ * toplandigi icin etkin degil HAM onem karsilastiriliyor; esitlikte en
+ * yenisi. Teknoloji ve kultur-sanat bu yere girmiyor (ana sayfada en
+ * sonda, bkz. haber_sirasi_temel).
+ */
+const HABER_TOPLAMA_BOSLUGU_SANIYE = 600;
+
+function haber_son_dakika_id(): ?int
+{
+    static $onbellek = false;
+
+    if ($onbellek !== false) {
+        return $onbellek;
+    }
+
+    $onbellek = null;
+
+    try {
+        $satirlar = db()->query(
+            'SELECT h.id, h.onem, UNIX_TIMESTAMP(h.olusturuldu) AS zaman
+               FROM haberler h
+              WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . haber_ana_akis_kosulu() . "
+                AND (h.kategori_id IS NULL OR h.kategori_id NOT IN
+                     (SELECT id FROM kategoriler WHERE slug IN ('teknoloji', 'kultur-sanat')))
+              ORDER BY h.olusturuldu DESC, h.id DESC
+              LIMIT 100"
+        )->fetchAll();
+    } catch (Throwable $e) {
+        error_log('[valentra] son dakika secilemedi: ' . $e->getMessage());
+
+        return $onbellek;
+    }
+
+    $enIyiOnem = -1;
+    $onceki    = null;
+
+    foreach ($satirlar as $satir) {
+        $zaman = (int) $satir['zaman'];
+
+        if ($onceki !== null && $onceki - $zaman > HABER_TOPLAMA_BOSLUGU_SANIYE) {
+            break;
+        }
+
+        // Yeniden eskiye gidiliyor: esitlikte ilk gorulen (en yeni) kalir.
+        if ((int) $satir['onem'] > $enIyiOnem) {
+            $enIyiOnem = (int) $satir['onem'];
+            $onbellek  = (int) $satir['id'];
+        }
+
+        $onceki = $zaman;
+    }
+
+    return $onbellek;
+}
+
 function haber_sirasi(bool $anaSayfa = false): string
 {
     $temel = haber_sirasi_temel($anaSayfa);
@@ -185,6 +254,11 @@ function haber_sirasi(bool $anaSayfa = false): string
     if (!$anaSayfa) {
         return $temel;
     }
+
+    // Son dakika her seyin onunde (bkz. haber_son_dakika_id). Manset ve
+    // izgara ayni ORDER BY'i kullandigi icin haber iki kez cikmiyor.
+    $sonDakika = haber_son_dakika_id();
+    $onu = $sonDakika !== null ? '(h.id = ' . $sonDakika . ') DESC, ' : '';
 
     /*
      * Kotalar (bkz. haber_ana_sayfa_ilk_set): secilen 20 haber ilk sirada.
@@ -207,7 +281,7 @@ function haber_sirasi(bool $anaSayfa = false): string
         $sira[] = 'CASE WHEN h.id IN (' . $yeni . ') THEN h.olusturuldu END DESC';
     }
 
-    return $sira === [] ? $temel : implode(', ', $sira) . ', ' . $temel;
+    return $onu . ($sira === [] ? $temel : implode(', ', $sira) . ', ' . $temel);
 }
 
 function haber_sirasi_temel(bool $anaSayfa): string
