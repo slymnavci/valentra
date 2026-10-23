@@ -204,7 +204,7 @@ require __DIR__ . '/ust.php';
 
                     <?php if ((int) $haber['guven_skoru'] > 0): ?>
                         <span class="rozet rozet-skor">güven %<?= (int) $haber['guven_skoru'] ?></span>
-                        <span class="rozet rozet-skor">önem <?= (int) ($haber['onem'] ?? 50) ?></span>
+                        <span class="rozet rozet-skor" title="Önem haber eskidikçe azalıyor: saatte %2,5; dünün haberi en fazla 49">önem <?= (int) ($haber['onem'] ?? 50) ?><?php if (isset($haber['etkin_onem']) && (int) $haber['etkin_onem'] !== (int) ($haber['onem'] ?? 50)): ?> → şimdi <?= (int) $haber['etkin_onem'] ?><?php endif; ?></span>
                     <?php endif; ?>
 
                     <?php if (!empty($haber['kategori_adi'])): ?>

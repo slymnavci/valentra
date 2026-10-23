@@ -1375,6 +1375,7 @@ gunluk(count($gruplar) . ' grup halinde, başlık başlık işlenecek (grup baş
 
 $islenenAday = 0;
 $gorselsiz   = 0;
+$eskiElenen  = 0;
 
 foreach ($gruplar as $grupNo => $grup) {
     if ($grupNo > 0) {
@@ -1453,7 +1454,7 @@ foreach ($gruplar as $grupNo => $grup) {
                 mb_substr($aday['girdi']['baslik'], 0, 60),
                 $e->getMessage()
             ));
-            $okunan = ['metin' => '', 'gorsel' => '', 'video' => ''];
+            $okunan = ['metin' => '', 'gorsel' => '', 'video' => '', 'zaman' => null];
         }
 
         /*
@@ -1466,6 +1467,34 @@ foreach ($gruplar as $grupNo => $grup) {
         if ($baglantiVideo !== '') {
             $okunan['video'] = $baglantiVideo;
             $okunan['metin'] = trim((string) ($aday['girdi']['ozet'] ?? ''));
+        }
+
+        /*
+         * TARIHSIZ ADAY: sayfanin kendi yayin zamani (23.10.2026).
+         *
+         * Kazinan kaynaklarin (IHA, DHA ana sayfasi) girdilerinde tarih
+         * yok; sitede haberin yasi toplandigi andan sayiliyor ve dunku
+         * haber "yeni" gorunuyordu (IHA'nin dunku Sergen Yalcin haberi
+         * ertesi gun ana sayfada 1. oldu). Sayfadan okunan zaman
+         * girdiye yaziliyor; site onu kaynak_tarihi olarak sakliyor.
+         *
+         * Taranan pencereden ($saat) eski haber modele hic gitmiyor:
+         * beslemeler bu suzgecten zaten geciyor, kazima gecmiyordu.
+         * Tarifler eskimiyor (bkz. tarif kaynaklari), onlarda suzgec yok.
+         */
+        if (($aday['girdi']['tarih'] ?? null) === null && ($okunan['zaman'] ?? null) !== null) {
+            $aday['girdi']['tarih'] = date('Y-m-d H:i:s', (int) $okunan['zaman']);
+        }
+
+        $adayZamani = ($aday['girdi']['tarih'] ?? null) !== null ? (int) strtotime((string) $aday['girdi']['tarih']) : 0;
+
+        if ($adayZamani > 0 && $adayZamani < time() - $saat * 3600
+            && HaberAkisi::kova($aday['kaynak']) !== 'yemek-tarifleri') {
+            $eskiElenen++;
+            $elenenler[url_parmak($aday['girdi']['baglanti'])] = time();
+            gunluk('  eski haber, atlandı — ' . mb_substr($aday['girdi']['baslik'], 0, 60, 'UTF-8')
+                . ' (yayın: ' . date('d.m H:i', $adayZamani) . ')');
+            continue;
         }
 
         // Gorsel once beslemeden, yoksa haber sayfasinin og:image'inden.
@@ -1676,6 +1705,10 @@ gunluk('---');
 
 if ($gorselsiz > 0) {
     gunluk($gorselsiz . ' aday görseli olmadığı için alınmadı (görselsiz haber yayımlanmıyor).');
+}
+
+if ($eskiElenen > 0) {
+    gunluk($eskiElenen . ' aday sayfasındaki yayın tarihi ' . $saat . ' saatten eski olduğu için alınmadı.');
 }
 
 gunluk(
