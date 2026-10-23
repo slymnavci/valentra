@@ -78,7 +78,10 @@
              */
             $panelMenu = [
                 'Günlük işler'  => 'gunluk.php',
-                'Haberler'      => 'index.php',
+                'Haberler'      => [
+                    'Haberler'          => 'index.php',
+                    'Videolu haberler'  => 'videolar.php',
+                ],
                 'İçerik'        => [
                     'Köşe yazıları'   => 'kose-yazilari.php',
                     'Rehberler'       => 'rehberler.php',

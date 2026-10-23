@@ -407,3 +407,109 @@ function ajan_uyarisi_goster(?array $uyari): void
     </div>
     <?php
 }
+
+/*
+ * Video haber ajani (23.10.2026, site sahibi: "videolu haberler icin ayri
+ * bir ajan kuralim, takip edebileyim"). Ayri is akisi: .github/workflows/
+ * video.yml. Panel: Haberler -> Videolu haberler (admin/videolar.php).
+ */
+const AJAN_VIDEO_WORKFLOW = 'video.yml';
+
+/**
+ * Video ajanını çalıştırır.
+ *
+ * @return array{tamam:bool,mesaj:string}
+ */
+function ajan_video_tetikle(bool $kuru = false, int $saat = 12): array
+{
+    $anahtar = trim(ayar_oku(AJAN_GITHUB_ANAHTAR));
+
+    if ($anahtar === '') {
+        return ['tamam' => false, 'mesaj' => 'GitHub erişim anahtarı tanımlı değil. Ajan sayfasından girin.'];
+    }
+
+    $ch = curl_init('https://api.github.com/repos/' . ajan_depo()
+        . '/actions/workflows/' . AJAN_VIDEO_WORKFLOW . '/dispatches');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => json_encode([
+            'ref'    => 'main',
+            'inputs' => ['kuru' => $kuru ? 'true' : 'false', 'saat' => (string) max(1, min(72, $saat))],
+        ]),
+        CURLOPT_HTTPHEADER     => [
+            'Accept: application/vnd.github+json',
+            'Authorization: Bearer ' . $anahtar,
+            'X-GitHub-Api-Version: 2022-11-28',
+            'Content-Type: application/json',
+            'User-Agent: Valentra-Panel',
+        ],
+        CURLOPT_TIMEOUT        => 20,
+        CURLOPT_CONNECTTIMEOUT => 10,
+    ]);
+
+    $yanit = curl_exec($ch);
+    $kod   = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    curl_close($ch);
+
+    if ($kod === 204) {
+        return [
+            'tamam' => true,
+            'mesaj' => 'Video ajanı çalışmaya başladı. Birkaç dakika sonra aşağıdaki '
+                     . 'çalışma listesinde sonucu, "Rapor" bağlantısında her videonun akıbetini görürsünüz.',
+        ];
+    }
+
+    if (!is_string($yanit)) {
+        return ['tamam' => false, 'mesaj' => 'GitHub\'a ulaşılamadı.'];
+    }
+
+    return [
+        'tamam' => false,
+        'mesaj' => $kod === 404
+            ? 'Video ajanı iş akışı bulunamadı (video.yml) ya da anahtarın depoya erişimi yok.'
+            : 'GitHub hatası (HTTP ' . $kod . ').',
+    ];
+}
+
+/**
+ * Video ajanının son çalışmaları ve her birinin özet satırı.
+ *
+ * @return list<array{durum:string,sonuc:string,baslangic:string,adres:string,ozet:string}>
+ */
+function ajan_video_calismalari(int $adet = 8): array
+{
+    $veri = ajan_github_json('https://api.github.com/repos/' . ajan_depo()
+        . '/actions/workflows/' . AJAN_VIDEO_WORKFLOW . '/runs?per_page=' . max(1, min(20, $adet)));
+
+    $liste = [];
+
+    foreach ($veri['workflow_runs'] ?? [] as $i => $c) {
+        $ozet = '';
+
+        // Ozet satiri (ajanin "Video haber ajanı" bildirimi) yalnizca
+        // en yeni ucunde okunuyor: her biri iki GitHub istegi.
+        if ($i < 3 && ($c['status'] ?? '') === 'completed') {
+            $isler = ajan_github_json('https://api.github.com/repos/' . ajan_depo()
+                . '/actions/runs/' . (int) $c['id'] . '/jobs?per_page=2');
+
+            foreach ($isler['jobs'] ?? [] as $is) {
+                foreach (ajan_github_json((string) ($is['check_run_url'] ?? '') . '/annotations?per_page=20') ?? [] as $not) {
+                    if (($not['title'] ?? '') === 'Video haber ajanı') {
+                        $ozet = trim((string) ($not['message'] ?? ''));
+                    }
+                }
+            }
+        }
+
+        $liste[] = [
+            'durum'     => (string) ($c['status'] ?? ''),
+            'sonuc'     => (string) ($c['conclusion'] ?? ''),
+            'baslangic' => (string) ($c['run_started_at'] ?? ''),
+            'adres'     => guvenli_url((string) ($c['html_url'] ?? '')),
+            'ozet'      => $ozet,
+        ];
+    }
+
+    return $liste;
+}
