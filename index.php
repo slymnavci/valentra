@@ -30,7 +30,7 @@ $adet       = 12;   // izgaradaki kart sayisi
  * ilk sayfadaki izgara 21. haberden basliyor. Secici dugmeler tek satir;
  * telefonda numarasiz noktalar (assets/style.css, .kaydirak-sayfalar).
  */
-$mansetAdet = 20;   // kaydiraktaki haber sayisi
+$mansetAdet = ANA_SAYFA_MANSET_ADEDI;   // 20; kaydiraktaki haber sayisi (spor kotasi da buna gore)
 
 /*
  * Resmi Gazete kaynakli haberler ana sayfa akisinda yok; kendi

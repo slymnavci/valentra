@@ -7,11 +7,18 @@ on:
   workflow_dispatch:
 
 # Ayni anda birden fazla FTP mirror calisirsa farkli commitlerin dosyalari
-# sunucuda birbirine karisabilir. Yeni commit geldiginde eski deploy iptal
-# edilir; yalnizca en guncel main surumu IHS'ye yuklenir.
+# sunucuda birbirine karisabilir; yuklemeler bu yuzden SIRAYLA.
+#
+# Yarida KESILMIYOR (23.10.2026). Onceden yeni commit gelince suren
+# yukleme iptal ediliyordu: mirror dosyalari tek tek yazdigi icin sunucuda
+# yeni ve eski dosyalar karisik kaliyordu (yeni index.php, eski
+# haberler.php -> tanimsiz islev) ve site ACILMADI; art arda birlestirmelerde
+# hicbir yukleme bitmedi. Simdi suren yukleme biter, siradaki bekler.
+# GitHub sirada tek yukleme tutar; bekleyen daha eskiyse yenisi onun
+# yerini alir, yani yine en guncel main yuklenir.
 concurrency:
   group: valentra-deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
