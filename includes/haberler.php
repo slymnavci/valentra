@@ -67,8 +67,8 @@ const HABER_AKIS_DISI = ['yemek-tarifleri'];
  *      okunma da ekleniyor (bkz. haber_sirasi).
  *   4. Esitlerde yeni olan once.
  *
- * Ana sayfada 2. basamak yok (bkz. haber_sirasi_temel): orada yalnizca
- * gunun haberleri var ve sira 3'teki puanla kuruluyor.
+ * Ana sayfada ayrica 1. yerde son dakika (haber_son_dakika_id) ve
+ * kaydirakta spor kotasi var; yalnizca bugun ve dunun haberleri.
  *
  * Onceki "son 24 saat" penceresi sabah 08'de dun 08'den sonraki her
  * haberi yeni sayiyordu; dunun gun boyu okunma toplamis haberleri bu
@@ -124,16 +124,14 @@ function haber_yas_dakika_ifadesi(): string
  * ETKIN ONEM: onem puani haber eskidikce azaliyor (site sahibinin
  * karari, 23.10.2026: "haberin onem derecesi yayin tarihine de bakarak
  * karar verilmeli; eski haberlerin onem degeri gitgide azalsin; 4 saat
- * gectiyse %10 azalsin; dunun haberiyse 50 altinda olsun ve ana sayfaya
- * hic yansimasin").
+ * gectiyse %10 azalsin; dunun haberiyse 50 altinda olsun"). Ana sayfada
+ * dunun haberleri yalnizca bugunkulerin ardindan (bkz. haber_sirasi_temel).
  *
  *   - Bugunun haberi: saatte %2,5 (4 saatte %10, 8 saatte %20, 12 saatte
  *     %30). Onem 75, 4 saatlik haber 67,5; yeni gelen onem 70 haber onun
  *     ustunde.
  *   - Dunun ve daha eski haberler (Istanbul gece yarisindan once
- *     yayimlanmis): ayni azalma, ustelik en fazla 49. Ana sayfaya zaten
- *     girmiyor (haber_ana_akis_kosulu); konu sayfalarinda bugunun
- *     haberlerinin altinda.
+ *     yayimlanmis): ayni azalma, ustelik en fazla 49.
  *
  * Yas, kaynagin yayin ani ile toplanma aninin erken olani: dun 14:30'da
  * yayimlanip bugun toplanan haber dunun haberi. Kazinan kaynaklarda
@@ -261,27 +259,16 @@ function haber_sirasi(bool $anaSayfa = false): string
     $onu = $sonDakika !== null ? '(h.id = ' . $sonDakika . ') DESC, ' : '';
 
     /*
-     * Kotalar (bkz. haber_ana_sayfa_ilk_set): secilen 20 haber ilk sirada.
-     * Kaydiragin icinde: once gunun en onemli 3 haberi, sonra en yeni 5
-     * (en yenisi once), sonra kalanlar temel sirayla. En yeniler boylece
-     * 4-8. slaytta; onceden 14. slayttan sonraya dusuyordu.
+     * Sonra spor kotasi (bkz. haber_ana_sayfa_ilk_set), sonra puan sirasi.
+     * "En yeni 5 haber 4-8. slaytta" ve "gunun en onemli 3 haberi" kurallari
+     * kaldirildi (site sahibi, 23.10.2026: "once puanlamayi yap, ondan
+     * sonra sirayla ana sayfaya gelsin"): tazelik artik puanin icinde.
      */
-    $ilk  = haber_ana_sayfa_ilk_set();
-    $duz  = haber_ana_sayfa_duzeni();
-    $sira = [];
+    $ilk = haber_ana_sayfa_ilk_set();
 
-    if ($ilk !== []) {
-        $sira[] = '(h.id IN (' . implode(', ', $ilk) . ')) DESC';
-    }
-
-    if ($duz['yeni'] !== []) {
-        $yeni = implode(', ', $duz['yeni']);
-        $bas  = $duz['bas'] !== [] ? 'WHEN h.id IN (' . implode(', ', $duz['bas']) . ') THEN 0 ' : '';
-        $sira[] = 'CASE ' . $bas . 'WHEN h.id IN (' . $yeni . ') THEN 1 ELSE 2 END ASC';
-        $sira[] = 'CASE WHEN h.id IN (' . $yeni . ') THEN h.olusturuldu END DESC';
-    }
-
-    return $onu . ($sira === [] ? $temel : implode(', ', $sira) . ', ' . $temel);
+    return $onu
+        . ($ilk !== [] ? '(h.id IN (' . implode(', ', $ilk) . ')) DESC, ' : '')
+        . $temel;
 }
 
 function haber_sirasi_temel(bool $anaSayfa): string
@@ -303,39 +290,28 @@ function haber_sirasi_temel(bool $anaSayfa): string
         : $onem . ' DESC';
 
     /*
-     * Ana sayfada GUN BASAMAGI YOK (23.10.2026, site sahibi: "bir haberin
-     * degeri yuksek ama sayfaya hic gelmiyor"). Ana sayfa zaten yalnizca
-     * gunun haberlerini aliyor (haber_ana_akis_kosulu); gece ve spordaki
-     * dunku haberler etkin onem tavaniyla (49) zaten altta. Basamak
-     * bunlari, onemi ne olursa olsun bugunun en onemsiz haberinin de
-     * altina itiyordu. Tazelik puanda (etkin onem, son dakika). Konu
-     * sayfalarinda basamak duruyor: orada eski haberler de listede.
+     * ONCE BUGUN, SONRA DUN (site sahibi, 23.10.2026: "once puanlamayi
+     * yap, ondan sonra sirayla ana sayfaya gelsin; bugun yeterince haber
+     * yoksa dunun haberleri siradan devam edebilir, oncelik bugunun
+     * haberlerinde"). Gun basamagi once, kendi icinde puan sirasi: bugunun
+     * en dusuk puanli haberi bile dunun en yuksek puanlisinin onunde.
+     * Dunun haberleri ancak bugunkuler bitince (sonraki slaytlar, izgara)
+     * geliyor. Spor icin dun aksamki mac "bugun" (bkz. haber_gun_ifadesi).
      */
-    $basamak = $anaSayfa ? '' : $gun . ' ASC,
-        ';
-
     return '(h.one_cikan = 1 AND ' . $gun . ' = 0) DESC,
-        ' . $basamak . $puan . ',
+        ' . $gun . ' ASC,
+        ' . $puan . ',
         h.olusturuldu DESC,
         h.id DESC';
 }
 
 /*
- * ANA SAYFA KOTALARI — kaydiragin 20 haberinde her zaman yer alanlar.
+ * ANA SAYFA SPOR KOTASI — kaydiragin 20 haberinde en az 3 spor haberi
+ * (site sahibinin istegi, 23.10.2026: "ana sayfada spor haberi hic yok,
+ * onlari da 20 haber arasina sokalim"): bugunun ya da dunun en
+ * onemlileri.
  *
- * Spor (site sahibinin istegi, 23.10.2026: "ana sayfada spor haberi hic
- * yok, onlari da 20 haber arasina sokalim; halen Galatasaray haberi var,
- * dun baska maclar vardi"): en az 3 spor haberi, bugunun ya da dunun
- * en onemlileri (daha eski mac haberi alinmiyor).
- *
- * En yeniler (site sahibinin sorusu, 23.10.2026: "son haberler
- * kaydiracta neden gorunmuyor"): sira etkin onem + okunma; sabahin
- * onemli ve okunmus haberleri az once gelen orta onemli haberin ustunde
- * kaliyor, gunun haberi coksa en yeniler 21. siradan asagi dusup
- * kaydiraga hic giremiyordu. Simdi en son toplanan 5 haber 20'nin
- * icinde.
- *
- * Yer, 20'nin en altindaki KORUNMAYAN haberlerden aciliyor; cikanlar
+ * Yer, 20'nin en altindaki spor olmayan haberlerden aciliyor; cikanlar
  * kaybolmuyor, izgaranin basina iniyor. Sira SQL'de (h.id IN (...)) ile
  * kuruluyor, PHP'de karistirilmiyor: manset ve izgara ayni ORDER BY'i
  * kullaniyor ve izgara mansetin tukettigi kadar haberi atliyor; ikisi
@@ -343,53 +319,8 @@ function haber_sirasi_temel(bool $anaSayfa): string
  * islevi (ROW_NUMBER) kullanilmadi: paylasimli sunucunun MySQL surumu
  * bilinmiyor.
  */
-const ANA_SAYFA_MANSET_ADEDI  = 20;
-const ANA_SAYFA_SPOR_KOTASI   = 3;
-const ANA_SAYFA_EN_YENI_KOTASI = 5;
-
-/**
- * Kaydiragin duzeni: gunun en onemli 3 haberi (etkin onemle) ve
- * ardindan onlar disindaki en yeni 5 haber (toplanma anina gore; yas
- * burada kaynagin yayin ani degil, okuyucu icin "yeni gelen").
- *
- * @return array{yeni:list<int>,bas:list<int>}
- */
-function haber_ana_sayfa_duzeni(): array
-{
-    static $onbellek = null;
-
-    if ($onbellek !== null) {
-        return $onbellek;
-    }
-
-    $kosul  = 'h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . haber_ana_akis_kosulu();
-    $kaynak = 'FROM haberler h
-           LEFT JOIN kategoriler k ON k.id = h.kategori_id
-           ' . haber_okunma_birlesimi();
-
-    /*
-     * Ilk 3, en yeniler DAHIL butun gunun haberleri arasindan (23.10.2026).
-     * Onceden en yeni 5 haber disarida birakilarak seciliyordu: az once
-     * gelen onem 70 haber, 4 saatlik onem 75 haberin arkasinda 5. slayta
-     * dusuyordu. Etkin onem tazeligi zaten tartiyor.
-     */
-    $bas = array_map('intval', db()->query(
-        'SELECT h.id ' . $kaynak . ' WHERE ' . $kosul
-        . ' ORDER BY ' . haber_sirasi_temel(true) . ' LIMIT 3'
-    )->fetchAll(PDO::FETCH_COLUMN));
-
-    $yeni = array_map('intval', db()->query(
-        'SELECT h.id ' . $kaynak . ' WHERE ' . $kosul
-        . ($bas !== [] ? ' AND h.id NOT IN (' . implode(', ', $bas) . ')' : '')
-        . ' ORDER BY h.olusturuldu DESC, h.id DESC LIMIT ' . ANA_SAYFA_EN_YENI_KOTASI
-    )->fetchAll(PDO::FETCH_COLUMN));
-
-    if ($yeni === []) {
-        $bas = [];
-    }
-
-    return $onbellek = ['yeni' => $yeni, 'bas' => $bas];
-}
+const ANA_SAYFA_MANSET_ADEDI = 20;
+const ANA_SAYFA_SPOR_KOTASI  = 3;
 
 /**
  * Ana sayfanin ilk 20'si (kotalar uygulanmis); kotalar zaten doluysa bos
@@ -421,60 +352,38 @@ function haber_ana_sayfa_ilk_set(): array
     }
 
     $ilkIdler = array_map(static fn (array $s): int => (int) $s['id'], $ilk);
-    $enYeni   = haber_ana_sayfa_duzeni()['yeni'];
 
-    $eklenecek = array_values(array_diff($enYeni, $ilkIdler));
+    // Spor kotasi: 20'de kac spor var?
+    $sporSayisi = count(array_filter($ilk, static fn (array $s): bool => $s['slug'] === 'spor'));
+    $eksikSpor  = ANA_SAYFA_SPOR_KOTASI - $sporSayisi;
 
-    // Spor kotasi: 20'de (ve eklenecek en yenilerde) kac spor var?
-    $sporIdler = array_map(
-        static fn (array $s): int => (int) $s['id'],
-        array_filter($ilk, static fn (array $s): bool => $s['slug'] === 'spor')
-    );
-
-    if ($eklenecek !== []) {
-        $sporIdler = array_merge($sporIdler, array_map('intval', db()->query(
-            'SELECT h.id ' . $kaynak . " WHERE k.slug = 'spor' AND h.id IN (" . implode(', ', $eklenecek) . ')'
-        )->fetchAll(PDO::FETCH_COLUMN)));
-    }
-
-    $eksikSpor = ANA_SAYFA_SPOR_KOTASI - count($sporIdler);
-
-    if ($eksikSpor > 0) {
-        $haric = array_merge($ilkIdler, $eklenecek);
-        $yeniSpor = array_map('intval', db()->query(
-            'SELECT h.id ' . $kaynak . ' WHERE ' . $kosul
-            . " AND k.slug = 'spor'"
-            . ' AND ' . haber_gun_ifadesi() . ' <= 1'
-            . ' AND h.id NOT IN (' . implode(', ', $haric) . ')'
-            . ' ORDER BY ' . $temel . ' LIMIT ' . $eksikSpor
-        )->fetchAll(PDO::FETCH_COLUMN));
-
-        $eklenecek = array_merge($eklenecek, $yeniSpor);
-        $sporIdler = array_merge($sporIdler, $yeniSpor);
-    }
-
-    if ($eklenecek === []) {
+    if ($eksikSpor <= 0) {
         return $onbellek = [];
     }
 
-    /*
-     * En alttan yer ac. Korunan: en yeniler ve spor kotasini dolduran
-     * sporlar (kotadan fazlasi korunmuyor).
-     */
-    $korunan = array_flip($enYeni);
-    $sporKorunan = array_flip(array_slice($sporIdler, 0, ANA_SAYFA_SPOR_KOTASI));
-    $cikacak = count($eklenecek);
+    $yeniSpor = array_map('intval', db()->query(
+        'SELECT h.id ' . $kaynak . ' WHERE ' . $kosul
+        . " AND k.slug = 'spor'"
+        . ' AND ' . haber_gun_ifadesi() . ' <= 1'
+        . ' AND h.id NOT IN (' . implode(', ', $ilkIdler) . ')'
+        . ' ORDER BY ' . $temel . ' LIMIT ' . $eksikSpor
+    )->fetchAll(PDO::FETCH_COLUMN));
 
-    for ($i = count($ilkIdler) - 1; $i >= 0 && $cikacak > 0; $i--) {
-        $id = $ilkIdler[$i];
+    if ($yeniSpor === []) {
+        return $onbellek = [];
+    }
 
-        if (!isset($korunan[$id]) && !isset($sporKorunan[$id])) {
+    // En alttan, spor olmayan haberlerden yer ac.
+    $cikacak = count($yeniSpor);
+
+    for ($i = count($ilk) - 1; $i >= 0 && $cikacak > 0; $i--) {
+        if ($ilk[$i]['slug'] !== 'spor') {
             unset($ilkIdler[$i]);
             $cikacak--;
         }
     }
 
-    return $onbellek = array_values(array_merge($ilkIdler, $eklenecek));
+    return $onbellek = array_values(array_merge($ilkIdler, $yeniSpor));
 }
 
 /**
@@ -494,7 +403,8 @@ function haber_okunma_birlesimi(): string
 
 /**
  * Ana sayfa akisinin kosulu: Resmi Gazete kaynakli olmayan, haber olan
- * (yemek tarifi gibi akis disi bir baslikta olmayan), GUNUN haberi.
+ * (yemek tarifi gibi akis disi bir baslikta olmayan), bugunun ya da dunun
+ * haberi.
  */
 function haber_ana_akis_kosulu(): string
 {
@@ -504,35 +414,21 @@ function haber_ana_akis_kosulu(): string
     ));
 
     /*
-     * YALNIZCA GUNUN HABERLERI (site sahibinin karari, 23.10.2026: "ana
-     * sayfada sadece gunluk haberler kalacak"). Onceki karar (22.10:
-     * "eski haberler de akista kalsin") boylece kalkti; eski haberler
-     * konu sayfalarinda ve kendi adreslerinde duruyor.
-     *
-     * "Gun" Istanbul gece yarisindan (site sahibi, 23.10.2026: "dunun
-     * haberi ana sayfaya hic yansimayacak"). Tek istisna gece: 06:00'ya
-     * kadar son 6 saat, yoksa gece yarisindan sonra ana sayfa bos kalir.
-     * O saatlerde gelen dunku haberler etkin onem tavaniyla (49) bugunun
-     * haberlerinin altinda. Onceden pencere en az 12 saatti ve sabah
-     * 10'da dun ogleden sonraki haberler hala ana sayfadaydi. Yas,
-     * kaynagin yayin ani ile toplanma aninin erken olani
+     * BUGUN VE DUN (site sahibi, 23.10.2026: "bugun yeterince haber yoksa
+     * dunun haberleri siradan devam edebilir; oncelik bugunun
+     * haberlerinde"). Sira bugunu once aliyor (bkz. haber_sirasi_temel);
+     * dunun haberleri bugunkulerin ardindan geliyor, daha eskiler ana
+     * sayfada yok (konu sayfalarinda ve kendi adreslerinde duruyorlar).
+     * Yas, kaynagin yayin ani ile toplanma aninin erken olani
      * (haber_yas_dakika_ifadesi).
-     *
-     * Spor en az son 12 saat (site sahibinin 23.10.2026 tarihli istegi:
-     * "onemli olan dunku maclar"; bkz. haber_gun_ifadesi): dun aksamki
-     * mac sabah ana sayfada. Etkin onemi yine 49'u gecmiyor; spor
-     * kotasiyla kaydiraga giriyor.
      */
-    $pencere     = max(haber_bugun_dakika(), 360);
-    $sporPencere = max(haber_bugun_dakika(), 720);
-    $yas         = haber_yas_dakika_ifadesi();
+    $pencere = haber_bugun_dakika() + 1440;
+    $yas     = haber_yas_dakika_ifadesi();
 
     return 'NOT (' . HABER_RG_KOSULU . ')'
         . ' AND (h.kategori_id IS NULL OR h.kategori_id NOT IN'
         . ' (SELECT id FROM kategoriler WHERE slug IN (' . $disarida . ')))'
-        . ' AND (' . $yas . ' <= ' . $pencere
-        . " OR (" . $yas . ' <= ' . $sporPencere
-        . " AND h.kategori_id IN (SELECT id FROM kategoriler WHERE slug = 'spor')))";
+        . ' AND ' . $yas . ' <= ' . $pencere;
 }
 
 /**
