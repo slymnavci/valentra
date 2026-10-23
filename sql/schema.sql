@@ -1842,3 +1842,19 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, liste_url, liste_secici, tur, katego
     ('Habertürk Yemek Tarifleri', 'https://www.haberturk.com', 'https://www.haberturk.com/yemek-tarifleri', NULL,                    'web', 'yemek-tarifleri', 1),
     ('Sabah Yemek Tarifleri',     'https://www.sabah.com.tr',  'https://www.sabah.com.tr/yemek-tarifleri',  'yol:/yemek-tarifleri/', 'web', 'yemek-tarifleri', 1),
     ('CNN Türk Yemek Tarifleri',  'https://www.cnnturk.com',   'https://www.cnnturk.com/yemek-tarifleri',   'yol:/yemek-tarifleri/', 'web', 'yemek-tarifleri', 1);
+
+-- ---------------------------------------------------------------------------
+-- Videolu haber kaynaklari — 23.10.2026, site sahibinin istegi ("videolu
+-- haber hala hic gelmiyor"). Haber kuruluslarinin YouTube kanallari: her
+-- video bir haber, oynatici YouTube'un resmi gomme adresi (telif
+-- kaynakta). besleme_url kanal adresi; ajan bunu kanalin RSS adresine
+-- ceviriyor (Besleme::youtubeBeslemesi). Kanal bulunamazsa kaynak
+-- sessizce bos doner; panelden kapatilabilir ya da adresi duzeltilebilir.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('TRT Haber (video)',   'https://www.youtube.com', 'https://www.youtube.com/@trthaber',    'rss', 'gundem',  1),
+    ('NTV (video)',         'https://www.youtube.com', 'https://www.youtube.com/@ntv',         'rss', 'gundem',  1),
+    ('CNN TÜRK (video)',    'https://www.youtube.com', 'https://www.youtube.com/@cnnturk',     'rss', 'gundem',  1),
+    ('Habertürk (video)',   'https://www.youtube.com', 'https://www.youtube.com/@haberturktv', 'rss', 'gundem',  1),
+    ('Bloomberg HT (video)','https://www.youtube.com', 'https://www.youtube.com/@BloombergHT', 'rss', 'ekonomi', 1),
+    ('TRT Spor (video)',    'https://www.youtube.com', 'https://www.youtube.com/@trtspor',     'rss', 'spor',    1);

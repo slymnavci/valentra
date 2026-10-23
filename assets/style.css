@@ -4147,3 +4147,19 @@ a.rg-madde:hover { color: var(--vurgu); }
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* Videolu haber etiketi (kart ve manset; 23.10.2026). */
+.video-rozet {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-right: 6px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: #c62828;
+    color: #fff;
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .03em;
+}

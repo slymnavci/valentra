@@ -18,6 +18,9 @@ if (($izgaraHaberleri ?? []) === []) {
                          onerror="this.closest('.kart').classList.add('yazili');this.remove()">
                 <?php endif; ?>
                 <div class="govde">
+                    <?php if (haber_video_adresi((string) ($haber['iframe_url'] ?? '')) !== ''): ?>
+                        <span class="video-rozet" title="Videolu haber">&#9654; Video</span>
+                    <?php endif; ?>
                     <?php if (!empty($haber['kategori_adi'])): ?>
                         <span class="etiket"><?= e($haber['kategori_adi']) ?></span>
                     <?php else: ?>

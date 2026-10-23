@@ -38,6 +38,9 @@ if (($mansetler ?? []) === []) {
                         <?php if (!empty($haber['kategori_adi'])): ?>
                             <span class="grup"><?= e($haber['kategori_adi']) ?></span>
                         <?php endif; ?>
+                        <?php if (haber_video_adresi((string) ($haber['iframe_url'] ?? '')) !== ''): ?>
+                            <span class="video-rozet" title="Videolu haber">&#9654; Video</span>
+                        <?php endif; ?>
 
                         <h2><?= e($haber['baslik']) ?></h2>
 
