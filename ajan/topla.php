@@ -1800,8 +1800,28 @@ try {
 // Gonderim tuttu: bekleyenler artik sitede, depoyu temizle.
 $depo->sil('bekleyen_haberler');
 
-gunluk(
-    'Siteye gönderildi: ' . ($yanit['eklenen'] ?? 0) . ' yeni taslak, '
-    . ($yanit['yinelenen'] ?? 0) . ' zaten vardı.'
-);
-gunluk('Haberler yönetim panelinde onay bekliyor.');
+/*
+ * Ozet GitHub'da da gorunsun (calisma ozeti, "notice"): kac haber
+ * eklendi, kaci hemen yayina girdi, kaci onay bekliyor, ana sayfada su an
+ * kac haber var. Site eski surumse yayinlanan/ana_sayfa alanlari yok.
+ */
+$ozet = 'Siteye gönderildi: ' . ($yanit['eklenen'] ?? 0) . ' yeni haber, '
+    . ($yanit['yinelenen'] ?? 0) . ' zaten vardı.';
+
+if (isset($yanit['yayinlanan'])) {
+    $ozet .= ' Hemen yayına giren: ' . (int) $yanit['yayinlanan']
+        . ', onay bekleyen (güven puanı düşük): ' . max(0, (int) ($yanit['eklenen'] ?? 0) - (int) $yanit['yayinlanan']) . '.';
+}
+
+if (is_array($yanit['ana_sayfa'] ?? null)) {
+    $as = $yanit['ana_sayfa'];
+    $ozet .= ' Ana sayfada şu an ' . (int) ($as['ana_sayfada'] ?? 0) . ' haber'
+        . (isset($as['en_yeni_dakika']) ? ' (en yenisi ' . (int) $as['en_yeni_dakika'] . ' dk önce)' : '')
+        . '; bugün onay bekleyen ' . (int) ($as['onay_bekleyen_bugun'] ?? 0) . '.';
+}
+
+gunluk($ozet);
+
+if (getenv('GITHUB_ACTIONS') === 'true') {
+    echo '::notice title=Valentra ajanı::' . str_replace(["%", "\r", "\n"], ['%25', '%0D', '%0A'], $ozet) . PHP_EOL;
+}
