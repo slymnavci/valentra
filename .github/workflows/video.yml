@@ -69,6 +69,16 @@ jobs:
         working-directory: ajan
         run: composer install --no-interaction --no-progress --prefer-dist
 
+      # Tarihi bilinmeyen videolu haberlerin gercek yayin tarihi (YouTube
+      # izleme sayfasindan). Eski video ana sayfadan duser.
+      - name: Video tarihlerini duzelt
+        if: ${{ inputs.kuru != true }}
+        working-directory: ajan
+        env:
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: php video_tarih.php
+
       - name: Videolu haberleri topla
         working-directory: ajan
         env:

@@ -418,6 +418,40 @@ final class Site
         return array_values((array) ($veri['eksik'] ?? []));
     }
 
+    /**
+     * Yayin tarihi bilinmeyen videolu haberler (api/video-tarih.php).
+     *
+     * @return list<array{id:int,url:string}>
+     */
+    public function videoTarihEksikleri(): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/video-tarih.php');
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Video listesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return array_values((array) ($veri['eksik'] ?? []));
+    }
+
+    /**
+     * Videolarin gercek yayin zamanlarini yazar; guncellenen sayisini dondurur.
+     *
+     * @param list<array{id:int,zaman:int}> $tarihler
+     */
+    public function videoTarihGonder(array $tarihler): int
+    {
+        [$kod, $govde] = $this->istek('POST', '/api/video-tarih.php', (string) json_encode(['tarihler' => $tarihler]));
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Video tarihleri yazılamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return (int) ($veri['guncellenen'] ?? 0);
+    }
+
     /** Yazar fotoğrafını yükler. */
     public function portreGonder(string $anahtar, string $ikili): void
     {
