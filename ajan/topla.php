@@ -110,8 +110,10 @@ gunluk('Valentra ajanı başlıyor' . ($kuruCalisma ? ' (KURU ÇALIŞMA — gön
 $site    = new Site($siteUrl, $ajanKey);
 $http    = new Http();
 
-$yazar   = new Yazar($apiKey);
-gunluk('Model: ' . $yazar->model() . ' (haber; GEMINI_MODEL ile değiştirilebilir).');
+// OpenAI anahtari varsa haberler once onunla (GPT-6 Luna), basarisizsa
+// Gemini ile (bkz. Yazar, BIRINCIL MODEL). Yoksa yalnizca Gemini.
+$yazar   = new Yazar($apiKey, '', trim((string) getenv('OPENAI_API_KEY')));
+gunluk('Model: ' . $yazar->model() . ' (haber; OPENAI_MODEL / GEMINI_MODEL ile değiştirilebilir).');
 
 // --- 1. Yapılandırma -------------------------------------------------------
 
@@ -1675,6 +1677,22 @@ if ($kullanim['istek'] > 0) {
         number_format($kullanim['girdi']),
         number_format($kullanim['cikti'])
     ));
+
+    $saglayici = $yazar->saglayicilar();
+
+    if ($saglayici !== []) {
+        gunluk(sprintf(
+            '  %s: %d istek yanıtladı (%s giriş + %s çıkış); yedek %s: %d istek (%s giriş + %s çıkış).',
+            $saglayici['birincil'],
+            $saglayici['birincil_istek'],
+            number_format($saglayici['birincil_kullanim']['girdi']),
+            number_format($saglayici['birincil_kullanim']['cikti']),
+            $saglayici['yedek'],
+            $saglayici['yedek_istek'],
+            number_format($saglayici['yedek_kullanim']['girdi']),
+            number_format($saglayici['yedek_kullanim']['cikti'])
+        ));
+    }
 }
 
 if ($modelErisimYok !== '') {

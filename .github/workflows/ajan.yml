@@ -255,6 +255,10 @@ jobs:
           # Model adi degisirse kod duzenlemeye gerek yok: bu secret'i
           # ekleyip istedigin model adini yazman yeterli.
           GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          # Haberler once OpenAI ile (varsayilan GPT-6 Luna), basarisizsa
+          # Gemini ile. OPENAI_API_KEY yoksa yalnizca Gemini (23.10.2026).
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
           # Ortam degiskeniyle: betige dogrudan yazilmasin.
