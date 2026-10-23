@@ -167,9 +167,16 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
         <?php if ($sporBolum === ''): ?>
         <div class="bolum-basligi" id="<?= e((string) $kategori['slug']) ?>-haberleri">
+            <?php
+            /*
+             * Ilk sayfada kaydirak ilk 10 haberi tuketiyor ve izgara
+             * kalanlari gosteriyor; "13 Haber" yazip 3 kart gostermek
+             * eksik haber izlenimi veriyordu (site sahibi, 23.10.2026).
+             */
+            ?>
             <h2><?= $canliPanel !== '' || in_array($kategori['slug'], ['spor', 'ekonomi'], true)
                 ? 'Güncel ' . e((string) $kategori['ad']) . ' Haberleri'
-                : $toplam . ' Haber' ?></h2>
+                : ($mansetler !== [] ? 'Diğer Haberler' : $toplam . ' Haber') ?></h2>
             <span class="cizgi"></span>
         </div>
 
