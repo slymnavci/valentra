@@ -51,6 +51,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
             </div>
         <?php endif; ?>
 
+        <?php $koseGorselleri = kose_gorselleri(array_merge([], ...array_values($gunler))); ?>
         <?php foreach ($gunler as $gun => $yazilar): ?>
             <?php $zaman = strtotime($gun); ?>
             <div class="bolum-basligi">
@@ -61,7 +62,13 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <ul class="kose-liste">
                 <?php foreach ($yazilar as $yazi): ?>
                     <li>
-                        <a href="<?= e(kose_yolu((string) $yazi['slug'])) ?>">
+                        <a href="<?= e(kose_yolu((string) $yazi['slug'])) ?>"
+                           class="<?= isset($koseGorselleri[(int) $yazi['id']]) ? 'gorselli' : '' ?>">
+                            <?php if (isset($koseGorselleri[(int) $yazi['id']])): ?>
+                                <img class="kose-kucuk" src="<?= e($koseGorselleri[(int) $yazi['id']]['src']) ?>" alt=""
+                                     loading="lazy" referrerpolicy="no-referrer"
+                                     onerror="this.parentElement.classList.remove('gorselli');this.remove()">
+                            <?php endif; ?>
                             <?php if ((string) $yazi['gundem'] !== ''): ?>
                                 <span class="kose-gundem"><?= e((string) $yazi['gundem']) ?></span>
                             <?php endif; ?>

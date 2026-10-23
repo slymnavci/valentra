@@ -32,6 +32,7 @@ if ($yazi === null) {
 }
 
 $dayanaklar = kose_dayanaklar((string) $yazi['haber_idleri']);
+$gorsel     = kose_gorselleri([$yazi])[(int) $yazi['id']] ?? null;
 
 // Ayni gunun diger yazilari: okuyucu gunun gundeminde gezinebilsin.
 $ayniGun = array_values(array_filter(
@@ -45,6 +46,10 @@ $sayfaAciklama = (string) $yazi['ozet'];
 $seoAdres      = site_adresi() . kose_yolu((string) $yazi['slug']);
 $seoTur        = 'article';
 $govdeSinifi   = 'okuma';
+
+if ($gorsel !== null) {
+    $seoGorsel = str_starts_with($gorsel['src'], '/') ? site_adresi() . $gorsel['src'] : $gorsel['src'];
+}
 
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
@@ -64,6 +69,16 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <span>&middot; <?= e((string) $yazi['gundem']) ?></span>
         <?php endif; ?>
     </div>
+
+    <?php if ($gorsel !== null): ?>
+        <figure class="kose-gorsel">
+            <img src="<?= e($gorsel['src']) ?>" alt="" referrerpolicy="no-referrer"
+                 onerror="this.closest('figure').remove()">
+            <?php if ($gorsel['kaynak'] !== ''): ?>
+                <figcaption>Görsel: <?= e(kaynak_gorunen_ad($gorsel['kaynak'])) ?></figcaption>
+            <?php endif; ?>
+        </figure>
+    <?php endif; ?>
 
     <?php if ((string) $yazi['ozet'] !== ''): ?>
         <p class="spot"><?= e((string) $yazi['ozet']) ?></p>
