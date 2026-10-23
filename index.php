@@ -51,6 +51,11 @@ haber_bugunku_taslaklari_yayinla_arada();
 require_once __DIR__ . '/includes/ajan_tetikle.php';
 ajan_otomatik_tetikle_sayfa_sonunda();
 
+// Ajanin siteye gonderemedigi (IHS zaman asimi) haberleri site GitHub'dan
+// kendisi aliyor; en fazla yarim saatte bir, sayfa gittikten sonra.
+require_once __DIR__ . '/includes/ajan_teslim.php';
+ajan_teslim_sayfa_sonunda();
+
 $mansetler = $sayfa === 1 ? haber_manset($mansetAdet, true) : [];
 $tuketilen = min($mansetAdet, $toplam);
 
