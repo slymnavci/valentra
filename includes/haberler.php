@@ -725,6 +725,27 @@ function haber_video_adresi(string $adres): string
 }
 
 /**
+ * Kaynak zamani tam gece yarisi mi (Istanbul ya da GMT 00:00:00)?
+ *
+ * Bazi kaynaklar saati vermiyor, yalnizca gunu yaziyor ve haber
+ * "00:00"da yayimlanmis gorunuyor. Ekonomim'in dun aksamki PPK haberi
+ * ertesi gun "23 Ekim 00:00" tarihiyle geldi ve ana sayfada 2. oldu
+ * (site sahibi, 23.10.2026). Saati bilinmeyen zaman guvenilmez:
+ * tarihsiz sayiliyor (ana sayfaya ve son dakikaya cikmaz, onay bekler).
+ */
+function haber_yalnizca_gun_mu(int $zaman): bool
+{
+    // Gun bazi beslemelerde GMT gece yarisi olarak yaziliyor (03:00 TSI).
+    foreach (['Europe/Istanbul', 'UTC'] as $dilim) {
+        if ((new DateTimeImmutable('@' . $zaman))->setTimezone(new DateTimeZone($dilim))->format('H:i:s') === '00:00:00') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
  * Ajanin buldugu haberi taslak olarak kaydeder.
  *
  * @return array{durum:string,id:?int} durum: 'eklendi' | 'yinelenen'
@@ -790,7 +811,8 @@ function haber_taslak_ekle(array $veri): array
      */
     $kaynakZamani  = (int) ($veri['kaynak_zamani'] ?? 0);
     $kaynakGecikme = $kaynakZamani > 0 ? intdiv(time() - $kaynakZamani, 60) : -1;
-    $kaynakVar     = $kaynakGecikme >= 0 && $kaynakGecikme <= 30 * 1440;
+    $kaynakVar     = $kaynakGecikme >= 0 && $kaynakGecikme <= 30 * 1440
+        && !haber_yalnizca_gun_mu($kaynakZamani);
 
     $ifade->execute([
         'baslik'        => mb_substr($baslik, 0, 300, 'UTF-8'),
