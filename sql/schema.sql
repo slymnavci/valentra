@@ -683,6 +683,18 @@ CREATE TABLE IF NOT EXISTS ziyaretler (
     haber_id    INT UNSIGNED    NULL,
     baslik      VARCHAR(255)    NOT NULL DEFAULT '',
     yonlendiren VARCHAR(255)    NOT NULL DEFAULT '',
+    -- Tarayici dogrulamasi ve okuma olcumu (23.10.2026; bkz.
+    -- includes/ziyaret.php ve api/gorunum.php). Mevcut kurulumlara
+    -- includes/sema.php ekliyor.
+    insan       TINYINT UNSIGNED  NOT NULL DEFAULT 0,
+    tarayici_id CHAR(16)          NOT NULL DEFAULT '',
+    yeni        TINYINT UNSIGNED  NOT NULL DEFAULT 0,
+    sure        SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    kaydirma    TINYINT UNSIGNED  NOT NULL DEFAULT 0,
+    cihaz       VARCHAR(10)       NOT NULL DEFAULT '',
+    tarayici    VARCHAR(20)       NOT NULL DEFAULT '',
+    isletim     VARCHAR(20)       NOT NULL DEFAULT '',
+    kampanya    VARCHAR(100)      NOT NULL DEFAULT '',
     PRIMARY KEY (id),
     -- Butun raporlar once tarihe gore suzuyor; bu indeks olmadan
     -- tablo buyudukce panel yavaslar.

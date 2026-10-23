@@ -333,6 +333,59 @@ function sema_yukselt(array &$hatalar = []): array
     // CREATE TABLE onu eklemez; mevcut kurulumlara boyle iniyor.
     $sutunEkle('ziyaretler', 'ip', "VARCHAR(45) NOT NULL DEFAULT '' AFTER ziyaretci");
 
+    /*
+     * Ziyaret dogrulamasi ve okuma olcumu (23.10.2026; bkz.
+     * includes/ziyaret.php basi). Sira onemli degil; hepsi varsayilanli.
+     */
+    $sutunEkle('ziyaretler', 'insan', 'TINYINT UNSIGNED NOT NULL DEFAULT 0');
+    $sutunEkle('ziyaretler', 'tarayici_id', "CHAR(16) NOT NULL DEFAULT ''");
+    $sutunEkle('ziyaretler', 'yeni', 'TINYINT UNSIGNED NOT NULL DEFAULT 0');
+    $sutunEkle('ziyaretler', 'sure', 'SMALLINT UNSIGNED NOT NULL DEFAULT 0');
+    $sutunEkle('ziyaretler', 'kaydirma', 'TINYINT UNSIGNED NOT NULL DEFAULT 0');
+    $sutunEkle('ziyaretler', 'cihaz', "VARCHAR(10) NOT NULL DEFAULT ''");
+    $sutunEkle('ziyaretler', 'tarayici', "VARCHAR(20) NOT NULL DEFAULT ''");
+    $sutunEkle('ziyaretler', 'isletim', "VARCHAR(20) NOT NULL DEFAULT ''");
+    $sutunEkle('ziyaretler', 'kampanya', "VARCHAR(100) NOT NULL DEFAULT ''");
+
+    /*
+     * Veritabani saat dilimi (23.10.2026 denetimi).
+     *
+     * Ziyaret zamani SQL'deki NOW() ile yaziliyor, "bugun" sinirini da
+     * CURDATE() cizdi; ikisi de veritabani sunucusunun saat dilimini
+     * kullaniyor. Baglantinin saat dilimi hic ayarlanmamisti: sunucu UTC
+     * ise "bugun" gece 03:00'te basliyor, saatlik dagilim uc saat kayik
+     * gorunuyordu. Artik bootstrap her baglantida +03:00 ayarliyor.
+     *
+     * Bu adim bir kez calisip sunucunun kendi farkini olcuyor ve
+     * kaydediyor (panel "saat dogru mu" sorusunu bununla cevapliyor).
+     * Fark 3 saat degilse eski ziyaret kayitlari Turkiye saatine
+     * kaydiriliyor ki eski ve yeni kayitlar ayni gunlere dussun.
+     */
+    $adim('ziyaret saat dilimi', static function (): bool {
+        if (ayar_oku('db_saat_farki') !== '') {
+            return false;
+        }
+
+        $pdo = db();
+        $pdo->exec('SET time_zone = @@global.time_zone');
+        $fark = (int) $pdo->query('SELECT TIMESTAMPDIFF(MINUTE, UTC_TIMESTAMP(), NOW())')->fetchColumn();
+        $pdo->exec("SET time_zone = '+03:00'");
+
+        // Ceyrek saate yuvarla: iki fonksiyon ayni anda olculuyor ama
+        // saniye sinirina denk gelirse 179 cikabilir.
+        $fark      = (int) (round($fark / 15) * 15);
+        $duzeltme  = 180 - $fark;
+
+        if ($duzeltme !== 0) {
+            $son = (int) $pdo->query('SELECT COALESCE(MAX(id), 0) FROM ziyaretler')->fetchColumn();
+            $pdo->exec('UPDATE ziyaretler SET zaman = zaman + INTERVAL ' . $duzeltme . ' MINUTE WHERE id <= ' . $son);
+        }
+
+        ayar_yaz('db_saat_farki', (string) $fark);
+
+        return true;
+    });
+
     // Ekonomik gostergelerin grafik serisi. Yayindaki ve aday ayri:
     // seri de deger gibi onaydan geciyor.
     $sutunEkle('pratik_bilgiler', 'seri', 'MEDIUMTEXT NULL AFTER onay_tarihi');
@@ -538,6 +591,9 @@ function sema_guncel_mi(): bool
             ['gsc_gunluk', 'gosterim'],
             ['gsc_denetim', 'kapsam'],
             ['rehberler', 'kontrol_eden'],
+            // Ziyaret dogrulamasi (api/gorunum.php bunlara yaziyor).
+            ['ziyaretler', 'insan'],
+            ['ziyaretler', 'kampanya'],
         ];
 
         foreach ($beklenenSutunlar as [$tablo, $sutun]) {

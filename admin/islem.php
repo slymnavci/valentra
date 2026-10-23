@@ -99,6 +99,14 @@ switch ($islem) {
         exit('Bilinmeyen işlem.');
 }
 
+// Ziyaretci raporundan one cikarma: rapor ayni aralik ve siralamayla
+// geri acilsin. Sorgu dizgesi yalnizca guvenli karakterlerle kabul ediliyor.
+if ($donus === 'istatistik' && ($islem === 'one_cikar' || $islem === 'one_cikarma')) {
+    $sorgu = (string) ($_POST['donus_sorgu'] ?? '');
+    $sorgu = preg_match('/^[A-Za-z0-9_=&%.+-]*$/', $sorgu) === 1 ? $sorgu : '';
+    yonlendir('istatistik.php?' . ($sorgu !== '' ? $sorgu . '&' : '') . 'bildirim=' . $bildirim . '#haberler');
+}
+
 if ($donus === 'duzenle' && $islem !== 'sil') {
     yonlendir('duzenle.php?id=' . $id . '&bildirim=' . $bildirim);
 }
