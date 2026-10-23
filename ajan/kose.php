@@ -159,6 +159,14 @@ $yazarlar = $malzeme['yazarlar'] !== []
     : [['anahtar' => 'valentra', 'ad' => 'Valentra Yorumu', 'alan' => 'Günün en önemli konusu',
         'kategoriler' => [], 'uslup' => '', 'bugun_yazdi' => $malzeme['bugun_sayisi'] > 0]];
 
+// Siteden ne geldi: teshis icin (bir calismada "hepsi yazdi" deyip yazisiz bitti).
+gunluk($malzeme['yazarlar'] === []
+    ? 'Site yazar listesi göndermedi (eski site sürümü olabilir); bugün ' . $malzeme['bugun_sayisi'] . ' yazı var.'
+    : 'Yazarlar: ' . implode(', ', array_map(
+        static fn (array $y): string => $y['ad'] . (empty($y['bugun_yazdi']) ? ' (yazacak)' : ' (bugün yazdı)'),
+        $yazarlar
+    )));
+
 $bekleyenYazarlar = array_values(array_filter($yazarlar, static fn (array $y): bool => empty($y['bugun_yazdi'])));
 
 if ($bekleyenYazarlar === []) {
