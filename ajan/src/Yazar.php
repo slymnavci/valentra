@@ -5,6 +5,8 @@ namespace Valentra\Ajan;
 
 require_once __DIR__ . '/OpenAiErisimYokException.php';
 require_once __DIR__ . '/OpenAiIstemci.php';
+require_once __DIR__ . '/ClaudeErisimYokException.php';
+require_once __DIR__ . '/ClaudeIstemci.php';
 
 /**
  * Aday haberi Gemini'ye verip iki soruyu birden yanıtlatır:
@@ -445,8 +447,10 @@ final class Yazar implements SemaliIstemci
     /** Kullanilan model adi (gunluge yazmak icin). */
     public function model(): string
     {
-        return $this->birincil !== null
-            ? $this->birincil->model() . ' (yedek: ' . $this->model . ')'
+        $sira = array_filter([$this->claude?->model(), $this->birincil?->model()]);
+
+        return $sira !== []
+            ? implode(' → ', $sira) . ' (yedek: ' . $this->model . ')'
             : $this->model;
     }
 
@@ -476,10 +480,44 @@ final class Yazar implements SemaliIstemci
     /** Son istegi cevaplayan model; haberle birlikte siteye gidiyor. */
     private string $sonYanitlayan = '';
 
-    public function __construct(private readonly string $apiKey, string $model = '', string $openAiAnahtari = '')
-    {
+    /*
+     * EN ONDE CLAUDE (site sahibinin karari, 23.10.2026: "once Haiku 5.5
+     * baksin, sonra Luna, en son bunlar da yapamiyorsa Gemini").
+     * ANTHROPIC_API_KEY verilmisse her istek once Claude'a gidiyor;
+     * olmazsa ayni istek Luna'ya, o da olmazsa Gemini'ye. Kapanma kurali
+     * Luna'daki gibi: anahtar/kredi sorunu ya da ust uste
+     * BIRINCIL_HATA_SINIRI hata.
+     */
+    private const CLAUDE_VARSAYILAN_MODEL = 'claude-haiku-5-5';
+
+    private ?ClaudeIstemci $claude = null;
+    private bool $claudeKapali = false;
+    private int $claudeArdisikHata = 0;
+    private int $claudeSayac = 0;
+
+    /** @var array{tur:string,mesaj:string}|null Claude'un bu calismada neden kapandigi */
+    private ?array $claudeErisimSorunu = null;
+
+    public function __construct(
+        private readonly string $apiKey,
+        string $model = '',
+        string $openAiAnahtari = '',
+        string $claudeAnahtari = '',
+    ) {
         // Model verilmediyse haber modeli (GEMINI_MODEL, yoksa varsayilan).
         $this->model = $model !== '' ? $model : self::ortamModeli('GEMINI_MODEL', self::VARSAYILAN_MODEL);
+
+        // Kurulamazsa (kutuphane eksik vb.) calisma dusmesin: Claude atlanir.
+        if (trim($claudeAnahtari) !== '') {
+            try {
+                $this->claude = new ClaudeIstemci(
+                    trim($claudeAnahtari),
+                    self::ortamModeli('CLAUDE_MODEL', self::CLAUDE_VARSAYILAN_MODEL)
+                );
+            } catch (\Throwable $e) {
+                fwrite(STDERR, '[uyari] Claude istemcisi kurulamadı, atlanıyor: ' . $e->getMessage() . PHP_EOL);
+            }
+        }
 
         if (trim($openAiAnahtari) !== '') {
             $this->birincil = new OpenAiIstemci(
@@ -500,6 +538,12 @@ final class Yazar implements SemaliIstemci
      */
     private function birincildenIste(string $yonerge, string $istem, array $sema, int $enFazlaToken, callable $gecerli): ?array
     {
+        $claudeVeri = $this->claudedenIste($yonerge, $istem, $sema, $enFazlaToken, $gecerli);
+
+        if ($claudeVeri !== null) {
+            return $claudeVeri;
+        }
+
         if ($this->birincil === null || $this->birincilKapali) {
             return null;
         }
@@ -530,6 +574,79 @@ final class Yazar implements SemaliIstemci
         }
 
         return null;
+    }
+
+    /**
+     * Zincirin ilk halkasi: Claude (Haiku 5.5). Olmazsa null; cagiran
+     * Luna'ya, o da olmazsa Gemini'ye gecer.
+     *
+     * @param array<string,mixed> $sema
+     * @param callable(array<string,mixed>):bool $gecerli
+     * @return array<string,mixed>|null
+     */
+    private function claudedenIste(string $yonerge, string $istem, array $sema, int $enFazlaToken, callable $gecerli): ?array
+    {
+        if ($this->claude === null || $this->claudeKapali) {
+            return null;
+        }
+
+        try {
+            $veri = $this->claude->jsonIstek($yonerge, $istem, $sema, $enFazlaToken);
+
+            if (!$gecerli($veri)) {
+                throw new \RuntimeException('yanıt beklenen alanları içermiyor');
+            }
+
+            $this->claudeArdisikHata = 0;
+            $this->claudeSayac++;
+            $this->sonYanitlayan = $this->claude->model();
+
+            return $veri;
+        } catch (ClaudeErisimYokException $e) {
+            $this->claudeErisimSorunu = ['tur' => $e->tur, 'mesaj' => $e->getMessage()];
+            $this->claudeKapat('erişim yok (' . $e->getMessage() . ')');
+        } catch (\Throwable $e) {
+            $this->claudeArdisikHata++;
+            fwrite(STDERR, '[' . date('H:i:s') . '] ' . $this->claude->model() . ' başarısız, sıradaki modelle devam: '
+                . mb_substr($e->getMessage(), 0, 300, 'UTF-8') . PHP_EOL);
+
+            if ($this->claudeArdisikHata >= self::BIRINCIL_HATA_SINIRI) {
+                $this->claudeKapat(self::BIRINCIL_HATA_SINIRI . ' istek üst üste düştü');
+            }
+        }
+
+        return null;
+    }
+
+    private function claudeKapat(string $neden): void
+    {
+        if ($this->claude === null) {
+            return;
+        }
+
+        fwrite(STDERR, '[' . date('H:i:s') . '] ' . $this->claude->model() . ' bu çalışmada kapatıldı: '
+            . mb_substr($neden, 0, 300, 'UTF-8') . '. Kalan istekler sıradaki modelle.' . PHP_EOL);
+
+        $this->claudeKapali = true;
+    }
+
+    /**
+     * Claude'un bu calismadaki durumu (birincilDurumu ile ayni bicim);
+     * anahtar yoksa null.
+     *
+     * @return array{model:string,durum:string,mesaj:string}|null
+     */
+    public function claudeDurumu(): ?array
+    {
+        if ($this->claude === null) {
+            return null;
+        }
+
+        return [
+            'model' => $this->claude->model(),
+            'durum' => $this->claudeErisimSorunu['tur'] ?? ($this->claudeSayac > 0 ? 'tamam' : 'bilinmiyor'),
+            'mesaj' => mb_substr($this->claudeErisimSorunu['mesaj'] ?? '', 0, 300, 'UTF-8'),
+        ];
     }
 
     private function birincilKapat(string $neden): void
@@ -1030,8 +1147,8 @@ final class Yazar implements SemaliIstemci
     {
         $toplam = $this->kullanim;
 
-        if ($this->birincil !== null) {
-            foreach ($this->birincil->kullanim() as $alan => $deger) {
+        foreach ([$this->claude, $this->birincil] as $istemci) {
+            foreach ($istemci?->kullanim() ?? [] as $alan => $deger) {
                 $toplam[$alan] += $deger;
             }
         }
@@ -1040,25 +1157,30 @@ final class Yazar implements SemaliIstemci
     }
 
     /**
-     * Sağlayıcı dökümü: kaç isteği birincil (OpenAI) ve yedek (Gemini)
-     * yanıtladı, kaç token harcadılar. Birincil yoksa boş.
+     * Sağlayıcı dökümü, zincir sırasıyla (Claude, OpenAI, Gemini): kaç
+     * isteği yanıtladılar, kaç token harcadılar. Yalnızca Gemini varsa boş.
      *
-     * @return array{birincil:string,yedek:string,birincil_istek:int,yedek_istek:int,birincil_kullanim:array{girdi:int,cikti:int,istek:int},yedek_kullanim:array{girdi:int,cikti:int,istek:int}}|array{}
+     * @return list<array{model:string,istek:int,kullanim:array{girdi:int,cikti:int,istek:int}}>
      */
     public function saglayicilar(): array
     {
-        if ($this->birincil === null) {
+        if ($this->claude === null && $this->birincil === null) {
             return [];
         }
 
-        return [
-            'birincil'          => $this->birincil->model(),
-            'yedek'             => $this->model,
-            'birincil_istek'    => $this->saglayiciSayaci['birincil'],
-            'yedek_istek'       => $this->kullanim['istek'],
-            'birincil_kullanim' => $this->birincil->kullanim(),
-            'yedek_kullanim'    => $this->kullanim,
-        ];
+        $liste = [];
+
+        if ($this->claude !== null) {
+            $liste[] = ['model' => $this->claude->model(), 'istek' => $this->claudeSayac, 'kullanim' => $this->claude->kullanim()];
+        }
+
+        if ($this->birincil !== null) {
+            $liste[] = ['model' => $this->birincil->model(), 'istek' => $this->saglayiciSayaci['birincil'], 'kullanim' => $this->birincil->kullanim()];
+        }
+
+        $liste[] = ['model' => $this->model, 'istek' => $this->kullanim['istek'], 'kullanim' => $this->kullanim];
+
+        return $liste;
     }
 
     /**
