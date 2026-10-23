@@ -124,17 +124,63 @@ function sirket_adi(string $kod, string $kaynaktaki = ''): string
  */
 function sirket_seri(string $kod, string $donem): array
 {
-    if ($donem === '1d') {
-        $tanim = ['aralik' => '1d', 'adim' => '5m', 'sure' => 120];
-    } else {
-        $tanim = sirket_donemleri()[$donem] ?? sirket_donemleri()['1y'];
-    }
+    $tanim = sirket_seri_tanimi($donem);
 
     return canli_onbellek(
         'sirket_' . $kod . '_' . $tanim['aralik'],
         $tanim['sure'],
         static fn (): ?array => yahoo_grafik($kod . '.IS', $tanim['aralik'], $tanim['adim'])
     );
+}
+
+/** @return array{aralik:string,adim:string,sure:int} */
+function sirket_seri_tanimi(string $donem): array
+{
+    return $donem === '1d'
+        ? ['aralik' => '1d', 'adim' => '5m', 'sure' => 120]
+        : sirket_donemleri()[$donem] ?? sirket_donemleri()['1y'];
+}
+
+/**
+ * Sayfanin istedigi serileri AYNI ANDA ceker ve onbellege yazar.
+ *
+ * Sirket sayfasi ilk acilista dort seri istiyor (gun ici, 1 yil, 10 yil,
+ * secili donem; ustune BIST 100'un 10 yili). Sirayla cekildiginde
+ * paylasimli sunucudan her biri 1-3 saniye surdugu icin sayfa 10-15
+ * saniyede aciliyordu ve "sirket analizi calismiyor" diye gorunuyordu
+ * (23.10.2026). Burada bayat ya da hic olmayan seriler tek seferde
+ * paralel indiriliyor; ardindan sirket_seri() her birini onbellekten
+ * buluyor. Deneme araligi (canli_deneme_izni) aynen gecerli; indirilemeyen
+ * seri eskisi gibi "alinamadi" olur.
+ *
+ * @param list<array{0:string,1:string}> $istenen [kod, donem] ciftleri
+ */
+function sirket_serileri_hazirla(array $istenen): void
+{
+    $adresler = [];
+
+    foreach ($istenen as [$kod, $donem]) {
+        $tanim   = sirket_seri_tanimi($donem);
+        $anahtar = 'sirket_' . $kod . '_' . $tanim['aralik'];
+        $kayit   = canli_onbellek_oku($anahtar);
+
+        if (isset($adresler[$anahtar])
+            || ($kayit !== null && time() - $kayit['zaman'] < $tanim['sure'])
+            || !canli_deneme_izni($anahtar)) {
+            continue;
+        }
+
+        $adresler[$anahtar] = 'https://query1.finance.yahoo.com/v8/finance/chart/' . rawurlencode($kod . '.IS')
+            . '?range=' . rawurlencode($tanim['aralik']) . '&interval=' . rawurlencode($tanim['adim']);
+    }
+
+    if ($adresler === []) {
+        return;
+    }
+
+    foreach (canli_coklu_indir($adresler) as $anahtar => $ham) {
+        canli_onbellek_uret($anahtar, static fn (): ?array => $ham !== null ? yahoo_grafik_coz($ham) : null);
+    }
 }
 
 /** İki değer arasındaki yüzde değişim. */
