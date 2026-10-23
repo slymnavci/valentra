@@ -62,13 +62,14 @@ $kuruCalisma = isset($secenekler['kuru']);
  */
 $videoModu = isset($secenekler['video']);
 /*
- * Geriye bakis 5 saat (site sahibinin karari, 23.10.2026: "haber topla
- * dediğimizde son 5 saatin haberlerini toplasın; eski haberleri zaten
- * kaydediyoruz"). Ajan iki saatte bir calisiyor; 5 saat iki calismayi
- * ustuste bindiriyor, bir calisma kacarsa arada haber kaybolmuyor.
- * Tarifler eskimiyor: tarif beslemeleri en az 36 saat (asagida).
+ * Geriye bakis 2 saat, videolar dahil (site sahibinin karari, 23.10.2026:
+ * "haber tarama her aramada bir iki saat once yayinlanan haberleri
+ * alsin; eski haberleri toplamiyoruz"). Ajan iki saatte bir calisiyor.
+ * Pencere yayin zamanina gore: beslemedeki tarih, kazinan haberde
+ * sayfanin kendi tarihi; tarihi bulunamayan haber alinmiyor (bkz.
+ * TARIH DENETIMI). Tarifler eskimiyor: tarif beslemeleri en az 36 saat.
  */
-$saat        = max(1, (int) ($secenekler['saat'] ?? ($videoModu ? 12 : 5)));
+$saat        = max(1, (int) ($secenekler['saat'] ?? 2));
 
 /** Tarif beslemelerinin geriye bakisi: tarifin yeni olmasi gerekmiyor. */
 const TARIF_SAATI = 36;
@@ -1509,6 +1510,7 @@ gunluk(count($gruplar) . ' grup halinde, başlık başlık işlenecek (grup baş
 $islenenAday = 0;
 $gorselsiz   = 0;
 $eskiElenen  = 0;
+$tarihsizElenen = 0;
 
 foreach ($gruplar as $grupNo => $grup) {
     if ($grupNo > 0) {
@@ -1615,14 +1617,40 @@ foreach ($gruplar as $grupNo => $grup) {
          * beslemeler bu suzgecten zaten geciyor, kazima gecmiyordu.
          * Tarifler eskimiyor (bkz. tarif kaynaklari), onlarda suzgec yok.
          */
-        if (($aday['girdi']['tarih'] ?? null) === null && ($okunan['zaman'] ?? null) !== null) {
-            $aday['girdi']['tarih'] = date('Y-m-d H:i:s', (int) $okunan['zaman']);
+        /*
+         * TARIH DENETIMI (site sahibi, 23.10.2026: "haberlerin tarihleri
+         * cok onemli, onlari mutlaka kontrol edelim").
+         *
+         *   - Beslemenin tarihi ile sayfanin kendi tarihinden ERKEN olani
+         *     geciyor: bazi beslemeler eski haberi yeni tarihle yeniden
+         *     yayimliyor; sayfa haberin ilk yayin anini veriyor.
+         *   - Gelecekteki tarih (15 dakikadan fazla ileri; yanlis saat
+         *     dilimi) gecersiz sayiliyor.
+         *   - Tarihi hicbir yerden bulunamayan haber ALINMIYOR: ne zaman
+         *     yayimlandigi bilinmeyen haber ana sayfada "bugunun haberi"
+         *     diye gorunebiliyordu.
+         * Tarifler bu denetimden muaf (tarihleri onemli degil).
+         */
+        $tarif         = HaberAkisi::kova($aday['kaynak']) === 'yemek-tarifleri';
+        $beslemeZamani = ($aday['girdi']['tarih'] ?? null) !== null ? (int) strtotime((string) $aday['girdi']['tarih']) : 0;
+        $sayfaZamani   = (int) ($okunan['zaman'] ?? 0);
+        $gecerli       = array_filter(
+            [$beslemeZamani, $sayfaZamani],
+            static fn (int $z): bool => $z > 0 && $z <= time() + 900
+        );
+        $adayZamani    = $gecerli !== [] ? min($gecerli) : 0;
+
+        if ($adayZamani > 0) {
+            $aday['girdi']['tarih'] = date('Y-m-d H:i:s', $adayZamani);
+        } elseif (!$tarif) {
+            $tarihsizElenen++;
+            $elenenler[url_parmak($aday['girdi']['baglanti'])] = time();
+            video_kaydet($aday['girdi'], $aday['kaynak'], 'tarihsiz — yayın tarihi bulunamadı');
+            gunluk('  tarihsiz haber, atlandı — ' . mb_substr($aday['girdi']['baslik'], 0, 60, 'UTF-8'));
+            continue;
         }
 
-        $adayZamani = ($aday['girdi']['tarih'] ?? null) !== null ? (int) strtotime((string) $aday['girdi']['tarih']) : 0;
-
-        if ($adayZamani > 0 && $adayZamani < time() - $saat * 3600
-            && HaberAkisi::kova($aday['kaynak']) !== 'yemek-tarifleri') {
+        if ($adayZamani > 0 && $adayZamani < time() - $saat * 3600 && !$tarif) {
             $eskiElenen++;
             $elenenler[url_parmak($aday['girdi']['baglanti'])] = time();
             video_kaydet($aday['girdi'], $aday['kaynak'], 'eski — yayın ' . date('d.m H:i', $adayZamani));
@@ -1852,6 +1880,10 @@ gunluk('---');
 
 if ($gorselsiz > 0) {
     gunluk($gorselsiz . ' aday görseli olmadığı için alınmadı (görselsiz haber yayımlanmıyor).');
+}
+
+if ($tarihsizElenen > 0) {
+    gunluk($tarihsizElenen . ' aday yayın tarihi bulunamadığı için alınmadı.');
 }
 
 if ($eskiElenen > 0) {

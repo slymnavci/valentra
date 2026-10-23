@@ -63,8 +63,10 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
 <?php if ($toplam === 0): ?>
     <div class="bos-durum">
-        <strong>Henüz yayımlanmış haber yok.</strong>
-        Ajanın derlediği haberler yönetici onayından geçtikten sonra burada görünecek.
+        <?php /* Ana sayfa yalnizca kaynakta bugun yayimlanmis haberleri gosteriyor
+                 (haber_ana_akis_kosulu); eskiler konu sayfalarinda. */ ?>
+        <strong>Bugün henüz haber yok.</strong>
+        Yeni haberler gün içinde burada görünecek; önceki haberler konu sayfalarında.
     </div>
 <?php else: ?>
 

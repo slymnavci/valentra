@@ -57,7 +57,7 @@ on:
         default: false
       saat:
         description: 'Kac saat geriye bakilsin'
-        default: '5'
+        default: '2'
       enfazla:
         description: 'En fazla kac aday islensin (bos: basliklarin paylarinin toplami, 72)'
         default: ''
@@ -289,11 +289,11 @@ jobs:
           # 22.10.2026: aday sayisi verilmezse ajan basliklarin paylarinin
           # toplamini kullaniyor (HaberAkisi::PAYLAR, 72); haberler baslik
           # baslik isleniyor.
-          # 23.10.2026: 30 saatten 5 saate (site sahibinin karari: "son 5
-          # saatin haberleri"). Ajan artik iki saatte bir calisiyor; 5
-          # saat ardisik iki calismayi ustuste bindiriyor. Tarif
+          # 23.10.2026: 30 saatten 2 saate (site sahibinin karari: "her
+          # aramada bir iki saat once yayinlanan haberleri alsin; eski
+          # haberleri toplamiyoruz"). Ajan iki saatte bir calisiyor. Tarif
           # beslemeleri ajanda en az 36 saat (TARIF_SAATI).
-          BAYRAKLAR="--saat=${{ inputs.saat || '5' }}"
+          BAYRAKLAR="--saat=${{ inputs.saat || '2' }}"
 
           if [ -n "${{ inputs.enfazla }}" ]; then
             BAYRAKLAR="$BAYRAKLAR --enfazla=${{ inputs.enfazla }}"
@@ -310,6 +310,19 @@ jobs:
           fi
 
           php topla.php $BAYRAKLAR
+
+      # Son iki gunde toplanan haberlerin yayin tarihi kaynak sayfadan
+      # denetleniyor (23.10.2026, site sahibi: "haberlerin tarihleri cok
+      # onemli, mutlaka kontrol edelim"). Sayfadaki tarih kayitlidan
+      # eskiyse site onu yaziyor; eski haber ana sayfadan duser. Her haber
+      # bir kez; en fazla 3 dakika.
+      - name: Haber tarihlerini denetle
+        if: ${{ !cancelled() && inputs.kuru != true && (inputs.mod == 'topla' || inputs.mod == 'gunluk' || inputs.mod == '') }}
+        working-directory: ajan
+        env:
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: php tarih_denetle.php || true
 
       # Siteye gonderilemeyen haberler: site bu eseri GitHub API'den
       # kendisi indiriyor (includes/ajan_teslim.php). GitHub'dan siteye

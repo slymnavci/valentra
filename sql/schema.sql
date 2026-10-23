@@ -134,6 +134,8 @@ CREATE TABLE IF NOT EXISTS haberler (
     -- Kaynagin yayin zamani (ajan bildiriyor; bilinmiyorsa NULL). Ana
     -- sayfa ve konu sayfalari haberin gununu buna gore kuruyor.
     kaynak_tarihi   DATETIME      NULL,
+    -- Tarih denetiminin bu habere baktigi an (ajan/tarih_denetle.php).
+    tarih_denetlendi DATETIME     NULL,
 
     olusturuldu     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     guncellendi     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
