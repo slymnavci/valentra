@@ -82,6 +82,9 @@
                     'Haberler'          => 'index.php',
                     'Videolu haberler'  => 'videolar.php',
                 ],
+                // Site sahibinin istegi (23.10.2026): okunma istatistigi
+                // ust menude, acilir listenin icinde kaybolmasin.
+                'Ziyaretçiler'  => 'istatistik.php',
                 'İçerik'        => [
                     'Köşe yazıları'   => 'kose-yazilari.php',
                     'Rehberler'       => 'rehberler.php',
@@ -102,7 +105,6 @@
                 ],
                 'Site'          => [
                     'Spor verisi'  => 'spor.php',
-                    'Ziyaretçiler' => 'istatistik.php',
                     'Veritabanı'   => 'veritabani.php',
                     'Siteyi gör ↗' => '/',
                 ],

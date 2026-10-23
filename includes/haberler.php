@@ -411,10 +411,19 @@ function haber_ana_sayfa_ilk_set(): array
  */
 function haber_okunma_birlesimi(): string
 {
-    return 'LEFT JOIN (SELECT haber_id, COUNT(DISTINCT ziyaretci) AS okuyucu
+    // Botlar ve hic gosterilmeyen onyuklemeler sayilmasin; ayni kisi
+    // adres degistirdiginde iki okuyucu sayilmasin (bkz. includes/ziyaret.php).
+    require_once __DIR__ . '/ziyaret.php';
+
+    $yeni   = ziyaret_yeni_sema();
+    $kimlik = $yeni ? ziyaret_kimlik_ifadesi() : 'ziyaretci';
+    $insan  = $yeni ? ziyaret_insan_kosulu() : '1=1';
+
+    return 'LEFT JOIN (SELECT haber_id, COUNT(DISTINCT ' . $kimlik . ') AS okuyucu
                          FROM ziyaretler
                         WHERE haber_id IS NOT NULL
                           AND zaman >= NOW() - INTERVAL 1 DAY
+                          AND ' . $insan . '
                         GROUP BY haber_id) zo ON zo.haber_id = h.id';
 }
 

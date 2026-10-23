@@ -35,6 +35,22 @@ if (!isset($pdo) || !$pdo instanceof PDO) {
 /**
  * Paylasilan PDO baglantisi.
  */
+/*
+ * Veritabani saati Turkiye saati (23.10.2026 denetimi).
+ *
+ * Kayit zamanlari SQL'de NOW() ile yaziliyor, "bugun" sinirlarini
+ * CURDATE() ciziyor; ikisi de baglantinin saat dilimini kullaniyor ve bu
+ * hic ayarlanmamisti. Sunucu UTC ise ziyaretler uc saat kayik
+ * kaydediliyor, "bugun" gece 03:00'te basliyordu. PHP tarafi zaten
+ * Europe/Istanbul; Turkiye 2016'dan beri yaz saati uygulamiyor, yani
+ * sabit +03:00 dogru. Eski kayitlarin duzeltmesi includes/sema.php'de.
+ */
+try {
+    $pdo->exec("SET time_zone = '+03:00'");
+} catch (PDOException $e) {
+    error_log('[valentra] veritabani saat dilimi ayarlanamadi: ' . $e->getMessage());
+}
+
 function db(): PDO
 {
     global $pdo;

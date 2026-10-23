@@ -11,20 +11,39 @@ declare(strict_types=1);
  * cikiyor. Kendi tarafimizda tutunca hem veri bizde kaliyor hem de
  * her istek sayiliyor.
  *
- * KISISEL VERI. Iki alan tutuluyor, ikisi ayri ise yariyor:
+ * IKI ASAMALI SAYIM (23.10.2026, site sahibi: "ziyaretci sayisi dogru
+ * hesaplaniyor mu, iyi kontrol et"):
  *
- *   ziyaretci - adres + tarayici imzasi + gizli tuz ile uretilen takma
- *               kimlik. "Ayni ziyaretci mi" sorusunu cevapliyor,
- *               kimlige geri goturmuyor; raporlarin tamami bunu
- *               kullaniyor. Tuz degistirilirse eski kayitlar hicbir
- *               kisiye baglanamaz hale gelir.
- *   ip        - ham adres. Panelde gosterilmek uzere, sitenin
- *               yoneticisinin acik talebi uzerine saklaniyor.
+ *   1. Sunucu her sayfa isteginde bir satir yaziyor (ziyaret_kaydet).
+ *      Bot imzasi tasiyanlar ve yonetici zaten elenmis oluyor.
+ *   2. Sayfa TARAYICIDA GERCEKTEN GORUNDUGUNDE kucuk bir betik
+ *      api/gorunum.php'ye haber veriyor ve satir "insan" isaretleniyor;
+ *      sayfa kapanirken goruntulenme suresi ve kaydirma derinligi de
+ *      yaziliyor.
  *
- * Ham adres kisisel veridir; saklanmasi KVKK kapsaminda bir islemedir
- * ve sitenin aydinlatma metninde yer almasi gerekir. Veri hicbir
- * ucuncu tarafa gonderilmiyor ve diger alanlarla birlikte 180 gun
- * sonra siliniyor.
+ *   Neden: tarayici kimligini gizleyen botlar, baglanti onizlemeleri
+ *   (WhatsApp, Telegram), tarayicinin onceden yukledigi ama hic
+ *   gosterilmeyen sayfalar ve izleme servisleri birinci asamadan geciyor
+ *   ama betik calistirmiyor. Raporlar ikinci asamayi gecenleri sayiyor
+ *   (ziyaret_insan_kosulu). Betik ilk kez calisana kadar, yani bu
+ *   surumden onceki kayitlar icin, eskisi gibi her satir sayiliyor.
+ *
+ * KISISEL VERI. Uc alan tutuluyor, ucu de ayri ise yariyor:
+ *
+ *   ziyaretci   - adres + tarayici imzasi + gizli tuz ile uretilen takma
+ *                 kimlik. Betik calismadiginda "ayni ziyaretci mi"
+ *                 sorusunun tek cevabi.
+ *   tarayici_id - betigin tarayicida tuttugu rastgele bir kimlik. Mobil
+ *                 agda adres degistikce ayni kisi yeni ziyaretci
+ *                 sayiliyordu; bu kimlik adres degisse de ayni kaliyor.
+ *                 Kisiye dair hicbir bilgi tasimiyor.
+ *   ip          - ham adres. Panelde gosterilmek uzere, sitenin
+ *                 yoneticisinin acik talebi uzerine saklaniyor.
+ *
+ * Ham adres ve tarayici kimligi kisisel veridir; saklanmasi KVKK
+ * kapsaminda bir islemedir ve sitenin aydinlatma metninde yer almasi
+ * gerekir. Veri hicbir ucuncu tarafa gonderilmiyor ve 180 gun sonra
+ * siliniyor.
  */
 
 require_once __DIR__ . '/ayarlar.php';
@@ -34,6 +53,15 @@ const ZIYARET_ONLINE_DAKIKA = 5;
 
 /** Kayitlarin saklanma suresi. */
 const ZIYARET_SAKLAMA_GUN = 180;
+
+/** Bu cerez varsa o tarayicidan yapilan ziyaretler sayilmiyor (panelden). */
+const ZIYARET_SAYMA_CEREZI = 'valentra_sayma';
+
+/** Tek sayfa icin kabul edilen en uzun goruntulenme suresi (saniye). */
+const ZIYARET_EN_UZUN_SURE = 3600;
+
+/** Son yazilan satirin numarasi; sayfa alti betigi bunu kullaniyor. */
+$GLOBALS['ziyaret_son_id'] = 0;
 
 /**
  * Bu isteği ziyaret olarak kaydeder.
@@ -48,20 +76,43 @@ function ziyaret_kaydet(?int $haberId = null, string $baslik = ''): void
         return;
     }
 
-    try {
-        $ifade = db()->prepare(
-            'INSERT INTO ziyaretler (zaman, ziyaretci, ip, yol, haber_id, baslik, yonlendiren)
-             VALUES (NOW(), :z, :i, :y, :h, :b, :r)'
-        );
+    $ua    = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+    $cihaz = ziyaret_ua_coz($ua);
 
-        $ifade->execute([
-            'z' => ziyaretci_imzasi(),
-            'i' => ziyaret_adresi(),
-            'y' => mb_substr((string) ($_SERVER['REQUEST_URI'] ?? '/'), 0, 255, 'UTF-8'),
-            'h' => $haberId,
-            'b' => mb_substr($baslik, 0, 255, 'UTF-8'),
-            'r' => ziyaret_yonlendiren(),
-        ]);
+    $temel = [
+        'z' => ziyaretci_imzasi(),
+        'i' => ziyaret_adresi(),
+        'y' => mb_substr((string) ($_SERVER['REQUEST_URI'] ?? '/'), 0, 255, 'UTF-8'),
+        'h' => $haberId,
+        'b' => mb_substr($baslik, 0, 255, 'UTF-8'),
+        'r' => ziyaret_yonlendiren(),
+    ];
+
+    try {
+        try {
+            $ifade = db()->prepare(
+                'INSERT INTO ziyaretler
+                        (zaman, ziyaretci, ip, yol, haber_id, baslik, yonlendiren,
+                         cihaz, tarayici, isletim, kampanya)
+                 VALUES (NOW(), :z, :i, :y, :h, :b, :r, :c, :t, :o, :k)'
+            );
+            $ifade->execute($temel + [
+                'c' => $cihaz['cihaz'],
+                't' => $cihaz['tarayici'],
+                'o' => $cihaz['isletim'],
+                'k' => ziyaret_kampanya(),
+            ]);
+        } catch (PDOException $e) {
+            // Sema yukseltmesi henuz calismadiysa yeni sutunlar yok;
+            // sayim yine de surmeli.
+            $ifade = db()->prepare(
+                'INSERT INTO ziyaretler (zaman, ziyaretci, ip, yol, haber_id, baslik, yonlendiren)
+                 VALUES (NOW(), :z, :i, :y, :h, :b, :r)'
+            );
+            $ifade->execute($temel);
+        }
+
+        $GLOBALS['ziyaret_son_id'] = (int) db()->lastInsertId();
 
         ziyaret_eskileri_temizle();
     } catch (Throwable $e) {
@@ -75,8 +126,11 @@ function ziyaret_kaydet(?int $haberId = null, string $baslik = ''): void
  * Elenenler ve sebepleri:
  *   - Yonetici oturumu: kendi ziyaretlerimizi saymak sayilari sisirir
  *     ve "bugun kac kisi geldi" sorusunu anlamsizlastirir.
+ *   - "Bu cihazi sayma" cerezi: yonetici paneldeki oturumu kapaliyken de
+ *     (telefondan bakarken) kendini saydirmasin.
  *   - Botlar: arama motoru taramalari insan ziyareti degil. Tam liste
- *     mumkun degil, ama bilinen imzalar trafigin buyuk kismini eler.
+ *     mumkun degil, ama bilinen imzalar trafigin buyuk kismini eler;
+ *     kacanlari tarayici dogrulamasi (dosya basi) eliyor.
  *   - GET disi ve HEAD istekleri: sayfa goruntuleme sayilmaz.
  */
 function ziyaret_sayilmali(): bool
@@ -84,6 +138,10 @@ function ziyaret_sayilmali(): bool
     $yontem = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
 
     if ($yontem !== 'GET') {
+        return false;
+    }
+
+    if (($_COOKIE[ZIYARET_SAYMA_CEREZI] ?? '') === '1') {
         return false;
     }
 
@@ -106,26 +164,118 @@ function ziyaret_sayilmali(): bool
     return !ziyaret_bot_mu();
 }
 
-/** Bilinen bot imzalari. */
-function ziyaret_bot_mu(): bool
+/**
+ * Bilinen bot imzaları.
+ *
+ * 23.10.2026 denetimi: eski liste "bot" kelimesi gecmeyen yaygin
+ * otomatik istemcileri kaciriyordu — WhatsApp baglanti onizlemesi
+ * ("WhatsApp/2..."), Meta'nin yapay zeka tarayicisi
+ * ("meta-externalagent"), ChatGPT ve Perplexity'nin kullanici adina
+ * sayfa okumasi ("ChatGPT-User", "Perplexity-User"), Google'in
+ * denetim araclari ("Google-InspectionTool", "GoogleOther"), Lighthouse,
+ * programlama dili kutuphaneleri (okhttp, Guzzle, node-fetch...).
+ * Tarayici kimliginde web adresi tasiyanlar ("+http://...") neredeyse
+ * her zaman tarayicidir; gercek tarayicilar adres yazmaz.
+ */
+function ziyaret_bot_mu(?string $ua = null): bool
 {
-    $tarayici = strtolower((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''));
+    $tarayici = strtolower($ua ?? (string) ($_SERVER['HTTP_USER_AGENT'] ?? ''));
 
-    if ($tarayici === '') {
-        // Tarayici kimligi olmayan istekler neredeyse her zaman betik.
+    if ($tarayici === '' || strlen($tarayici) < 20) {
+        // Bos ya da cok kisa tarayici kimligi neredeyse her zaman betik.
         return true;
     }
 
-    foreach (['bot', 'crawl', 'spider', 'slurp', 'facebookexternalhit',
-              'preview', 'python-requests', 'curl/', 'wget', 'headless',
-              'scrapy', 'httpclient', 'axios', 'go-http', 'java/',
-              'monitor', 'uptime', 'pingdom', 'ahrefs', 'semrush'] as $imza) {
+    if (str_contains($tarayici, 'http://') || str_contains($tarayici, 'https://') || str_contains($tarayici, '+http')) {
+        return true;
+    }
+
+    foreach (['bot', 'crawl', 'spider', 'slurp', 'facebookexternalhit', 'facebookcatalog',
+              'meta-externalagent', 'meta-externalfetcher', 'whatsapp', 'telegram', 'skypeuripreview',
+              'preview', 'python', 'curl/', 'wget', 'headless', 'phantomjs', 'puppeteer',
+              'playwright', 'selenium', 'lighthouse', 'pagespeed', 'gtmetrix',
+              'scrapy', 'httpclient', 'axios', 'go-http', 'java/', 'okhttp', 'guzzle',
+              'node-fetch', 'undici', 'libwww', 'ruby', 'php/', 'postman', 'insomnia',
+              'monitor', 'uptime', 'pingdom', 'statuscake', 'ahrefs', 'semrush', 'mj12',
+              'chatgpt-user', 'perplexity', 'claude-user', 'anthropic', 'cohere',
+              'google-inspectiontool', 'googleother', 'google-read-aloud', 'feedfetcher',
+              'mediapartners', 'adsbot', 'apis-google', 'google-site-verification',
+              'bingpreview', 'yandex', 'baiduspider', 'bytespider', 'petalsearch',
+              'feed', 'rss', 'validator', 'checker', 'scanner', 'archive.org'] as $imza) {
         if (str_contains($tarayici, $imza)) {
             return true;
         }
     }
 
     return false;
+}
+
+/**
+ * Tarayıcı kimliğinden cihaz türü, tarayıcı ve işletim sistemi.
+ *
+ * Kaba bir siniflandirma; rapordaki "telefondan mi bilgisayardan mi
+ * okunuyor" sorusuna yetiyor. Kimlik dizgesinin kendisi saklanmiyor.
+ *
+ * @return array{cihaz:string,tarayici:string,isletim:string}
+ */
+function ziyaret_ua_coz(string $ua): array
+{
+    $k = strtolower($ua);
+
+    $cihaz = match (true) {
+        str_contains($k, 'ipad') || str_contains($k, 'tablet')
+            || (str_contains($k, 'android') && !str_contains($k, 'mobile')) => 'tablet',
+        str_contains($k, 'mobile') || str_contains($k, 'iphone')
+            || str_contains($k, 'android') => 'mobil',
+        default => 'masaustu',
+    };
+
+    $isletim = match (true) {
+        str_contains($k, 'iphone') || str_contains($k, 'ipad') || str_contains($k, 'ipod') => 'iOS',
+        str_contains($k, 'android') => 'Android',
+        str_contains($k, 'windows') => 'Windows',
+        str_contains($k, 'cros') => 'ChromeOS',
+        str_contains($k, 'mac os x') || str_contains($k, 'macintosh') => 'macOS',
+        str_contains($k, 'linux') => 'Linux',
+        default => 'Diğer',
+    };
+
+    // Sira onemli: Edge, Opera, Samsung ve Yandex kimliklerinde "chrome"
+    // da geciyor; Chrome kimliginde de "safari".
+    $tarayici = match (true) {
+        str_contains($k, 'fban') || str_contains($k, 'fbav') => 'Facebook',
+        str_contains($k, 'instagram') => 'Instagram',
+        str_contains($k, 'edg/') || str_contains($k, 'edga/') || str_contains($k, 'edgios/') => 'Edge',
+        str_contains($k, 'opr/') || str_contains($k, 'opera') => 'Opera',
+        str_contains($k, 'samsungbrowser') => 'Samsung',
+        str_contains($k, 'yabrowser') => 'Yandex',
+        str_contains($k, 'firefox') || str_contains($k, 'fxios') => 'Firefox',
+        str_contains($k, 'chrome') || str_contains($k, 'crios') => 'Chrome',
+        str_contains($k, 'safari') => 'Safari',
+        default => 'Diğer',
+    };
+
+    return ['cihaz' => $cihaz, 'tarayici' => $tarayici, 'isletim' => $isletim];
+}
+
+/**
+ * Bağlantıdaki kampanya etiketi (utm_source / utm_campaign).
+ *
+ * Bultende, sosyal medyada ya da reklamda paylasilan baglantiya
+ * ?utm_source=bulten eklenirse rapor o ziyaretleri ayri gosteriyor.
+ */
+function ziyaret_kampanya(): string
+{
+    $kaynak   = trim((string) ($_GET['utm_source'] ?? ''));
+    $kampanya = trim((string) ($_GET['utm_campaign'] ?? ''));
+
+    if ($kaynak === '' && $kampanya === '') {
+        return '';
+    }
+
+    $metin = $kaynak . ($kampanya !== '' ? ' / ' . $kampanya : '');
+
+    return mb_substr((string) preg_replace('/[^\p{L}\p{N} \/._-]/u', '', $metin), 0, 100, 'UTF-8');
 }
 
 /**
@@ -211,12 +361,19 @@ function ziyaret_tuzu(): string
     return $tuz;
 }
 
+/** Kendi sitemizden gelen geçişin işareti (bkz. ziyaret_yonlendiren). */
+const ZIYARET_IC_GECIS = '@';
+
 /**
  * Ziyaretçinin geldiği dış adresin alan adı.
  *
  * Tam adres degil yalnizca alan adi saklaniyor: "google" mi "linkedin"
- * mi sorusuna cevap veriyor, fazlasi gereksiz. Kendi sayfalarimizdan
- * gelen gecisler bos birakiliyor, yoksa liste kendi adimizla dolardi.
+ * mi sorusuna cevap veriyor, fazlasi gereksiz.
+ *
+ * Site ici gecisler "@" ile isaretleniyor (23.10.2026). Onceden bos
+ * birakiliyordu ve "dogrudan gelen" ile ayirt edilemiyordu: Google'dan
+ * gelip uc haber okuyan bir ziyaretcinin iki sayfasi "dogrudan"
+ * sayiliyor, rapor dogrudan trafigi oldugundan cok gosteriyordu.
  */
 function ziyaret_yonlendiren(): string
 {
@@ -232,11 +389,12 @@ function ziyaret_yonlendiren(): string
         return '';
     }
 
-    $kendi = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    // Port numarasi karsilastirmayi bozmasin (HTTP_HOST "alan:8080" olabilir).
+    $kendi = strtolower((string) preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')));
     $sade  = static fn (string $a): string => preg_replace('/^www\./', '', $a) ?? $a;
 
     if ($sade($sunucu) === $sade($kendi)) {
-        return '';
+        return ZIYARET_IC_GECIS;
     }
 
     return mb_substr($sade($sunucu), 0, 255, 'UTF-8');
@@ -266,174 +424,188 @@ function ziyaret_eskileri_temizle(): void
 }
 
 /* ------------------------------------------------------------------ *
- * Raporlama
- *
- * Asagidaki sorgular yalnizca panelden cagriliyor. "Ziyaretci" her
- * yerde TEKIL imza sayisi, "goruntulenme" ise satir sayisi: ikisini
- * ayirmak onemli, cunku tek kisi on sayfa gezdiginde bunlar cok farkli
- * seyler anlatiyor.
+ * Tarayici dogrulamasi (ikinci asama, bkz. dosya basi)
  * ------------------------------------------------------------------ */
 
-/**
- * Üst satırdaki özet sayılar.
- *
- * @return array<string,int>
- */
-function ziyaret_ozeti(): array
+/** Satır numarası için imza: betik yalnızca kendi satırını güncelleyebilsin. */
+function ziyaret_isaret_imzasi(int $id): string
 {
-    $tek = static function (string $sorgu): int {
-        try {
-            return (int) db()->query($sorgu)->fetchColumn();
-        } catch (Throwable $e) {
-            return 0;
+    return substr(hash_hmac('sha256', 'gorunum|' . $id, ziyaret_tuzu()), 0, 16);
+}
+
+/**
+ * Sayfanın sonuna eklenen doğrulama betiği.
+ *
+ * Satir yazilmadiysa (bot, yonetici, "bu cihazi sayma") bos doner.
+ *
+ * Betik sayfa gercekten gorundugunde calisiyor: arka planda acilan
+ * sekme gorunur olana, tarayicinin onceden hazirladigi (prerender)
+ * sayfa acilana kadar bekliyor. Sayfadan cikarken goruntulenme suresini
+ * (yalnizca sekme ondeyken gecen sure) ve en derin kaydirma oranini
+ * gonderiyor. Hata verirse sessiz: sayfayi etkilemiyor.
+ */
+function ziyaret_betigi(): string
+{
+    $id = (int) ($GLOBALS['ziyaret_son_id'] ?? 0);
+
+    if ($id <= 0) {
+        return '';
+    }
+
+    $veri = json_encode([
+        'id'  => $id,
+        't'   => ziyaret_isaret_imzasi($id),
+        'url' => '/api/gorunum.php',
+    ], JSON_UNESCAPED_SLASHES);
+
+    return <<<HTML
+<script>
+(function (v) {
+    var anahtar = '', yeni = 0, sure = 0, bas = null, derin = 0, basladi = false;
+    try {
+        anahtar = localStorage.getItem('vz_k') || '';
+        if (!/^[0-9a-f]{16}$/.test(anahtar)) {
+            var b = new Uint8Array(8); crypto.getRandomValues(b);
+            anahtar = Array.prototype.map.call(b, function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+            localStorage.setItem('vz_k', anahtar); yeni = 1;
         }
-    };
-
-    $online = (int) ZIYARET_ONLINE_DAKIKA;
-
-    return [
-        'online' => $tek(
-            'SELECT COUNT(DISTINCT ziyaretci) FROM ziyaretler
-              WHERE zaman >= (NOW() - INTERVAL ' . $online . ' MINUTE)'
-        ),
-        'bugun_ziyaretci' => $tek(
-            'SELECT COUNT(DISTINCT ziyaretci) FROM ziyaretler
-              WHERE DATE(zaman) = CURDATE()'
-        ),
-        'bugun_goruntulenme' => $tek(
-            'SELECT COUNT(*) FROM ziyaretler WHERE DATE(zaman) = CURDATE()'
-        ),
-        'dun_ziyaretci' => $tek(
-            'SELECT COUNT(DISTINCT ziyaretci) FROM ziyaretler
-              WHERE DATE(zaman) = (CURDATE() - INTERVAL 1 DAY)'
-        ),
-        'hafta_ziyaretci' => $tek(
-            'SELECT COUNT(DISTINCT ziyaretci) FROM ziyaretler
-              WHERE zaman >= (CURDATE() - INTERVAL 6 DAY)'
-        ),
-        'hafta_goruntulenme' => $tek(
-            'SELECT COUNT(*) FROM ziyaretler
-              WHERE zaman >= (CURDATE() - INTERVAL 6 DAY)'
-        ),
-        'ay_ziyaretci' => $tek(
-            'SELECT COUNT(DISTINCT ziyaretci) FROM ziyaretler
-              WHERE zaman >= (CURDATE() - INTERVAL 29 DAY)'
-        ),
-        'ay_goruntulenme' => $tek(
-            'SELECT COUNT(*) FROM ziyaretler
-              WHERE zaman >= (CURDATE() - INTERVAL 29 DAY)'
-        ),
-        'toplam_goruntulenme' => $tek('SELECT COUNT(*) FROM ziyaretler'),
-    ];
+    } catch (e) { anahtar = ''; }
+    function olc() {
+        var h = document.documentElement, alt = (window.pageYOffset || h.scrollTop) + window.innerHeight;
+        var oran = Math.min(100, Math.round(alt / Math.max(1, h.scrollHeight) * 100));
+        if (oran > derin) { derin = oran; }
+    }
+    function gecen() { return sure + (bas !== null ? Date.now() - bas : 0); }
+    function gonder(son) {
+        try {
+            olc();
+            // FormData degil: api/.htaccess multipart istekleri reddediyor.
+            var d = new URLSearchParams();
+            d.append('id', v.id); d.append('t', v.t); d.append('k', anahtar); d.append('y', yeni);
+            d.append('s', Math.round(gecen() / 1000)); d.append('o', derin);
+            if (son && navigator.sendBeacon) { navigator.sendBeacon(v.url, d); }
+            else { fetch(v.url, { method: 'POST', body: d, keepalive: true, credentials: 'omit' }).catch(function () {}); }
+        } catch (e) {}
+    }
+    function goster() {
+        if (document.visibilityState !== 'visible') { if (bas !== null) { sure += Date.now() - bas; bas = null; } gonder(true); return; }
+        if (bas === null) { bas = Date.now(); }
+        if (!basladi) { basladi = true; olc(); gonder(false); }
+    }
+    function kur() {
+        document.addEventListener('visibilitychange', function () { if (basladi || document.visibilityState === 'visible') { goster(); } });
+        window.addEventListener('pagehide', function () { if (basladi) { if (bas !== null) { sure += Date.now() - bas; bas = null; } gonder(true); } });
+        window.addEventListener('scroll', olc, { passive: true });
+        if (document.visibilityState === 'visible') { goster(); }
+    }
+    if (document.prerendering) { document.addEventListener('prerenderingchange', kur, { once: true }); } else { kur(); }
+})({$veri});
+</script>
+HTML;
 }
 
 /**
- * Son N günün günlük dökümü; kayıt olmayan günler de sıfırla döner.
+ * Raporlarda sayılacak satırların koşulu.
  *
- * Bos gunleri SQL uretmiyor (tarih tablosu yok); PHP tarafinda takvim
- * kuruluyor. Aksi halde grafikte gunler kayardi ve "dun hic ziyaret
- * yok" ile "dun diye bir gun yok" ayirt edilemezdi.
+ * Dogrulama betigi ilk kez calistigi andan (olcum_baslangic) itibaren
+ * yalnizca tarayicida gorundugu dogrulanan satirlar sayiliyor; o andan
+ * onceki satirlar eskisi gibi. Betik hic calismadiysa (ornegin uc nokta
+ * hata veriyorsa) kosul her seyi kabul ediyor: sayilar sifira inmesin.
  *
- * @return list<array{tarih:string,ziyaretci:int,goruntulenme:int}>
+ * $ham true ise (panelde "ham sayim") dogrulama yok sayiliyor.
  */
-function ziyaret_gunluk(int $gun = 14): array
+function ziyaret_insan_kosulu(string $takma = '', bool $ham = false): string
 {
-    $gun = max(1, min(90, $gun));
+    $baslangic = ziyaret_olcum_baslangici();
 
-    try {
-        $satirlar = db()->query(
-            'SELECT DATE(zaman) AS tarih,
-                    COUNT(DISTINCT ziyaretci) AS ziyaretci,
-                    COUNT(*) AS goruntulenme
-               FROM ziyaretler
-              WHERE zaman >= (CURDATE() - INTERVAL ' . ($gun - 1) . ' DAY)
-              GROUP BY DATE(zaman)'
-        )->fetchAll();
-    } catch (Throwable $e) {
-        $satirlar = [];
+    if ($ham || $baslangic === '') {
+        return '1=1';
     }
 
-    $sayilar = [];
+    $p = $takma !== '' ? $takma . '.' : '';
 
-    foreach ($satirlar as $satir) {
-        $sayilar[(string) $satir['tarih']] = [
-            'ziyaretci'    => (int) $satir['ziyaretci'],
-            'goruntulenme' => (int) $satir['goruntulenme'],
-        ];
+    return '(' . $p . 'insan = 1 OR ' . $p . 'zaman < ' . db()->quote($baslangic) . ')';
+}
+
+/** Ziyaretçi kimliği ifadesi: tarayıcı kimliği varsa o, yoksa takma imza. */
+function ziyaret_kimlik_ifadesi(string $takma = ''): string
+{
+    $p = $takma !== '' ? $takma . '.' : '';
+
+    return 'COALESCE(NULLIF(' . $p . "tarayici_id, ''), " . $p . 'ziyaretci)';
+}
+
+/** Doğrulamanın başladığı an ('' = henüz hiç doğrulama gelmedi). */
+function ziyaret_olcum_baslangici(): string
+{
+    static $deger = null;
+
+    if ($deger === null) {
+        try {
+            $deger = ayar_oku('olcum_baslangic');
+        } catch (Throwable $e) {
+            $deger = '';
+        }
     }
 
-    $sonuc = [];
-
-    for ($i = $gun - 1; $i >= 0; $i--) {
-        $tarih = date('Y-m-d', strtotime("-{$i} day"));
-
-        $sonuc[] = [
-            'tarih'        => $tarih,
-            'ziyaretci'    => $sayilar[$tarih]['ziyaretci'] ?? 0,
-            'goruntulenme' => $sayilar[$tarih]['goruntulenme'] ?? 0,
-        ];
-    }
-
-    return $sonuc;
+    return $deger;
 }
 
 /**
- * En çok okunan haberler.
- *
- * Basligi haberler tablosundan aliyoruz; kayit anindaki basligi degil.
- * Haber sonradan duzenlenirse listede guncel hali gorunsun diye.
- *
- * @return list<array<string,mixed>>
+ * Doğrulama sütunları var mı? (Şema yükseltmesi çalışmadıysa raporlar
+ * eski sorgulara dönüyor.)
  */
-function ziyaret_populer_haberler(int $gun = 7, int $adet = 10): array
+function ziyaret_yeni_sema(): bool
 {
-    try {
-        $ifade = db()->prepare(
-            'SELECT z.haber_id,
-                    COALESCE(h.baslik, z.baslik) AS baslik,
-                    h.slug,
-                    COUNT(*) AS okunma,
-                    COUNT(DISTINCT z.ziyaretci) AS ziyaretci
-               FROM ziyaretler z
-          LEFT JOIN haberler h ON h.id = z.haber_id
-              WHERE z.haber_id IS NOT NULL
-                AND z.zaman >= (CURDATE() - INTERVAL ' . max(0, $gun - 1) . ' DAY)
-              GROUP BY z.haber_id, baslik, h.slug
-              ORDER BY okunma DESC
-              LIMIT ' . max(1, min(50, $adet))
-        );
-        $ifade->execute();
+    static $var = null;
 
-        return $ifade->fetchAll();
-    } catch (Throwable $e) {
-        return [];
+    if ($var === null) {
+        try {
+            db()->query('SELECT insan, tarayici_id, sure, kaydirma, cihaz FROM ziyaretler LIMIT 0');
+            $var = true;
+        } catch (Throwable $e) {
+            $var = false;
+        }
     }
+
+    return $var;
 }
+
+/* ------------------------------------------------------------------ *
+ * Herkese acik sayfalarda kullanilan okunma bilgisi
+ * ------------------------------------------------------------------ */
 
 /**
  * Okuyucuya gösterilen "En Çok Okunanlar" (yan pencere).
  *
  * Site sahibinin istegi (22.10.2026): "en cok hangi sayfalara
- * bakildiysa onlari on plana alalim". Panel listesinden (yukarida)
- * farki: yalnizca YAYINDAKI haberler, sayim ayni okuyucunun tekrar
- * acmalarini degil FARKLI okuyuculari sayiyor (bir kisi yenile tusuna
- * basarak listeyi degistiremesin) ve donem kisa (son 2 gun): okuyucu
- * gecen haftanin degil bugunun cok okunanini gormek istiyor. Iki gunde
- * yeterli haber yoksa 7 gune genisliyor.
+ * bakildiysa onlari on plana alalim". Panel listesinden farki: yalnizca
+ * YAYINDAKI haberler, sayim ayni okuyucunun tekrar acmalarini degil
+ * FARKLI okuyuculari sayiyor (bir kisi yenile tusuna basarak listeyi
+ * degistiremesin) ve donem kisa (son 2 gun): okuyucu gecen haftanin
+ * degil bugunun cok okunanini gormek istiyor. Iki gunde yeterli haber
+ * yoksa 7 gune genisliyor. Botlar ve onizlemeler sayilmiyor
+ * (ziyaret_insan_kosulu).
  *
  * @return list<array{baslik:string,slug:string,okuyucu:int}>
  */
 function haber_en_cok_okunanlar(int $adet = 6): array
 {
+    $yeni   = ziyaret_yeni_sema();
+    $kimlik = $yeni ? ziyaret_kimlik_ifadesi('z') : 'z.ziyaretci';
+    $insan  = $yeni ? ziyaret_insan_kosulu('z') : '1=1';
+    $liste  = [];
+
     foreach ([2, 7] as $gun) {
         try {
             $ifade = db()->prepare(
-                'SELECT h.baslik, h.slug, COUNT(DISTINCT z.ziyaretci) AS okuyucu
+                'SELECT h.baslik, h.slug, COUNT(DISTINCT ' . $kimlik . ') AS okuyucu
                    FROM ziyaretler z
                    JOIN haberler h ON h.id = z.haber_id
                   WHERE z.haber_id IS NOT NULL
                     AND h.durum = :d
                     AND z.zaman >= (NOW() - INTERVAL ' . $gun . ' DAY)
+                    AND ' . $insan . '
                   GROUP BY h.id, h.baslik, h.slug
                   ORDER BY okuyucu DESC, MAX(z.zaman) DESC
                   LIMIT ' . max(1, min(20, $adet))
@@ -454,164 +626,4 @@ function haber_en_cok_okunanlar(int $adet = 6): array
         'slug'    => (string) $s['slug'],
         'okuyucu' => (int) $s['okuyucu'],
     ], $liste);
-}
-
-/**
- * En çok görüntülenen sayfalar (haber dışı sayfalar dahil).
- *
- * @return list<array<string,mixed>>
- */
-function ziyaret_populer_sayfalar(int $gun = 7, int $adet = 10): array
-{
-    try {
-        return db()->query(
-            'SELECT yol, COUNT(*) AS goruntulenme,
-                    COUNT(DISTINCT ziyaretci) AS ziyaretci
-               FROM ziyaretler
-              WHERE zaman >= (CURDATE() - INTERVAL ' . max(0, $gun - 1) . ' DAY)
-              GROUP BY yol
-              ORDER BY goruntulenme DESC
-              LIMIT ' . max(1, min(50, $adet))
-        )->fetchAll();
-    } catch (Throwable $e) {
-        return [];
-    }
-}
-
-/**
- * Ziyaretçiler nereden geldi.
- *
- * Yonlendireni bos olanlar "dogrudan" sayiliyor: adresi elle yazan,
- * yer imine tiklayan ya da yonlendirenini gizleyen ziyaretciler.
- *
- * @return list<array<string,mixed>>
- */
-function ziyaret_yonlendirenler(int $gun = 30, int $adet = 10): array
-{
-    try {
-        return db()->query(
-            'SELECT CASE WHEN yonlendiren = "" THEN "(doğrudan)" ELSE yonlendiren END AS kaynak,
-                    COUNT(*) AS goruntulenme,
-                    COUNT(DISTINCT ziyaretci) AS ziyaretci
-               FROM ziyaretler
-              WHERE zaman >= (CURDATE() - INTERVAL ' . max(0, $gun - 1) . ' DAY)
-              GROUP BY kaynak
-              ORDER BY goruntulenme DESC
-              LIMIT ' . max(1, min(50, $adet))
-        )->fetchAll();
-    } catch (Throwable $e) {
-        return [];
-    }
-}
-
-/**
- * Şu anda sitede olanların EN SON baktığı sayfa; kişi başına bir satır.
- *
- * Kisi basina tek satir olmasi onemli: ilk surumde her ziyaretcinin
- * gezdigi her sayfa ayri satirdi ve liste "3 kisi online" yazarken bes
- * satir gosteriyordu.
- *
- * Son satir MAX(id) ile bulunuyor. id otomatik artan oldugu icin
- * zamanla ayni siradadir; MAX(zaman) ise ayni saniyeye denk gelen iki
- * sayfada hangisinin sonuncu oldugunu soylemez.
- *
- * @return list<array<string,mixed>>
- */
-function ziyaret_online_sayfalar(int $adet = 10): array
-{
-    $dakika = (int) ZIYARET_ONLINE_DAKIKA;
-
-    try {
-        return db()->query(
-            'SELECT z.yol, z.baslik, z.zaman AS son
-               FROM ziyaretler z
-               JOIN (SELECT ziyaretci, MAX(id) AS son_id
-                       FROM ziyaretler
-                      WHERE zaman >= (NOW() - INTERVAL ' . $dakika . ' MINUTE)
-                      GROUP BY ziyaretci) sonlar ON sonlar.son_id = z.id
-              ORDER BY z.zaman DESC, z.id DESC
-              LIMIT ' . max(1, min(50, $adet))
-        )->fetchAll();
-    } catch (Throwable $e) {
-        return [];
-    }
-}
-
-/**
- * Aralıktaki ziyaretçiler, her biri için gezinti özeti.
- *
- * "Hangi ziyaretci nereye girmis" sorusunun ust yarisi. Alt yarisi
- * ziyaret_gezinti(): bir kisiye tiklayinca gezdigi butun sayfalar.
- *
- * Kimlik yerine takma ad kullaniliyor — ham IP zaten saklanmiyor
- * (bkz. dosya basi). Analiz icin gereken sey "ayni kisi mi" bilgisi ve
- * bunu takma ad da veriyor: bir ziyaretcinin kac sayfa gezdigini,
- * nereden gelip nerede biraktigini eksiksiz gosteriyor.
- *
- * Son sayfa MAX(id) ile bulunuyor; zamanla ayni siradadir ve ayni
- * saniyeye denk gelen iki kayitta hangisinin sonuncu oldugunu
- * MAX(zaman)'in aksine dogru soyler.
- *
- * @return list<array<string,mixed>>
- */
-function ziyaret_ziyaretciler(int $gun = 7, int $adet = 50): array
-{
-    try {
-        return db()->query(
-            'SELECT o.ziyaretci, o.ilk, o.son, o.sayfa, o.yonlendiren, o.ip,
-                    s.yol AS son_yol, s.baslik AS son_baslik
-               FROM (SELECT ziyaretci,
-                            MIN(zaman) AS ilk,
-                            MAX(zaman) AS son,
-                            COUNT(*)   AS sayfa,
-                            MAX(id)    AS son_id,
-                            -- Ziyaretcinin nereden geldigi ilk istekte
-                            -- belli olur; sonraki sayfalarda yonlendiren
-                            -- bos kalir, o yuzden dolu olan aliniyor.
-                            MAX(CASE WHEN yonlendiren <> "" THEN yonlendiren END) AS yonlendiren,
-                            -- Ayni takma kimlik farkli adreslerden
-                            -- gelebilir (mobil ag degisimi); listede en
-                            -- son gorulen yeterli, tamami gezinti
-                            -- dokumunde duruyor.
-                            MAX(CASE WHEN ip <> "" THEN ip END) AS ip
-                       FROM ziyaretler
-                      WHERE zaman >= (CURDATE() - INTERVAL ' . max(0, $gun - 1) . ' DAY)
-                      GROUP BY ziyaretci) o
-               JOIN ziyaretler s ON s.id = o.son_id
-              ORDER BY o.son DESC
-              LIMIT ' . max(1, min(200, $adet))
-        )->fetchAll();
-    } catch (Throwable $e) {
-        return [];
-    }
-}
-
-/**
- * Bir ziyaretçinin gezdiği sayfalar, sırasıyla.
- *
- * Imza dogrulanmadan sorguya girmiyor: 16 haneli onaltilik disinda bir
- * sey gelirse bos donuyor. Deger yine de hazir ifadeyle gonderiliyor.
- *
- * @return list<array<string,mixed>>
- */
-function ziyaret_gezinti(string $imza, int $adet = 300): array
-{
-    if (preg_match('/^[0-9a-f]{16}$/', $imza) !== 1) {
-        return [];
-    }
-
-    try {
-        $ifade = db()->prepare(
-            'SELECT zaman, yol, baslik, haber_id, yonlendiren, ip
-               FROM ziyaretler
-              WHERE ziyaretci = :z
-              ORDER BY id
-              LIMIT ' . max(1, min(1000, $adet))
-        );
-        $ifade->execute(['z' => $imza]);
-
-        return $ifade->fetchAll();
-    } catch (Throwable $e) {
-        return [];
-    }
 }
