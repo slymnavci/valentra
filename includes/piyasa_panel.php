@@ -15,13 +15,77 @@ require_once __DIR__ . '/piyasalar.php';
 require_once __DIR__ . '/piyasa.php';
 require_once __DIR__ . '/grafik.php';
 
-/** Canlı kartlar: değer, günlük değişim, gün içi çizgisi. */
-function piyasa_kartlari_html(): string
+/*
+ * Piyasa bolumleri: her biri AYRI sayfa (site sahibinin istegi,
+ * 23.10.2026: "BIST 100, sonra doviz, altin gibi bilgileri ve grafikleri
+ * ayri sayfalardan kullanicinin analiz edecegi sekilde yayinlayalim").
+ * Adres piyasalar.php?bolum=<anahtar>; bolumsuz adres hepsini birden
+ * gosteren genel bakis olarak kaliyor.
+ *
+ * @return array<string,array{ad:string,baslik:string,aciklama:string,araclar:list<string>,sirketler?:bool,gostergeler?:bool}>
+ */
+function piyasa_bolumleri(): array
+{
+    return [
+        'bist' => [
+            'ad'       => 'BIST 100',
+            'baslik'   => 'BIST 100 ve Borsa İstanbul Şirketleri',
+            'aciklama' => 'BIST 100 endeksinin gün içi ve dönem grafikleri, dönem analizi ve büyük şirketlerin fiyatları.',
+            'araclar'  => ['bist'],
+            'sirketler' => true,
+        ],
+        'doviz' => [
+            'ad'       => 'Döviz',
+            'baslik'   => 'Döviz: Dolar ve Euro',
+            'aciklama' => 'Dolar/TL ve Euro/TL: anlık kur, gün içi hareket, 3 ay, 1 yıl ve 5 yıllık grafikler ve dönem analizi.',
+            'araclar'  => ['usd', 'eur'],
+        ],
+        'altin' => [
+            'ad'       => 'Altın',
+            'baslik'   => 'Altın: Gram ve Ons',
+            'aciklama' => 'Gram ve ons altın: anlık fiyat, dönem grafikleri ve dönem analizi.',
+            'araclar'  => ['altin', 'ons'],
+        ],
+        'petrol' => [
+            'ad'       => 'Petrol',
+            'baslik'   => 'Brent Petrol',
+            'aciklama' => 'Brent petrol: anlık fiyat, dönem grafikleri ve dönem analizi.',
+            'araclar'  => ['brent'],
+        ],
+        'gostergeler' => [
+            'ad'       => 'Ekonomik Göstergeler',
+            'baslik'   => 'Ekonomik Göstergeler',
+            'aciklama' => 'Enflasyon, politika faizi, kurlar ve diğer resmî göstergelerin grafikleri (TCMB EVDS ve diğer resmî kaynaklar).',
+            'araclar'  => [],
+            'gostergeler' => true,
+        ],
+    ];
+}
+
+function piyasa_bolum_yolu(string $bolum, array $ek = []): string
+{
+    $parametre = array_filter(['bolum' => $bolum] + $ek, static fn ($d): bool => $d !== '');
+
+    return piyasalar_yolu() . ($parametre === [] ? '' : '?' . http_build_query($parametre));
+}
+
+/**
+ * Canlı kartlar: değer, günlük değişim, gün içi çizgisi.
+ *
+ * @param list<string> $sadece Yalnizca bu araclar (bos: hepsi). Canli
+ *        yenileme ayni listeyle istiyor; yoksa bolum sayfasindaki kartlar
+ *        iki dakika sonra butun araclarla yer degistirirdi.
+ */
+function piyasa_kartlari_html(array $sadece = []): string
 {
     $kartlar = [];
     $zaman   = 0;
 
     foreach (piyasa_araclari() as $anahtar => $tanim) {
+        if ($sadece !== [] && !in_array($anahtar, $sadece, true)) {
+            continue;
+        }
+
         $kayit = piyasa_seri($anahtar, '1d', 120);
         $veri  = $kayit['veri'];
         $zaman = max($zaman, $kayit['zaman']);
@@ -42,7 +106,7 @@ function piyasa_kartlari_html(): string
     try {
         $serit = piyasa_verisi();
 
-        if (($serit['altin'] ?? null) !== null) {
+        if (isset($kartlar['altin']) && ($serit['altin'] ?? null) !== null) {
             $kartlar['altin']['fiyat']   = (float) $serit['altin'];
             $kartlar['altin']['degisim'] = $serit['altin_degisim'] ?? $kartlar['altin']['degisim'];
         }
@@ -56,7 +120,7 @@ function piyasa_kartlari_html(): string
 
     ob_start();
     ?>
-    <div class="piyasa-kartlar" data-canli-bolum="/api/piyasalar.php?bolum=kartlar" data-canli-aralik="120">
+    <div class="piyasa-kartlar" data-canli-bolum="/api/piyasalar.php?<?= e(http_build_query(array_filter(['bolum' => 'kartlar', 'araclar' => implode(',', $sadece)]))) ?>" data-canli-aralik="120">
         <?php foreach ($kartlar as $anahtar => $k): ?>
             <div class="piyasa-kart">
                 <span class="pk-ad"><?= e($k['tanim']['ad']) ?></span>
@@ -76,8 +140,14 @@ function piyasa_kartlari_html(): string
     return (string) ob_get_clean();
 }
 
-/** Dönem grafikleri (3 ay / 1 yıl / 5 yıl). */
-function piyasa_grafikleri_html(string $donem): string
+/**
+ * Dönem grafikleri (3 ay / 1 yıl / 5 yıl).
+ *
+ * @param list<string> $sadece Yalnizca bu araclar (bos: hepsi).
+ * @param string       $bolum  Bolum sayfasindaysa donem bagi o bolumde kalsin.
+ * @param bool         $analiz Her grafigin altinda donem analizi tablosu.
+ */
+function piyasa_grafikleri_html(string $donem, array $sadece = [], string $bolum = '', bool $analiz = false): string
 {
     $donemler = piyasa_donemleri();
     $donem    = isset($donemler[$donem]) ? $donem : '3a';
@@ -85,6 +155,10 @@ function piyasa_grafikleri_html(string $donem): string
     $grafikler = '';
 
     foreach (piyasa_araclari() as $anahtar => $arac) {
+        if ($sadece !== [] && !in_array($anahtar, $sadece, true)) {
+            continue;
+        }
+
         $veri = piyasa_seri($anahtar, $tanim['aralik'], $tanim['sure'])['veri'];
 
         if ($veri === null || count($veri['noktalar']) < 2) {
@@ -112,7 +186,7 @@ function piyasa_grafikleri_html(string $donem): string
             'kaynak'   => 'Yahoo Finance',
             'sifirdan' => false,
             'hane'     => $arac['hane'],
-        ]) . '</div>';
+        ]) . ($analiz ? piyasa_donem_analizi_html($seri, $arac, (string) $tanim['ad']) : '') . '</div>';
     }
 
     // Varsayilan donemde de veri yoksa bolum hic basilmiyor; baska bir
@@ -130,7 +204,7 @@ function piyasa_grafikleri_html(string $donem): string
     <div class="piyasa-donem">
         <nav class="donem-secici" aria-label="Grafik dönemi">
             <?php foreach ($donemler as $kod => $d): ?>
-                <a href="?donem=<?= e($kod) ?>#piyasa-grafikleri"<?= $kod === $donem ? ' aria-current="true"' : '' ?>><?= e($d['ad']) ?></a>
+                <a href="?<?= e(http_build_query(array_filter(['bolum' => $bolum, 'donem' => $kod]))) ?>#piyasa-grafikleri"<?= $kod === $donem ? ' aria-current="true"' : '' ?>><?= e($d['ad']) ?></a>
             <?php endforeach; ?>
         </nav>
         <div class="piyasa-grafikler" id="piyasa-grafikleri"><?= $grafikler ?></div>
@@ -138,6 +212,116 @@ function piyasa_grafikleri_html(string $donem): string
     <?php
 
     return (string) ob_get_clean();
+}
+
+/**
+ * Dönem analizi: dönem başı ve sonu, değişim, en yüksek, en düşük,
+ * ortalama ve günlük oynaklık. Seri grafikle AYNI (gunluk kapanis).
+ *
+ * @param list<array{0:string,1:float}> $seri
+ */
+function piyasa_donem_analizi_html(array $seri, array $arac, string $donemAdi): string
+{
+    if (count($seri) < 2) {
+        return '';
+    }
+
+    $degerler = array_map(static fn (array $n): float => (float) $n[1], $seri);
+    $ilk      = $degerler[0];
+    $son      = $degerler[count($degerler) - 1];
+    $enYuksek = max($degerler);
+    $enDusuk  = min($degerler);
+    $yuksekGun = $seri[array_search($enYuksek, $degerler, true)][0];
+    $dusukGun  = $seri[array_search($enDusuk, $degerler, true)][0];
+
+    // Gunluk getirilerin standart sapmasi (%): ne kadar dalgali.
+    $getiriler = [];
+
+    for ($i = 1, $n = count($degerler); $i < $n; $i++) {
+        if ($degerler[$i - 1] != 0.0) {
+            $getiriler[] = ($degerler[$i] / $degerler[$i - 1] - 1) * 100;
+        }
+    }
+
+    $oynaklik = null;
+
+    if (count($getiriler) >= 2) {
+        $ort      = array_sum($getiriler) / count($getiriler);
+        $oynaklik = sqrt(array_sum(array_map(static fn (float $g): float => ($g - $ort) ** 2, $getiriler)) / (count($getiriler) - 1));
+    }
+
+    $hane  = (int) $arac['hane'];
+    $deger = static fn (float $d): string => ($arac['birim'] === '$' ? '$' : '') . piyasa_sayi($d, $hane)
+        . ($arac['birim'] === '₺' ? ' ₺' : '');
+    $gun   = static fn (string $t): string => date('d.m.Y', (int) strtotime($t));
+
+    $satirlar = [
+        ['Dönem başı (' . $gun($seri[0][0]) . ')', $deger($ilk)],
+        ['Son (' . $gun($seri[count($seri) - 1][0]) . ')', $deger($son)],
+        ['Dönem değişimi', piyasa_degisim_html($ilk != 0.0 ? ($son / $ilk - 1) * 100 : null)],
+        ['En yüksek (' . $gun($yuksekGun) . ')', $deger($enYuksek)],
+        ['En düşük (' . $gun($dusukGun) . ')', $deger($enDusuk)],
+        ['Ortalama', $deger(array_sum($degerler) / count($degerler))],
+    ];
+
+    if ($oynaklik !== null) {
+        $satirlar[] = ['Günlük oynaklık', '%' . piyasa_sayi($oynaklik, 2)];
+    }
+
+    $html = '<table class="piyasa-analiz"><caption>' . e($arac['ad']) . ' — ' . e($donemAdi) . ' analizi</caption><tbody>';
+
+    foreach ($satirlar as [$ad, $hucre]) {
+        // $hucre ya e() ile kacirilmis sayi ya piyasa_degisim_html ciktisi.
+        $html .= '<tr><th scope="row">' . e($ad) . '</th><td>' . (str_starts_with($hucre, '<') ? $hucre : e($hucre)) . '</td></tr>';
+    }
+
+    return $html . '</tbody></table>';
+}
+
+/**
+ * "Ekonomik Gündem": Ekonomi haberleri sayfasında haberlerin ALTINDA,
+ * piyasa bolumlerine baglantilar ve her birinin anlik degeri (site
+ * sahibinin istegi, 23.10.2026: "en onde guncel haberler, sonra
+ * istatistikler; ekonomik gundem olsun, oraya linkler koyarak").
+ * Degerler onbellekten (piyasa_seri); veri yoksa yalnizca baglanti.
+ */
+function ekonomik_gundem_html(): string
+{
+    $araclar = piyasa_araclari();
+    $ozet    = ['bist' => 'bist', 'doviz' => 'usd', 'altin' => 'altin', 'petrol' => 'brent'];
+    $kartlar = '';
+
+    foreach (piyasa_bolumleri() as $bolum => $b) {
+        $satir = '';
+
+        if (isset($ozet[$bolum])) {
+            try {
+                $veri = piyasa_seri($ozet[$bolum], '1d', 120)['veri'];
+            } catch (Throwable $e) {
+                $veri = null;
+            }
+
+            if (($veri['fiyat'] ?? null) !== null) {
+                $arac  = $araclar[$ozet[$bolum]];
+                $satir = '<span class="eg-deger">' . e($arac['ad']) . ': '
+                    . ($arac['birim'] === '$' ? '$' : '') . e(piyasa_sayi((float) $veri['fiyat'], (int) $arac['hane']))
+                    . ($arac['birim'] === '₺' ? ' ₺' : '') . '</span> '
+                    . piyasa_degisim_html($veri['degisim'] ?? null);
+            }
+        }
+
+        $kartlar .= '<a class="eg-kart" href="' . e(piyasa_bolum_yolu($bolum)) . '">'
+            . '<strong>' . e($b['ad']) . '</strong>'
+            . ($satir !== '' ? '<span class="eg-satir">' . $satir . '</span>' : '')
+            . '<span class="eg-not">Grafikler ve analiz &rarr;</span></a>';
+    }
+
+    $kartlar .= '<a class="eg-kart" href="' . e(sirket_yolu()) . '"><strong>Şirket Analizi</strong>'
+        . '<span class="eg-not">Bir şirketin 10 yıllık geçmişi, getirileri ve çarpanları &rarr;</span></a>';
+
+    return '<section class="ekonomik-gundem" aria-labelledby="eg-baslik">'
+        . '<div class="bolum-basligi"><h2 id="eg-baslik">Ekonomik Gündem</h2><span class="cizgi"></span></div>'
+        . '<div class="eg-izgara">' . $kartlar . '</div></section>';
 }
 
 /** Borsa İstanbul'un büyük şirketleri: fiyat ve günlük değişim. */

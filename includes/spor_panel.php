@@ -100,7 +100,8 @@ function spor_parametreleri(array $kaynak): array
 /** Bölümler arasında geçiş sekmeleri. */
 function spor_sekmeleri_html(string $aktif, string $lig): string
 {
-    $sekmeler = SPOR_BOLUMLERI + ['' => 'Spor Haberleri'];
+    // Once guncel haberler (site sahibinin istegi, 23.10.2026).
+    $sekmeler = ['' => 'Güncel Spor Haberleri'] + SPOR_BOLUMLERI;
 
     if (!futbol_api_acik()) {
         unset($sekmeler['gol-kralligi']);

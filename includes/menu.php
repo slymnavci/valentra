@@ -46,25 +46,36 @@ function site_menusu(): array
          * gostergeler, borsa sirketleri ve gunluk ekonomi haberleri ayri
          * ayri. Ilk ucu Piyasalar sayfasinin bolumleri.
          */
+        /*
+         * 23.10.2026 (site sahibinin istegi): "en onde guncel haberler,
+         * sonra istatistikler". BIST 100, doviz, altin, petrol ve
+         * gostergeler artik AYRI sayfalar (piyasa_bolumleri).
+         */
         if ($oge['anahtar'] === 'ekonomi') {
-            $piyasa = piyasalar_yolu();
+            require_once __DIR__ . '/piyasa_panel.php';
+
             $menu[$i]['href']   = null;
             $menu[$i]['altlar'] = [
-                ['ad' => 'Piyasalar (BIST, Döviz, Altın)', 'anahtar' => 'piyasalar',        'href' => $piyasa,                          'adet' => 0],
-                ['ad' => 'Ekonomik Göstergeler',          'anahtar' => 'ekonomi-gosterge', 'href' => $piyasa . '#gostergeler',         'adet' => 0],
-                ['ad' => 'Borsa İstanbul Şirketleri',     'anahtar' => 'ekonomi-borsa',    'href' => $piyasa . '#borsa',               'adet' => 0],
-                ['ad' => 'Şirket Analizi (10 Yıllık Geçmiş)', 'anahtar' => 'ekonomi-sirket', 'href' => sirket_yolu(),                  'adet' => 0],
-                ['ad' => 'Günlük Ekonomi Haberleri',      'anahtar' => 'ekonomi-haberler', 'href' => (string) $oge['href'],           'adet' => 0],
+                ['ad' => 'Güncel Ekonomi Haberleri', 'anahtar' => 'ekonomi', 'href' => (string) $oge['href'], 'adet' => 0],
             ];
+
+            foreach (piyasa_bolumleri() as $bolum => $b) {
+                $menu[$i]['altlar'][] = ['ad' => $b['ad'], 'anahtar' => 'ekonomi-' . $bolum, 'href' => piyasa_bolum_yolu($bolum), 'adet' => 0];
+            }
+
+            $menu[$i]['altlar'][] = ['ad' => 'Şirket Analizi (10 Yıllık Geçmiş)', 'anahtar' => 'ekonomi-sirket', 'href' => sirket_yolu(), 'adet' => 0];
+            $menu[$i]['altlar'][] = ['ad' => 'Tüm Piyasalar', 'anahtar' => 'piyasalar', 'href' => piyasalar_yolu(), 'adet' => 0];
         }
 
         if ($oge['anahtar'] === 'spor') {
             $menu[$i]['href']   = null;
+            // Once guncel haberler, sonra puan durumu ve fikstur (site
+            // sahibinin istegi, 23.10.2026).
             $menu[$i]['altlar'] = [
+                ['ad' => 'Güncel Spor Haberleri', 'anahtar' => 'spor-haberler', 'href' => spor_bolum_yolu(),              'adet' => 0],
                 ['ad' => 'Puan Durumu',           'anahtar' => 'spor-puan',     'href' => spor_bolum_yolu('puan-durumu'), 'adet' => 0],
                 ['ad' => 'Fikstür',               'anahtar' => 'spor-fikstur',  'href' => spor_bolum_yolu('fikstur'),     'adet' => 0],
                 ['ad' => 'Gol Krallığı',          'anahtar' => 'spor-gol',      'href' => spor_bolum_yolu('gol-kralligi'), 'adet' => 0],
-                ['ad' => 'Güncel Spor Haberleri', 'anahtar' => 'spor-haberler', 'href' => spor_bolum_yolu(),              'adet' => 0],
             ];
 
             // Gol kralligi yalnizca spor veri servisiyle (TFF'den yok).
