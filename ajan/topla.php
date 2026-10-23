@@ -1957,7 +1957,8 @@ gunluk(
     . ', ' . $hatali . ' hata.'
 );
 
-$kullanim = $yazar->kullanim();
+$kullanim   = $yazar->kullanim();
+$modelOzeti = '';
 
 if ($kullanim['istek'] > 0) {
     gunluk(sprintf(
@@ -1970,7 +1971,18 @@ if ($kullanim['istek'] > 0) {
     $saglayici = $yazar->saglayicilar();
 
     if ($saglayici !== []) {
-        // Zincir sirasiyla: Claude (Haiku), Luna, Gemini (yedek).
+        // Zincir sirasiyla: Claude (Haiku), Luna, Gemini (yedek). Ozete de
+        // (GitHub bildirimi): hangi model kac grubu yazdi.
+        $modelOzeti = 'Modeller: ' . implode(', ', array_map(
+            static fn (array $s): string => $s['model'] . ' ' . $s['istek'] . ' grup',
+            $saglayici
+        )) . '.';
+        $cd = $yazar->claudeDurumu();
+
+        if ($cd !== null && $cd['mesaj'] !== '') {
+            $modelOzeti .= ' Claude son hata: ' . mb_substr(str_replace(["\r", "\n"], ' ', $cd['mesaj']), 0, 160, 'UTF-8') . '.';
+        }
+
         gunluk('  ' . implode('; ', array_map(static fn (array $s): string => sprintf(
             '%s: %d istek yanıtladı (%s giriş + %s çıkış)',
             $s['model'],
@@ -2030,6 +2042,10 @@ if ($modelErisimYok !== '') {
 
 if ($kuruCalisma) {
     gunluk('Kuru çalışma: gönderim yapılmadı.');
+
+    if ($modelOzeti !== '' && getenv('GITHUB_ACTIONS') === 'true') {
+        echo '::notice title=Valentra ajanı::' . str_replace(['%', "\r", "\n"], ['%25', '%0D', '%0A'], $modelOzeti) . PHP_EOL;
+    }
     $videoSonuc = 'Kuru çalışma: siteye gönderilmedi.';
 
     foreach ($haberler as $haber) {
@@ -2061,6 +2077,10 @@ $gonderilecek = array_merge($bekleyen, $haberler);
 
 if ($gonderilecek === []) {
     gunluk('Gönderilecek haber yok.');
+
+    if ($modelOzeti !== '' && getenv('GITHUB_ACTIONS') === 'true') {
+        echo '::notice title=Valentra ajanı::' . str_replace(['%', "\r", "\n"], ['%25', '%0D', '%0A'], $modelOzeti) . PHP_EOL;
+    }
     exit(0);
 }
 
@@ -2129,7 +2149,7 @@ $depo->sil('bekleyen_haberler');
  * eklendi, kaci hemen yayina girdi, kaci onay bekliyor, ana sayfada su an
  * kac haber var. Site eski surumse yayinlanan/ana_sayfa alanlari yok.
  */
-$ozet = 'Siteye gönderildi: ' . ($yanit['eklenen'] ?? 0) . ' yeni haber, '
+$ozet = ($modelOzeti !== '' ? $modelOzeti . ' ' : '') . 'Siteye gönderildi: ' . ($yanit['eklenen'] ?? 0) . ' yeni haber, '
     . ($yanit['yinelenen'] ?? 0) . ' zaten vardı.';
 
 if (isset($yanit['yayinlanan'])) {
