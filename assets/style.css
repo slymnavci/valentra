@@ -4075,3 +4075,42 @@ a.rg-madde:hover { color: var(--vurgu); }
 
 .piyasa-analiz th { text-align: left; font-weight: 500; color: var(--metin-soluk); }
 .piyasa-analiz td { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* --- Sirket izgarasi: 30 sirket bir arada, her kutu tiklanir ------------- */
+
+.sirket-izgara {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    gap: 6px;
+}
+
+.sirket-izgara a {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "kod deg" "fiyat fiyat" "ad ad";
+    gap: 1px 6px;
+    padding: 7px 9px;
+    border: 1px solid var(--cizgi);
+    border-radius: 7px;
+    color: var(--metin);
+    font-variant-numeric: tabular-nums;
+    transition: border-color .12s ease, background .12s ease;
+}
+
+.sirket-izgara a:hover,
+.sirket-izgara a:focus-visible { border-color: var(--altin); background: rgba(201, 168, 106, .08); }
+
+.sirket-izgara .si-kod   { grid-area: kod; font-weight: 700; font-size: .9rem; }
+.sirket-izgara .pdeg     { grid-area: deg; font-size: .76rem; align-self: center; }
+.sirket-izgara .si-fiyat { grid-area: fiyat; font-size: .86rem; }
+.sirket-izgara .si-ad    {
+    grid-area: ad;
+    font-size: .72rem;
+    color: var(--metin-soluk);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

@@ -209,6 +209,8 @@ function grafik_ciz(array $seri, array $ayar = []): string
                 <?= $kaynak !== '' ? 'Kaynak: ' . e($kaynak) . ' · ' : '' ?><span
                     class="grafik-tarih">son gözlem <?= e(grafik_tarih_uzun($son['tarih'], $gunlu)) ?></span>
             </span>
+            <?php // Hangi eksen ne gosteriyor (site sahibinin istegi, 23.10.2026). ?>
+            <span class="grafik-eksenler">Dikey eksen: <?= e(grafik_eksen_adi($ad, $birim)) ?> · Yatay eksen: tarih</span>
         </figcaption>
     <?php endif; ?>
 
@@ -237,9 +239,19 @@ function grafik_ciz(array $seri, array $ayar = []): string
                   style="left:100%;top:<?= grafik_sayi($sonY) ?>%"><?=
                 e(grafik_deger($son['d'], $birim, $hane)) ?></span>
 
+            <?php
+            /*
+             * Arti imlec (site sahibinin istegi, 23.10.2026): fare
+             * grafikteyken dikey ve yatay KESIKLI cizgi; o anki deger
+             * Y ekseninin, tarih X ekseninin uzerinde etiket olarak.
+             * Arsivi takip etmek icin goz eksenden okuyor.
+             */
+            ?>
             <span class="grafik-imlec" hidden></span>
+            <span class="grafik-imlec-yatay" hidden></span>
             <span class="grafik-nokta grafik-imlec-nokta" hidden></span>
-            <span class="grafik-ipucu" hidden><strong></strong><span></span></span>
+            <span class="grafik-eksen-deger" hidden></span>
+            <span class="grafik-eksen-tarih" hidden></span>
         </div>
 
         <div class="grafik-x" aria-hidden="true">
@@ -486,6 +498,19 @@ function grafik_ozet(array $noktalar, string $birim, string $ad, bool $gunlu, in
          . grafik_deger(min($degerler), $birim, $hane) . '. Tüm değerler tablo görünümünde.';
 }
 
+/** Dikey eksenin adı ve birimi ("Dolar/TL (TL)", "Enflasyon (%)"). */
+function grafik_eksen_adi(string $ad, string $birim): string
+{
+    $birimAdi = match ($birim) {
+        'yuzde' => '%',
+        'tl'    => 'TL',
+        'usd'   => 'ABD doları',
+        default => '',
+    };
+
+    return $birimAdi !== '' && !str_contains($ad, $birimAdi) ? $ad . ' (' . $birimAdi . ')' : $ad;
+}
+
 /** Değeri Türkçe biçimde yazar ("%37,00", "41,2345 TL"). */
 function grafik_deger(float $deger, string $birim, int $hane): string
 {
@@ -584,11 +609,12 @@ const GRAFIK_BETIK = <<<'JS'
         try { v = JSON.parse(alan.getAttribute('data-grafik')); } catch (e) { return; }
 
         var n = v.n, basamak = v.tur === 'basamak', secili = n.length - 1;
-        var imlec = alan.querySelector('.grafik-imlec');
-        var nokta = alan.querySelector('.grafik-imlec-nokta');
-        var ipucu = alan.querySelector('.grafik-ipucu');
-        var ipDeger = ipucu.querySelector('strong');
-        var ipTarih = ipucu.querySelector('span');
+        var imlec  = alan.querySelector('.grafik-imlec');
+        var yatay  = alan.querySelector('.grafik-imlec-yatay');
+        var nokta  = alan.querySelector('.grafik-imlec-nokta');
+        var deger  = alan.querySelector('.grafik-eksen-deger');
+        var tarih  = alan.querySelector('.grafik-eksen-tarih');
+        var parcalar = [imlec, yatay, nokta, deger, tarih];
 
         function x(t) { return (t - v.t0) / (v.t1 - v.t0) * 100; }
         function y(d) { return (v.ust - d) / (v.ust - v.alt) * 100; }
@@ -597,19 +623,20 @@ const GRAFIK_BETIK = <<<'JS'
             var px = x(t), py = y(d);
 
             imlec.style.left = px + '%';
+            yatay.style.top  = py + '%';
             nokta.style.left = px + '%';
             nokta.style.top  = py + '%';
-            ipucu.style.left = px + '%';
-            ipucu.style.top  = Math.min(85, Math.max(15, py)) + '%';
-            ipucu.classList.toggle('sola', px > 60);
+            deger.style.top  = py + '%';
+            // Tarih etiketi kenarlarda kutudan tasmasin.
+            tarih.style.left = Math.min(88, Math.max(12, px)) + '%';
 
-            ipDeger.textContent = bicimle(d, v.birim, v.hane || 2);
-            ipTarih.textContent = (v.gun ? gunBicim : ayBicim).format(new Date(t));
+            deger.textContent = bicimle(d, v.birim, v.hane || 2);
+            tarih.textContent = (v.gun ? gunBicim : ayBicim).format(new Date(t));
 
-            imlec.hidden = nokta.hidden = ipucu.hidden = false;
+            parcalar.forEach(function (p) { p.hidden = false; });
         }
 
-        function gizle() { imlec.hidden = nokta.hidden = ipucu.hidden = true; }
+        function gizle() { parcalar.forEach(function (p) { p.hidden = true; }); }
 
         function noktaya(i) { secili = i; goster(n[i][0], n[i][1]); }
 

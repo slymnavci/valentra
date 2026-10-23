@@ -17,6 +17,7 @@
     --grafik-zemin: var(--kart, #ffffff);
     --grafik-izgara: var(--cizgi, #e2e6ec);
     --grafik-yazi:  var(--metin-soluk, #5d6a80);
+    --grafik-eksen: var(--metin-soluk, #5d6a80);
 
     margin: 22px 0 6px;
     padding: 0;
@@ -60,7 +61,8 @@
  */
 .grafik-govde {
     display: grid;
-    grid-template-columns: 3.6em 1fr;
+    /* 4.4em: imlecin deger etiketi Y ekseninin uzerine sigsin. */
+    grid-template-columns: 4.4em 1fr;
     grid-template-rows: 220px auto;
     /* Son noktanin yarisi ve halkasi cizim kutusunun disina tasiyor. */
     padding-right: 8px;
@@ -87,6 +89,9 @@
     position: relative;
     grid-column: 2;
     grid-row: 1;
+    /* Eksen cizgileri: hangi eksenin nerede oldugu acik olsun. */
+    border-left: 1px solid var(--grafik-eksen);
+    border-bottom: 1px solid var(--grafik-eksen);
     /* Dikey kaydirma parmakla calismaya devam etsin, yatay surukleme imleci tasisin. */
     touch-action: pan-y;
     cursor: crosshair;
@@ -116,19 +121,21 @@
     opacity: .10;
 }
 
+/* Ince cizgi (site sahibinin istegi, 23.10.2026): gunluk seride ayrinti
+   kalin cizginin altinda kayboluyordu. */
 .grafik-cizgi {
     fill: none;
     stroke: var(--grafik-renk);
-    stroke-width: 2;
+    stroke-width: 1.4;
     stroke-linejoin: round;
     stroke-linecap: round;
 }
 
-/* Isaret: 10px dolu daire + 2px zemin halkasi; cizginin ustunde okunur kalsin. */
+/* Isaret: 8px dolu daire + 2px zemin halkasi; cizginin ustunde okunur kalsin. */
 .grafik-nokta {
     position: absolute;
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: var(--grafik-renk);
     box-shadow: 0 0 0 2px var(--grafik-zemin);
@@ -149,43 +156,79 @@
 
 .grafik-son.altta { transform: translate(calc(-100% - 10px), 8px); }
 
-.grafik-imlec {
+.grafik-imlec,
+.grafik-imlec-yatay {
     position: absolute;
+    pointer-events: none;
+    opacity: .75;
+}
+
+/* Arti imlec: KESIKLI dikey ve yatay cizgi (izgaradan ayrilsin diye). */
+.grafik-imlec {
     top: 0;
     bottom: 0;
-    width: 1px;
-    background: var(--grafik-yazi);
-    opacity: .55;
-    pointer-events: none;
+    width: 0;
+    border-left: 1px dashed var(--grafik-yazi);
 }
 
-.grafik-ipucu {
+.grafik-imlec-yatay {
+    left: 0;
+    right: 0;
+    height: 0;
+    border-top: 1px dashed var(--grafik-yazi);
+}
+
+/* Eksen uzerindeki etiketler: deger soldaki Y ekseninde, tarih alttaki
+   X ekseninde. Koyu zemin: eksen yazilarindan ayrilsin. */
+.grafik-eksen-deger,
+.grafik-eksen-tarih {
     position: absolute;
     z-index: 2;
-    transform: translate(14px, -50%);
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 7px 10px;
-    border-radius: 6px;
-    background: var(--grafik-zemin);
-    border: 1px solid var(--grafik-izgara);
-    box-shadow: 0 4px 14px rgba(20, 33, 58, .12);
+    padding: 3px 7px;
+    border-radius: 4px;
+    background: var(--metin, #14213a);
+    color: var(--grafik-zemin);
+    font-size: .78rem;
+    font-weight: 700;
+    line-height: 1.2;
     white-space: nowrap;
+    font-variant-numeric: tabular-nums;
     pointer-events: none;
 }
 
-.grafik-ipucu.sola { transform: translate(calc(-100% - 14px), -50%); }
-
-/* Deger once ve guclu; tarih ikincil. */
-.grafik-ipucu strong {
-    font-size: 1rem;
-    color: var(--metin, #14213a);
+.grafik-eksen-deger {
+    left: 0;
+    transform: translate(calc(-100% - 4px), -50%);
 }
 
-.grafik-ipucu span {
-    font-size: .82rem;
+.grafik-eksen-tarih {
+    top: 100%;
+    transform: translate(-50%, 5px);
+}
+
+.grafik-eksenler {
+    flex-basis: 100%;
+    font-size: .8rem;
     color: var(--grafik-yazi);
+}
+
+/* Eksen isaretleri: etiketin eksene degdigi yer. */
+.grafik-y span::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: -10px;
+    width: 5px;
+    border-top: 1px solid var(--grafik-eksen);
+}
+
+.grafik-x span::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    height: 5px;
+    border-left: 1px solid var(--grafik-eksen);
 }
 
 .grafik-x {
@@ -207,6 +250,10 @@
 /* Uclardaki etiket kutudan tasmasin. */
 .grafik-x span:first-child:not(:only-child) { transform: translateX(-15%); }
 .grafik-x span:last-child:not(:only-child)  { transform: translateX(-85%); }
+
+/* Centik etiketin baglandigi noktada kalsin. */
+.grafik-x span:first-child:not(:only-child)::before { left: 15%; }
+.grafik-x span:last-child:not(:only-child)::before  { left: 85%; }
 
 .grafik-tablo {
     margin-top: 10px;
