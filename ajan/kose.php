@@ -60,7 +60,28 @@ const KAYNAK_SAYFA_TAVANI = 2;
 function gunluk(string $mesaj): void
 {
     echo '[' . date('H:i:s') . '] ' . $mesaj . PHP_EOL;
+    $GLOBALS['koseGunlugu'][] = $mesaj;
 }
+
+/*
+ * Calisma ozeti GitHub'da da gorunsun (23.10.2026): kose adimi bir kez
+ * 2 saniyede yazisiz bitti ve sebebi yalnizca okunamayan gunlukteydi.
+ * Cikis noktasi ne olursa olsun son satirlar "notice" olarak yaziliyor:
+ * hangi yazar yazdi, hangisi neden yazmadi.
+ */
+$GLOBALS['koseGunlugu'] = [];
+
+register_shutdown_function(static function (): void {
+    if (getenv('GITHUB_ACTIONS') !== 'true' || $GLOBALS['koseGunlugu'] === []) {
+        return;
+    }
+
+    $satirlar = array_slice($GLOBALS['koseGunlugu'], -25);
+    $metin    = 'Köşe yazıları:' . "\n" . implode("\n", array_map(static fn (string $s): string => mb_substr($s, 0, 300), $satirlar));
+
+    echo '::notice title=Valentra köşe yazıları::'
+        . str_replace(['%', "\r", "\n"], ['%25', '%0D', '%0A'], $metin) . PHP_EOL;
+});
 
 function ayar(string $ad): string
 {

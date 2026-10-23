@@ -70,6 +70,13 @@ gunluk(count($eksikler) . ' yazarın fotoğrafı üretilecek; model: ' . $uretic
 
 $yuklenen = 0;
 
+/*
+ * Model bulunamazsa (404) ya da desteklemiyorsa (400) bu anahtarla
+ * kullanilabilen goruntu modelleri sirayla deneniyor; ilk tutan model
+ * butun yazarlar icin kullaniliyor (23.10.2026: imagen-4.0 bu hesapta yok).
+ */
+$adaylar = null;
+
 foreach ($eksikler as $yazar) {
     /*
      * Hayali bir kisi: gercek ya da taninmis hicbir kisiye benzememeli.
@@ -82,7 +89,45 @@ foreach ($eksikler as $yazar) {
         . 'public person. No text, no logo, no watermark, no frame.';
 
     try {
-        $ikili = $uretici->uret($istem);
+        try {
+            $ikili = $uretici->uret($istem);
+        } catch (RuntimeException $e) {
+            if (!preg_match('/HTTP (404|400)/', $e->getMessage())) {
+                throw $e;
+            }
+
+            $adaylar ??= $uretici->gorselModelleri();
+            gunluk('  ' . $uretici->model() . ' kullanılamadı; bu anahtarla görüntü modelleri: '
+                . ($adaylar === [] ? '(yok)' : implode(', ', $adaylar)));
+
+            $ikili = null;
+            $sonHata = $e;
+
+            foreach ($adaylar as $aday) {
+                if ($aday === $uretici->model()) {
+                    continue;
+                }
+
+                $uretici->modelSec($aday);
+
+                try {
+                    $ikili = $uretici->uret($istem);
+                    gunluk('  model: ' . $aday);
+                    break;
+                } catch (RuntimeException $e2) {
+                    $sonHata = $e2;
+                    gunluk('  ' . $aday . ': ' . $e2->getMessage());
+                }
+            }
+
+            if ($ikili === null) {
+                throw new RuntimeException($sonHata->getMessage() . ' | Denenen modeller: '
+                    . ($adaylar === [] ? '(bu anahtarla görüntü modeli yok)' : implode(', ', $adaylar)));
+            }
+
+            $adaylar = [];  // tutan model secildi; sonraki yazarlar dogrudan onunla
+        }
+
         $site->portreGonder((string) $yazar['anahtar'], $ikili);
         $yuklenen++;
         gunluk('  yüklendi: ' . $yazar['ad']);
