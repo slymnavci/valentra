@@ -29,6 +29,45 @@
         </div>
     <?php endif; ?>
 
+    <?php
+    /*
+     * OpenAI (Luna) kredisi bitti / anahtar gecersiz uyarisi. Site
+     * sahibinin istegi (23.10.2026): "kredi biterse bana haber ver".
+     * Ajan her toplamada durumu bildiriyor; kredi yuklenince ilk
+     * basarili calismada uyari kendiliginden kalkiyor.
+     */
+    require_once __DIR__ . '/../includes/openai_durum.php';
+    $openAiUyari = openai_durum_uyarisi();
+
+    if ($openAiUyari !== null):
+        $openAiGun = intdiv(time() - (int) $openAiUyari['ilk'], 86400);
+    ?>
+        <div class="sinirli">
+            <div class="uyari uyari-hata" style="margin-top:18px;">
+                <?php if ($openAiUyari['durum'] === 'kredi'): ?>
+                    <strong>OpenAI kredisi bitti.</strong>
+                    Haberler şu an yedek model (Gemini) ile yazılıyor; bu yaklaşık
+                    6 kat daha pahalı. Kredi yükleyin; ajanın bir sonraki
+                    çalışmasında Luna'ya kendiliğinden döner ve bu uyarı kalkar.
+                    <a href="https://platform.openai.com/settings/organization/billing/overview"
+                       target="_blank" rel="noopener" class="dugme dugme-ana"
+                       style="margin-left:10px;">Kredi yükle</a>
+                <?php else: ?>
+                    <strong>OpenAI anahtarı geçersiz.</strong>
+                    Haberler şu an yedek model (Gemini) ile yazılıyor. GitHub'daki
+                    <code>OPENAI_API_KEY</code> değerini yeni bir anahtarla güncelleyin.
+                    <a href="https://platform.openai.com/api-keys" target="_blank"
+                       rel="noopener" class="dugme dugme-ana" style="margin-left:10px;">API anahtarları</a>
+                <?php endif; ?>
+                <br><small>
+                    Son kontrol: <?= e(date('d.m.Y H:i', (int) $openAiUyari['zaman'])) ?>
+                    <?= $openAiGun > 0 ? ' · ' . $openAiGun . ' gündür sürüyor' : '' ?>
+                    <?= $openAiUyari['mesaj'] !== '' ? ' · OpenAI: ' . e(mb_substr($openAiUyari['mesaj'], 0, 160, 'UTF-8')) : '' ?>
+                </small>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <div class="sinirli">
             <a class="logo" href="gunluk.php" style="color:#fff;display:flex;align-items:center;gap:10px;"><img src="/assets/logo.svg" alt="" width="30" height="26" style="background:#fff;border-radius:4px;padding:2px;">VALENTRA</a>
             <?php
