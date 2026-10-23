@@ -1,0 +1,45 @@
+name: Canli veri
+
+# Sayfalardaki canli veriyi tazeler: piyasa seridi ve Piyasalar sayfasi
+# (kartlar, sirket tablosu, grafikler, EVDS gosterge grafikleri), spor
+# sayfalari (puan durumu, fikstur, mac sonuclari, gol kralligi), Resmi
+# Gazete fihristi.
+#
+# Site sahibinin istegi (23.10.2026): "borsa grafikleri, mac sonuclari da
+# cekilsin; eski bilgi kalmasin". Veriyi SITE cekiyor (api/canli-tazele.php);
+# bu is akisi yalnizca durtuyor, model cagrisi yok.
+#
+# Haber ajanindan AYRI is akisi: ajanin eszamanlilik grubunda sirada tek
+# calisma bekleyebiliyor; saatlik bir durtme orada bekleyen haber
+# calismasini iptal ederdi. Ajan da her calismasinda ayni ucu durtuyor
+# (ajan.yml -> "Canli verileri tazele").
+
+on:
+  schedule:
+    # Turkiye saatiyle 06:35'ten 00:35'e iki saatte bir (UTC+3).
+    # 00:35 aksam maclarinin sonuclarini yakaliyor. Dakika 35: saat
+    # basi GitHub'da yogun.
+    - cron: '35 3-21/2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: valentra-canli
+  cancel-in-progress: true
+
+jobs:
+  tazele:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Repository kodlarini al
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout: ajan/canli_tazele.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Canli verileri tazele
+        env:
+          VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: bash ajan/canli_tazele.sh
