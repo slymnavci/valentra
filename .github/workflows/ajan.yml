@@ -330,12 +330,16 @@ jobs:
       # Kose yazilari 22.10.2026'da genel habere uyarlandi: gunun en
       # onemli haberlerinden (onem puani) ve en az biri dunyadan olmak
       # uzere yorum yazilari. Hepsi onaya duser.
+      #
+      # Kose yazisi haberden ayri modelle (23.10.2026): varsayilan Gemini
+      # 3.8 Flash; GEMINI_KOSE_MODEL gizli degeriyle degistirilebilir.
+      # Haber toplama varsayilan olarak Gemini 3.1 Flash-Lite (GEMINI_MODEL).
       - name: Kose yazilarini yaz
         if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'kose-yazisi' || inputs.mod == 'gunluk') }}
         working-directory: ajan
         env:
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          GEMINI_KOSE_MODEL:   ${{ secrets.GEMINI_KOSE_MODEL }}
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
         run: |

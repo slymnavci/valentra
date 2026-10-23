@@ -149,7 +149,9 @@ if (count($haberler) < 2) {
 
 gunluk(count($haberler) . ' haber malzeme, ' . count($malzeme['onceki']) . ' önceki yazı; en fazla ' . $hedef . ' yazı.');
 
-$yazar = new Yazar(ayar('GEMINI_API_KEY'));
+// Kose yazisi haberden ayri, daha guclu modelle (GEMINI_KOSE_MODEL; bkz. Yazar).
+$yazar = new Yazar(ayar('GEMINI_API_KEY'), Yazar::koseModeli());
+gunluk('Model: ' . $yazar->model() . ' (köşe yazısı; GEMINI_KOSE_MODEL ile değiştirilebilir).');
 $kose  = new KoseYazari($yazar);
 $sayfa = new Sayfa(new Http());
 
