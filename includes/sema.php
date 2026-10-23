@@ -219,6 +219,8 @@ function sema_yukselt(array &$hatalar = []): array
     $sutunEkle('haberler', 'iframe_url', 'VARCHAR(1000) NULL AFTER gorsel_url');
     // Kaynagin yayin zamani (23.10.2026; bkz. haber_gun_ifadesi).
     $sutunEkle('haberler', 'kaynak_tarihi', 'DATETIME NULL AFTER yayin_tarihi');
+    // Haberi yazan model; otomatik yayin esigi buna gore (23.10.2026).
+    $sutunEkle('haberler', 'ajan_modeli', "VARCHAR(80) NOT NULL DEFAULT '' AFTER ajan_notu");
 
     /*
      * Kopya denetimi alanlari.
@@ -528,6 +530,8 @@ function sema_guncel_mi(): bool
             ['haberler', 'isletme_etkisi'],
             ['haberler', 'uygulama_ornegi'],
             ['haberler', 'resmi_dayanak'],
+            // haber_taslak_ekle() yaziyor, otomatik yayin esigi okuyor.
+            ['haberler', 'ajan_modeli'],
             ['gsc_gunluk', 'gosterim'],
             ['gsc_denetim', 'kapsam'],
             ['rehberler', 'kontrol_eden'],

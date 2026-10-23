@@ -121,7 +121,8 @@ require __DIR__ . '/ust.php';
         Tüm aktif kaynaklar taranır, haberler ayıklanıp yazılır.
         <?php if (haber_otomatik_yayin_acik()): ?>
             <strong>Otomatik yayın açık:</strong> güven puanı
-            %<?= HABER_OTOMATIK_GUVEN_ESIGI ?> ve üzeri olan haberler geldiği anda
+            %<?= HABER_OTOMATIK_GUVEN_ESIGI ?> (GPT-6 Luna'nın yazdıklarında
+            %<?= HABER_OTOMATIK_GUVEN_ESIGI_OPENAI ?>) ve üzeri olan haberler geldiği anda
             ana sayfaya çıkar; güveni düşük olanlar onay bekleyen listesine düşer.
         <?php else: ?>
             Haberler <strong>onay bekleyen</strong> listesine eklenir; hiçbiri

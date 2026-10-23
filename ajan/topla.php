@@ -1511,6 +1511,7 @@ foreach ($gruplar as $grupNo => $grup) {
 
     try {
         $sonuclar = $yazar->topluIsle($modelAdaylari, $kategoriler, $modeleGosterilecek);
+        $yanitlayanModel = $yazar->sonYanitlayan();
     } catch (ModelErisimYokException $e) {
         gunluk("  [grup {$no}] model kullanılamıyor — çalışma erken bitiyor.");
         gunluk('  ' . $e->getMessage());
@@ -1619,6 +1620,9 @@ foreach ($gruplar as $grupNo => $grup) {
             'guven_skoru' => (int) ($sonuc['guven_skoru'] ?? 0),
             'onem'        => (int) ($sonuc['onem'] ?? 50),
             'ajan_notu'   => (string) ($sonuc['ajan_notu'] ?? ''),
+            // Haberi yazan model: site otomatik yayin esigini buna gore
+            // seciyor (Luna guveni daha temkinli puanliyor).
+            'model'       => $yanitlayanModel,
 
             // Valentra Analiz — dordu de bos olabilir, bos olmasi normal.
             'analiz_degisen'   => (string) ($sonuc['analiz_degisen'] ?? ''),
