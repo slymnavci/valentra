@@ -217,6 +217,9 @@ function sema_yukselt(array &$hatalar = []): array
 
     $sutunEkle('haberler', 'kategori_id', 'INT UNSIGNED NULL AFTER one_cikan');
     $sutunEkle('haberler', 'iframe_url', 'VARCHAR(1000) NULL AFTER gorsel_url');
+    // Kose yazisinin yazari (23.10.2026; bkz. includes/yazarlar.php).
+    $sutunEkle('kose_yazilari', 'yazar', "VARCHAR(60) NOT NULL DEFAULT 'valentra' AFTER gundem");
+
     // Kaynagin yayin zamani (23.10.2026; bkz. haber_gun_ifadesi).
     $sutunEkle('haberler', 'kaynak_tarihi', 'DATETIME NULL AFTER yayin_tarihi');
     // Haberi yazan model; otomatik yayin esigi buna gore (23.10.2026).

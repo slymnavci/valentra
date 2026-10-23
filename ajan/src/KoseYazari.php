@@ -46,10 +46,11 @@ final class KoseYazari
      */
     private const ORTAK = <<<'METIN'
         Valentra, Türkiye'den ve dünyadan güncel haberleri tarafsız
-        özetler halinde yayımlayan bir haber sitesidir. Sitenin "Valentra
-        Diyor ki…" köşesinde her gün gündemin en önemli 3-4 konusu ayrı
-        ayrı yazılarla değerlendirilir: ne oldu, neden önemli, arka planı
-        ne, bundan sonra ne olabilir.
+        özetler halinde yayımlayan bir haber sitesidir. Sitenin köşe
+        yazarları her gün kendi alanlarında gündemin bir konusunu
+        değerlendirir: ne oldu, neden önemli, arka planı ne, bundan sonra
+        ne olabilir. Her yazarın kendi alanı ve üslubu vardır; istemde
+        "KÖŞE YAZARI" bölümü verildiyse ona uy.
 
         YAYIN POLİTİKASI (her yazı için geçerli, tartışmasız):
         - Siyasi taraf tutulmaz. Hiçbir partiyi, siyasetçiyi, hükümeti ya
@@ -225,7 +226,7 @@ final class KoseYazari
      * @param list<array<string,mixed>> $onceki   Son günlerin yazıları
      * @return list<array{gundem:string,haberler:list<int>,aci:string,baslik_onerisi:string}>
      */
-    public function gundemSec(array $haberler, array $onceki, int $enFazla): array
+    public function gundemSec(array $haberler, array $onceki, int $enFazla, array $kalem = []): array
     {
         if ($haberler === [] || $enFazla < 1) {
             return [];
@@ -233,7 +234,7 @@ final class KoseYazari
 
         $sonuclar = $this->istemci->semaliIstek(
             self::SECIM_YONERGE,
-            $this->secimIstemi($haberler, $onceki, $enFazla),
+            self::kalemBlogu($kalem, true) . $this->secimIstemi($haberler, $onceki, $enFazla),
             self::SECIM_SEMA,
             8000,
             0,
@@ -290,11 +291,11 @@ final class KoseYazari
      * @param array<int,string> $kaynakMetinleri  indis => kaynak sayfa metni
      * @return array{baslik:string,ozet:string,icerik:string,editor_notu:string}|null
      */
-    public function yaz(array $madde, array $haberler, array $kaynakMetinleri = []): ?array
+    public function yaz(array $madde, array $haberler, array $kaynakMetinleri = [], array $kalem = []): ?array
     {
         $sonuclar = $this->istemci->semaliIstek(
             self::YAZI_YONERGE,
-            $this->yaziIstemi($madde, $haberler, $kaynakMetinleri),
+            self::kalemBlogu($kalem, false) . $this->yaziIstemi($madde, $haberler, $kaynakMetinleri),
             self::YAZI_SEMA,
             24000,
             1,
@@ -348,6 +349,43 @@ final class KoseYazari
      * @param list<array<string,mixed>> $haberler
      * @param list<array<string,mixed>> $onceki
      */
+    /**
+     * Köşe yazarının istem bloğu (bos dizi: blok yok, eski davranis).
+     *
+     * Secimde: yazar yalnizca kendi alanindan ve kendi onceki yazilarini
+     * tekrarlamadan TEK konu secer. Yazida: yazarin uslubu; yazi yazarin
+     * kaleminden, ama yayin politikasi ve uydurmama kurali aynen.
+     *
+     * @param array{ad?:string,alan?:string,uslup?:string} $kalem
+     */
+    private static function kalemBlogu(array $kalem, bool $secim): string
+    {
+        if (($kalem['ad'] ?? '') === '') {
+            return '';
+        }
+
+        $blok = "KÖŞE YAZARI: {$kalem['ad']}
+"
+              . 'Alanı: ' . ($kalem['alan'] ?? '-') . "
+"
+              . 'Üslubu: ' . ($kalem['uslup'] ?? '-') . "
+";
+
+        $blok .= $secim
+            ? "Bu yazarın bugünkü yazısı için, aşağıdaki haberlerden YALNIZCA bu yazarın alanına giren TEK bir konu seç. "
+              . "Yazarın son günlerde yazdığı konuyu (ÖNCEKİ YAZILAR'da yazar adıyla işaretli) yeni bir gelişme yoksa yeniden seçme. "
+              . "Dünya gündemi kuralı bu seçimde geçerli değil; çeşitlilik kuralı da (tek konu).
+
+"
+            : "Yazıyı bu yazarın kaleminden, yukarıdaki üslupla yaz. Yazıda yazarın adını ya da kendini tanıtan bir cümle kullanma; "
+              . "birinci tekil şahıs ölçülü kullanılabilir (\"bence\" yerine \"değerlendirmeme göre\"). Yayın politikası ve "
+              . "UYDURMA kuralı aynen geçerli.
+
+";
+
+        return $blok;
+    }
+
     private function secimIstemi(array $haberler, array $onceki, int $enFazla): string
     {
         $bloklar = [];
@@ -376,7 +414,8 @@ final class KoseYazari
             $satirlar = [];
 
             foreach (array_slice($onceki, 0, 40) as $y) {
-                $satirlar[] = '- ' . ($y['gun'] ?? '') . ' · ' . ($y['gundem'] ?? '') . ' · ' . ($y['baslik'] ?? '');
+                $satirlar[] = '- ' . ($y['gun'] ?? '') . ' · ' . ($y['gundem'] ?? '') . ' · ' . ($y['baslik'] ?? '')
+                    . (($y['yazar_adi'] ?? '') !== '' ? ' · yazar: ' . $y['yazar_adi'] : '');
             }
 
             $oncekiBlok = implode("\n", $satirlar);

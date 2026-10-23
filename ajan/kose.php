@@ -124,30 +124,43 @@ try {
     exit(0);
 }
 
-$tavan  = max(1, $malzeme['gunluk_tavan']);
-$mevcut = $malzeme['bugun_sayisi'];
-
-if ($zamanli && $mevcut > 0) {
-    gunluk("Bugünün yazıları zaten var ({$mevcut}).");
-    exit(0);
-}
-
-$hedef = $tavan - $mevcut;
-
-if ($hedef < 1) {
-    gunluk("Bugün için {$mevcut} yazı var; günlük tavan ({$tavan}) dolu. "
-         . 'Yenisini istiyorsanız panelde birini reddedin.');
-    exit(0);
-}
-
 $haberler = $malzeme['haberler'];
+
+/*
+ * YAZARLAR (site sahibinin istegi, 23.10.2026): her gun her yazar kendi
+ * alanindan TEK konu secip kendi uslubuyla bir yazi yaziyor (en fazla 7
+ * yazi). Site yazar listesini ve bugun yazanlari veriyor; eski site
+ * surumu vermiyorsa tek bir "Valentra Yorumu" yazari varsayiliyor.
+ * Valentra Yorumu en sonda: diger yazarlarin almadigi en onemli konu.
+ */
+$yazarlar = $malzeme['yazarlar'] !== []
+    ? $malzeme['yazarlar']
+    : [['anahtar' => 'valentra', 'ad' => 'Valentra Yorumu', 'alan' => 'Günün en önemli konusu',
+        'kategoriler' => [], 'uslup' => '', 'bugun_yazdi' => $malzeme['bugun_sayisi'] > 0]];
+
+$bekleyenYazarlar = array_values(array_filter($yazarlar, static fn (array $y): bool => empty($y['bugun_yazdi'])));
+
+if ($bekleyenYazarlar === []) {
+    gunluk('Bugün bütün yazarların yazısı var.');
+    exit(0);
+}
 
 if (count($haberler) < 2) {
     gunluk('Son ' . $saat . ' saatte yazıya malzeme olacak kadar haber yok (' . count($haberler) . ').');
     exit(0);
 }
 
-gunluk(count($haberler) . ' haber malzeme, ' . count($malzeme['onceki']) . ' önceki yazı; en fazla ' . $hedef . ' yazı.');
+$yazarAdlari = [];
+
+foreach ($yazarlar as $y) {
+    $yazarAdlari[(string) $y['anahtar']] = (string) $y['ad'];
+}
+
+// Onceki yazilar yazar adiyla: yazar kendi konusunu tekrarlamasin.
+$onceki = array_map(static fn (array $o): array => $o + ['yazar_adi' => $yazarAdlari[$o['yazar'] ?? ''] ?? ''], $malzeme['onceki']);
+
+gunluk(count($haberler) . ' haber malzeme; bugün yazacak ' . count($bekleyenYazarlar) . ' yazar: '
+     . implode(', ', array_map(static fn (array $y): string => (string) $y['ad'], $bekleyenYazarlar)) . '.');
 
 // Kose yazisi haberden ayri, daha guclu modelle (GEMINI_KOSE_MODEL; bkz. Yazar).
 $yazar = new Yazar(ayar('GEMINI_API_KEY'), Yazar::koseModeli());
@@ -155,35 +168,59 @@ gunluk('Model: ' . $yazar->model() . ' (köşe yazısı; GEMINI_KOSE_MODEL ile d
 $kose  = new KoseYazari($yazar);
 $sayfa = new Sayfa(new Http());
 
-// --- 2. Gundem maddeleri ------------------------------------------------------
+$yazilar    = [];
+$kullanilan = [];   // bu calismada baska yazarin konusu olmus haberler (indis)
+$sira       = $malzeme['bugun_sayisi'];
 
-try {
-    $maddeler = $kose->gundemSec($haberler, $malzeme['onceki'], $hedef);
-} catch (ModelErisimYokException $e) {
-    Bildirim::sorun($e->getMessage());
-    exit(0);
-} catch (KotaBittiException $e) {
-    gunluk('Günlük model kotası dolu: ' . $e->getMessage());
-    exit(0);
-} catch (Throwable $e) {
-    gunluk('Gündem seçilemedi: ' . $e->getMessage());
-    exit(1);
-}
+foreach ($bekleyenYazarlar as $kalem) {
+    $ad = (string) $kalem['ad'];
+    $kategoriler = array_map('strval', (array) ($kalem['kategoriler'] ?? []));
 
-if ($maddeler === []) {
-    gunluk('Model yazıya değer bir gündem maddesi seçmedi.');
-    exit(0);
-}
+    // Yazarin alanindaki, baska yazara verilmemis haberler (Valentra: hepsi).
+    $alt = [];
 
-foreach ($maddeler as $i => $m) {
-    gunluk('  ' . ($i + 1) . '. ' . $m['gundem'] . ' (' . count($m['haberler']) . ' haber) — ' . $m['aci']);
-}
+    foreach ($haberler as $indis => $h) {
+        if (isset($kullanilan[$indis])) {
+            continue;
+        }
 
-// --- 3. Her madde icin yazi -----------------------------------------------------
+        if ($kategoriler !== [] && !in_array((string) ($h['kategori_slug'] ?? ''), $kategoriler, true)) {
+            continue;
+        }
 
-$yazilar = [];
+        $alt[] = $indis;
+    }
 
-foreach ($maddeler as $i => $madde) {
+    if ($alt === []) {
+        gunluk("— {$ad}: alanında bugün yazıya malzeme olacak haber yok.");
+        continue;
+    }
+
+    $altHaberler = array_map(static fn (int $i): array => $haberler[$i], $alt);
+
+    // --- Konu ---
+    try {
+        $maddeler = $kose->gundemSec($altHaberler, $onceki, 1, $kalem);
+    } catch (ModelErisimYokException $e) {
+        Bildirim::sorun($e->getMessage());
+        break;
+    } catch (KotaBittiException $e) {
+        gunluk('Günlük model kotası dolu: ' . $e->getMessage());
+        break;
+    } catch (Throwable $e) {
+        gunluk("— {$ad}: konu seçilemedi: " . $e->getMessage());
+        continue;
+    }
+
+    $madde = $maddeler[0] ?? null;
+
+    if ($madde === null) {
+        gunluk("— {$ad}: model yazıya değer bir konu seçmedi.");
+        continue;
+    }
+
+    gunluk("— {$ad}: " . $madde['gundem'] . ' (' . count($madde['haberler']) . ' haber) — ' . $madde['aci']);
+
     /*
      * Kaynak sayfalar: haberin metni kaynagin ozeti; yazinin "detay"
      * vaat etmesi icin asil sayfa da okunuyor. Once site uzerinden (Turk
@@ -192,8 +229,8 @@ foreach ($maddeler as $i => $madde) {
      */
     $kaynakMetinleri = [];
 
-    foreach (array_slice($madde['haberler'], 0, KAYNAK_SAYFA_TAVANI) as $indis) {
-        $url = (string) ($haberler[$indis]['kaynak_url'] ?? '');
+    foreach (array_slice($madde['haberler'], 0, KAYNAK_SAYFA_TAVANI) as $altIndis) {
+        $url = (string) ($altHaberler[$altIndis]['kaynak_url'] ?? '');
 
         if (!preg_match('#^https?://#i', $url)) {
             continue;
@@ -206,38 +243,41 @@ foreach ($maddeler as $i => $madde) {
         }
 
         if (trim($metin) !== '') {
-            $kaynakMetinleri[$indis] = $metin;
+            $kaynakMetinleri[$altIndis] = $metin;
         }
     }
 
+    // --- Yazi ---
     try {
-        $yazi = $kose->yaz($madde, $haberler, $kaynakMetinleri);
+        $yazi = $kose->yaz($madde, $altHaberler, $kaynakMetinleri, $kalem);
     } catch (ModelErisimYokException $e) {
         Bildirim::sorun($e->getMessage());
         break;
     } catch (KotaBittiException $e) {
-        gunluk('Günlük model kotası doldu; kalan maddeler atlanıyor.');
+        gunluk('Günlük model kotası doldu; kalan yazarlar atlanıyor.');
         break;
     } catch (Throwable $e) {
-        gunluk('  "' . $madde['gundem'] . '" yazılamadı: ' . $e->getMessage());
+        gunluk("  \"{$madde['gundem']}\" yazılamadı: " . $e->getMessage());
         continue;
     }
 
     if ($yazi === null) {
-        gunluk('  "' . $madde['gundem'] . '" için geçerli yazı çıkmadı (boş ya da çok kısa).');
+        gunluk("  \"{$madde['gundem']}\" için geçerli yazı çıkmadı (boş ya da çok kısa).");
         continue;
     }
 
     $idler = [];
 
-    foreach ($madde['haberler'] as $indis) {
-        $idler[] = (int) ($haberler[$indis]['id'] ?? 0);
+    foreach ($madde['haberler'] as $altIndis) {
+        $kullanilan[$alt[$altIndis]] = true;
+        $idler[] = (int) ($altHaberler[$altIndis]['id'] ?? 0);
     }
 
     $yazilar[] = [
         'gun'          => $malzeme['bugun'],
-        'sira'         => $mevcut + count($yazilar) + 1,
+        'sira'         => ++$sira,
         'gundem'       => $madde['gundem'],
+        'yazar'        => (string) $kalem['anahtar'],
         'baslik'       => $yazi['baslik'],
         'ozet'         => $yazi['ozet'],
         'icerik'       => $yazi['icerik'],
@@ -286,7 +326,7 @@ try {
 }
 
 gunluk(sprintf(
-    '%d yazı onay bekliyor (%d yinelenen, %d hata).',
+    '%d yazı gönderildi (%d yinelenen, %d hata). ' . (string) ($sonuc['not'] ?? ''),
     (int) ($sonuc['eklenen'] ?? 0),
     (int) ($sonuc['yinelenen'] ?? 0),
     count((array) ($sonuc['hatalar'] ?? []))

@@ -1345,6 +1345,8 @@ CREATE TABLE IF NOT EXISTS kose_yazilari (
     gun           DATE          NOT NULL,
     sira          TINYINT UNSIGNED NOT NULL DEFAULT 0,
     gundem        VARCHAR(200)  NOT NULL DEFAULT '',
+    -- Yazar anahtari (includes/yazarlar.php, KOSE_YAZARLARI); 23.10.2026.
+    yazar         VARCHAR(60)   NOT NULL DEFAULT 'valentra',
     baslik        VARCHAR(300)  NOT NULL,
     slug          VARCHAR(320)  NOT NULL,
     ozet          VARCHAR(600)  NOT NULL DEFAULT '',

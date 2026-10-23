@@ -202,4 +202,7 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^valentra-diyor-ki/([^/]+)/?$ kose-yazisi.php?y=$1 [L,QSA]
+
+    # Kose yazari sayfasi (23.10.2026): /yazar/ahmet-sami-gumus
+    RewriteRule ^yazar/([a-z0-9-]+)/?$ yazar.php?y=$1 [L,QSA]
 </IfModule>

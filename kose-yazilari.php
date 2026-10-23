@@ -37,10 +37,22 @@ require __DIR__ . '/includes/sayfa_ust.php';
 <div class="kategori-basligi">
     <h1>Valentra Diyor ki…</h1>
     <p>
-        Her gün Türkiye'nin ve dünyanın en önemli 3-4 konusu, ayrı ayrı
-        yazılarla değerlendiriliyor.
+        Yazarlarımız her gün kendi alanlarında gündemin en önemli
+        konularını değerlendiriyor.
     </p>
 </div>
+
+<?php // Yazarlar seridi: her yazarin sayfasina (gecmis yazilari). ?>
+<nav class="yazar-seridi" aria-label="Yazarlar">
+    <?php foreach (array_keys(KOSE_YAZARLARI) as $anahtar): ?>
+        <?php $y = yazar_bul($anahtar); ?>
+        <a href="<?= e(yazar_yolu($anahtar)) ?>">
+            <?= yazar_portre_svg($anahtar, 64) ?>
+            <span class="yazar-ad"><?= e($y['ad']) ?></span>
+            <span class="yazar-alan"><?= e($y['alan']) ?></span>
+        </a>
+    <?php endforeach; ?>
+</nav>
 
 <div class="ana-duzen">
     <div class="ana-kolon">
@@ -69,9 +81,8 @@ require __DIR__ . '/includes/sayfa_ust.php';
                                      loading="lazy" referrerpolicy="no-referrer"
                                      onerror="this.parentElement.classList.remove('gorselli');this.remove()">
                             <?php endif; ?>
-                            <?php if ((string) $yazi['gundem'] !== ''): ?>
-                                <span class="kose-gundem"><?= e((string) $yazi['gundem']) ?></span>
-                            <?php endif; ?>
+                            <span class="kose-gundem"><?= e(yazar_yazinin($yazi)['ad']) ?><?=
+                                (string) $yazi['gundem'] !== '' ? ' · ' . e((string) $yazi['gundem']) : '' ?></span>
                             <span class="kose-baslik"><?= e((string) $yazi['baslik']) ?></span>
                             <?php if ((string) $yazi['ozet'] !== ''): ?>
                                 <span class="kose-ozet"><?= e((string) $yazi['ozet']) ?></span>
