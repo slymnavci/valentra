@@ -162,6 +162,7 @@ require __DIR__ . '/ust.php';
         <div class="satir-bilgi" style="margin-bottom:6px;">
             <span class="rozet rozet-<?= e((string) $yazi['durum']) ?>"><?= e((string) $yazi['durum']) ?></span>
             <span><?= e(tarih_bicimle((string) $yazi['gun'], false)) ?></span>
+            <span class="rozet"><?= e(yazar_yazinin($yazi)['ad']) ?></span>
             <?php if ((string) $yazi['gundem'] !== ''): ?>
                 <span class="rozet rozet-skor"><?= e((string) $yazi['gundem']) ?></span>
             <?php endif; ?>

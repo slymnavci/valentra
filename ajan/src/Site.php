@@ -344,6 +344,8 @@ final class Site
             'gunluk_tavan' => (int) ($veri['gunluk_tavan'] ?? 4),
             'haberler'     => array_values((array) ($veri['haberler'] ?? [])),
             'onceki'       => array_values((array) ($veri['onceki'] ?? [])),
+            // Kose yazarlari (23.10.2026); eski site surumunde yok.
+            'yazarlar'     => array_values((array) ($veri['yazarlar'] ?? [])),
         ];
     }
 

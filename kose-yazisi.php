@@ -33,6 +33,14 @@ if ($yazi === null) {
 
 $dayanaklar = kose_dayanaklar((string) $yazi['haber_idleri']);
 $gorsel     = kose_gorselleri([$yazi])[(int) $yazi['id']] ?? null;
+$yazar      = yazar_yazinin($yazi);
+
+// Yazarin diger yazilari: okuyucu yazarin arsivine buradan da ulassin.
+$yazarinDigerleri = array_values(array_filter(
+    kose_yazarin_yazilari($yazar['anahtar'], 1, 6)['yazilar'],
+    static fn (array $y): bool => (int) $y['id'] !== (int) $yazi['id']
+));
+$yazarinDigerleri = array_slice($yazarinDigerleri, 0, 5);
 
 // Ayni gunun diger yazilari: okuyucu gunun gundeminde gezinebilsin.
 $ayniGun = array_values(array_filter(
@@ -41,7 +49,7 @@ $ayniGun = array_values(array_filter(
 ));
 
 $aktifKategori = 'kose';
-$sayfaBasligi  = $yazi['baslik'] . ' — Valentra Diyor ki…';
+$sayfaBasligi  = $yazi['baslik'] . ' — ' . $yazar['ad'] . ' | Valentra';
 $sayfaAciklama = (string) $yazi['ozet'];
 $seoAdres      = site_adresi() . kose_yolu((string) $yazi['slug']);
 $seoTur        = 'article';
@@ -62,8 +70,14 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
     <h1><?= e((string) $yazi['baslik']) ?></h1>
 
-    <div class="kunye">
-        <span class="hazirlayan">Valentra Yayın Kurulu</span>
+    <div class="kunye kose-kunye">
+        <a class="kose-yazar" href="<?= e(yazar_yolu($yazar['anahtar'])) ?>">
+            <?= yazar_portre_svg($yazar['anahtar'], 44) ?>
+            <span>
+                <span class="hazirlayan"><?= e($yazar['ad']) ?></span>
+                <span class="yazar-alan"><?= e($yazar['alan']) ?></span>
+            </span>
+        </a>
         <span>&middot; <?= e(tarih_bicimle((string) $yazi['gun'], false)) ?></span>
         <?php if ((string) $yazi['gundem'] !== ''): ?>
             <span>&middot; <?= e((string) $yazi['gundem']) ?></span>
@@ -109,13 +123,34 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
     <?php /* Kaldirilmamali: okuyucu yorumun nasil hazirlandigini bilmeli ve
              genel degerlendirmeyi kisiye ozel danismanlik sanmamali. */ ?>
+    <?php /* "Editor onayindan gecmistir" yalnizca gercekten onaylanan yazida:
+             otomatik yayinlanan yazida (onaylayan bos) bu cumle dogru olmaz. */ ?>
     <p class="kose-not">
-        Bu yazı, günün haberlerinden yapay zekâ desteğiyle hazırlanmış ve
-        Valentra editörlerinin onayından geçmiştir. Değerlendirmeler genel
-        bilgilendirme amaçlıdır; yatırım tavsiyesi ya da kişiye özel
-        danışmanlık yerine geçmez.
+        Bu yazı, günün haberlerinden yapay zekâ desteğiyle hazırlanmış<?=
+            !empty($yazi['onaylayan_id']) ? ' ve Valentra editörlerinin onayından geçmiştir' : 'tır' ?>.
+        Değerlendirmeler genel bilgilendirme amaçlıdır; yatırım tavsiyesi ya da
+        kişiye özel danışmanlık yerine geçmez.
     </p>
 </article>
+
+<?php if ($yazarinDigerleri !== []): ?>
+    <div class="bolum-basligi">
+        <h2><?= e($yazar['ad']) ?> — diğer yazıları</h2>
+        <span class="cizgi"></span>
+    </div>
+
+    <ul class="kose-liste">
+        <?php foreach ($yazarinDigerleri as $diger): ?>
+            <li>
+                <a href="<?= e(kose_yolu((string) $diger['slug'])) ?>">
+                    <span class="kose-gundem"><?= e(tarih_bicimle((string) $diger['gun'], false)) ?></span>
+                    <span class="kose-baslik"><?= e((string) $diger['baslik']) ?></span>
+                </a>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+    <p class="piyasa-bag"><a href="<?= e(yazar_yolu($yazar['anahtar'])) ?>">Tüm yazıları &rarr;</a></p>
+<?php endif; ?>
 
 <?php if ($ayniGun !== []): ?>
     <div class="bolum-basligi">
@@ -127,9 +162,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <?php foreach ($ayniGun as $diger): ?>
             <li>
                 <a href="<?= e(kose_yolu((string) $diger['slug'])) ?>">
-                    <?php if ((string) $diger['gundem'] !== ''): ?>
-                        <span class="kose-gundem"><?= e((string) $diger['gundem']) ?></span>
-                    <?php endif; ?>
+                    <span class="kose-gundem"><?= e(yazar_yazinin($diger)['ad']) ?></span>
                     <span class="kose-baslik"><?= e((string) $diger['baslik']) ?></span>
                     <?php if ((string) $diger['ozet'] !== ''): ?>
                         <span class="kose-ozet"><?= e((string) $diger['ozet']) ?></span>

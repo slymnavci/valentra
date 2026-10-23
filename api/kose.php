@@ -33,6 +33,8 @@ if ($yontem === 'GET') {
         'gunluk_tavan' => KOSE_GUNLUK_TAVAN,
         'haberler'     => kose_malzeme($saat),
         'onceki'       => kose_onceki(10),
+        // Yazarlar (23.10.2026): her biri kendi alanindan gunde bir yazi.
+        'yazarlar'     => kose_yazarlar_ajan_icin(),
     ]);
 }
 
@@ -81,5 +83,7 @@ ajan_json(200, [
     'eklenen'   => $eklenen,
     'yinelenen' => $yinelenen,
     'hatalar'   => $hatalar,
-    'not'       => 'Yazılar taslak olarak kaydedildi, yönetici onayı bekliyor.',
+    'not'       => haber_otomatik_yayin_acik()
+        ? 'Yazılar yayına alındı (otomatik yayın açık).'
+        : 'Yazılar taslak olarak kaydedildi, yönetici onayı bekliyor.',
 ]);

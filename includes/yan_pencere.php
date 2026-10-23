@@ -26,10 +26,10 @@ require_once __DIR__ . '/ziyaret.php';
 $etiketler = haber_etiket_bulutu(12);
 $enCokOkunanlar = haber_en_cok_okunanlar(6);
 
-$koseYazilari = [];
+$yazarYazilari = [];
 
 try {
-    $koseYazilari = kose_son_gun();
+    $yazarYazilari = kose_yazarlarin_son_yazilari();
 } catch (PDOException $e) {
     error_log('[valentra] kose yazilari okunamadi: ' . $e->getMessage());
 }
