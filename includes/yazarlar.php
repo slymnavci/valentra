@@ -95,6 +95,9 @@ const KOSE_YAZARLARI = [
 /** Yazar fotoğraflarının klasörü (site kökünden). */
 const YAZAR_FOTO_YOLU = '/gorseller/yazar';
 
+/** Site sahibinin verdigi fotograflar (depoda); ajanin urettiginden once gelir. */
+const YAZAR_SECILI_FOTO_YOLU = '/assets/yazarlar';
+
 /** Yazarın yüklenmiş fotoğrafı (site içi yol); yoksa null. */
 function yazar_foto(string $anahtar): ?string
 {
@@ -102,10 +105,18 @@ function yazar_foto(string $anahtar): ?string
         return null;
     }
 
-    $dosya = dirname(__DIR__) . YAZAR_FOTO_YOLU . '/' . $anahtar . '.jpg';
+    // Once site sahibinin sectigi fotograf (depoda, deploy ile gelir),
+    // yoksa ajanin urettigi (sunucuda).
+    foreach ([YAZAR_SECILI_FOTO_YOLU, YAZAR_FOTO_YOLU] as $yol) {
+        $dosya = dirname(__DIR__) . $yol . '/' . $anahtar . '.jpg';
 
-    // Surum: dosya yenilenince tarayici eskisini gostermesin.
-    return is_file($dosya) ? YAZAR_FOTO_YOLU . '/' . $anahtar . '.jpg?s=' . filemtime($dosya) : null;
+        // Surum: dosya yenilenince tarayici eskisini gostermesin.
+        if (is_file($dosya)) {
+            return $yol . '/' . $anahtar . '.jpg?s=' . filemtime($dosya);
+        }
+    }
+
+    return null;
 }
 
 /** Varsayılan yazar (eski yazılar, bilinmeyen anahtar). */
