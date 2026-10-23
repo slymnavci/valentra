@@ -82,14 +82,36 @@ function haber_bugun_dakika(): int
     return (int) $simdi->format('G') * 60 + (int) $simdi->format('i');
 }
 
-function haber_sirasi(bool $anaSayfa = false): string
+/** Haberin gunu: 0 bugun, 1 dun, 2 evvelki gun... (Istanbul gece yarisindan). */
+function haber_gun_ifadesi(): string
 {
     /*
-     * Istanbul gece yarisindan beri gecen dakika PHP'den: veritabaninin
-     * saat dilimi bilinmiyor (paylasimli sunucu), NOW() ile farki ise
-     * dilimden bagimsiz. Gun numarasi: 0 bugun, 1 dun, 2 evvelki gun...
+     * Gece yarisindan beri gecen dakika PHP'den: veritabaninin saat dilimi
+     * bilinmiyor (paylasimli sunucu), NOW() ile farki ise dilimden bagimsiz.
      */
-    $gun = 'GREATEST(0, CEIL((TIMESTAMPDIFF(MINUTE, h.olusturuldu, NOW()) - ' . haber_bugun_dakika() . ') / 1440))';
+    return 'GREATEST(0, CEIL((TIMESTAMPDIFF(MINUTE, h.olusturuldu, NOW()) - ' . haber_bugun_dakika() . ') / 1440))';
+}
+
+function haber_sirasi(bool $anaSayfa = false): string
+{
+    $temel = haber_sirasi_temel($anaSayfa);
+
+    if (!$anaSayfa) {
+        return $temel;
+    }
+
+    // Spor kotasi (bkz. haber_ana_sayfa_ilk_set): secilen haberler ilk
+    // sirada, kendi aralarinda yine temel sirayla.
+    $ilk = haber_ana_sayfa_ilk_set();
+
+    return $ilk === []
+        ? $temel
+        : '(h.id IN (' . implode(', ', $ilk) . ')) DESC, ' . $temel;
+}
+
+function haber_sirasi_temel(bool $anaSayfa): string
+{
+    $gun = haber_gun_ifadesi();
 
     /*
      * Ana sayfada puana okunma da giriyor (son 24 saatte haberi acan
@@ -109,6 +131,87 @@ function haber_sirasi(bool $anaSayfa = false): string
         ' . $puan . ',
         h.olusturuldu DESC,
         h.id DESC';
+}
+
+/*
+ * ANA SAYFA SPOR KOTASI (site sahibinin istegi, 23.10.2026: "ana sayfada
+ * spor haberi hic yok, onlari da 20 haber arasina sokalim; halen
+ * Galatasaray haberi var, dun baska maclar vardi").
+ *
+ * Mansetin ilk 20 haberinde en az 3 spor haberi olmali. Eksikse bugunun
+ * ya da dunun en onemli spor haberleri (daha eskisi degil: eski mac
+ * haberi istenmiyor) alinip 20'nin en altindaki spor disi haberlerin
+ * yerine konuyor. Cikan haberler kaybolmuyor, izgaranin basina iniyor.
+ *
+ * Sira SQL'de (h.id IN (...)) ile kuruluyor, PHP'de karistirilmiyor:
+ * manset ve izgara ayni ORDER BY'i kullaniyor ve izgara mansetin
+ * tukettigi kadar haberi atliyor; ikisi farkli sira gorurse haber ya
+ * iki kez cikar ya hic cikmaz. Pencere islevi (ROW_NUMBER) kullanilmadi:
+ * paylasimli sunucunun MySQL surumu bilinmiyor.
+ */
+const ANA_SAYFA_MANSET_ADEDI = 20;
+const ANA_SAYFA_SPOR_KOTASI  = 3;
+
+/**
+ * Ana sayfanin ilk 20'si (spor kotasi uygulanmis); kota zaten
+ * dolmussa ya da guncel spor haberi yoksa bos (sira degismiyor).
+ *
+ * @return list<int>
+ */
+function haber_ana_sayfa_ilk_set(): array
+{
+    static $onbellek = null;
+
+    if ($onbellek !== null) {
+        return $onbellek;
+    }
+
+    $temel = haber_sirasi_temel(true);
+    $kosul = 'h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . haber_ana_akis_kosulu();
+    $kaynak = 'FROM haberler h
+           LEFT JOIN kategoriler k ON k.id = h.kategori_id
+           ' . haber_okunma_birlesimi();
+
+    $ilk = db()->query(
+        'SELECT h.id, k.slug ' . $kaynak . ' WHERE ' . $kosul
+        . ' ORDER BY ' . $temel . ' LIMIT ' . ANA_SAYFA_MANSET_ADEDI
+    )->fetchAll();
+
+    $sporSayisi = count(array_filter($ilk, static fn (array $s): bool => $s['slug'] === 'spor'));
+    $eksik      = ANA_SAYFA_SPOR_KOTASI - $sporSayisi;
+
+    if ($eksik <= 0 || count($ilk) < ANA_SAYFA_MANSET_ADEDI) {
+        return $onbellek = [];
+    }
+
+    $ilkIdler = array_map(static fn (array $s): int => (int) $s['id'], $ilk);
+
+    $sporlar = db()->query(
+        'SELECT h.id ' . $kaynak . ' WHERE ' . $kosul
+        . " AND k.slug = 'spor'"
+        . ' AND ' . haber_gun_ifadesi() . ' <= 1'
+        . ' AND h.id NOT IN (' . implode(', ', $ilkIdler) . ')'
+        . ' ORDER BY ' . $temel . ' LIMIT ' . $eksik
+    )->fetchAll(PDO::FETCH_COLUMN);
+
+    if ($sporlar === []) {
+        return $onbellek = [];
+    }
+
+    // En alttaki spor disi haberler yer acar.
+    $cikacak = count($sporlar);
+
+    for ($i = count($ilk) - 1; $i >= 0 && $cikacak > 0; $i--) {
+        if ($ilk[$i]['slug'] !== 'spor') {
+            unset($ilkIdler[$i]);
+            $cikacak--;
+        }
+    }
+
+    return $onbellek = array_values(array_merge(
+        $ilkIdler,
+        array_map('intval', $sporlar)
+    ));
 }
 
 /**
