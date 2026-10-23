@@ -18,21 +18,20 @@ require_once __DIR__ . '/OpenAiIstemci.php';
 final class Yazar implements SemaliIstemci
 {
     /**
-     * Haber toplamanin varsayilan modeli. GEMINI_MODEL ortam degiskeniyle
+     * Haber toplamanin Gemini modeli. GEMINI_MODEL ortam degiskeniyle
      * degistirilebilir; model adi degisirse kod duzenlemeye gerek kalmaz.
      *
-     * 23.10.2026 (site sahibinin karari): haber icin ucuz model, kose
-     * yazisi icin guclu model. Haber toplama asil token tuketimi (her
-     * calismada onlarca aday); okuma, eleme ve kisa metin "Lite" sinifi
-     * icin uygun is. Flash-Lite 1M token basina $0.25 / $1.50; 3.8 Flash
-     * $0.75 / $3.75 (1 Ocak 2027'den $1.50 / $7.50).
+     * 23.10.2026 (site sahibinin karari): haberler once OpenAI (GPT-6
+     * Luna) ile yaziliyor, Gemini YEDEK. Yedek olarak eskisi gibi 3.8
+     * Flash: yalnizca Luna dustugunde calistigi icin maliyeti kucuk,
+     * yazim kalitesi bilinen model. OpenAI anahtari yoksa butun is bunda.
      */
-    private const VARSAYILAN_MODEL = 'gemini-3.1-flash-lite';
+    private const VARSAYILAN_MODEL = 'gemini-3.8-flash';
 
     /**
-     * Kose yazilarinin varsayilan modeli; GEMINI_KOSE_MODEL ile
-     * degistirilebilir. Gundem secip yorumlu, akici yazi uretmek daha
-     * guclu yazim istiyor; gunde birkac yazi oldugu icin maliyeti kucuk.
+     * Kose yazilarinin modeli; GEMINI_KOSE_MODEL ile degistirilebilir.
+     * Gundem secip yorumlu, akici yazi uretmek daha guclu yazim istiyor;
+     * gunde birkac yazi oldugu icin maliyeti kucuk.
      */
     private const KOSE_VARSAYILAN_MODEL = 'gemini-3.8-flash';
 
