@@ -498,6 +498,9 @@ final class Yazar implements SemaliIstemci
     /** @var array{tur:string,mesaj:string}|null Claude'un bu calismada neden kapandigi */
     private ?array $claudeErisimSorunu = null;
 
+    /** Claude'un son gecici hatasi (ozete yazmak icin). */
+    private string $claudeSonHata = '';
+
     public function __construct(
         private readonly string $apiKey,
         string $model = '',
@@ -607,6 +610,7 @@ final class Yazar implements SemaliIstemci
             $this->claudeKapat('erişim yok (' . $e->getMessage() . ')');
         } catch (\Throwable $e) {
             $this->claudeArdisikHata++;
+            $this->claudeSonHata = $e->getMessage();
             fwrite(STDERR, '[' . date('H:i:s') . '] ' . $this->claude->model() . ' başarısız, sıradaki modelle devam: '
                 . mb_substr($e->getMessage(), 0, 300, 'UTF-8') . PHP_EOL);
 
@@ -645,7 +649,7 @@ final class Yazar implements SemaliIstemci
         return [
             'model' => $this->claude->model(),
             'durum' => $this->claudeErisimSorunu['tur'] ?? ($this->claudeSayac > 0 ? 'tamam' : 'bilinmiyor'),
-            'mesaj' => mb_substr($this->claudeErisimSorunu['mesaj'] ?? '', 0, 300, 'UTF-8'),
+            'mesaj' => mb_substr($this->claudeErisimSorunu['mesaj'] ?? $this->claudeSonHata, 0, 300, 'UTF-8'),
         ];
     }
 
