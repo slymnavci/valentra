@@ -207,7 +207,8 @@ function piyasa_grafikleri_html(string $donem, array $sadece = [], string $bolum
                 <a href="?<?= e(http_build_query(array_filter(['bolum' => $bolum, 'donem' => $kod]))) ?>#piyasa-grafikleri"<?= $kod === $donem ? ' aria-current="true"' : '' ?>><?= e($d['ad']) ?></a>
             <?php endforeach; ?>
         </nav>
-        <div class="piyasa-grafikler" id="piyasa-grafikleri"><?= $grafikler ?></div>
+        <?php // Analizli (bolum) sayfada her grafik tam genislikte: analiz kutulari tek satira sigsin. ?>
+        <div class="piyasa-grafikler<?= $analiz ? ' analizli' : '' ?>" id="piyasa-grafikleri"><?= $grafikler ?></div>
     </div>
     <?php
 
@@ -268,14 +269,14 @@ function piyasa_donem_analizi_html(array $seri, array $arac, string $donemAdi): 
         $satirlar[] = ['Günlük oynaklık', '%' . piyasa_sayi($oynaklik, 2)];
     }
 
-    $html = '<table class="piyasa-analiz"><caption>' . e($arac['ad']) . ' — ' . e($donemAdi) . ' analizi</caption><tbody>';
+    $html = '<section class="piyasa-analiz"><h4>' . e($arac['ad']) . ' — ' . e($donemAdi) . ' analizi</h4><dl class="pa-kutular">';
 
     foreach ($satirlar as [$ad, $hucre]) {
-        // $hucre ya e() ile kacirilmis sayi ya piyasa_degisim_html ciktisi.
-        $html .= '<tr><th scope="row">' . e($ad) . '</th><td>' . (str_starts_with($hucre, '<') ? $hucre : e($hucre)) . '</td></tr>';
+        // $hucre ya duz sayi metni ya piyasa_degisim_html ciktisi (HTML).
+        $html .= '<div class="pa-kutu"><dt>' . e($ad) . '</dt><dd>' . (str_starts_with($hucre, '<') ? $hucre : e($hucre)) . '</dd></div>';
     }
 
-    return $html . '</tbody></table>';
+    return $html . '</dl></section>';
 }
 
 /**
@@ -322,6 +323,40 @@ function ekonomik_gundem_html(): string
     return '<section class="ekonomik-gundem" aria-labelledby="eg-baslik">'
         . '<div class="bolum-basligi"><h2 id="eg-baslik">Ekonomik Gündem</h2><span class="cizgi"></span></div>'
         . '<div class="eg-izgara">' . $kartlar . '</div></section>';
+}
+
+/**
+ * Piyasa ve şirket sayfalarının altında güncel ekonomi haberleri (site
+ * sahibinin istegi, 23.10.2026: "bosluklari gostermeyelim, dolu dolu
+ * sayfalar"). 12 kart: haber izgarasinin sutun sayilarinin (4, 3, 2, 1)
+ * hepsine bolunuyor, son satir bos kalmiyor.
+ */
+function ekonomi_haberleri_html(int $adet = 12): string
+{
+    $kategori = kategori_slug_bul('ekonomi');
+
+    if ($kategori === null) {
+        return '';
+    }
+
+    $izgaraHaberleri = haber_kategoride((int) $kategori['id'], $adet, 0);
+
+    if ($izgaraHaberleri === []) {
+        return '';
+    }
+
+    ob_start();
+    ?>
+    <section class="ekonomi-haberleri" aria-labelledby="eh-baslik">
+        <div class="bolum-basligi">
+            <h2 id="eh-baslik"><a href="<?= e(kategori_yolu('ekonomi')) ?>">Güncel Ekonomi Haberleri</a></h2>
+            <span class="cizgi"></span>
+        </div>
+        <?php require __DIR__ . '/kart_izgara.php'; ?>
+    </section>
+    <?php
+
+    return (string) ob_get_clean();
 }
 
 /** Borsa İstanbul'un büyük şirketleri: fiyat ve günlük değişim. */

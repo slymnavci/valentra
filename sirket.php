@@ -69,7 +69,7 @@ if ($kod === null) {
             <?= sirket_secici_html() ?>
             <?= $sirketler ?>
             <?= $sirketler !== '' ? canli_betik() : '' ?>
-            <p class="piyasa-bag"><a href="<?= e(piyasalar_yolu()) ?>">Piyasalar: BIST 100, döviz, altın &rarr;</a></p>
+            <?= ekonomi_haberleri_html() ?>
         </div>
 
         <?php /* Yan pencere yok: grafik ve tablolar tam genislikte (23.10.2026). */ ?>
@@ -213,6 +213,8 @@ require __DIR__ . '/includes/sayfa_ust.php';
         </section>
 
         <?php if ($analiz !== null): ?>
+            <?php // Getiriler ve yillara gore getiri genis ekranda yan yana: tam genislikte sutunlar arasi bos kaliyordu. ?>
+            <div class="sirket-ikili">
             <section class="sirket-bolum" id="getiriler">
                 <div class="bolum-basligi"><h2>Getiriler</h2><span class="cizgi"></span></div>
                 <div class="tablo-kaydir">
@@ -268,6 +270,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
                     </div>
                 </section>
             <?php endif; ?>
+            </div>
 
             <section class="sirket-bolum" id="risk">
                 <div class="bolum-basligi"><h2>Risk ve İşlem Ölçüleri</h2><span class="cizgi"></span></div>
@@ -435,6 +438,9 @@ require __DIR__ . '/includes/sayfa_ust.php';
             yatırım kararı vermeden önce resmi kaynaklardan (KAP, Borsa İstanbul) doğrulayın.
             <a href="https://www.kap.org.tr/tr/bildirim-sorgu" target="_blank" rel="noopener">KAP bildirimleri &rarr;</a>
         </p>
+
+        <?php require_once __DIR__ . '/includes/piyasa_panel.php'; ?>
+        <?= ekonomi_haberleri_html() ?>
     </div>
 
     <?php /* Yan pencere yok: grafik ve tablolar tam genislikte (23.10.2026). */ ?>

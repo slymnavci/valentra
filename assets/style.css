@@ -3780,14 +3780,20 @@ a.rg-madde:hover { color: var(--vurgu); }
 
 /* Piyasalar */
 .piyasa-kartlar {
-    display: grid;
-    /* Kart sayisi bolume gore 1-6; satir bos kalmasin. */
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    /*
+     * Esnek satir, izgara degil: kart sayisi bolume gore 1-6 ve satir
+     * HER ZAMAN dolu olmali (site sahibinin istegi, 23.10.2026: "bosluklari
+     * gostermeyelim, dolu dolu sayfalar"). Izgarada alttaki not satiri
+     * butun sutunlari tuttugu icin iki kart sekizde bir genislikte kaliyordu.
+     */
+    display: flex;
+    flex-wrap: wrap;
     gap: 12px;
     margin: 0 0 18px;
 }
 
 .piyasa-kart {
+    flex: 1 1 220px;
     position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -3820,7 +3826,7 @@ a.rg-madde:hover { color: var(--vurgu); }
 .kivrim.arti path { stroke: var(--artis); }
 .kivrim.eksi path { stroke: var(--dusus); }
 
-.piyasa-kart-not { grid-column: 1 / -1; margin: 0; }
+.piyasa-kart-not { flex-basis: 100%; margin: 0; }
 
 .donem-secici {
     display: flex;
@@ -3901,12 +3907,12 @@ a.rg-madde:hover { color: var(--vurgu); }
 .sirket-tablosu tbody tr:last-child td { border-bottom: 0; }
 
 @media (max-width: 1100px) {
-    .piyasa-kartlar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .piyasa-grafikler { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {
-    .piyasa-kartlar { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .piyasa-kartlar { gap: 8px; }
+    .piyasa-kart { flex-basis: calc(50% - 4px); }
     .pk-deger { font-size: 1.1rem; }
     .sirket-tablosu .kod { display: none; }
 }
@@ -4087,38 +4093,61 @@ a.rg-madde:hover { color: var(--vurgu); }
 .eg-satir { font-size: .92rem; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
 .eg-not { font-size: .84rem; color: var(--metin-soluk); margin-top: auto; }
 
-.piyasa-analiz {
-    width: 100%;
-    margin-top: 10px;
-    border-collapse: collapse;
+/*
+ * Donem analizi: satiri dolduran kutucuklar (site sahibinin istegi,
+ * 23.10.2026: "bosluklari gostermeyelim"). Onceden tablo: etiket en
+ * solda, deger en sagda, arasi bos ve uzun.
+ */
+.piyasa-analiz { margin-top: 12px; }
+
+.piyasa-analiz h4 {
+    margin: 0 0 8px;
     font-size: .9rem;
-}
-
-.piyasa-analiz caption {
-    text-align: left;
     font-weight: 700;
-    padding: 4px 0 6px;
 }
 
-.piyasa-analiz th,
-.piyasa-analiz td {
-    padding: 6px 4px;
-    border-top: 1px solid var(--cizgi);
+.pa-kutular {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
 }
 
-.piyasa-analiz th { text-align: left; font-weight: 500; color: var(--metin-soluk); }
-.piyasa-analiz td { text-align: right; font-variant-numeric: tabular-nums; }
+.pa-kutu {
+    flex: 1 1 130px;
+    padding: 8px 10px;
+    border: 1px solid var(--cizgi);
+    border-radius: 7px;
+}
+
+.pa-kutu dt { font-size: .74rem; color: var(--metin-soluk); }
+.pa-kutu dd { margin: 2px 0 0; font-weight: 700; font-size: .95rem; font-variant-numeric: tabular-nums; }
 
 /* --- Sirket izgarasi: 30 sirket bir arada, her kutu tiklanir ------------- */
+
+/*
+ * Sutun sayisi 60'i TAM bolen degerlerden (2, 3, 4, 5, 6, 10, 12): son
+ * satir yarim kalmasin (site sahibinin istegi, 23.10.2026). auto-fill
+ * 2000 piksellik ekranda 13 sutun yapiyor, son satirda 8 kutu bosluk
+ * kaliyordu. Genislik kutunun kendisine gore (container query).
+ */
+.piyasa-sirketler { container-type: inline-size; }
 
 .sirket-izgara {
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
 }
+
+@container (min-width: 420px)  { .sirket-izgara { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container (min-width: 560px)  { .sirket-izgara { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@container (min-width: 700px)  { .sirket-izgara { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@container (min-width: 840px)  { .sirket-izgara { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@container (min-width: 1300px) { .sirket-izgara { grid-template-columns: repeat(10, minmax(0, 1fr)); } }
+@container (min-width: 1650px) { .sirket-izgara { grid-template-columns: repeat(12, minmax(0, 1fr)); } }
 
 .sirket-izgara a {
     display: grid;
@@ -4162,4 +4191,20 @@ a.rg-madde:hover { color: var(--vurgu); }
     font-size: .74rem;
     font-weight: 700;
     letter-spacing: .03em;
+}
+
+.ekonomi-haberleri { margin-top: 34px; }
+.ekonomi-haberleri h2 a { color: inherit; }
+
+/* Bolum sayfasi: grafik basina bir satir, analiz kutulari tek satirda. */
+.piyasa-grafikler.analizli { grid-template-columns: minmax(0, 1fr); }
+
+/* Sirket sayfasi: getiri tablolari genis ekranda yan yana (23.10.2026). */
+@media (min-width: 1100px) {
+    .sirket-ikili {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 0 30px;
+        align-items: start;
+    }
 }
