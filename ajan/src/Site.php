@@ -433,6 +433,23 @@ final class Site
     }
 
     /**
+     * OpenAI durumunu panele bildirir (api/ajan-durum.php): kredi bitince
+     * panelde uyari cikiyor, kredi yuklenip istek cevaplaninca kalkiyor.
+     *
+     * @param array{model:string,durum:string,mesaj:string} $openAi
+     */
+    public function ajanDurumu(array $openAi): void
+    {
+        $json = json_encode(['openai' => $openAi], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        [$kod, $govde] = $this->istek('POST', '/api/ajan-durum.php', is_string($json) ? $json : '{}');
+
+        if ($kod !== 200) {
+            throw new \RuntimeException('Ajan durumu bildirilemedi (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+    }
+
+    /**
      * @return array{0:int,1:string}
      */
     private function istek(

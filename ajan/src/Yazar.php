@@ -457,6 +457,9 @@ final class Yazar implements SemaliIstemci
     /** @var array{birincil:int,yedek:int} Hangi saglayicinin kac istegi cevapladigi */
     private array $saglayiciSayaci = ['birincil' => 0, 'yedek' => 0];
 
+    /** @var array{tur:string,mesaj:string}|null OpenAI'nin bu calismada neden kapandigi */
+    private ?array $birincilErisimSorunu = null;
+
     /** Son istegi cevaplayan model; haberle birlikte siteye gidiyor. */
     private string $sonYanitlayan = '';
 
@@ -501,6 +504,7 @@ final class Yazar implements SemaliIstemci
 
             return $veri;
         } catch (OpenAiErisimYokException $e) {
+            $this->birincilErisimSorunu = ['tur' => $e->tur, 'mesaj' => $e->getMessage()];
             $this->birincilKapat('erişim yok (' . $e->getMessage() . ')');
         } catch (\Throwable $e) {
             $this->birincilArdisikHata++;
@@ -1028,6 +1032,35 @@ final class Yazar implements SemaliIstemci
             'yedek_istek'       => $this->kullanim['istek'],
             'birincil_kullanim' => $this->birincil->kullanim(),
             'yedek_kullanim'    => $this->kullanim,
+        ];
+    }
+
+    /**
+     * OpenAI'nin bu calismadaki durumu; panel uyarisi icin siteye gidiyor
+     * (site sahibinin istegi, 23.10.2026: "kredi biterse bana haber ver").
+     *
+     *   kredi     kredi/kota bitti: OpenAI'ye kredi yuklenmeli
+     *   anahtar   anahtar gecersiz ya da yetkisiz
+     *   tamam     en az bir istegi cevapladi
+     *   bilinmiyor hic istek atilmadi ya da gecici hatalarla dustu
+     *
+     * OpenAI anahtari yoksa null.
+     *
+     * @return array{model:string,durum:string,mesaj:string}|null
+     */
+    public function birincilDurumu(): ?array
+    {
+        if ($this->birincil === null) {
+            return null;
+        }
+
+        $durum = $this->birincilErisimSorunu['tur']
+            ?? ($this->saglayiciSayaci['birincil'] > 0 ? 'tamam' : 'bilinmiyor');
+
+        return [
+            'model' => $this->birincil->model(),
+            'durum' => $durum,
+            'mesaj' => mb_substr($this->birincilErisimSorunu['mesaj'] ?? '', 0, 300, 'UTF-8'),
         ];
     }
 

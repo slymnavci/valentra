@@ -1757,6 +1757,32 @@ if ($kullanim['istek'] > 0) {
     }
 }
 
+/*
+ * OpenAI (Luna) durumu panele. Site sahibinin istegi (23.10.2026):
+ * "kredi biterse bana haber ver, ben kredi yuklerim". Kredi bitince ya
+ * da anahtar gecersizse haberler Gemini ile yaziliyor (calisma suruyor),
+ * ama panelde kirmizi uyari cikiyor ve calisma kirmizi bitiyor; GitHub
+ * kirmizi calismayi e-postayla bildiriyor. Kredi yuklenince ilk basarili
+ * istekte uyari kendiliginden kalkiyor.
+ */
+$openAiDurumu = $yazar->birincilDurumu();
+
+if ($openAiDurumu !== null && $openAiDurumu['durum'] !== 'bilinmiyor') {
+    if ($openAiDurumu['durum'] === 'kredi') {
+        Bildirim::sorun('OpenAI (' . $openAiDurumu['model'] . ') kredisi bitti; haberler bu çalışmada yedek Gemini ile '
+            . 'yazıldı (daha pahalı). platform.openai.com → Billing sayfasından kredi yükleyin.');
+    } elseif ($openAiDurumu['durum'] === 'anahtar') {
+        Bildirim::sorun('OpenAI anahtarı geçersiz ya da yetkisiz; haberler yedek Gemini ile yazıldı. '
+            . 'GitHub\'daki OPENAI_API_KEY değerini kontrol edin.');
+    }
+
+    try {
+        $site->ajanDurumu($openAiDurumu);
+    } catch (Throwable $e) {
+        gunluk('OpenAI durumu panele bildirilemedi: ' . $e->getMessage());
+    }
+}
+
 if ($modelErisimYok !== '') {
     // Calismayi kirmiziya cevirir; panel de bu satiri gosterir.
     Bildirim::sorun($modelErisimYok);

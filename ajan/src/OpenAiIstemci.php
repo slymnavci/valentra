@@ -162,8 +162,12 @@ final class OpenAiIstemci
 
                 // Anahtar gecersiz, yetki yok ya da kredi bitti: beklemekle
                 // duzelmez, bu calismada Luna bir daha denenmemeli.
-                if (in_array($kod, [401, 403], true) || $hataKodu === 'insufficient_quota') {
-                    throw new OpenAiErisimYokException($sonMesaj);
+                if ($hataKodu === 'insufficient_quota' || str_starts_with($hataKodu, 'billing_')) {
+                    throw new OpenAiErisimYokException($sonMesaj, 'kredi');
+                }
+
+                if (in_array($kod, [401, 403], true)) {
+                    throw new OpenAiErisimYokException($sonMesaj, 'anahtar');
                 }
 
                 // 4xx (429 haric) istegin kendisiyle ilgili: yeniden denemek

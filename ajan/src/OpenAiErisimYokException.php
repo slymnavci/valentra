@@ -11,4 +11,13 @@ namespace Valentra\Ajan;
  */
 final class OpenAiErisimYokException extends \RuntimeException
 {
+    /**
+     * @param string $tur 'kredi' (kredi/kota bitti) ya da 'anahtar'
+     *                    (gecersiz anahtar, yetki yok). Panel uyarisi
+     *                    buna gore yaziliyor (api/ajan-durum.php).
+     */
+    public function __construct(string $mesaj, public readonly string $tur = 'anahtar')
+    {
+        parent::__construct($mesaj);
+    }
 }
