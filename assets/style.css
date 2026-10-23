@@ -4208,3 +4208,43 @@ a.rg-madde:hover { color: var(--vurgu); }
         align-items: start;
     }
 }
+
+/* --- Kose yazisi gorselleri (23.10.2026) ---------------------------------- */
+
+.kose-gorsel { margin: 4px 0 22px; }
+
+.kose-gorsel img {
+    width: 100%;
+    max-height: 520px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.kose-gorsel figcaption {
+    margin-top: 6px;
+    font-size: .8rem;
+    color: var(--metin-soluk);
+}
+
+/* Liste: gorsel solda, yazi sagda. */
+.kose-liste a.gorselli {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    column-gap: 16px;
+    align-content: start;
+}
+
+.kose-liste a.gorselli > :not(.kose-kucuk) { grid-column: 2; }
+
+.kose-kucuk {
+    grid-column: 1;
+    grid-row: 1 / span 4;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    border-radius: 7px;
+}
+
+@media (max-width: 560px) {
+    .kose-liste a.gorselli { grid-template-columns: 104px minmax(0, 1fr); column-gap: 12px; }
+}

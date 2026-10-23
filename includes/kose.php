@@ -350,6 +350,69 @@ function kose_dayanaklar(string $idler): array
     return $sonuc;
 }
 
+/**
+ * Yazıların görselleri: dayandığı haberlerden görseli olan İLKİNİN görseli
+ * (site sahibinin istegi, 23.10.2026: "kose yazilarinda resim de
+ * ekleyelim, konuyla ilgili bir resim"). Yazi o haberlerin yorumu; haberin
+ * gorseli konuyla birebir ilgili ve haber gorselleriyle ayni yoldan
+ * (sitenin kendi sunucusu, bkz. haber_gorsel) geliyor. Ajan haberleri
+ * onem sirasiyla verdigi icin ilk gorselli haber yazinin ana konusu.
+ *
+ * Liste sayfasi icin toplu: tek sorgu.
+ *
+ * @param list<array<string,mixed>> $yazilar
+ * @return array<int,array{src:string,kaynak:string}> yazi id => gorsel
+ */
+function kose_gorselleri(array $yazilar): array
+{
+    $yaziHaberleri = [];
+    $hepsi = [];
+
+    foreach ($yazilar as $yazi) {
+        $idler = kose_id_listesi((string) ($yazi['haber_idleri'] ?? ''));
+        $yaziHaberleri[(int) $yazi['id']] = $idler;
+        array_push($hepsi, ...$idler);
+    }
+
+    $hepsi = array_values(array_unique($hepsi));
+
+    if ($hepsi === []) {
+        return [];
+    }
+
+    $yer = implode(',', array_fill(0, count($hepsi), '?'));
+    $ifade = db()->prepare(
+        'SELECT id, gorsel_url, kaynak_adi FROM haberler
+          WHERE id IN (' . $yer . ') AND gorsel_url IS NOT NULL AND gorsel_url <> \'\''
+    );
+    $ifade->execute($hepsi);
+
+    $haberler = [];
+
+    foreach ($ifade->fetchAll() as $h) {
+        $haberler[(int) $h['id']] = $h;
+    }
+
+    $sonuc = [];
+
+    foreach ($yaziHaberleri as $yaziId => $idler) {
+        foreach ($idler as $id) {
+            if (!isset($haberler[$id])) {
+                continue;
+            }
+
+            $src = haber_gorsel($haberler[$id]);
+
+            if ($src !== '') {
+                $sonuc[$yaziId] = ['src' => $src, 'kaynak' => (string) $haberler[$id]['kaynak_adi']];
+                break;
+            }
+        }
+    }
+
+    return $sonuc;
+}
+
 /** Yazı metnini HTML'e çevirir (bkz. bicimli_metin_html). */
 function kose_icerik_html(string $icerik): string
 {
