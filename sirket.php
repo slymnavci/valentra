@@ -87,6 +87,11 @@ if ($kod === null) {
 $izinli  = sirket_kod_izinli($kod);
 $bos     = ['veri' => null, 'zaman' => 0];
 
+// Gerekenleri once ayni anda cek (bkz. sirket_serileri_hazirla).
+if ($izinli) {
+    sirket_serileri_hazirla([[$kod, '1d'], [$kod, '1y'], [$kod, '10y'], [$kod, $donem], ['XU100', '10y']]);
+}
+
 $anlikKayit = $izinli ? sirket_seri($kod, '1d') : $bos;
 $yilKayit   = $izinli ? sirket_seri($kod, '1y') : $bos;
 $anlik  = $anlikKayit['veri'];

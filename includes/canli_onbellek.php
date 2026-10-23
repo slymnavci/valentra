@@ -237,6 +237,50 @@ function canli_indir(string $url, int $zamanAsimi = 8): ?string
     return $sonuc['tamam'] ? (string) $sonuc['govde'] : null;
 }
 
+/**
+ * Birden çok adresi AYNI ANDA indirir (curl_multi); sıra korunur.
+ * Ayarlar canli_indir ile ayni (http_ortak_secenekler).
+ *
+ * @param array<string,string> $adresler anahtar => adres
+ * @return array<string,?string> anahtar => govde (basarisizsa null)
+ */
+function canli_coklu_indir(array $adresler, int $zamanAsimi = 8): array
+{
+    require_once __DIR__ . '/http_ortak.php';
+
+    $coklu   = curl_multi_init();
+    $tutamac = [];
+
+    foreach ($adresler as $anahtar => $adres) {
+        $ch = curl_init($adres);
+        curl_setopt_array($ch, http_ortak_secenekler($zamanAsimi));
+        curl_multi_add_handle($coklu, $ch);
+        $tutamac[$anahtar] = $ch;
+    }
+
+    do {
+        $durum = curl_multi_exec($coklu, $suren);
+
+        if ($suren > 0) {
+            curl_multi_select($coklu, 1.0);
+        }
+    } while ($suren > 0 && $durum === CURLM_OK);
+
+    $sonuc = [];
+
+    foreach ($tutamac as $anahtar => $ch) {
+        $govde = curl_multi_getcontent($ch);
+        $kod   = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        $sonuc[$anahtar] = is_string($govde) && $govde !== '' && $kod >= 200 && $kod < 300 ? $govde : null;
+        curl_multi_remove_handle($coklu, $ch);
+        curl_close($ch);
+    }
+
+    curl_multi_close($coklu);
+
+    return $sonuc;
+}
+
 /** "13:05" ya da "22 Eki 13:05": verinin ne zaman çekildiği. */
 function canli_zaman_yazi(int $zaman): string
 {
