@@ -311,12 +311,37 @@ function haber_sirasi_temel(bool $anaSayfa): string
      * bugun var (haber_ana_akis_kosulu); konu sayfalarinda bugunun
      * haberleri dunkulerin ve eskilerin onunde. Spor icin dun aksamki mac
      * konu sayfasinda "bugun" (bkz. haber_gun_ifadesi).
+     *
+     * Ana sayfada gunun icinde TOPLAMA DALGASI (bkz. ANA_SAYFA_DALGA_DAKIKA).
      */
     return '(h.one_cikan = 1 AND ' . $gun . ' = 0) DESC,
         ' . $gun . ' ASC,
-        ' . $puan . ',
+        ' . ($anaSayfa ? haber_dalga_ifadesi() . ' ASC,
+        ' : '') . $puan . ',
         h.olusturuldu DESC,
         h.id DESC';
+}
+
+/*
+ * TOPLAMA DALGASI (site sahibinin karari, 23.10.2026: "yeni gelen
+ * haberleri her zaman son 2 saatlik haberler olarak arayalim; buradan
+ * onemli olanlari ana sayfaya koyalim; eski haberler yavas yavas sirayla
+ * arkaya dogru gitsin; boylece yeni haberleri hep one alalim").
+ *
+ * Ajan iki saatte bir son 2 saatin haberlerini topluyor. Ana sayfa
+ * once siteye en son 2 saatte GELEN haberleri (dalga 0) kendi
+ * icinde onem sirasiyla diziyor, sonra 2-4 saat once gelenleri (dalga
+ * 1), sonra 4-6... Eski haber, onemi ne olursa olsun yeni toplamanin
+ * arkasina geciyor; her yeni toplamada bir dalga geriye kayiyor.
+ * Dalga toplanma anina gore (olusturuldu): ayni calismanin haberleri
+ * ayni dalgada kaliyor. Kaynakta bugun yayimlanmamis haber zaten ana
+ * sayfada yok (haber_ana_akis_kosulu).
+ */
+const ANA_SAYFA_DALGA_DAKIKA = 120;
+
+function haber_dalga_ifadesi(): string
+{
+    return 'FLOOR(GREATEST(0, TIMESTAMPDIFF(MINUTE, h.olusturuldu, NOW())) / ' . ANA_SAYFA_DALGA_DAKIKA . ')';
 }
 
 /*
