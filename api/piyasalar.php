@@ -18,7 +18,11 @@ header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: public, max-age=60');
 
 echo match ((string) ($_GET['bolum'] ?? '')) {
-    'kartlar'   => piyasa_kartlari_html(),
+    // Bolum sayfasi yalnizca kendi araclarini istiyor (bilinmeyen ad atilir).
+    'kartlar'   => piyasa_kartlari_html(array_values(array_intersect(
+        explode(',', (string) ($_GET['araclar'] ?? '')),
+        array_keys(piyasa_araclari())
+    ))),
     'sirketler' => piyasa_sirketler_html(),
     default     => '',
 };

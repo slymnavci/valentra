@@ -137,24 +137,15 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
         if ($sporBolum !== '') {
             $canliPanel = spor_paneli_html($sporBolum, $sporP);
-        } elseif ($kategori['slug'] === 'ekonomi') {
-            /*
-             * Ekonomi sayfasi yalnizca HABERLER (22.10.2026, site
-             * sahibinin istegi: piyasa ve gunluk ekonomi haberleri ayri
-             * ayri). Piyasa kartlari, grafikler ve sirketler Piyasalar
-             * sayfasinda; burada ona bir bag.
-             */
-            echo '<p class="piyasa-bag"><a href="' . e(piyasalar_yolu()) . '">'
-               . 'Piyasalar: BIST 100, döviz, altın, borsa şirketleri ve ekonomik göstergeler &rarr;</a></p>';
-
-            // BIST 100 grafigi ve sirket secici (22.10.2026, site sahibinin
-            // istegi: "ekonomi haberlerini verirken BIST 100 grafikleri de
-            // olsun; bir sirket secip gecmisini gorelim"). Yalnizca ilk sayfada.
-            if ($sayfa === 1) {
-                require_once __DIR__ . '/includes/sirket_panel.php';
-                echo sirket_bist_bolumu_html();
-            }
         }
+
+        /*
+         * Ekonomi: EN ONDE guncel haberler (kaydirak + izgara), piyasa
+         * verisi haberlerin ALTINDA "Ekonomik Gundem" kutusunda, BIST 100,
+         * doviz, altin, petrol ve gostergelerin ayri sayfalarina
+         * baglantilarla (site sahibinin istegi, 23.10.2026). Onceden BIST
+         * grafigi ve sirket secici haberlerin ustundeydi.
+         */
 
         if ($canliPanel !== '') {
             require_once __DIR__ . '/includes/canli_betik.php';
@@ -190,6 +181,11 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <?php else: ?>
             <?php $izgaraHaberleri = $haberler; ?>
             <?php require __DIR__ . '/includes/kart_izgara.php'; ?>
+
+            <?php if ($kategori['slug'] === 'ekonomi' && $sayfa === 1): ?>
+                <?php require_once __DIR__ . '/includes/piyasa_panel.php'; ?>
+                <?= ekonomik_gundem_html() ?>
+            <?php endif; ?>
 
             <?php if ($sonSayfa > 1): ?>
                 <nav class="kart-alt" style="justify-content:center;margin:32px 0;gap:14px;">

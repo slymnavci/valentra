@@ -4025,3 +4025,53 @@ a.rg-madde:hover { color: var(--vurgu); }
     .kunye-tablosu tr { grid-template-columns: 1fr; }
     .kunye-tablosu th { width: auto; padding-bottom: 0; }
 }
+
+/* --- Ekonomik Gundem (Ekonomi haberlerinin altinda) ve donem analizi ------ */
+
+.ekonomik-gundem { margin-top: 36px; }
+
+.eg-izgara {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 12px;
+}
+
+.eg-kart {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 16px;
+    background: var(--kart);
+    border: 1px solid var(--cizgi);
+    border-radius: 10px;
+    box-shadow: var(--golge);
+    color: var(--metin);
+    transition: border-color .14s ease, transform .14s ease;
+}
+
+.eg-kart:hover { border-color: var(--altin); transform: translateY(-1px); }
+.eg-kart strong { font-size: 1.02rem; }
+.eg-satir { font-size: .92rem; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.eg-not { font-size: .84rem; color: var(--metin-soluk); margin-top: auto; }
+
+.piyasa-analiz {
+    width: 100%;
+    margin-top: 10px;
+    border-collapse: collapse;
+    font-size: .9rem;
+}
+
+.piyasa-analiz caption {
+    text-align: left;
+    font-weight: 700;
+    padding: 4px 0 6px;
+}
+
+.piyasa-analiz th,
+.piyasa-analiz td {
+    padding: 6px 4px;
+    border-top: 1px solid var(--cizgi);
+}
+
+.piyasa-analiz th { text-align: left; font-weight: 500; color: var(--metin-soluk); }
+.piyasa-analiz td { text-align: right; font-variant-numeric: tabular-nums; }
