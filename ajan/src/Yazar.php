@@ -15,10 +15,23 @@ namespace Valentra\Ajan;
 final class Yazar implements SemaliIstemci
 {
     /**
-     * Varsayilan model. GEMINI_MODEL ortam degiskeniyle degistirilebilir;
-     * model adi degisirse kod duzenlemeye gerek kalmaz.
+     * Haber toplamanin varsayilan modeli. GEMINI_MODEL ortam degiskeniyle
+     * degistirilebilir; model adi degisirse kod duzenlemeye gerek kalmaz.
+     *
+     * 23.10.2026 (site sahibinin karari): haber icin ucuz model, kose
+     * yazisi icin guclu model. Haber toplama asil token tuketimi (her
+     * calismada onlarca aday); okuma, eleme ve kisa metin "Lite" sinifi
+     * icin uygun is. Flash-Lite 1M token basina $0.25 / $1.50; 3.8 Flash
+     * $0.75 / $3.75 (1 Ocak 2027'den $1.50 / $7.50).
      */
-    private const VARSAYILAN_MODEL = 'gemini-3.8-flash';
+    private const VARSAYILAN_MODEL = 'gemini-3.1-flash-lite';
+
+    /**
+     * Kose yazilarinin varsayilan modeli; GEMINI_KOSE_MODEL ile
+     * degistirilebilir. Gundem secip yorumlu, akici yazi uretmek daha
+     * guclu yazim istiyor; gunde birkac yazi oldugu icin maliyeti kucuk.
+     */
+    private const KOSE_VARSAYILAN_MODEL = 'gemini-3.8-flash';
 
     /**
      * Aday basina modele giden sayfa metni siniri (karakter).
@@ -368,29 +381,53 @@ final class Yazar implements SemaliIstemci
     /** @var array{girdi:int,cikti:int,istek:int} Calisma boyunca biriken kullanim */
     private array $kullanim = ['girdi' => 0, 'cikti' => 0, 'istek' => 0];
 
-    public function __construct(private readonly string $apiKey, string $model = '')
+    /** Kose yazisi ajaninin modeli: GEMINI_KOSE_MODEL, yoksa guclu varsayilan. */
+    public static function koseModeli(): string
     {
-        $ortam = trim((string) (getenv('GEMINI_MODEL') ?: ''));
-        $secilen = $model !== '' ? $model : $ortam;
+        return self::ortamModeli('GEMINI_KOSE_MODEL', self::KOSE_VARSAYILAN_MODEL);
+    }
 
-        /*
-         * Model adi adrese yaziliyor (models/<ad>:generateContent). Gecersiz
-         * bir ad ("gemini model", sonda bosluk, Turkce karakter) butun
-         * istekleri "URL rejected: Malformed input" ile dusuruyordu
-         * (23.10.2026: 72 adayin 72'si hata, 0 haber). Ad gecersizse
-         * varsayilana donuluyor ve sebep gunluge yaziliyor.
-         */
-        $secilen = preg_replace('#^models/#', '', $secilen) ?? '';
+    /**
+     * Ortam degiskenindeki model adi; bos ya da gecersizse varsayilan.
+     *
+     * Model adi adrese yaziliyor (models/<ad>:generateContent). Gecersiz
+     * bir ad ("gemini model", sonda bosluk, Turkce karakter) butun
+     * istekleri "URL rejected: Malformed input" ile dusuruyordu
+     * (23.10.2026: 72 adayin 72'si hata, 0 haber). Ad kirpiliyor,
+     * "models/" oneki atiliyor; gecersizse varsayilana donuluyor ve
+     * hangi ayarin duzeltilecegi gunluge yaziliyor.
+     */
+    private static function ortamModeli(string $degisken, string $varsayilan): string
+    {
+        $ad = preg_replace('#^models/#', '', trim((string) (getenv($degisken) ?: ''))) ?? '';
 
-        if ($secilen !== '' && !preg_match('/^[a-z0-9][a-z0-9._-]{1,99}$/i', $secilen)) {
-            fwrite(STDERR, '[uyari] GEMINI_MODEL gecersiz ("' . mb_substr($secilen, 0, 40) . '"); varsayilan '
-                . self::VARSAYILAN_MODEL . ' kullaniliyor. GitHub -> Settings -> Secrets -> GEMINI_MODEL '
-                . 'degerini duzeltin ya da silin.' . PHP_EOL);
-            $secilen = '';
+        if ($ad === '') {
+            return $varsayilan;
         }
 
-        $this->model = $secilen !== '' ? $secilen : self::VARSAYILAN_MODEL;
+        if (!preg_match('/^[a-z0-9][a-z0-9._-]{1,99}$/i', $ad)) {
+            fwrite(STDERR, '[uyari] ' . $degisken . ' gecersiz ("' . mb_substr($ad, 0, 40) . '"); varsayilan '
+                . $varsayilan . ' kullaniliyor. GitHub -> Settings -> Secrets -> ' . $degisken
+                . ' degerini duzeltin ya da silin.' . PHP_EOL);
+
+            return $varsayilan;
+        }
+
+        return $ad;
     }
+
+    /** Kullanilan model adi (gunluge yazmak icin). */
+    public function model(): string
+    {
+        return $this->model;
+    }
+
+    public function __construct(private readonly string $apiKey, string $model = '')
+    {
+        // Model verilmediyse haber modeli (GEMINI_MODEL, yoksa varsayilan).
+        $this->model = $model !== '' ? $model : self::ortamModeli('GEMINI_MODEL', self::VARSAYILAN_MODEL);
+    }
+
 
     /**
      * @param array{baslik:string,ozet:string,baglanti:string} $aday

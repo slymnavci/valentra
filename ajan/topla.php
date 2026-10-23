@@ -111,6 +111,7 @@ $site    = new Site($siteUrl, $ajanKey);
 $http    = new Http();
 
 $yazar   = new Yazar($apiKey);
+gunluk('Model: ' . $yazar->model() . ' (haber; GEMINI_MODEL ile değiştirilebilir).');
 
 // --- 1. Yapılandırma -------------------------------------------------------
 
