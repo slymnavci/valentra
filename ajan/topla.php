@@ -1619,6 +1619,14 @@ foreach ($gruplar as $grupNo => $grup) {
             // Haber sayfasinin gomdugu YouTube/Vimeo/Dailymotion oynaticisi
             // (bkz. Sayfa::videoBul); haber sayfasinda gorselin altinda.
             'iframe_url'  => $videolar[$sira] ?? '',
+            /*
+             * Kaynagin yayin zamani (Unix). Site haberin GUNUNU buna gore
+             * kuruyor: ajan son 36 saati taradigi icin carsamba yayimlanmis
+             * bir mac haberi cuma sabahi toplanip "bugunku" gorunuyordu
+             * (23.10.2026). Tarihi olmayan girdide 0; site toplama anini
+             * kullanir.
+             */
+            'kaynak_zamani' => ($girdi['tarih'] ?? null) !== null ? (int) strtotime((string) $girdi['tarih']) : 0,
         ];
 
         /*

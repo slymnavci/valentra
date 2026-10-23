@@ -128,6 +128,9 @@ CREATE TABLE IF NOT EXISTS haberler (
     onaylayan_id    INT UNSIGNED  NULL,
     onay_tarihi     DATETIME      NULL,
     yayin_tarihi    DATETIME      NULL,
+    -- Kaynagin yayin zamani (ajan bildiriyor; bilinmiyorsa NULL). Ana
+    -- sayfa ve konu sayfalari haberin gununu buna gore kuruyor.
+    kaynak_tarihi   DATETIME      NULL,
 
     olusturuldu     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     guncellendi     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
