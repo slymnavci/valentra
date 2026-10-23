@@ -35,6 +35,9 @@ if (($mansetler ?? []) === []) {
                     <?php endif; ?>
 
                     <div class="kaydirak-govde">
+                        <?php if ((int) $haber['id'] === haber_son_dakika_id()): ?>
+                            <span class="son-dakika-rozet">Son Dakika</span>
+                        <?php endif; ?>
                         <?php if (!empty($haber['kategori_adi'])): ?>
                             <span class="grup"><?= e($haber['kategori_adi']) ?></span>
                         <?php endif; ?>

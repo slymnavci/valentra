@@ -38,7 +38,7 @@ function ajan_tetikleyebilir_mi(): bool
  *
  * @return array{tamam:bool,mesaj:string}
  */
-function ajan_tetikle(bool $kuru = false, int $saat = 36, int $enFazla = 25, string $mod = 'topla', string $konu = ''): array
+function ajan_tetikle(bool $kuru = false, int $saat = 5, int $enFazla = 25, string $mod = 'topla', string $konu = ''): array
 {
     $anahtar = trim(ayar_oku(AJAN_GITHUB_ANAHTAR));
 

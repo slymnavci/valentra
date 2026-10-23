@@ -206,7 +206,8 @@ function gunluk_ajan(string $mod): array
         return ['tamam' => false, 'mesaj' => 'Ajan zaten çalışıyor; bitince yeniden deneyin. Şimdi göndermek süreni iptal ederdi.'];
     }
 
-    return ajan_tetikle(false, 36, 0, $mod);
+    // Haber toplama son 5 saat (bkz. ajan/topla.php); kose yazisi bunu kullanmiyor.
+    return ajan_tetikle(false, 5, 0, $mod);
 }
 
 /**

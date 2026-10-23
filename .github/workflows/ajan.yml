@@ -57,7 +57,7 @@ on:
         default: false
       saat:
         description: 'Kac saat geriye bakilsin'
-        default: '36'
+        default: '5'
       enfazla:
         description: 'En fazla kac aday islensin (bos: basliklarin paylarinin toplami, 72)'
         default: ''
@@ -289,7 +289,11 @@ jobs:
           # 22.10.2026: aday sayisi verilmezse ajan basliklarin paylarinin
           # toplamini kullaniyor (HaberAkisi::PAYLAR, 72); haberler baslik
           # baslik isleniyor.
-          BAYRAKLAR="--saat=${{ inputs.saat || '30' }}"
+          # 23.10.2026: 30 saatten 5 saate (site sahibinin karari: "son 5
+          # saatin haberleri"). Ajan artik iki saatte bir calisiyor; 5
+          # saat ardisik iki calismayi ustuste bindiriyor. Tarif
+          # beslemeleri ajanda en az 36 saat (TARIF_SAATI).
+          BAYRAKLAR="--saat=${{ inputs.saat || '5' }}"
 
           if [ -n "${{ inputs.enfazla }}" ]; then
             BAYRAKLAR="$BAYRAKLAR --enfazla=${{ inputs.enfazla }}"
