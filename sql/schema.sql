@@ -1889,3 +1889,13 @@ UPDATE haberler SET kaynak_tarihi = NULL
  WHERE kaynak_url LIKE 'https://www.youtube.com/%'
    AND kaynak_tarihi IS NOT NULL
    AND olusturuldu < '2026-10-23 13:00:00';
+
+-- ---------------------------------------------------------------------------
+-- Ekonomim'in 22.10.2026 aksamki PPK haberi kaynakta "23 Ekim 00:00"
+-- (yalnizca gun, saat yok) tarihiyle geldi ve ana sayfada 2. oldu. Saati
+-- bilinmeyen zaman artik tarihsiz sayiliyor (haber_yalnizca_gun_mu); bu
+-- kayit icin tek seferlik. Tekrar calismasi zararsiz.
+-- ---------------------------------------------------------------------------
+UPDATE haberler SET kaynak_tarihi = NULL
+ WHERE kaynak_baslik LIKE 'TCMB, indirime 1 puan ile başladı%'
+   AND kaynak_tarihi IS NOT NULL;
