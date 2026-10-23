@@ -4276,7 +4276,8 @@ a.rg-madde:hover { color: var(--vurgu); }
 
 /* --- Kose yazarlari (23.10.2026) ------------------------------------------ */
 
-.yazar-portre { display: block; flex: none; border-radius: 50%; }
+.yazar-portre { display: block; flex: none; max-width: none; border-radius: 6px; }
+.yazar-portre-bag { display: block; flex: none; }
 .yazar-portre.logo { background: #fff; padding: 8px; box-shadow: inset 0 0 0 1px var(--cizgi); }
 
 /* Yan pencere: Yazarlarimiz */
@@ -4328,5 +4329,5 @@ a.rg-madde:hover { color: var(--vurgu); }
 .yazar-basligi h1 { margin-bottom: 2px; }
 .yazar-basligi .yazar-alan { margin: 0 0 6px; font-weight: 700; color: var(--altin); }
 
-.yazar-portre.foto { object-fit: cover; }
+.yazar-portre.foto { object-fit: cover; object-position: center top; }
 .yazar-basligi .yazar-not { margin: 6px 0 0; font-size: .8rem; color: var(--metin-soluk); }
