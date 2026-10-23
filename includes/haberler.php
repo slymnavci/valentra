@@ -225,6 +225,7 @@ function haber_son_dakika_id(): ?int
                FROM haberler h
               WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . haber_ana_akis_kosulu() . "
                 AND h.kaynak_tarihi IS NOT NULL
+                AND h.onem >= " . ANA_SAYFA_ONEM_ESIGI . "
                 AND (h.kategori_id IS NULL OR h.kategori_id NOT IN
                      (SELECT id FROM kategoriler WHERE slug IN ('teknoloji', 'kultur-sanat')))
               ORDER BY h.olusturuldu DESC, h.id DESC
@@ -348,6 +349,11 @@ const ANA_SAYFA_DALGA_DAKIKA = 120;
  * sirasi), onemi 60'in altindakiler hepsinin arkasinda ayni duzenle.
  * Kaydirak ilk 20: yeni toplamanin onemli haberleri geldikce eski
  * toplamalarinkiler 20'nin disina, izgaraya kayiyor.
+ *
+ * Ayni esik ana sayfanin butun kurallarinda ("hepsini bu sekilde
+ * yapalim"): son dakika yuvasi (haber_son_dakika_id) ve kaydirakta en az 3
+ * spor kotasi (haber_ana_sayfa_ilk_set) yalnizca onemi 60 ve ustu
+ * haberlerden. Esigi gecen spor haberi yoksa kota bos kalir.
  */
 const ANA_SAYFA_ONEM_ESIGI = 60;
 
@@ -415,6 +421,8 @@ function haber_ana_sayfa_ilk_set(): array
     $yeniSpor = array_map('intval', db()->query(
         'SELECT h.id ' . $kaynak . ' WHERE ' . $kosul
         . " AND k.slug = 'spor'"
+        // Kotaya da yalnizca onemli spor haberi (ANA_SAYFA_ONEM_ESIGI).
+        . ' AND h.onem >= ' . ANA_SAYFA_ONEM_ESIGI
         . ' AND ' . haber_gun_ifadesi() . ' <= 1'
         . ' AND h.id NOT IN (' . implode(', ', $ilkIdler) . ')'
         . ' ORDER BY ' . $temel . ' LIMIT ' . $eksikSpor
