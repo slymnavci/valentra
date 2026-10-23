@@ -10,8 +10,10 @@ declare(strict_types=1);
  *
  *   {"haberler": [{"baslik": "...", "icerik": "...", "kaynak_url": "...", ...}]}
  *
- * Gelen her kayit HER ZAMAN 'taslak' olarak yazilir. Bu uc hicbir kosulda
- * haberi yayina alamaz; yayina alma yetkisi yalnizca yonetici panelindedir.
+ * Gelen kayit taslak olarak yazilir. Otomatik yayin aciksa (varsayilan,
+ * site sahibinin karari 23.10.2026; panelde Ajan sayfasindan kapatilir)
+ * hemen yayina alinir; kapaliysa yonetici onayini bekler. Kopya denetimi
+ * her iki durumda ayni.
  */
 
 require_once __DIR__ . '/../includes/bootstrap.php';
@@ -39,11 +41,14 @@ if (count($veri['haberler']) > 100) {
 }
 
 $sonuc = haber_toplu_taslak_ekle($veri['haberler']);
+$otomatik = haber_otomatik_yayin_acik();
 
 ajan_json(200, [
     'durum'     => 'tamam',
     'eklenen'   => $sonuc['eklenen'],
     'yinelenen' => $sonuc['yinelenen'],
     'hatalar'   => $sonuc['hatalar'],
-    'not'       => 'Haberler taslak olarak kaydedildi, yönetici onayı bekliyor.',
+    'not'       => $otomatik
+        ? 'Haberler yayına alındı (otomatik yayın açık).'
+        : 'Haberler taslak olarak kaydedildi, yönetici onayı bekliyor.',
 ]);

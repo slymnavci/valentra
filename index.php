@@ -43,6 +43,9 @@ $toplam = haber_yayinda_sayisi(true);
 // Kaydirak yalnizca ilk sayfada; tukettigi haberler izgarada tekrarlanmaz.
 // Iki sorgu da ayni siralamayi (one_cikan, yayin_tarihi) kullandigi icin
 // kaydiragin tukettigi kadar atlamak yeterli.
+// Bugun toplanip taslakta kalan haberler (otomatik yayin acikken).
+haber_bugunku_taslaklari_yayinla_arada();
+
 $mansetler = $sayfa === 1 ? haber_manset($mansetAdet, true) : [];
 $tuketilen = min($mansetAdet, $toplam);
 
