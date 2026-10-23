@@ -52,6 +52,6 @@ ajan_json(200, [
     'hatalar'   => $sonuc['hatalar'],
     'not'       => $otomatik
         ? 'Güven puanı %' . HABER_OTOMATIK_GUVEN_ESIGI . ' (OpenAI modellerinde %'
-            . HABER_OTOMATIK_GUVEN_ESIGI_OPENAI . ') ve üzeri olanlar yayına alındı; diğerleri onay bekliyor.'
+            . HABER_OTOMATIK_GUVEN_ESIGI_OPENAI . ') ve üzeri olup kaynakta yayın tarihi bulunanlar yayına alındı; diğerleri onay bekliyor.'
         : 'Haberler taslak olarak kaydedildi, yönetici onayı bekliyor.',
 ]);
