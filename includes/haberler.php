@@ -149,13 +149,28 @@ function haber_sirasi(bool $anaSayfa = false): string
         return $temel;
     }
 
-    // Spor kotasi (bkz. haber_ana_sayfa_ilk_set): secilen haberler ilk
-    // sirada, kendi aralarinda yine temel sirayla.
-    $ilk = haber_ana_sayfa_ilk_set();
+    /*
+     * Kotalar (bkz. haber_ana_sayfa_ilk_set): secilen 20 haber ilk sirada.
+     * Kaydiragin icinde: once gunun en onemli 3 haberi, sonra en yeni 5
+     * (en yenisi once), sonra kalanlar temel sirayla. En yeniler boylece
+     * 4-8. slaytta; onceden 14. slayttan sonraya dusuyordu.
+     */
+    $ilk  = haber_ana_sayfa_ilk_set();
+    $duz  = haber_ana_sayfa_duzeni();
+    $sira = [];
 
-    return $ilk === []
-        ? $temel
-        : '(h.id IN (' . implode(', ', $ilk) . ')) DESC, ' . $temel;
+    if ($ilk !== []) {
+        $sira[] = '(h.id IN (' . implode(', ', $ilk) . ')) DESC';
+    }
+
+    if ($duz['yeni'] !== []) {
+        $yeni = implode(', ', $duz['yeni']);
+        $bas  = $duz['bas'] !== [] ? 'WHEN h.id IN (' . implode(', ', $duz['bas']) . ') THEN 0 ' : '';
+        $sira[] = 'CASE ' . $bas . 'WHEN h.id IN (' . $yeni . ') THEN 1 ELSE 2 END ASC';
+        $sira[] = 'CASE WHEN h.id IN (' . $yeni . ') THEN h.olusturuldu END DESC';
+    }
+
+    return $sira === [] ? $temel : implode(', ', $sira) . ', ' . $temel;
 }
 
 function haber_sirasi_temel(bool $anaSayfa): string
@@ -184,27 +199,69 @@ function haber_sirasi_temel(bool $anaSayfa): string
 }
 
 /*
- * ANA SAYFA SPOR KOTASI (site sahibinin istegi, 23.10.2026: "ana sayfada
- * spor haberi hic yok, onlari da 20 haber arasina sokalim; halen
- * Galatasaray haberi var, dun baska maclar vardi").
+ * ANA SAYFA KOTALARI — kaydiragin 20 haberinde her zaman yer alanlar.
  *
- * Mansetin ilk 20 haberinde en az 3 spor haberi olmali. Eksikse bugunun
- * ya da dunun en onemli spor haberleri (daha eskisi degil: eski mac
- * haberi istenmiyor) alinip 20'nin en altindaki spor disi haberlerin
- * yerine konuyor. Cikan haberler kaybolmuyor, izgaranin basina iniyor.
+ * Spor (site sahibinin istegi, 23.10.2026: "ana sayfada spor haberi hic
+ * yok, onlari da 20 haber arasina sokalim; halen Galatasaray haberi var,
+ * dun baska maclar vardi"): en az 3 spor haberi, bugunun ya da dunun
+ * en onemlileri (daha eski mac haberi alinmiyor).
  *
- * Sira SQL'de (h.id IN (...)) ile kuruluyor, PHP'de karistirilmiyor:
- * manset ve izgara ayni ORDER BY'i kullaniyor ve izgara mansetin
- * tukettigi kadar haberi atliyor; ikisi farkli sira gorurse haber ya
- * iki kez cikar ya hic cikmaz. Pencere islevi (ROW_NUMBER) kullanilmadi:
- * paylasimli sunucunun MySQL surumu bilinmiyor.
+ * En yeniler (site sahibinin sorusu, 23.10.2026: "son haberler
+ * kaydiracta neden gorunmuyor"): sira onem + guncellik + okunma; sabahin
+ * onemli ve okunmus haberleri az once gelen orta onemli haberin ustunde
+ * kaliyor, gunun haberi coksa en yeniler 21. siradan asagi dusup
+ * kaydiraga hic giremiyordu. Simdi en son toplanan 5 haber 20'nin
+ * icinde.
+ *
+ * Yer, 20'nin en altindaki KORUNMAYAN haberlerden aciliyor; cikanlar
+ * kaybolmuyor, izgaranin basina iniyor. Sira SQL'de (h.id IN (...)) ile
+ * kuruluyor, PHP'de karistirilmiyor: manset ve izgara ayni ORDER BY'i
+ * kullaniyor ve izgara mansetin tukettigi kadar haberi atliyor; ikisi
+ * farkli sira gorurse haber ya iki kez cikar ya hic cikmaz. Pencere
+ * islevi (ROW_NUMBER) kullanilmadi: paylasimli sunucunun MySQL surumu
+ * bilinmiyor.
  */
-const ANA_SAYFA_MANSET_ADEDI = 20;
-const ANA_SAYFA_SPOR_KOTASI  = 3;
+const ANA_SAYFA_MANSET_ADEDI  = 20;
+const ANA_SAYFA_SPOR_KOTASI   = 3;
+const ANA_SAYFA_EN_YENI_KOTASI = 5;
 
 /**
- * Ana sayfanin ilk 20'si (spor kotasi uygulanmis); kota zaten
- * dolmussa ya da guncel spor haberi yoksa bos (sira degismiyor).
+ * Kaydiragin duzeni: en yeni 5 haber (toplanma anina gore; yas burada
+ * kaynagin yayin ani degil, okuyucu icin "yeni gelen") ve onlarin onune
+ * gecen gunun en onemli 3 haberi.
+ *
+ * @return array{yeni:list<int>,bas:list<int>}
+ */
+function haber_ana_sayfa_duzeni(): array
+{
+    static $onbellek = null;
+
+    if ($onbellek !== null) {
+        return $onbellek;
+    }
+
+    $kosul  = 'h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . haber_ana_akis_kosulu();
+    $kaynak = 'FROM haberler h
+           LEFT JOIN kategoriler k ON k.id = h.kategori_id
+           ' . haber_okunma_birlesimi();
+
+    $yeni = array_map('intval', db()->query(
+        'SELECT h.id ' . $kaynak . ' WHERE ' . $kosul
+        . ' ORDER BY h.olusturuldu DESC, h.id DESC LIMIT ' . ANA_SAYFA_EN_YENI_KOTASI
+    )->fetchAll(PDO::FETCH_COLUMN));
+
+    $bas = $yeni === [] ? [] : array_map('intval', db()->query(
+        'SELECT h.id ' . $kaynak . ' WHERE ' . $kosul
+        . ' AND h.id NOT IN (' . implode(', ', $yeni) . ')'
+        . ' ORDER BY ' . haber_sirasi_temel(true) . ' LIMIT 3'
+    )->fetchAll(PDO::FETCH_COLUMN));
+
+    return $onbellek = ['yeni' => $yeni, 'bas' => $bas];
+}
+
+/**
+ * Ana sayfanin ilk 20'si (kotalar uygulanmis); kotalar zaten doluysa bos
+ * (sira degismiyor).
  *
  * @return list<int>
  */
@@ -227,41 +284,65 @@ function haber_ana_sayfa_ilk_set(): array
         . ' ORDER BY ' . $temel . ' LIMIT ' . ANA_SAYFA_MANSET_ADEDI
     )->fetchAll();
 
-    $sporSayisi = count(array_filter($ilk, static fn (array $s): bool => $s['slug'] === 'spor'));
-    $eksik      = ANA_SAYFA_SPOR_KOTASI - $sporSayisi;
-
-    if ($eksik <= 0 || count($ilk) < ANA_SAYFA_MANSET_ADEDI) {
+    if (count($ilk) < ANA_SAYFA_MANSET_ADEDI) {
         return $onbellek = [];
     }
 
     $ilkIdler = array_map(static fn (array $s): int => (int) $s['id'], $ilk);
+    $enYeni   = haber_ana_sayfa_duzeni()['yeni'];
 
-    $sporlar = db()->query(
-        'SELECT h.id ' . $kaynak . ' WHERE ' . $kosul
-        . " AND k.slug = 'spor'"
-        . ' AND ' . haber_gun_ifadesi() . ' <= 1'
-        . ' AND h.id NOT IN (' . implode(', ', $ilkIdler) . ')'
-        . ' ORDER BY ' . $temel . ' LIMIT ' . $eksik
-    )->fetchAll(PDO::FETCH_COLUMN);
+    $eklenecek = array_values(array_diff($enYeni, $ilkIdler));
 
-    if ($sporlar === []) {
+    // Spor kotasi: 20'de (ve eklenecek en yenilerde) kac spor var?
+    $sporIdler = array_map(
+        static fn (array $s): int => (int) $s['id'],
+        array_filter($ilk, static fn (array $s): bool => $s['slug'] === 'spor')
+    );
+
+    if ($eklenecek !== []) {
+        $sporIdler = array_merge($sporIdler, array_map('intval', db()->query(
+            'SELECT h.id ' . $kaynak . " WHERE k.slug = 'spor' AND h.id IN (" . implode(', ', $eklenecek) . ')'
+        )->fetchAll(PDO::FETCH_COLUMN)));
+    }
+
+    $eksikSpor = ANA_SAYFA_SPOR_KOTASI - count($sporIdler);
+
+    if ($eksikSpor > 0) {
+        $haric = array_merge($ilkIdler, $eklenecek);
+        $yeniSpor = array_map('intval', db()->query(
+            'SELECT h.id ' . $kaynak . ' WHERE ' . $kosul
+            . " AND k.slug = 'spor'"
+            . ' AND ' . haber_gun_ifadesi() . ' <= 1'
+            . ' AND h.id NOT IN (' . implode(', ', $haric) . ')'
+            . ' ORDER BY ' . $temel . ' LIMIT ' . $eksikSpor
+        )->fetchAll(PDO::FETCH_COLUMN));
+
+        $eklenecek = array_merge($eklenecek, $yeniSpor);
+        $sporIdler = array_merge($sporIdler, $yeniSpor);
+    }
+
+    if ($eklenecek === []) {
         return $onbellek = [];
     }
 
-    // En alttaki spor disi haberler yer acar.
-    $cikacak = count($sporlar);
+    /*
+     * En alttan yer ac. Korunan: en yeniler ve spor kotasini dolduran
+     * sporlar (kotadan fazlasi korunmuyor).
+     */
+    $korunan = array_flip($enYeni);
+    $sporKorunan = array_flip(array_slice($sporIdler, 0, ANA_SAYFA_SPOR_KOTASI));
+    $cikacak = count($eklenecek);
 
-    for ($i = count($ilk) - 1; $i >= 0 && $cikacak > 0; $i--) {
-        if ($ilk[$i]['slug'] !== 'spor') {
+    for ($i = count($ilkIdler) - 1; $i >= 0 && $cikacak > 0; $i--) {
+        $id = $ilkIdler[$i];
+
+        if (!isset($korunan[$id]) && !isset($sporKorunan[$id])) {
             unset($ilkIdler[$i]);
             $cikacak--;
         }
     }
 
-    return $onbellek = array_values(array_merge(
-        $ilkIdler,
-        array_map('intval', $sporlar)
-    ));
+    return $onbellek = array_values(array_merge($ilkIdler, $eklenecek));
 }
 
 /**
