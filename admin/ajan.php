@@ -39,6 +39,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $bildirim = 'Ayarlar kaydedildi.';
 
+    } elseif ($islem === 'otomatik_yayin') {
+        $acik = ($_POST['acik'] ?? '') === '1';
+        ayar_yaz(HABER_OTOMATIK_YAYIN_AYARI, $acik ? '1' : '0');
+
+        if ($acik) {
+            $alinan  = haber_bugunku_taslaklari_yayinla();
+            $bildirim = 'Otomatik yayın açıldı. Bugün toplanıp bekleyen '
+                      . $alinan . ' haber yayına alındı.';
+        } else {
+            $bildirim = 'Otomatik yayın kapatıldı. Yeni haberler onayınızı bekleyecek.';
+        }
+
     } elseif ($islem === 'anahtar_sil') {
         ayar_sil(AJAN_GITHUB_ANAHTAR);
         $bildirim = 'GitHub anahtarı silindi.';
@@ -106,10 +118,27 @@ require __DIR__ . '/ust.php';
 <div class="kutu" style="margin-top:18px;">
     <h2 style="margin:0 0 6px;font-size:1.05rem;">Haberleri topla</h2>
     <p class="ipucu" style="margin:0 0 16px;">
-        Tüm aktif kaynaklar taranır, vergi haberleri ayıklanır ve yazılıp
-        <strong>onay bekleyen</strong> listesine eklenir. Hiçbir haber
-        doğrudan yayımlanmaz.
+        Tüm aktif kaynaklar taranır, haberler ayıklanıp yazılır.
+        <?php if (haber_otomatik_yayin_acik()): ?>
+            <strong>Otomatik yayın açık:</strong> haberler geldiği anda ana
+            sayfaya çıkar.
+        <?php else: ?>
+            Haberler <strong>onay bekleyen</strong> listesine eklenir; hiçbiri
+            doğrudan yayımlanmaz.
+        <?php endif; ?>
     </p>
+
+    <form method="post" action="ajan.php" style="margin:0 0 16px;">
+        <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+        <input type="hidden" name="islem" value="otomatik_yayin">
+        <?php if (haber_otomatik_yayin_acik()): ?>
+            <input type="hidden" name="acik" value="0">
+            <button type="submit" class="dugme">Otomatik yayını kapat (haberler onay beklesin)</button>
+        <?php else: ?>
+            <input type="hidden" name="acik" value="1">
+            <button type="submit" class="dugme dugme-onay">Otomatik yayını aç (bugün bekleyenler de yayına alınır)</button>
+        <?php endif; ?>
+    </form>
 
     <?php if (!$anahtarVar): ?>
         <div class="uyari uyari-bilgi" style="margin:0;">

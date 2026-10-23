@@ -74,6 +74,14 @@ const HABER_AKIS_DISI = ['yemek-tarifleri'];
  * Manset ve izgara AYNI sirayi kullanmali: izgara mansetin tukettigi
  * kadar haberi atliyor.
  */
+/** Istanbul saatiyle gece yarisindan beri gecen dakika. */
+function haber_bugun_dakika(): int
+{
+    $simdi = new DateTimeImmutable('now', new DateTimeZone('Europe/Istanbul'));
+
+    return (int) $simdi->format('G') * 60 + (int) $simdi->format('i');
+}
+
 function haber_sirasi(bool $anaSayfa = false): string
 {
     /*
@@ -81,9 +89,7 @@ function haber_sirasi(bool $anaSayfa = false): string
      * saat dilimi bilinmiyor (paylasimli sunucu), NOW() ile farki ise
      * dilimden bagimsiz. Gun numarasi: 0 bugun, 1 dun, 2 evvelki gun...
      */
-    $simdi = new DateTimeImmutable('now', new DateTimeZone('Europe/Istanbul'));
-    $gunDakika = (int) $simdi->format('G') * 60 + (int) $simdi->format('i');
-    $gun = 'GREATEST(0, CEIL((TIMESTAMPDIFF(MINUTE, h.olusturuldu, NOW()) - ' . $gunDakika . ') / 1440))';
+    $gun = 'GREATEST(0, CEIL((TIMESTAMPDIFF(MINUTE, h.olusturuldu, NOW()) - ' . haber_bugun_dakika() . ') / 1440))';
 
     /*
      * Ana sayfada puana okunma da giriyor (son 24 saatte haberi acan
@@ -510,7 +516,8 @@ function haber_taslak_ekle(array $veri): array
  * İki yoldan çağrılıyor: ajanın POST ettiği /api/ingest.php ve ajanın
  * siteye ulaşamadığında GitHub'a bıraktığı teslimi sitenin kendisinin
  * alması (includes/ajan_teslim.php). İkisi aynı kaydı ve kopya
- * denetimini kullanıyor; hiçbiri haberi yayına alamaz.
+ * denetimini kullanıyor. Otomatik yayın açıksa (varsayılan; bkz.
+ * haber_otomatik_yayin_acik) eklenen haber hemen yayına alınıyor.
  *
  * @param list<mixed> $haberler
  * @return array{eklenen:int,yinelenen:int,hatalar:list<array{sira:int|string,mesaj:string}>}
@@ -526,6 +533,7 @@ function haber_toplu_taslak_ekle(array $haberler): array
     $eklenen = 0;
     $yinelenen = 0;
     $hatalar = [];
+    $otomatik = haber_otomatik_yayin_acik();
 
     foreach ($haberler as $sira => $haber) {
         if (!is_array($haber)) {
@@ -538,6 +546,10 @@ function haber_toplu_taslak_ekle(array $haberler): array
 
             if ($sonuc['durum'] === 'eklendi') {
                 $eklenen++;
+
+                if ($otomatik) {
+                    haber_otomatik_yayinla((int) $sonuc['id']);
+                }
             } else {
                 $yinelenen++;
             }
@@ -740,6 +752,102 @@ function haber_onayla(int $id, int $yoneticiId): bool
     }
 
     return false;
+}
+
+/*
+ * OTOMATIK YAYIN (site sahibinin karari, 23.10.2026: "bugunkuleri
+ * otomatik onayla"). Onceden ajanin her haberi taslak olarak bekliyordu
+ * ve panelden onaylanmadikca ana sayfaya cikmiyordu; sabah toplanan
+ * haberler onaysiz kalinca ana sayfada dunkuler duruyordu.
+ *
+ * Aciksa ajanin gonderdigi haber geldigi anda yayina giriyor; bugun
+ * toplanip taslakta kalmis haberler de ana sayfa acildiginda topluca
+ * yayina aliniyor (index.php). Panelden (Ajan sayfasi) kapatilabilir;
+ * kapaliyken her sey eskisi gibi onay bekler. Kopya denetimi ve gorselsiz
+ * haber engeli ayni: yalnizca onay adimi kalkiyor.
+ */
+const HABER_OTOMATIK_YAYIN_AYARI = 'haber_otomatik_yayin';
+
+function haber_otomatik_yayin_acik(): bool
+{
+    require_once __DIR__ . '/ayarlar.php';
+
+    return ayar_oku(HABER_OTOMATIK_YAYIN_AYARI, '1') === '1';
+}
+
+/** Taslagi yonetici olmadan yayina alir (onaylayan bos kalir). */
+function haber_otomatik_yayinla(int $id): bool
+{
+    $ifade = db()->prepare(
+        'UPDATE haberler
+            SET durum = :yayinda,
+                onay_tarihi = NOW(),
+                yayin_tarihi = COALESCE(yayin_tarihi, NOW())
+          WHERE id = :id AND durum = :taslak'
+    );
+    $ifade->execute(['yayinda' => HABER_YAYINDA, 'taslak' => HABER_TASLAK, 'id' => $id]);
+
+    if ($ifade->rowCount() === 0) {
+        return false;
+    }
+
+    require_once __DIR__ . '/arama_bildirim.php';
+    arama_bildir_kayit('haber', $id);
+
+    return true;
+}
+
+/**
+ * Bugun (Istanbul gece yarisindan beri) toplanip taslakta kalan haberleri
+ * yayina alir; kac haber alindigini dondurur. Otomatik yayin kapaliysa
+ * hicbir sey yapmaz. Reddedilen haberlere dokunmaz.
+ */
+function haber_bugunku_taslaklari_yayinla(): int
+{
+    if (!haber_otomatik_yayin_acik()) {
+        return 0;
+    }
+
+    $ifade = db()->prepare(
+        'SELECT id FROM haberler
+          WHERE durum = :taslak
+            AND olusturuldu >= NOW() - INTERVAL ' . haber_bugun_dakika() . ' MINUTE
+          ORDER BY id'
+    );
+    $ifade->execute(['taslak' => HABER_TASLAK]);
+
+    $adet = 0;
+
+    foreach ($ifade->fetchAll(PDO::FETCH_COLUMN) as $id) {
+        if (haber_otomatik_yayinla((int) $id)) {
+            $adet++;
+        }
+    }
+
+    return $adet;
+}
+
+/**
+ * Ana sayfa acilisinda cagriliyor: en fazla 5 dakikada bir
+ * haber_bugunku_taslaklari_yayinla. Her istekte tek kucuk SELECT.
+ */
+function haber_bugunku_taslaklari_yayinla_arada(): void
+{
+    require_once __DIR__ . '/ayarlar.php';
+
+    $son = (int) ayar_oku('haber_otomatik_yayin_son', '0');
+
+    if (time() - $son < 300) {
+        return;
+    }
+
+    try {
+        ayar_yaz('haber_otomatik_yayin_son', (string) time());
+        haber_bugunku_taslaklari_yayinla();
+    } catch (Throwable $e) {
+        // Ana sayfa bu yuzden dusmemeli; bir sonraki acilista yeniden.
+        error_log('[valentra] otomatik yayin: ' . $e->getMessage());
+    }
 }
 
 /**
