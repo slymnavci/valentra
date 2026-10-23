@@ -707,6 +707,7 @@ function haber_toplu_taslak_ekle(array $haberler): array
 
     $eklenen = 0;
     $yinelenen = 0;
+    $yayinlanan = 0;
     $hatalar = [];
     $otomatik = haber_otomatik_yayin_acik();
 
@@ -722,8 +723,8 @@ function haber_toplu_taslak_ekle(array $haberler): array
             if ($sonuc['durum'] === 'eklendi') {
                 $eklenen++;
 
-                if ($otomatik) {
-                    haber_otomatik_yayinla((int) $sonuc['id']);
+                if ($otomatik && haber_otomatik_yayinla((int) $sonuc['id'])) {
+                    $yayinlanan++;
                 }
             } else {
                 $yinelenen++;
@@ -748,7 +749,36 @@ function haber_toplu_taslak_ekle(array $haberler): array
         'id'        => $kayitId,
     ]);
 
-    return ['eklenen' => $eklenen, 'yinelenen' => $yinelenen, 'hatalar' => $hatalar];
+    return ['eklenen' => $eklenen, 'yinelenen' => $yinelenen, 'yayinlanan' => $yayinlanan, 'hatalar' => $hatalar];
+}
+
+/**
+ * Ana sayfanın durumu (ajana, GitHub özetinde gösterilsin diye): ana
+ * sayfa akışında kaç haber var, en yenisi ne zaman toplandı, bugün kaç
+ * haber onay bekliyor. "Yeni haberler ana sayfada yok" sorusunun cevabı
+ * GitHub'dan da okunabilsin (23.10.2026).
+ *
+ * @return array{ana_sayfada:int,en_yeni_dakika:?int,onay_bekleyen_bugun:int}
+ */
+function haber_ana_sayfa_durumu(): array
+{
+    $ana = db()->query(
+        'SELECT COUNT(*) AS adet, MIN(' . haber_yas_dakika_ifadesi() . ') AS en_yeni
+           FROM haberler h
+          WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . haber_ana_akis_kosulu()
+    )->fetch();
+
+    $bekleyen = db()->prepare(
+        'SELECT COUNT(*) FROM haberler
+          WHERE durum = :taslak AND olusturuldu >= NOW() - INTERVAL ' . haber_bugun_dakika() . ' MINUTE'
+    );
+    $bekleyen->execute(['taslak' => HABER_TASLAK]);
+
+    return [
+        'ana_sayfada'         => (int) ($ana['adet'] ?? 0),
+        'en_yeni_dakika'      => isset($ana['en_yeni']) ? (int) $ana['en_yeni'] : null,
+        'onay_bekleyen_bugun' => (int) $bekleyen->fetchColumn(),
+    ];
 }
 
 /**

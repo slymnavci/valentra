@@ -1059,6 +1059,11 @@ a.menu-oge.aktif::after,
 
 .ana-kolon { min-width: 0; }
 
+/* Piyasa ve sirket sayfalari: yan pencere yok, grafikler tam genislikte
+   (site sahibinin istegi, 23.10.2026: "grafikler sayfaya yerlessin,
+   yanlarda bosluklari azaltalim"). */
+.ana-duzen.tam { grid-template-columns: minmax(0, 1fr); }
+
 /* --- Pencereler ---------------------------------------------------------- */
 
 .yan-pencere {
@@ -3750,7 +3755,8 @@ a.rg-madde:hover { color: var(--vurgu); }
 /* Piyasalar */
 .piyasa-kartlar {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* Kart sayisi bolume gore 1-6; satir bos kalmasin. */
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 12px;
     margin: 0 0 18px;
 }
@@ -3815,7 +3821,8 @@ a.rg-madde:hover { color: var(--vurgu); }
 
 .piyasa-grafikler {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* Tek grafikli bolumde (BIST, petrol) grafik satiri doldursun. */
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
     gap: 14px;
     margin: 0 0 18px;
 }

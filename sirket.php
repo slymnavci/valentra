@@ -60,7 +60,7 @@ if ($kod === null) {
             analist önerisi ve temettüler.</p>
     </div>
 
-    <div class="ana-duzen">
+    <div class="ana-duzen tam">
         <div class="ana-kolon">
             <?php if ($ham !== ''): ?>
                 <p class="bos-durum"><strong>"<?= e($ham) ?>" geçerli bir borsa kodu değil.</strong>
@@ -72,7 +72,7 @@ if ($kod === null) {
             <p class="piyasa-bag"><a href="<?= e(piyasalar_yolu()) ?>">Piyasalar: BIST 100, döviz, altın &rarr;</a></p>
         </div>
 
-        <?php require __DIR__ . '/includes/yan_pencere.php'; ?>
+        <?php /* Yan pencere yok: grafik ve tablolar tam genislikte (23.10.2026). */ ?>
     </div>
     <?php
     require __DIR__ . '/includes/sayfa_alt.php';
@@ -181,7 +181,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
     <?php endif; ?>
 </div>
 
-<div class="ana-duzen">
+<div class="ana-duzen tam">
     <div class="ana-kolon sirket-sayfa">
         <?= sirket_secici_html($kod) ?>
 
@@ -437,7 +437,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
         </p>
     </div>
 
-    <?php require __DIR__ . '/includes/yan_pencere.php'; ?>
+    <?php /* Yan pencere yok: grafik ve tablolar tam genislikte (23.10.2026). */ ?>
 </div>
 
 <?php require __DIR__ . '/includes/sayfa_alt.php'; ?>

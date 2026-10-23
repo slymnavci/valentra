@@ -69,7 +69,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
     <a href="<?= e(sirket_yolu()) ?>">Şirket Analizi</a>
 </nav>
 
-<div class="ana-duzen">
+<div class="ana-duzen tam">
     <div class="ana-kolon">
         <?php if ($kartlar === '' && $grafikler === '' && $sirketler === '' && $gostergeler === ''): ?>
             <div class="bos-durum">
@@ -96,7 +96,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
         </p>
     </div>
 
-    <?php require __DIR__ . '/includes/yan_pencere.php'; ?>
+    <?php /* Yan pencere yok: grafik ve tablolar tam genislikte (23.10.2026). */ ?>
 </div>
 
 <?php require __DIR__ . '/includes/sayfa_alt.php'; ?>

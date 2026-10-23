@@ -47,6 +47,8 @@ ajan_json(200, [
     'durum'     => 'tamam',
     'eklenen'   => $sonuc['eklenen'],
     'yinelenen' => $sonuc['yinelenen'],
+    'yayinlanan' => $sonuc['yayinlanan'],
+    'ana_sayfa'  => haber_ana_sayfa_durumu(),
     'hatalar'   => $sonuc['hatalar'],
     'not'       => $otomatik
         ? 'Güven puanı %' . HABER_OTOMATIK_GUVEN_ESIGI . ' ve üzeri olanlar yayına alındı; diğerleri onay bekliyor.'
