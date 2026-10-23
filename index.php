@@ -46,6 +46,11 @@ $toplam = haber_yayinda_sayisi(true);
 // Bugun toplanip taslakta kalan haberler (otomatik yayin acikken).
 haber_bugunku_taslaklari_yayinla_arada();
 
+// Ajan iki saatte bir: GitHub zamanlamasi guvenilmez, site de tetikliyor
+// (bkz. ajan_otomatik_tetikle_arada). Sayfa gittikten sonra calisir.
+require_once __DIR__ . '/includes/ajan_tetikle.php';
+ajan_otomatik_tetikle_sayfa_sonunda();
+
 $mansetler = $sayfa === 1 ? haber_manset($mansetAdet, true) : [];
 $tuketilen = min($mansetAdet, $toplam);
 
