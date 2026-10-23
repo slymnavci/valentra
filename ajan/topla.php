@@ -942,6 +942,33 @@ function kaynak_yayincisi(array $kaynak): string
  * @param list<array<string,mixed>> $adaylar Puana gore sirali
  * @return array{0:list<array<string,mixed>>,1:int} Kalanlar ve elenen sayisi
  */
+/*
+ * EK KAYNAKLAR (site sahibinin karari, 23.10.2026: haberler daha uzun ve
+ * dolu olsun). Ayni olayi baska yayincilar da verdiyse adayin yanina en
+ * fazla iki tanesinin adresi ekleniyor; model haberi bu metinlerin
+ * hepsinden birlikte yaziyor. Bir sitede olmayan ayrinti digerinden
+ * geliyor, haber tek bir kaynagin yeniden yazimi olmaktan cikiyor.
+ */
+const EK_KAYNAK_TAVANI = 2;
+
+/** Adaya ayni olayi veren baska bir yayincinin girdisini ekler. */
+function ek_kaynak_ekle(array &$aday, array $girdi, array $kaynak): void
+{
+    $yayinci = kaynak_yayincisi($kaynak);
+
+    if ($yayinci === kaynak_yayincisi($aday['kaynak']) || count($aday['ekler'] ?? []) >= EK_KAYNAK_TAVANI) {
+        return;
+    }
+
+    foreach ($aday['ekler'] ?? [] as $ek) {
+        if (kaynak_yayincisi($ek['kaynak']) === $yayinci) {
+            return;
+        }
+    }
+
+    $aday['ekler'][] = ['girdi' => $girdi, 'kaynak' => $kaynak];
+}
+
 function ayni_olayi_ele(array $adaylar): array
 {
     /** @var list<array{kume:array<string,bool>,kaynak:string,sira:int}> */
@@ -969,6 +996,7 @@ function ayni_olayi_ele(array $adaylar): array
             // Elenen kopyanin yayincilari tutulan adaya ekleniyor (bkz. KAPSAM).
             $tekil[$ayni]['kaynaklar'] = ($tekil[$ayni]['kaynaklar'] ?? []) + ($aday['kaynaklar'] ?? []);
             $tekil[$ayni]['kapsam']    = max(1, count($tekil[$ayni]['kaynaklar']));
+            ek_kaynak_ekle($tekil[$ayni], $aday['girdi'], $aday['kaynak']);
             $elenen++;
             continue;
         }
@@ -1189,6 +1217,7 @@ foreach ($kaynaklar as $kaynak) {
         if ($esSira !== null) {
             $adaylar[$esSira]['kaynaklar'][kaynak_yayincisi($kaynak)] = true;
             $adaylar[$esSira]['kapsam'] = count($adaylar[$esSira]['kaynaklar']);
+            ek_kaynak_ekle($adaylar[$esSira], $girdi, $kaynak);
 
             $zatenVar++;
             video_kaydet($girdi, $kaynak, 'kopya — bu çalışmada başka kanalda aynı başlık');
@@ -1509,6 +1538,7 @@ gunluk(count($gruplar) . ' grup halinde, başlık başlık işlenecek (grup baş
 
 $islenenAday = 0;
 $gorselsiz   = 0;
+$ekKaynakliAday = 0;
 $eskiElenen  = 0;
 $tarihsizElenen = 0;
 
@@ -1685,8 +1715,35 @@ foreach ($gruplar as $grupNo => $grup) {
         $gorseller[] = $gorsel;
         $videolar[]  = (string) ($okunan['video'] ?? '');
 
+        /*
+         * Ek kaynaklarin metni (bkz. EK_KAYNAK_TAVANI). Okunamayan ya da
+         * cok kisa olan atlaniyor; ana haber yine tek kaynaktan yazilir.
+         */
+        $ekKaynaklar = [];
+
+        foreach ($aday['ekler'] ?? [] as $ek) {
+            try {
+                $ekMetin = trim((string) ($sayfa->oku((string) $ek['girdi']['baglanti'], 12000)['metin'] ?? ''));
+            } catch (Throwable $e) {
+                $ekMetin = '';
+            }
+
+            if (mb_strlen($ekMetin, 'UTF-8') >= 300) {
+                $ekKaynaklar[] = [
+                    'kaynakAdi' => (string) $ek['kaynak']['ad'],
+                    'baglanti'  => (string) $ek['girdi']['baglanti'],
+                    'metin'     => $ekMetin,
+                ];
+            }
+        }
+
+        if ($ekKaynaklar !== []) {
+            $ekKaynakliAday++;
+        }
+
         $modelAdaylari[] = [
             'girdi'      => $aday['girdi'],
+            'ekKaynaklar' => $ekKaynaklar,
             'sayfaMetni' => $okunan['metin'],
             'kaynakAdi'  => (string) $aday['kaynak']['ad'],
             'kaynakTuru' => (string) ($aday['kaynak']['tur'] ?? 'rss'),
@@ -1877,6 +1934,10 @@ if (!$kuruCalisma) {
 // --- 5. Siteye gönder ------------------------------------------------------
 
 gunluk('---');
+
+if ($ekKaynakliAday > 0) {
+    gunluk($ekKaynakliAday . ' aday modele başka yayıncıların metniyle birlikte gitti (ek kaynak).');
+}
 
 if ($gorselsiz > 0) {
     gunluk($gorselsiz . ' aday görseli olmadığı için alınmadı (görselsiz haber yayımlanmıyor).');

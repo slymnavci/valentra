@@ -44,6 +44,9 @@ final class Yazar implements SemaliIstemci
      */
     private const SAYFA_METNI_SINIRI = 14000;
 
+    /** Ek kaynak (ayni olayi veren baska yayinci) basina metin siniri. */
+    private const EK_KAYNAK_METNI_SINIRI = 6000;
+
     /**
      * İsteme kaç tane "daha önce yayımlandı" başlığı yazılacağı.
      *
@@ -195,9 +198,19 @@ final class Yazar implements SemaliIstemci
              yazarsın; cümle cümle çevirme, anlayıp aktar. Kurum ve kişi
              adları özgün biçimini korur.
            - Para birimlerini kaynaktaki birimiyle ver, TL'ye çevirme.
-           - UZUNLUK: 3-5 paragraf. İlk paragraf haberin özünü tek
-             başına versin: ne oldu, kim, nerede, ne zaman. Kaynak kısaysa
-             kısa kal; boş cümleyle paragraf doldurma.
+           - UZUNLUK KAYNAĞA GÖRE: kaynak metin(ler) zengin ve
+             ayrıntılıysa 5-8 paragraf yaz; ayrıntıyı (rakam, tarih, kim
+             ne dedi, arka plan, sonraki adım) atma. Kaynak kısaysa 3
+             paragrafta kal. Uzunluk için ASLA boş cümle, tekrar ya da
+             kaynakta olmayan bilgi ekleme. İlk paragraf haberin özünü
+             tek başına versin: ne oldu, kim, nerede, ne zaman.
+           - EK KAYNAKLAR: adayda "Ek kaynaklar" varsa bunlar aynı olayı
+             veren başka yayıncılardır. Haberi hepsini birlikte okuyarak
+             yaz; birinde olmayan ayrıntıyı ötekinden al. Kaynaklar bir
+             rakamda ya da olguda çelişiyorsa resmî/ajans kaynağını
+             esas al ya da farkı açıkça belirt ("X'e göre ..., Y ise ...
+             bildirdi") ve ajan notuna yaz. Yalnızca BİR kaynakta geçen
+             iddiayı kesin bilgi gibi yazma, kime ait olduğunu söyle.
            - Paragrafları BOŞ SATIRLA ayır.
            - Başlık en fazla 90 karakter, olguyu bildirsin; soru ya da
              merak uyandırma kalıbı kullanma.
@@ -317,7 +330,7 @@ final class Yazar implements SemaliIstemci
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
             'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı, en fazla 90 karakter'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
-            'icerik'      => ['type' => 'string',  'description' => '3-5 paragraflık tarafsız özet, paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
+            'icerik'      => ['type' => 'string',  'description' => 'Tarafsız haber metni: kaynak zenginse 5-8, kısaysa 3 paragraf; paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
             'etiketler'   => [
                 'type'  => 'array',
                 'items' => ['type' => 'string'],
@@ -359,7 +372,7 @@ final class Yazar implements SemaliIstemci
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
             'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı, en fazla 90 karakter'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
-            'icerik'      => ['type' => 'string',  'description' => '3-5 paragraflık tarafsız özet, paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
+            'icerik'      => ['type' => 'string',  'description' => 'Tarafsız haber metni: kaynak zenginse 5-8, kısaysa 3 paragraf; paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
             'etiketler'   => [
                 'type'  => 'array',
                 'items' => ['type' => 'string'],
@@ -713,7 +726,7 @@ final class Yazar implements SemaliIstemci
      * kotayı hemen tüketiyor. Beş adaylık bir grup tek istekte işlenince
      * aynı iş beşte bir istekle yapılır.
      *
-     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string,kapsam?:int}> $adaylar
+     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string,kapsam?:int,ekKaynaklar?:list<array{kaynakAdi:string,baglanti:string,metin:string}>}> $adaylar
      * @param list<array<string,mixed>> $kategoriler
      * @return array<int,array<string,mixed>> sira => sonuc
      */
@@ -846,7 +859,7 @@ final class Yazar implements SemaliIstemci
     }
 
     /**
-     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string,kapsam?:int}> $adaylar
+     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string,kapsam?:int,ekKaynaklar?:list<array{kaynakAdi:string,baglanti:string,metin:string}>}> $adaylar
      * @param list<array<string,mixed>> $kategoriler
      */
     private function topluIstemHazirla(array $adaylar, array $kategoriler, array $onceki = []): string
@@ -879,6 +892,19 @@ final class Yazar implements SemaliIstemci
 
             $kapsam = max(1, (int) ($aday['kapsam'] ?? 1));
 
+            // Ayni olayi veren baska yayincilarin metni (ajan/topla.php,
+            // EK_KAYNAK_TAVANI); her biri ayri sinirla.
+            $ekler = '';
+
+            foreach ($aday['ekKaynaklar'] ?? [] as $i => $ek) {
+                $ekler .= "\nEk kaynak " . ($i + 1) . ': ' . $ek['kaynakAdi'] . ' (' . $ek['baglanti'] . ")\n---\n"
+                    . mb_substr((string) $ek['metin'], 0, self::EK_KAYNAK_METNI_SINIRI, 'UTF-8') . "\n---";
+            }
+
+            if ($ekler !== '') {
+                $ekler = "\nEk kaynaklar (aynı olay, başka yayıncılar):" . $ekler;
+            }
+
             $bloklar[] = <<<METIN
             ### ADAY {$no}
             Kaynak: {$aday['kaynakAdi']} — {$tur}
@@ -889,7 +915,7 @@ final class Yazar implements SemaliIstemci
             Sayfa metni:
             ---
             {$metin}
-            ---
+            ---{$ekler}
             METIN;
         }
 
