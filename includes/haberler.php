@@ -308,9 +308,8 @@ function haber_sirasi_temel(bool $anaSayfa): string
         : $onem . ' DESC';
 
     /*
-     * Gun basamagi once, kendi icinde puan sirasi. Ana sayfada yalnizca
-     * bugun var (haber_ana_akis_kosulu); konu sayfalarinda bugunun
-     * haberleri dunkulerin ve eskilerin onunde. Spor icin dun aksamki mac
+     * Gun basamagi once, kendi icinde puan sirasi: bugunun haberleri
+     * dunkulerin (ana sayfada) ve eskilerin (konu sayfalarinda) onunde. Spor icin dun aksamki mac
      * konu sayfasinda "bugun" (bkz. haber_gun_ifadesi).
      *
      * Ana sayfada gunun icinde TOPLAMA DALGASI (bkz. ANA_SAYFA_DALGA_DAKIKA).
@@ -482,12 +481,15 @@ function haber_ana_akis_kosulu(): string
     ));
 
     /*
-     * YALNIZCA BUGUN (site sahibi, 23.10.2026: "ana sayfaya sadece bugunun
-     * haberlerini koyalim; diger haberler ilgili sayfasinda arsivde
-     * kalacak"). Istanbul gece yarisindan beri KAYNAKTA yayimlanmis
-     * haberler; dunku ve daha eskiler konu sayfalarinda ve kendi
-     * adreslerinde. Gece yarisindan hemen sonra ana sayfa bos ya da az
-     * haberli olabilir: bu bilerek.
+     * KAYAN ANA SAYFA (site sahibi, 23.10.2026: "yeni gune gecince tum
+     * haberler gitti; eski haberler, mesela dunkuler kalsin; yeni haber
+     * eklendikce eskiler yavas yavas ana sayfadan kalksin").
+     *
+     * Aday: kaynakta bugun ya da dun yayimlanmis haberler. Sira bugunu
+     * once aliyor (haber_sirasi_temel, gun basamagi); ana sayfa en fazla
+     * ANA_SAYFA_HABER_SINIRI haber gosteriyor. Bugunun haberleri arttikca
+     * dunkuler sinirin disina itilip ana sayfadan dusuyor; gece yarisi
+     * ana sayfa bosalmiyor. Daha eskiler konu sayfalarinda.
      *
      * Kaynakta yayin tarihi bilinmeyen haber (kaynak_tarihi bos) ana
      * sayfaya girmiyor ("haberlerin tarihleri cok onemli"): yasi toplandigi
@@ -499,7 +501,7 @@ function haber_ana_akis_kosulu(): string
         . ' AND (h.kategori_id IS NULL OR h.kategori_id NOT IN'
         . ' (SELECT id FROM kategoriler WHERE slug IN (' . $disarida . ')))'
         . ' AND h.kaynak_tarihi IS NOT NULL'
-        . ' AND ' . haber_yas_dakika_ifadesi() . ' <= ' . haber_bugun_dakika();
+        . ' AND ' . haber_yas_dakika_ifadesi() . ' <= ' . (haber_bugun_dakika() + 1440);
 }
 
 /**
@@ -1106,8 +1108,23 @@ function haber_yayinda_bul(string $slug): ?array
 /**
  * Ana sayfa listesi: sadece yayinda olanlar, yeniden eskiye.
  */
+/*
+ * Ana sayfada en fazla bu kadar haber: kaydirakta 20, izgarada 3 sayfa
+ * (3 x 12). Sira bugunu once aldigi icin sinirin disina dusen hep en eski
+ * (dunun en dusuk puanli) haberler (bkz. haber_ana_akis_kosulu).
+ */
+const ANA_SAYFA_HABER_SINIRI = 56;
+
 function haber_yayindakiler(int $limit = 20, int $atla = 0, bool $anaAkis = false): array
 {
+    if ($anaAkis) {
+        $limit = min($limit, ANA_SAYFA_HABER_SINIRI - $atla);
+
+        if ($limit <= 0) {
+            return [];
+        }
+    }
+
     $ifade = db()->prepare(
         'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
            FROM haberler h
@@ -1135,7 +1152,9 @@ function haber_yayinda_sayisi(bool $anaAkis = false): int
     );
     $ifade->execute(['durum' => HABER_YAYINDA]);
 
-    return (int) $ifade->fetchColumn();
+    $sayi = (int) $ifade->fetchColumn();
+
+    return $anaAkis ? min($sayi, ANA_SAYFA_HABER_SINIRI) : $sayi;
 }
 
 function haber_durum_sayilari(): array
@@ -1680,7 +1699,7 @@ function haber_manset(int $limit = 8, bool $anaAkis = false): array
           LIMIT :limit'
     );
     $ifade->bindValue('durum', HABER_YAYINDA);
-    $ifade->bindValue('limit', $limit, PDO::PARAM_INT);
+    $ifade->bindValue('limit', $anaAkis ? min($limit, ANA_SAYFA_HABER_SINIRI) : $limit, PDO::PARAM_INT);
     $ifade->execute();
 
     return $ifade->fetchAll();

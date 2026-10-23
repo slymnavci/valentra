@@ -73,9 +73,9 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
 <?php if ($toplam === 0): ?>
     <div class="bos-durum">
-        <?php /* Ana sayfa yalnizca kaynakta bugun yayimlanmis haberleri gosteriyor
+        <?php /* Ana sayfa kaynakta bugun ve dun yayimlanmis haberleri gosteriyor
                  (haber_ana_akis_kosulu); eskiler konu sayfalarinda. */ ?>
-        <strong>Bugün henüz haber yok.</strong>
+        <strong>Henüz haber yok.</strong>
         Yeni haberler gün içinde burada görünecek; önceki haberler konu sayfalarında.
     </div>
 <?php else: ?>
