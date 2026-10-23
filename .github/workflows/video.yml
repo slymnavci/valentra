@@ -84,6 +84,10 @@ jobs:
         env:
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          # Haberler once Claude Haiku 5.5 ile (ANTHROPIC_API_KEY), sonra Luna,
+          # en son Gemini (23.10.2026). Anahtar yoksa Claude atlanir.
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
           OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}

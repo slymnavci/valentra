@@ -216,8 +216,8 @@ $http    = new Http();
 
 // OpenAI anahtari varsa haberler once onunla (GPT-6 Luna), basarisizsa
 // Gemini ile (bkz. Yazar, BIRINCIL MODEL). Yoksa yalnizca Gemini.
-$yazar   = new Yazar($apiKey, '', trim((string) getenv('OPENAI_API_KEY')));
-gunluk('Model: ' . $yazar->model() . ' (haber; OPENAI_MODEL / GEMINI_MODEL ile değiştirilebilir).');
+$yazar   = new Yazar($apiKey, '', trim((string) getenv('OPENAI_API_KEY')), trim((string) getenv('ANTHROPIC_API_KEY')));
+gunluk('Model: ' . $yazar->model() . ' (haber; CLAUDE_MODEL / OPENAI_MODEL / GEMINI_MODEL ile değiştirilebilir).');
 
 // --- 1. Yapılandırma -------------------------------------------------------
 
@@ -1970,17 +1970,14 @@ if ($kullanim['istek'] > 0) {
     $saglayici = $yazar->saglayicilar();
 
     if ($saglayici !== []) {
-        gunluk(sprintf(
-            '  %s: %d istek yanıtladı (%s giriş + %s çıkış); yedek %s: %d istek (%s giriş + %s çıkış).',
-            $saglayici['birincil'],
-            $saglayici['birincil_istek'],
-            number_format($saglayici['birincil_kullanim']['girdi']),
-            number_format($saglayici['birincil_kullanim']['cikti']),
-            $saglayici['yedek'],
-            $saglayici['yedek_istek'],
-            number_format($saglayici['yedek_kullanim']['girdi']),
-            number_format($saglayici['yedek_kullanim']['cikti'])
-        ));
+        // Zincir sirasiyla: Claude (Haiku), Luna, Gemini (yedek).
+        gunluk('  ' . implode('; ', array_map(static fn (array $s): string => sprintf(
+            '%s: %d istek yanıtladı (%s giriş + %s çıkış)',
+            $s['model'],
+            $s['istek'],
+            number_format($s['kullanim']['girdi']),
+            number_format($s['kullanim']['cikti'])
+        ), $saglayici)) . '.');
     }
 }
 
@@ -1992,6 +1989,16 @@ if ($kullanim['istek'] > 0) {
  * kirmizi calismayi e-postayla bildiriyor. Kredi yuklenince ilk basarili
  * istekte uyari kendiliginden kalkiyor.
  */
+$claudeDurumu = $yazar->claudeDurumu();
+
+if ($claudeDurumu !== null && $claudeDurumu['durum'] === 'kredi') {
+    Bildirim::sorun('Anthropic (' . $claudeDurumu['model'] . ') kredisi bitti; haberler bu çalışmada sıradaki modellerle '
+        . '(Luna, Gemini) yazıldı. platform.claude.com → Billing sayfasından kredi yükleyin.');
+} elseif ($claudeDurumu !== null && $claudeDurumu['durum'] === 'anahtar') {
+    Bildirim::sorun('Anthropic anahtarı geçersiz ya da yetkisiz; haberler sıradaki modellerle yazıldı. '
+        . 'GitHub\'daki ANTHROPIC_API_KEY değerini kontrol edin.');
+}
+
 $openAiDurumu = $yazar->birincilDurumu();
 
 if ($openAiDurumu !== null && $openAiDurumu['durum'] !== 'bilinmiyor') {
