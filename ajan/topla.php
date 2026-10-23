@@ -53,7 +53,17 @@ mb_internal_encoding('UTF-8');
 /** Komut satırı seçenekleri */
 $secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::', 'sitetavani::', 'sitearaligi::', 'kaynakbasina::', 'konu::']);
 $kuruCalisma = isset($secenekler['kuru']);
-$saat        = max(1, (int) ($secenekler['saat'] ?? 36));
+/*
+ * Geriye bakis 5 saat (site sahibinin karari, 23.10.2026: "haber topla
+ * dediğimizde son 5 saatin haberlerini toplasın; eski haberleri zaten
+ * kaydediyoruz"). Ajan iki saatte bir calisiyor; 5 saat iki calismayi
+ * ustuste bindiriyor, bir calisma kacarsa arada haber kaybolmuyor.
+ * Tarifler eskimiyor: tarif beslemeleri en az 36 saat (asagida).
+ */
+$saat        = max(1, (int) ($secenekler['saat'] ?? 5));
+
+/** Tarif beslemelerinin geriye bakisi: tarifin yeni olmasi gerekmiyor. */
+const TARIF_SAATI = 36;
 /*
  * --konu=spor[,politika]: yalnizca bu basliklarin kaynaklari taranir ve
  * kontenjanin tamami onlara gider (site sahibinin istegi, 22.10.2026:
@@ -974,7 +984,10 @@ foreach ($kaynaklar as $kaynak) {
 
         // Once RSS: varsa ve haber veriyorsa en guvenilir yol.
         if ($girdiler === [] && $beslemeUrl !== '') {
-            $girdiler = $besleme->oku($beslemeUrl, $saat);
+            $girdiler = $besleme->oku(
+                $beslemeUrl,
+                HaberAkisi::kova($kaynak) === 'yemek-tarifleri' ? max($saat, TARIF_SAATI) : $saat
+            );
             $yontem   = 'besleme';
         }
 
