@@ -47,6 +47,10 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <h1><?= e($yazar['ad']) ?></h1>
         <p class="yazar-alan"><?= e($yazar['alan']) ?></p>
         <p><?= e($yazar['tanitim']) ?></p>
+        <?php // Site sahibinin karari (23.10.2026): not yalnizca yazar sayfasinda, tek satir. ?>
+        <?php if (($yazar['gorunum'] ?? '') !== ''): ?>
+            <p class="yazar-not">Valentra'nın yapay zeka destekli yazar karakteridir.</p>
+        <?php endif; ?>
     </div>
 </div>
 

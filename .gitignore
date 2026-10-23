@@ -30,3 +30,8 @@ ajan/teslim/
 gorseller/haber/*
 !gorseller/haber/.htaccess
 !gorseller/haber/index.html
+
+# Kose yazari fotograflari (ajan uretip yukluyor); sunucuda duruyor.
+gorseller/yazar/*
+!gorseller/yazar/.htaccess
+!gorseller/yazar/index.html

@@ -402,6 +402,37 @@ final class Site
     }
 
     /**
+     * Fotoğrafı olmayan köşe yazarları (api/yazar-portre.php).
+     *
+     * @return list<array{anahtar:string,ad:string,gorunum:string}>
+     */
+    public function portreEksikleri(): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/yazar-portre.php');
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Yazar listesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return array_values((array) ($veri['eksik'] ?? []));
+    }
+
+    /** Yazar fotoğrafını yükler. */
+    public function portreGonder(string $anahtar, string $ikili): void
+    {
+        [$kod, $govde] = $this->istek(
+            'POST',
+            '/api/yazar-portre.php',
+            (string) json_encode(['anahtar' => $anahtar, 'veri' => base64_encode($ikili)])
+        );
+
+        if ($kod !== 200) {
+            throw new \RuntimeException('Fotoğraf yüklenemedi (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+    }
+
+    /**
      * @return array{0:int,1:string}
      */
     private function istek(
