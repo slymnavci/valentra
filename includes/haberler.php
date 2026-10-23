@@ -67,6 +67,9 @@ const HABER_AKIS_DISI = ['yemek-tarifleri'];
  *      okunma da ekleniyor (bkz. haber_sirasi).
  *   4. Esitlerde yeni olan once.
  *
+ * Ana sayfada 2. basamak yok (bkz. haber_sirasi_temel): orada yalnizca
+ * gunun haberleri var ve sira 3'teki puanla kuruluyor.
+ *
  * Onceki "son 24 saat" penceresi sabah 08'de dun 08'den sonraki her
  * haberi yeni sayiyordu; dunun gun boyu okunma toplamis haberleri bu
  * sabahin haberlerinin ustunde kaliyordu.
@@ -141,6 +144,27 @@ function haber_guncellik_ifadesi(): string
         . haber_yas_dakika_ifadesi() . ' / ' . HABER_GUNCELLIK_DAKIKASI . ')';
 }
 
+/*
+ * SON DAKIKA PUANI (site sahibinin istegi, 23.10.2026: "son dakika
+ * haberleri daha yuksek derece alsin").
+ *
+ * Kaynak haberi "son dakika" diye isaretlediyse (kaynagin basligi ya da
+ * adresi) +30; guncellik gibi saatte 5 azaliyor, 6 saatte sifir. Son
+ * dakika haberi taze oldugu surece degerli; aksama kadar ustte kalmamali.
+ * Ajan basligi yeniden yaziyor, bu yuzden kaynagin ozgun basligina
+ * (kaynak_baslik) da bakiliyor. Sutunlar utf8mb4_unicode_ci: LIKE buyuk
+ * kucuk harf ve "SON DAKİKA" yazimini da yakaliyor.
+ */
+const HABER_SON_DAKIKA_TAVANI = 30;
+
+function haber_son_dakika_ifadesi(): string
+{
+    return "CASE WHEN h.kaynak_baslik LIKE '%son dakika%' OR h.baslik LIKE '%son dakika%'
+                   OR h.kaynak_url LIKE '%son-dakika%' OR h.kaynak_url LIKE '%sondakika%'
+              THEN GREATEST(0, " . HABER_SON_DAKIKA_TAVANI . ' - '
+        . haber_yas_dakika_ifadesi() . ' / ' . HABER_GUNCELLIK_DAKIKASI . ') ELSE 0 END';
+}
+
 function haber_sirasi(bool $anaSayfa = false): string
 {
     $temel = haber_sirasi_temel($anaSayfa);
@@ -185,15 +209,27 @@ function haber_sirasi_temel(bool $anaSayfa): string
      * kultur en sonda"). Konu sayfalarinda ikisi de yok: orada hepsi ayni
      * baslikta.
      */
-    $guncellik = haber_guncellik_ifadesi();
+    $guncellik = haber_guncellik_ifadesi() . ' + ' . haber_son_dakika_ifadesi();
     $puan = $anaSayfa
         ? '(k.slug IN (\'teknoloji\', \'kultur-sanat\')) ASC,
            h.onem + ' . $guncellik . ' + LEAST(30, 10 * LOG2(1 + COALESCE(zo.okuyucu, 0))) DESC'
         : 'h.onem + ' . $guncellik . ' DESC';
 
+    /*
+     * Ana sayfada GUN BASAMAGI YOK (23.10.2026, site sahibi: "bir haberin
+     * degeri yuksek ama sayfaya hic gelmiyor"). Ana sayfa zaten yalnizca
+     * gunun haberlerini aliyor (haber_ana_akis_kosulu: gece yarisindan
+     * beri, en az son 12 saat). Basamak o pencerenin icinde gece
+     * yarisindan once yayimlanmis haberi -kaynak saati 23:00, sabah 05:20
+     * toplanan- onemi ne olursa olsun bu sabahin en onemsiz haberinin
+     * altina itiyordu. Tazelik zaten puanda (guncellik, son dakika). Konu
+     * sayfalarinda basamak duruyor: orada eski haberler de listede.
+     */
+    $basamak = $anaSayfa ? '' : $gun . ' ASC,
+        ';
+
     return '(h.one_cikan = 1 AND ' . $gun . ' = 0) DESC,
-        ' . $gun . ' ASC,
-        ' . $puan . ',
+        ' . $basamak . $puan . ',
         h.olusturuldu DESC,
         h.id DESC';
 }
