@@ -826,9 +826,18 @@ function gsc_site_haritasi_gonder(): array
         return ['hata' => $site['hata']] + $sonuc;
     }
 
-    $harita = site_adresi() . '/sitemap.php';
-    $yanit  = gsc_istek('PUT', GSC_API . '/sites/' . rawurlencode($site['site']) . '/sitemaps/' . rawurlencode($harita),
-                        null, $jeton['jeton']);
+    // Genel harita ve Google Haberler haritasi (son 2 gun; haber-haritasi.php).
+    $hatalar = [];
 
-    return ['tamam' => $yanit['tamam'], 'hata' => $yanit['hata']] + $sonuc;
+    foreach (['/sitemap.php', '/haber-haritasi.php'] as $yol) {
+        $harita = site_adresi() . $yol;
+        $yanit  = gsc_istek('PUT', GSC_API . '/sites/' . rawurlencode($site['site']) . '/sitemaps/' . rawurlencode($harita),
+                            null, $jeton['jeton']);
+
+        if (!$yanit['tamam']) {
+            $hatalar[] = $yol . ': ' . $yanit['hata'];
+        }
+    }
+
+    return ['tamam' => $hatalar === [], 'hata' => implode(' · ', $hatalar)] + $sonuc;
 }

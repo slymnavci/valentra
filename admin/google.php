@@ -332,13 +332,15 @@ require __DIR__ . '/ust.php';
         <h2 style="margin-top:0;">Otomatik bildirim</h2>
         <p class="ipucu">
             Bir haber, köşe yazısı ya da rehber yayımlandığında adresi IndexNow ile Bing ve Yandex'e
-            anında bildiriliyor, site haritası Google'a yeniden gönderiliyor (saatte en fazla bir kez).
+            anında bildiriliyor; site haritası ve son 2 günün haberlerini içeren
+            <a href="/haber-haritasi.php" target="_blank" rel="noopener">Google Haberler haritası</a>
+            Google'a yeniden gönderiliyor (saatte en fazla bir kez).
             Google'da tek tek "dizine eklenmesini iste"nin otomatik yolu yok; onu Search Console'dan
             önemli sayfalar için elle yapabilirsiniz.
         </p>
         <ul style="line-height:1.8;margin:0 0 12px;">
             <li>IndexNow (Bing, Yandex): <?= $sonucYaz($inSon) ?></li>
-            <li>Google site haritası: <?= $sonucYaz($haSon) ?></li>
+            <li>Google site haritası ve haber haritası: <?= $sonucYaz($haSon) ?></li>
         </ul>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <form method="post" action="google.php" style="margin:0;">
@@ -347,7 +349,7 @@ require __DIR__ . '/ust.php';
             </form>
             <form method="post" action="google.php" style="margin:0;">
                 <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
-                <button type="submit" name="islem" value="harita_gonder" class="dugme">Site haritasını Google'a yeniden gönder</button>
+                <button type="submit" name="islem" value="harita_gonder" class="dugme">Site ve haber haritasını Google'a yeniden gönder</button>
             </form>
         </div>
     </div>
