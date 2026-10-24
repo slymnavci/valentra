@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Hava durumu: üst bilgi çubuğundaki küçük kutu.
+ * Hava durumu: yan penceredeki kart (includes/hava_kutu.php).
  *
  * Site sahibinin istegi (24.10.2026): "bir yere de hava durumunu
  * koyalim". Kaynak Open-Meteo: ucretsiz, anahtarsiz, Turkiye icin
@@ -13,6 +13,10 @@ declare(strict_types=1);
  *
  * Varsayilan il Istanbul; ziyaretci baska il secerse secim tarayicida
  * kaliyor ve veri api/hava.php'den geliyor.
+ *
+ * 24.10.2026: ust cubuktan yan pencereye tasindi (site sahibi: "sagdaki
+ * bos kalan yere hava durumunu yerlestirelim"); sonraki uc gunun tahmini
+ * eklendi.
  */
 
 require_once __DIR__ . '/canli_onbellek.php';
@@ -42,7 +46,7 @@ const HAVA_ONBELLEK_SURE = 1800;
 /**
  * İlin anlık hava durumu; alınamazsa null.
  *
- * @return array{il:string,ad:string,sicaklik:int,en_yuksek:?int,en_dusuk:?int,durum:string,simge:string,zaman:int}|null
+ * @return array{il:string,ad:string,sicaklik:int,en_yuksek:?int,en_dusuk:?int,durum:string,simge:string,gunler:list<array{gun:string,durum:string,simge:string,en_yuksek:int,en_dusuk:int}>,zaman:int}|null
  */
 function hava_durumu(string $il = HAVA_VARSAYILAN_IL): ?array
 {
@@ -56,7 +60,7 @@ function hava_durumu(string $il = HAVA_VARSAYILAN_IL): ?array
         $ham = canli_indir(
             'https://api.open-meteo.com/v1/forecast?latitude=' . $enlem . '&longitude=' . $boylam
             . '&current=temperature_2m,weather_code,is_day'
-            . '&daily=temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=Europe%2FIstanbul',
+            . '&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=4&timezone=Europe%2FIstanbul',
             6
         );
 
@@ -71,6 +75,21 @@ function hava_durumu(string $il = HAVA_VARSAYILAN_IL): ?array
 
     [$durum, $simge] = hava_kodu((int) $veri['kod'], (bool) $veri['gunduz']);
 
+    // Sonraki gunler (bugun haric); eski onbellek kaydinda yok.
+    $gunAdlari = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+    $gunler    = [];
+
+    foreach (array_slice((array) ($veri['gunler'] ?? []), 1, 3) as $g) {
+        [$gDurum, $gSimge] = hava_kodu((int) $g['kod']);
+        $gunler[] = [
+            'gun'       => $gunAdlari[(int) date('w', (int) strtotime((string) $g['tarih']))],
+            'durum'     => $gDurum,
+            'simge'     => $gSimge,
+            'en_yuksek' => (int) round((float) $g['en_yuksek']),
+            'en_dusuk'  => (int) round((float) $g['en_dusuk']),
+        ];
+    }
+
     return [
         'il'        => $il,
         'ad'        => $ad,
@@ -79,6 +98,7 @@ function hava_durumu(string $il = HAVA_VARSAYILAN_IL): ?array
         'en_dusuk'  => $veri['en_dusuk'] !== null ? (int) round((float) $veri['en_dusuk']) : null,
         'durum'     => $durum,
         'simge'     => $simge,
+        'gunler'    => $gunler,
         'zaman'     => (int) $kayit['zaman'],
     ];
 }
@@ -86,7 +106,7 @@ function hava_durumu(string $il = HAVA_VARSAYILAN_IL): ?array
 /**
  * Open-Meteo yanıtını sadeleştirir; beklenen alanlar yoksa null.
  *
- * @return array{sicaklik:float,kod:int,gunduz:bool,en_yuksek:?float,en_dusuk:?float}|null
+ * @return array{sicaklik:float,kod:int,gunduz:bool,en_yuksek:?float,en_dusuk:?float,gunler:list<array{tarih:string,kod:int,en_yuksek:float,en_dusuk:float}>}|null
  */
 function hava_coz(string $ham): ?array
 {
@@ -104,7 +124,21 @@ function hava_coz(string $ham): ?array
         return null;
     }
 
-    $gun = $veri['daily'] ?? [];
+    $gun    = $veri['daily'] ?? [];
+    $gunler = [];
+
+    foreach ((array) ($gun['time'] ?? []) as $i => $tarih) {
+        if (!isset($gun['weather_code'][$i], $gun['temperature_2m_max'][$i], $gun['temperature_2m_min'][$i])) {
+            continue;
+        }
+
+        $gunler[] = [
+            'tarih'     => (string) $tarih,
+            'kod'       => (int) $gun['weather_code'][$i],
+            'en_yuksek' => (float) $gun['temperature_2m_max'][$i],
+            'en_dusuk'  => (float) $gun['temperature_2m_min'][$i],
+        ];
+    }
 
     return [
         'sicaklik'  => $sicaklik,
@@ -112,6 +146,7 @@ function hava_coz(string $ham): ?array
         'gunduz'    => (int) ($simdi['is_day'] ?? 1) === 1,
         'en_yuksek' => isset($gun['temperature_2m_max'][0]) ? (float) $gun['temperature_2m_max'][0] : null,
         'en_dusuk'  => isset($gun['temperature_2m_min'][0]) ? (float) $gun['temperature_2m_min'][0] : null,
+        'gunler'    => $gunler,
     ];
 }
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 /**
  * Gunluk isler: her gun yapilanlar tek sayfada.
  *
- *  - Onay bekleyenler (haber, kose yazisi, pratik bilgi) ve haberleri
+ *  - Onay bekleyenler (haber, kose yazisi) ve haberleri
  *    tek tikla yayinlama.
  *  - Ajan: haber toplama, kose yazisi, pratik bilgiler.
  *  - Site verisi: kurlar, grafikler, Resmi Gazete.
@@ -128,13 +128,7 @@ require __DIR__ . '/ust.php';
         </div>
     </div>
 
-    <div class="kutu">
-        <div class="ipucu">Onay bekleyen pratik bilgi</div>
-        <div class="sayi<?= $bekleyen['pratik'] === 0 ? ' sifir' : '' ?>"><?= $bekleyen['pratik'] ?></div>
-        <div class="islemler">
-            <a class="dugme<?= $bekleyen['pratik'] > 0 ? ' dugme-ana' : '' ?>" href="pratik.php">İncele ve onayla</a>
-        </div>
-    </div>
+    <?php /* Pratik bilgiler panel menusunden cikti (24.10.2026, bkz. ust.php). */ ?>
 </div>
 
 <?php foreach ($gruplar as $grup => [$baslik, $aciklama]): ?>

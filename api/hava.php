@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Hava durumu ucu: üst çubukta il değiştirilince sayfa buradan alıyor.
+ * Hava durumu ucu: yan penceredeki kartta il değiştirilince sayfa buradan alıyor.
  *
  *   GET /api/hava.php?il=ankara
  *
@@ -26,5 +26,9 @@ if ($hava === null) {
 }
 
 $hava['simge_svg'] = hava_simge_svg($hava['simge']);
+
+foreach ($hava['gunler'] as $i => $gun) {
+    $hava['gunler'][$i]['simge_svg'] = hava_simge_svg($gun['simge']);
+}
 
 echo json_encode($hava, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

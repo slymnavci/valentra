@@ -140,7 +140,7 @@ body.okuma .sinirli { max-width: 1320px; }
 .ust-bant .sinirli {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 16px;
     min-height: 64px;
     flex-wrap: wrap;
@@ -205,6 +205,15 @@ body.okuma .sinirli { max-width: 1320px; }
 
 .ust-bant .ust-arama { margin-left: auto; }
 
+/* Telefonda menu dugmesi ve logo ayni satirda, arama alt satirda. */
+@media (max-width: 640px) {
+    .ust-bant .sinirli { gap: 12px; row-gap: 8px; padding-bottom: 10px; }
+    .logo { padding: 6px 0; }
+    .logo .marka { width: 40px; height: 35px; }
+    .logo .ad { font-size: 1.55rem; }
+    .ust-bant .ust-arama { flex: 1 0 100%; margin-left: 0; }
+}
+
 .ust-bilgi {
     font-size: .90rem;
     color: var(--metin-soluk);
@@ -228,18 +237,162 @@ body.okuma .sinirli { max-width: 1320px; }
 }
 
 .bilgi-tarih { white-space: nowrap; }
+.bilgi-satir .tema-dugme { margin-left: auto; }
 
-.hava {
+/* --- Menu dugmesi ve acilir cekmece (24.10.2026) ------------------------- */
+
+.cekmece-dugme {
+    flex: none;
     display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    color: var(--metin);
-    white-space: nowrap;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 44px;
+    height: 44px;
+    padding: 0 11px;
+    border: 1px solid var(--cizgi);
+    border-radius: 10px;
+    background: var(--kart);
+    cursor: pointer;
 }
 
-.hava-ikon { display: inline-flex; color: var(--altin); }
-.hava-derece { font-weight: 700; font-size: .96rem; }
-.hava-aralik { color: var(--metin-soluk); }
+.cekmece-dugme span {
+    display: block;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--metin);
+    transition: background .14s ease;
+}
+
+.cekmece-dugme:hover { border-color: var(--altin); }
+.cekmece-dugme:hover span { background: var(--altin); }
+
+.cekmece[hidden] { display: none; }
+
+.cekmece {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+}
+
+.cekmece-perde {
+    position: absolute;
+    inset: 0;
+    background: rgba(12, 12, 14, .45);
+    opacity: 0;
+    transition: opacity .2s ease;
+}
+
+.cekmece-panel {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(340px, 86vw);
+    background: var(--kart);
+    border-right: 3px solid var(--altin);
+    box-shadow: 8px 0 30px rgba(0, 0, 0, .18);
+    overflow-y: auto;
+    padding: 0 0 24px;
+    transform: translateX(-100%);
+    transition: transform .2s ease;
+}
+
+.cekmece.acik .cekmece-perde { opacity: 1; }
+.cekmece.acik .cekmece-panel { transform: translateX(0); }
+
+html.cekmece-acik { overflow: hidden; }
+
+.cekmece-ust {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--cizgi);
+}
+
+.cekmece-baslik {
+    font-size: .86rem;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--altin);
+}
+
+.cekmece-kapat {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    background: var(--zemin);
+    color: var(--metin);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.cekmece-oge {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 22px;
+    border-bottom: 1px solid var(--cizgi);
+    color: var(--metin);
+    font-size: 1.04rem;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+}
+
+.cekmece-oge::-webkit-details-marker { display: none; }
+
+.cekmece-oge:hover,
+.cekmece-oge.aktif { color: var(--altin); }
+
+.cekmece-oge.aktif { box-shadow: inset 4px 0 0 var(--altin); }
+
+summary.cekmece-oge::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform .16s ease;
+    opacity: .6;
+}
+
+.cekmece-grup[open] > summary.cekmece-oge::after { transform: rotate(-135deg); }
+
+.cekmece-alt {
+    display: block;
+    padding: 10px 22px 10px 38px;
+    border-bottom: 1px solid var(--cizgi);
+    background: var(--zemin);
+    color: var(--metin);
+    font-size: .96rem;
+}
+
+.cekmece-alt:hover,
+.cekmece-alt.aktif { color: var(--altin); }
+
+@media (prefers-reduced-motion: reduce) {
+    .cekmece-perde, .cekmece-panel { transition: none; }
+}
+
+/* --- Hava durumu karti (yan pencere; 24.10.2026) ------------------------- */
+
+.hava-kart { border-top: 3px solid var(--altin); }
+
+.hava-kart-ust {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.hava-kart-ust .pencere-baslik { margin: 0; border-bottom: none; padding: 0; }
 
 .hava-il {
     border: 1px solid var(--cizgi);
@@ -247,16 +400,50 @@ body.okuma .sinirli { max-width: 1320px; }
     background: var(--kart);
     color: var(--metin);
     font: inherit;
-    font-size: .84rem;
-    padding: 2px 6px;
+    font-size: .88rem;
+    padding: 3px 6px;
     cursor: pointer;
 }
 
-.bilgi-satir .tema-dugme { margin-left: auto; }
+.hava-simdi {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.hava-simdi .hava-ikon { color: var(--altin); display: inline-flex; }
+.hava-simdi .hava-ikon .hava-simge { width: 46px; height: 46px; }
+
+.hava-simdi .hava-derece {
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -.02em;
+}
+
+.hava-bilgi { display: flex; flex-direction: column; gap: 2px; }
+.hava-bilgi .hava-durum { font-weight: 700; }
+.hava-bilgi .hava-aralik { font-size: .86rem; color: var(--metin-soluk); }
+
+.hava-gunler {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 12px 0 0;
+    border-top: 1px solid var(--cizgi);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    text-align: center;
+}
+
+.hava-gunler li { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.hava-gunler .gun { font-size: .84rem; font-weight: 700; color: var(--metin-soluk); }
+.hava-gunler .hava-simge { color: var(--altin); }
+.hava-gunler .derece { font-weight: 700; font-size: .94rem; }
+.hava-gunler .derece small { color: var(--metin-soluk); font-weight: 600; }
 
 @media (max-width: 640px) {
     .bilgi-satir { gap: 10px; }
-    .bilgi-tarih, .hava-durum, .hava-aralik { display: none; }
 }
 
 /* --- Bolum basligi ------------------------------------------------------- */
@@ -608,7 +795,8 @@ body.okuma .sinirli { max-width: 1320px; }
 .ust-satir {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    /* Menu dugmesi ve logo solda, arama margin-left: auto ile sagda. */
+    justify-content: flex-start;
     gap: 16px;
     min-height: 64px;
     flex-wrap: wrap;
@@ -855,7 +1043,9 @@ a.menu-oge.aktif::after,
      * kart sirasinin ust kenari 900 piksellik ekranda hala katlanin
      * ustunde kaliyor.
      */
-    height: clamp(360px, 54vh, 520px);
+    /* 24.10.2026: site sahibi slayti kucultmek istedi ("ana sayfadaki
+       slayt haberi kucultelim"); 54vh / 520px'ten geri indi. */
+    height: clamp(290px, 42vh, 410px);
     background: linear-gradient(150deg, #1f1f23 0%, #2c2c31 55%, #3a3a40 100%);
     color: #fff;
 }
@@ -987,7 +1177,7 @@ a.menu-oge.aktif::after,
  */
 .kaydirak-govde h2 {
     margin: 0;
-    font-size: clamp(1.6rem, 3.6vw, 2.75rem);
+    font-size: clamp(1.4rem, 2.9vw, 2.2rem);
     font-weight: 800;
     line-height: 1.14;
     letter-spacing: -.014em;
@@ -1011,12 +1201,12 @@ a.menu-oge.aktif::after,
 .kaydirak-govde .ozet {
     margin: 0;
     color: #ececf0;
-    font-size: clamp(1rem, 1.25vw, 1.16rem);
+    font-size: clamp(.98rem, 1.1vw, 1.06rem);
     line-height: 1.5;
     max-width: 72ch;
 
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -1131,8 +1321,8 @@ a.menu-oge.aktif::after,
 
     /* Telefonda ekranin yarisindan fazlasini tek habere vermek,
        altindaki listeyi tamamen gorunmez yapiyor. */
-    .kaydirak-slayt > a { height: clamp(300px, 50vh, 400px); }
-    .kaydirak-govde h2 { font-size: 1.42rem; }
+    .kaydirak-slayt > a { height: clamp(260px, 44vh, 360px); }
+    .kaydirak-govde h2 { font-size: 1.3rem; }
 
     /*
      * Telefonda spot gizleniyor.
