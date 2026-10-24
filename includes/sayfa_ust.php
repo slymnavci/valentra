@@ -130,6 +130,39 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
      *      sayfadaki tek yapiskan serit.
      */
     ?>
+    <?php
+    /*
+     * KAYAN SON DAKIKA SERIDI (site sahibinin istegi, 24.10.2026: "en
+     * ustte de kayan son dakika haberleri gecsin"). Kaynakta bugun
+     * yayimlanmis en yeni haberler; liste iki kez basiliyor ki kayma
+     * kesintisiz donsun (ikinci kopya ekran okuyucudan gizli). Uzerine
+     * gelince ya da odaklaninca duruyor; hareket azaltma tercihinde
+     * kaymiyor, yatay kaydirilabiliyor.
+     */
+    $sonDakikaSeridi = haber_son_dakika_seridi();
+    ?>
+    <?php if ($sonDakikaSeridi !== []): ?>
+        <div class="sd-serit" aria-label="Son dakika haberleri">
+            <div class="sinirli sd-satir">
+                <span class="sd-etiket">Son Dakika</span>
+                <div class="sd-pencere">
+                    <div class="sd-akis" style="--sure: <?= max(30, count($sonDakikaSeridi) * 7) ?>s">
+                        <?php foreach ([false, true] as $kopya): ?>
+                            <ul class="sd-liste" <?= $kopya ? 'aria-hidden="true"' : '' ?>>
+                                <?php foreach ($sonDakikaSeridi as $sd): ?>
+                                    <li>
+                                        <span class="sd-saat"><?= e($sd['zaman']) ?></span>
+                                        <a href="<?= e(haber_yolu($sd['slug'])) ?>" <?= $kopya ? 'tabindex="-1"' : '' ?>><?= e($sd['baslik']) ?></a>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <div class="bilgi-cubugu">
         <div class="sinirli bilgi-satir">
             <span class="bilgi-tarih"><?= e(tarih_bicimle(date('Y-m-d H:i:s'), false)) ?></span>

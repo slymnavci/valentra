@@ -5,17 +5,25 @@ declare(strict_types=1);
  * Yan penceredeki hava durumu kartı.
  *
  * Site sahibinin istegi (24.10.2026): "sagdaki bos kalan yere hava
- * durumunu yerlestirelim". Anlik durum, gunun en yuksek/en dusuk
- * sicakligi ve sonraki uc gun. Il secimi tarayicida kaliyor; secilen
- * ilin verisi api/hava.php'den. Kaynaga ulasilamazsa kart basilmiyor.
+ * durumunu yerlestirelim; buyuk sehirlerin gunluk hatta anlik hava
+ * tahmin bilgileri gosterilsin". Yazarlarimiz kutusunun altinda.
+ *
+ *   - Ustte secili sehir: anlik durum, gunun en yuksek/en dusuk
+ *     sicakligi, sonraki uc gun.
+ *   - Altta buyuk sehirler: anlik sicaklik ve gunun en yuksek/en dusuk
+ *     sicakligi; satira tiklayinca ustteki ayrinti o sehre gecer
+ *     (api/hava.php), secim tarayicida kalir.
+ * Kaynaga ulasilamazsa kart basilmiyor.
  */
 
 require_once __DIR__ . '/hava.php';
 
 try {
-    $hava = hava_durumu();
+    $hava     = hava_durumu();
+    $sehirler = hava_buyuk_sehirler();
 } catch (Throwable $e) {
-    $hava = null;
+    $hava     = null;
+    $sehirler = [];
 }
 
 if ($hava === null) {
@@ -25,12 +33,7 @@ if ($hava === null) {
 <section class="pencere hava-kart" id="hava" data-il="<?= e($hava['il']) ?>" aria-labelledby="hava-baslik">
     <div class="hava-kart-ust">
         <h2 class="pencere-baslik" id="hava-baslik">Hava Durumu</h2>
-        <label class="gizli-etiket" for="hava-il">Hava durumu ili</label>
-        <select id="hava-il" class="hava-il">
-            <?php foreach (HAVA_ILLERI as $anahtar => $il): ?>
-                <option value="<?= e($anahtar) ?>" <?= $anahtar === $hava['il'] ? 'selected' : '' ?>><?= e($il[0]) ?></option>
-            <?php endforeach; ?>
-        </select>
+        <span class="hava-sehir" data-hava="ad"><?= e($hava['ad']) ?></span>
     </div>
 
     <div class="hava-simdi">
@@ -51,13 +54,34 @@ if ($hava === null) {
             </li>
         <?php endforeach; ?>
     </ul>
+
+    <?php if ($sehirler !== []): ?>
+        <ul class="hava-sehirler" aria-label="Büyük şehirlerde hava">
+            <?php foreach ($sehirler as $sehir): ?>
+                <li>
+                    <button type="button" data-il="<?= e($sehir['il']) ?>"
+                            aria-pressed="<?= $sehir['il'] === $hava['il'] ? 'true' : 'false' ?>"
+                            title="<?= e($sehir['durum']) ?>">
+                        <?= hava_simge_svg($sehir['simge']) ?>
+                        <span class="ad"><?= e($sehir['ad']) ?></span>
+                        <span class="simdi"><?= (int) $sehir['sicaklik'] ?>°</span>
+                        <span class="aralik">
+                            <?php if ($sehir['en_yuksek'] !== null && $sehir['en_dusuk'] !== null): ?>
+                                <?= (int) $sehir['en_yuksek'] ?>° / <?= (int) $sehir['en_dusuk'] ?>°
+                            <?php endif; ?>
+                        </span>
+                    </button>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    <?php endif; ?>
 </section>
 
 <script>
 (function () {
     var kutu = document.getElementById('hava');
-    var secim = document.getElementById('hava-il');
-    if (!kutu || !secim) { return; }
+    if (!kutu) { return; }
+    var dugmeler = Array.prototype.slice.call(kutu.querySelectorAll('.hava-sehirler button'));
 
     function alan(ad) { return kutu.querySelector('[data-hava="' + ad + '"]'); }
 
@@ -73,6 +97,7 @@ if ($hava === null) {
             .then(function (v) {
                 if (!v) { return; }
                 // simge_svg sunucunun sabit SVG'si; diger alanlar metin olarak.
+                alan('ad').textContent = v.ad;
                 alan('simge').innerHTML = v.simge_svg;
                 alan('sicaklik').textContent = v.sicaklik + '°';
                 alan('durum').textContent = v.durum;
@@ -84,6 +109,9 @@ if ($hava === null) {
                         + kacir(g.en_dusuk) + '°</small></span></li>';
                 }).join('');
                 kutu.setAttribute('data-il', v.il);
+                dugmeler.forEach(function (d) {
+                    d.setAttribute('aria-pressed', d.getAttribute('data-il') === v.il ? 'true' : 'false');
+                });
             })
             .catch(function () { /* Gecici hata karti bozmasin. */ });
     }
@@ -92,14 +120,16 @@ if ($hava === null) {
     try { kayitli = localStorage.getItem('valentra-il'); } catch (e) {}
 
     if (kayitli && kayitli !== kutu.getAttribute('data-il')
-        && secim.querySelector('option[value="' + kayitli + '"]')) {
-        secim.value = kayitli;
+        && kutu.querySelector('.hava-sehirler button[data-il="' + kayitli + '"]')) {
         getir(kayitli);
     }
 
-    secim.addEventListener('change', function () {
-        try { localStorage.setItem('valentra-il', secim.value); } catch (e) {}
-        getir(secim.value);
+    dugmeler.forEach(function (d) {
+        d.addEventListener('click', function () {
+            var il = d.getAttribute('data-il');
+            try { localStorage.setItem('valentra-il', il); } catch (e) {}
+            getir(il);
+        });
     });
 })();
 </script>

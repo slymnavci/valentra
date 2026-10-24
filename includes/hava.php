@@ -103,6 +103,88 @@ function hava_durumu(string $il = HAVA_VARSAYILAN_IL): ?array
     ];
 }
 
+/** Kartın şehir listesinde gösterilen büyük şehirler (HAVA_ILLERI anahtarları). */
+const HAVA_BUYUK_SEHIRLER = ['istanbul', 'ankara', 'izmir', 'bursa', 'antalya', 'adana', 'trabzon', 'diyarbakir'];
+
+/**
+ * Büyük şehirlerin anlık ve günlük hava durumu, tek istekle.
+ *
+ * Site sahibinin istegi (24.10.2026): "hava durumunda buyuk sehirlerin
+ * gunluk hatta anlik hava tahmin bilgileri gosterilsin". Open-Meteo
+ * virgulle ayrilmis koordinatlarla tek cagrida sehir basina bir sonuc
+ * donduruyor; 30 dakika onbellekte.
+ *
+ * @return list<array{il:string,ad:string,sicaklik:int,en_yuksek:?int,en_dusuk:?int,durum:string,simge:string}>
+ */
+function hava_buyuk_sehirler(): array
+{
+    $enlemler = [];
+    $boylamlar = [];
+
+    foreach (HAVA_BUYUK_SEHIRLER as $il) {
+        $enlemler[]  = HAVA_ILLERI[$il][1];
+        $boylamlar[] = HAVA_ILLERI[$il][2];
+    }
+
+    $kayit = canli_onbellek('hava_sehirler', HAVA_ONBELLEK_SURE, static function () use ($enlemler, $boylamlar): ?array {
+        $ham = canli_indir(
+            'https://api.open-meteo.com/v1/forecast?latitude=' . implode(',', $enlemler)
+            . '&longitude=' . implode(',', $boylamlar)
+            . '&current=temperature_2m,weather_code,is_day'
+            . '&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=Europe%2FIstanbul',
+            8
+        );
+
+        if ($ham === null) {
+            return null;
+        }
+
+        $liste = json_decode($ham, true);
+
+        if (!is_array($liste) || !array_is_list($liste) || count($liste) !== count(HAVA_BUYUK_SEHIRLER)) {
+            return null;
+        }
+
+        $sonuc = [];
+
+        foreach ($liste as $tek) {
+            $cozulen = hava_coz((string) json_encode($tek));
+
+            if ($cozulen === null) {
+                return null;
+            }
+
+            unset($cozulen['gunler']);
+            $sonuc[] = $cozulen;
+        }
+
+        return $sonuc;
+    });
+
+    $sehirler = [];
+
+    foreach ((array) ($kayit['veri'] ?? []) as $i => $veri) {
+        $il = HAVA_BUYUK_SEHIRLER[$i] ?? null;
+
+        if ($il === null || !is_array($veri)) {
+            continue;
+        }
+
+        [$durum, $simge] = hava_kodu((int) $veri['kod'], (bool) $veri['gunduz']);
+        $sehirler[] = [
+            'il'        => $il,
+            'ad'        => HAVA_ILLERI[$il][0],
+            'sicaklik'  => (int) round((float) $veri['sicaklik']),
+            'en_yuksek' => $veri['en_yuksek'] !== null ? (int) round((float) $veri['en_yuksek']) : null,
+            'en_dusuk'  => $veri['en_dusuk'] !== null ? (int) round((float) $veri['en_dusuk']) : null,
+            'durum'     => $durum,
+            'simge'     => $simge,
+        ];
+    }
+
+    return $sehirler;
+}
+
 /**
  * Open-Meteo yanıtını sadeleştirir; beklenen alanlar yoksa null.
  *
