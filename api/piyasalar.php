@@ -2,8 +2,8 @@
 declare(strict_types=1);
 
 /**
- * Ekonomi sayfasinin canli bolumleri (HTML parcasi): ?bolum=kartlar ya
- * da ?bolum=sirketler.
+ * Ekonomi sayfasinin canli bolumleri (HTML parcasi): ?bolum=kartlar, ?bolum=sirketler
+ * ya da ?bolum=tablo&tablo=doviz|parite|endeks|emtia|kripto|dunya|altin|yukselen.
  *
  * Sayfadaki betik 2 dakikada bir yokluyor. Veri sunucuda onbellekte;
  * ziyaretci sayisi Yahoo'ya giden istegi artirmiyor.
@@ -24,5 +24,7 @@ echo match ((string) ($_GET['bolum'] ?? '')) {
         array_keys(piyasa_araclari())
     ))),
     'sirketler' => piyasa_sirketler_html(),
+    // Cevirici yenilenmiyor: icindeki betik innerHTML ile calismaz.
+    'tablo'     => ($_GET['tablo'] ?? '') === 'cevirici' ? '' : piyasa_tablo_parca_html((string) ($_GET['tablo'] ?? '')),
     default     => '',
 };
