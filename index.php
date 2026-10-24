@@ -102,7 +102,6 @@ require __DIR__ . '/includes/sayfa_ust.php';
         $yazarYazilari = [];
     }
 
-    $havaSehirListesi = false;
     ?>
     <?php if ($sayfa === 1): ?>
     <section class="vitrin">
