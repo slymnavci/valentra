@@ -14,6 +14,10 @@ declare(strict_types=1);
  *     sicakligi; satira tiklayinca ustteki ayrinti o sehre gecer
  *     (api/hava.php), secim tarayicida kalir.
  * Kaynaga ulasilamazsa kart basilmiyor.
+ *
+ * Ana sayfada sehir listesi kartta degil, piyasa seridinin yaninda
+ * yatay seritte (includes/hava_sehir_seridi.php); cagiran
+ * $havaSehirListesi = false veriyor.
  */
 
 require_once __DIR__ . '/hava.php';
@@ -45,6 +49,14 @@ if ($hava === null) {
         </span>
     </div>
 
+    <dl class="hava-ayrinti" data-hava="ayrinti">
+        <?php foreach (['hissedilen' => ['Hissedilen', '°'], 'nem' => ['Nem', '%'], 'ruzgar' => ['Rüzgâr', ' km/s']] as $alan => [$etiket, $birim]): ?>
+            <?php if (($hava[$alan] ?? null) !== null): ?>
+                <div><dt><?= e($etiket) ?></dt><dd><?= $alan === 'nem' ? '%' . (int) $hava[$alan] : (int) $hava[$alan] . e($birim) ?></dd></div>
+            <?php endif; ?>
+        <?php endforeach; ?>
+    </dl>
+
     <ul class="hava-gunler" data-hava="gunler">
         <?php foreach ($hava['gunler'] as $gun): ?>
             <li title="<?= e($gun['durum']) ?>">
@@ -55,11 +67,11 @@ if ($hava === null) {
         <?php endforeach; ?>
     </ul>
 
-    <?php if ($sehirler !== []): ?>
+    <?php if ($sehirler !== [] && ($havaSehirListesi ?? true)): ?>
         <ul class="hava-sehirler" aria-label="Büyük şehirlerde hava">
             <?php foreach ($sehirler as $sehir): ?>
                 <li>
-                    <button type="button" data-il="<?= e($sehir['il']) ?>"
+                    <button type="button" data-hava-il="<?= e($sehir['il']) ?>"
                             aria-pressed="<?= $sehir['il'] === $hava['il'] ? 'true' : 'false' ?>"
                             title="<?= e($sehir['durum']) ?>">
                         <?= hava_simge_svg($sehir['simge']) ?>
@@ -78,10 +90,12 @@ if ($hava === null) {
 </section>
 
 <script>
-(function () {
+// Sayfa yuklenince: ana sayfadaki sehir seridi karttan SONRA geliyor.
+document.addEventListener('DOMContentLoaded', function () {
     var kutu = document.getElementById('hava');
     if (!kutu) { return; }
-    var dugmeler = Array.prototype.slice.call(kutu.querySelectorAll('.hava-sehirler button'));
+    // Sehir dugmeleri kartta ya da ana sayfadaki sehir seridinde olabilir.
+    var dugmeler = Array.prototype.slice.call(document.querySelectorAll('[data-hava-il]'));
 
     function alan(ad) { return kutu.querySelector('[data-hava="' + ad + '"]'); }
 
@@ -103,6 +117,13 @@ if ($hava === null) {
                 alan('durum').textContent = v.durum;
                 alan('aralik').textContent = (v.en_yuksek !== null && v.en_dusuk !== null)
                     ? 'En yüksek ' + v.en_yuksek + '° · En düşük ' + v.en_dusuk + '°' : '';
+                var ayrinti = [];
+                if (v.hissedilen !== null && v.hissedilen !== undefined) { ayrinti.push(['Hissedilen', v.hissedilen + '°']); }
+                if (v.nem !== null && v.nem !== undefined) { ayrinti.push(['Nem', '%' + v.nem]); }
+                if (v.ruzgar !== null && v.ruzgar !== undefined) { ayrinti.push(['Rüzgâr', v.ruzgar + ' km/s']); }
+                alan('ayrinti').innerHTML = ayrinti.map(function (a) {
+                    return '<div><dt>' + kacir(a[0]) + '</dt><dd>' + kacir(a[1]) + '</dd></div>';
+                }).join('');
                 alan('gunler').innerHTML = (v.gunler || []).map(function (g) {
                     return '<li title="' + kacir(g.durum) + '"><span class="gun">' + kacir(g.gun) + '</span>'
                         + g.simge_svg + '<span class="derece">' + kacir(g.en_yuksek) + '° <small>'
@@ -110,7 +131,7 @@ if ($hava === null) {
                 }).join('');
                 kutu.setAttribute('data-il', v.il);
                 dugmeler.forEach(function (d) {
-                    d.setAttribute('aria-pressed', d.getAttribute('data-il') === v.il ? 'true' : 'false');
+                    d.setAttribute('aria-pressed', d.getAttribute('data-hava-il') === v.il ? 'true' : 'false');
                 });
             })
             .catch(function () { /* Gecici hata karti bozmasin. */ });
@@ -120,16 +141,16 @@ if ($hava === null) {
     try { kayitli = localStorage.getItem('valentra-il'); } catch (e) {}
 
     if (kayitli && kayitli !== kutu.getAttribute('data-il')
-        && kutu.querySelector('.hava-sehirler button[data-il="' + kayitli + '"]')) {
+        && document.querySelector('[data-hava-il="' + kayitli + '"]')) {
         getir(kayitli);
     }
 
     dugmeler.forEach(function (d) {
         d.addEventListener('click', function () {
-            var il = d.getAttribute('data-il');
+            var il = d.getAttribute('data-hava-il');
             try { localStorage.setItem('valentra-il', il); } catch (e) {}
             getir(il);
         });
     });
-})();
+});
 </script>

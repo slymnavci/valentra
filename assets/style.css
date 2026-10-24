@@ -499,6 +499,20 @@ summary.cekmece-oge::after {
 .hava-bilgi .hava-durum { font-weight: 700; }
 .hava-bilgi .hava-aralik { font-size: .86rem; color: var(--metin-soluk); }
 
+.hava-ayrinti {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 14px 0 0;
+    padding: 12px 0 0;
+    border-top: 1px solid var(--cizgi);
+    text-align: center;
+}
+
+.hava-ayrinti:empty { display: none; }
+.hava-ayrinti dt { font-size: .78rem; color: var(--metin-soluk); }
+.hava-ayrinti dd { margin: 2px 0 0; font-weight: 700; }
+
 .hava-gunler {
     list-style: none;
     margin: 14px 0 0;
@@ -1404,6 +1418,178 @@ a.menu-oge.aktif::after,
     }
 }
 
+/* --- Ana sayfa vitrini (24.10.2026) --------------------------------------- */
+
+/*
+ * Site sahibinin istegi: "hava durumunun boyu ile slaytlarin boyu,
+ * yazarlarin boyu ayni; seritte bosluklar istemiyorum; yerlesim cok
+ * muntazam olmali". Iki sira, her sirada kutular AYNI yukseklikte ve
+ * araliklar esit:
+ *
+ *   genis (>=1400):  kaydirak | hava | Yazarlarimiz    (460px)
+ *                    piyasa seridi | sehirler seridi    (tek satir)
+ *   orta (981-1399): kaydirak (tam genislik)
+ *                    hava | Yazarlarimiz (ayni yukseklik)
+ *                    piyasa seridi / sehirler seridi
+ *   dar (<=980):     hepsi alt alta
+ */
+.vitrin {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    margin-bottom: 8px;
+}
+
+.vitrin > .pencere { margin: 0; }
+.vitrin-manset { position: relative; min-width: 0; }
+.vitrin-manset .kaydirak { margin: 0; }
+.vitrin .piyasa-serit { margin: 0; height: 100%; }
+
+@media (min-width: 981px) {
+    .vitrin {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: stretch;
+    }
+
+    .vitrin-manset,
+    .vitrin-piyasa,
+    .vitrin-sehirler { grid-column: 1 / -1; }
+
+    .vitrin > .hava-kart,
+    .vitrin > .kose-kutu { display: flex; flex-direction: column; }
+}
+
+@media (min-width: 1400px) {
+    .vitrin {
+        grid-template-columns: minmax(0, 1fr) 320px 330px;
+        grid-template-rows: 460px auto;
+        gap: 18px 20px;
+    }
+
+    .vitrin-manset   { grid-column: 1; grid-row: 1; }
+    .vitrin > .hava-kart { grid-column: 2; grid-row: 1; }
+    .vitrin > .kose-kutu { grid-column: 3; grid-row: 1; }
+    .vitrin-piyasa   { grid-column: 1; grid-row: 2; }
+    .vitrin-sehirler { grid-column: 2 / 4; grid-row: 2; }
+
+    /* Kaydirak kutunun tamamini dolduruyor; numaralar resmin icinde,
+       altta (kutunun disinda kalip yuksekligi bozmasin). */
+    .vitrin-manset .kaydirak,
+    .vitrin-manset .kaydirak-pencere,
+    .vitrin-manset .kaydirak-slayt,
+    .vitrin-manset .kaydirak-slayt > a { height: 100%; }
+
+    .vitrin-manset .kaydirak-govde { padding-bottom: 52px; }
+
+    .vitrin-manset .kaydirak-sayfalar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 14px;
+        padding: 0;
+        z-index: 3;
+        grid-template-columns: repeat(var(--adet, 10), minmax(0, 12px));
+        gap: 6px;
+    }
+
+    .vitrin-manset .kaydirak-sayfalar button {
+        font-size: 0;
+        border: none;
+        background: rgba(255, 255, 255, .45);
+    }
+
+    .vitrin-manset .kaydirak-sayfalar button[aria-current="true"] { background: var(--altin); }
+
+    /* Yan kutular kendi iclerinde kayiyor; sira yuksekligi sabit. */
+    .vitrin > .hava-kart,
+    .vitrin > .kose-kutu { overflow: hidden; }
+
+    /* Icerik kutu boyunca esit aralikli: ortada ya da altta bosluk kalmasin.
+       Sigmayan yazar gizleniyor (includes/kose_kutu.php), kalanlar yayiliyor. */
+    .vitrin > .hava-kart { justify-content: space-between; }
+    .vitrin > .kose-kutu .yazar-listesi {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Satirlar esit yukseklikte, icerik ortada: cizgiler esit aralikli. */
+    .vitrin > .kose-kutu .yazar-listesi li { flex: 1 1 0; align-items: center; }
+}
+
+/* Hava karti vitrinde: buyuk simge ve sicaklik yan yana, altinda ayrinti
+   (hissedilen, nem, ruzgar), tahmin kutunun dibinde. */
+.vitrin > .hava-kart .hava-simdi { flex-wrap: wrap; gap: 6px 14px; margin-top: 4px; }
+.vitrin > .hava-kart .hava-simdi .hava-ikon .hava-simge { width: 58px; height: 58px; }
+.vitrin > .hava-kart .hava-simdi .hava-derece { font-size: 3.2rem; }
+.vitrin > .hava-kart .hava-simdi .hava-bilgi { flex-basis: 100%; }
+.vitrin > .hava-kart .hava-gunler { padding-top: 14px; }
+
+.vitrin .yazar-listesi li[hidden] { display: none; }
+.ana-duzen.anasayfa > .yan-pencere { margin-top: 32px; }
+.vitrin > .kose-kutu .kose-kutu-tumu { margin-top: auto; padding-top: 10px; }
+
+/* --- Buyuk sehirler hava seridi (piyasa seridine paralel) ----------------- */
+
+.sehir-serit {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    background: var(--kart);
+    border: 1px solid var(--cizgi);
+    border-left: 3px solid var(--altin);
+    border-radius: var(--yuvarlak);
+    overflow: hidden;
+    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 20px), transparent 100%);
+}
+
+.sehir-akis {
+    display: flex;
+    width: max-content;
+    animation: sd-kay 40s linear infinite;
+}
+
+.sehir-serit:hover .sehir-akis,
+.sehir-serit:focus-within .sehir-akis { animation-play-state: paused; }
+
+.sehir-liste {
+    display: flex;
+    gap: 6px;
+    margin: 0;
+    padding: 0 6px 0 10px;
+    list-style: none;
+}
+
+.sehir-liste button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 10px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    color: var(--metin);
+    font: inherit;
+    font-size: .92rem;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.sehir-liste button:hover { color: var(--altin); }
+.sehir-liste button[aria-pressed="true"] { color: var(--altin); }
+.sehir-liste .hava-simge { color: var(--altin); width: 18px; height: 18px; }
+.sehir-liste .ad { font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.sehir-liste .simdi { font-weight: 800; }
+.sehir-liste .aralik { color: var(--metin-soluk); font-size: .8rem; }
+
+@media (prefers-reduced-motion: reduce) {
+    .sehir-akis { animation: none; }
+    .sehir-serit { overflow-x: auto; mask-image: none; }
+    .sehir-liste[aria-hidden="true"] { display: none; }
+}
+
 /* --- Kategori basligi ---------------------------------------------------- */
 
 .kategori-basligi {
@@ -1471,19 +1657,25 @@ a.menu-oge.aktif::after,
  * tek sutunda: metin satiri kisalmasin.
  */
 @media (min-width: 1400px) {
-    body:not(.okuma) .ana-duzen:not(.tam) { grid-template-columns: minmax(0, 1fr) 680px; }
+    body:not(.okuma) .ana-duzen:not(.tam):not(.anasayfa) { grid-template-columns: minmax(0, 1fr) 680px; }
 
-    body:not(.okuma) .ana-duzen:not(.tam) > .yan-pencere {
+    body:not(.okuma) .ana-duzen:not(.tam):not(.anasayfa) > .yan-pencere {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         align-items: start;
         gap: 18px;
     }
 
-    body:not(.okuma) .ana-duzen:not(.tam) > .yan-pencere > * { grid-column: 1 / -1; }
+    body:not(.okuma) .ana-duzen:not(.tam):not(.anasayfa) > .yan-pencere > * { grid-column: 1 / -1; }
 
-    body:not(.okuma) .ana-duzen:not(.tam) > .yan-pencere > .kose-kutu,
-    body:not(.okuma) .ana-duzen:not(.tam) > .yan-pencere > .hava-kart { grid-column: auto; }
+    body:not(.okuma) .ana-duzen:not(.tam):not(.anasayfa) > .yan-pencere > .kose-kutu,
+    body:not(.okuma) .ana-duzen:not(.tam):not(.anasayfa) > .yan-pencere > .hava-kart { grid-column: auto; }
+
+    /* Hava durumu ortada, Yazarlarimiz en sagda (site sahibi, 24.10.2026).
+       Tek sutunda (dar ekran) sira degismiyor: Yazarlarimiz ustte. */
+    body:not(.okuma) .ana-duzen:not(.tam):not(.anasayfa) > .yan-pencere > .hava-kart { order: 1; }
+    body:not(.okuma) .ana-duzen:not(.tam):not(.anasayfa) > .yan-pencere > .kose-kutu { order: 2; }
+    body:not(.okuma) .ana-duzen:not(.tam):not(.anasayfa) > .yan-pencere > :not(.hava-kart):not(.kose-kutu) { order: 3; }
 }
 
 /* Piyasa ve sirket sayfalari: yan pencere yok, grafikler tam genislikte
@@ -1837,20 +2029,34 @@ a.menu-oge.aktif::after,
 :where(:root[data-tema="koyu"]) .piyasa-oge .degisim.eksi { color: #ff6b70; }
 
 /*
- * Genis ekranda sigmazsa alt satira gec (24.10.2026): ana kolon iki
- * sutunlu yan pencere yuzunden daraldi; tek satirda BIST kesiliyordu.
- * Ikinci kopya (kayma dongusu icin) genis ekranda tasma disinda kaliyor.
+ * Tek satir (site sahibi, 24.10.2026: "kurlar ve BIST 100 tek satir
+ * olacak"). Genis ekranda ana kolon iki sutunlu yan pencere yuzunden
+ * daraldi; dort deger degisimleriyle birlikte sigsin diye aralik ve
+ * puntolar biraz kucuk.
  */
+/* Serit kendi genisligine gore daraliyor (container query): ekran degil
+   kolon genisligi belirleyici. */
+.piyasa-serit { container-type: inline-size; }
+.piyasa-oge .ad .kisa { display: none; }
+
+/* Telefonda serit zaten kayiyor (asagida); kisaltma yalnizca genis ekranda. */
 @media (min-width: 721px) {
-    .piyasa-grup {
-        /* Genislik kutuya sabit; yoksa grup icerigi kadar genisliyor ve
-           alt satira hic gecmiyordu. */
-        flex: 0 0 100%;
-        flex-wrap: wrap;
-        justify-content: flex-start;
-        row-gap: 6px;
-        column-gap: 26px;
+    @container (max-width: 825px) {
+        .piyasa-oge .degisim { display: none; }
     }
+
+    @container (max-width: 620px) {
+        .piyasa-oge .ad .uzun { display: none; }
+        .piyasa-oge .ad .kisa { display: inline; }
+    }
+}
+
+@media (min-width: 721px) {
+    .piyasa-grup { gap: 18px; padding: 11px 16px; justify-content: space-between; }
+    .piyasa-oge { gap: 6px; }
+    .piyasa-oge .ad { font-size: .74rem; letter-spacing: .06em; }
+    .piyasa-oge .deger { font-size: 1rem; }
+    .piyasa-oge .degisim { font-size: .8rem; }
 }
 
 /*

@@ -36,10 +36,14 @@ try {
 ?>
 <aside class="yan-pencere">
 
-    <?php require __DIR__ . '/kose_kutu.php'; ?>
-
-    <?php // Yazarlarimiz'in altinda hava durumu (24.10.2026, bkz. includes/hava_kutu.php). ?>
-    <?php require __DIR__ . '/hava_kutu.php'; ?>
+    <?php
+    // Ana sayfada Yazarlarimiz ve hava durumu ustteki vitrinde (index.php);
+    // diger sayfalarda burada, Yazarlarimiz'in altinda hava durumu.
+    if (!($yanPencereVitrinli ?? false)) {
+        require __DIR__ . '/kose_kutu.php';
+        require __DIR__ . '/hava_kutu.php';
+    }
+    ?>
 
     <?php if (count($enCokOkunanlar) >= 3): ?>
         <section class="pencere" aria-labelledby="cok-okunan-baslik">
