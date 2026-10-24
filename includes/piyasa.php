@@ -488,7 +488,7 @@ function piyasa_bist(): array
  * ONS: BIST ile ayni uctan (Yahoo Finance, altin vadeli GC=F); onceki
  * kapanis da geldigi icin gunluk degisim kaynaktan hesaplaniyor.
  *
- * GRAM: once Turk piyasa sayfalari (BigPara, Doviz.com) kaziniyor; Turk
+ * GRAM: once Turk piyasa sayfasi (Doviz.com) kaziniyor; Turk
  * okurun bildigi gram altin fiyati bu. Kazima kor bir yontem oldugu
  * icin okunan deger ons x dolar / 31,1035 ile sinaniyor: yuzde 6'dan
  * fazla sapiyorsa yanlis sayi alinmis demektir ve hesaplanan deger
@@ -524,8 +524,9 @@ function piyasa_altin(?float $usd): array
     $hesap = ($ons !== null && $usd !== null) ? round($ons * $usd / 31.1035, 2) : null;
     $gram  = null;
 
+    // BigPara cikarildi (24.10.2026): sunucudan gelen istekleri yanitsiz
+    // birakiyor (IHS kayitlari); site sahibi "o kaynaklari aramayalim".
     foreach ([
-        'BigPara'   => 'https://bigpara.hurriyet.com.tr/altin/',
         'Döviz.com' => 'https://altin.doviz.com/',
     ] as $ad => $url) {
         $html = piyasa_indir($url);

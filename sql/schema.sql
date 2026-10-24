@@ -411,7 +411,7 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) 
     ('Dünya Gazetesi',      'https://www.dunya.com',
      'https://www.dunya.com/rss',                    'https://www.dunya.com/ekonomi', 'rss', 1),
     ('BigPara',             'https://bigpara.hurriyet.com.tr',
-     'https://bigpara.hurriyet.com.tr/rss/',         'https://bigpara.hurriyet.com.tr/haberler/ekonomi-haberleri/', 'rss', 1),
+     'https://bigpara.hurriyet.com.tr/rss/',         'https://bigpara.hurriyet.com.tr/haberler/ekonomi-haberleri/', 'rss', 0),
     ('TRT Haber Ekonomi',   'https://www.trthaber.com',
      'https://www.trthaber.com/ekonomi_articles.rss','https://www.trthaber.com/haber/ekonomi/', 'rss', 1),
     ('CNN Türk Ekonomi',    'https://www.cnnturk.com',
@@ -569,7 +569,7 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) 
      'https://tr.euronews.com/business', 'rss', 1),
     ('VOA Türkçe',              'https://www.amerikaninsesi.com',
      'https://www.amerikaninsesi.com/api/zkvyteumqi',
-     'https://www.amerikaninsesi.com/z/1730', 'rss', 1);
+     'https://www.amerikaninsesi.com/z/1730', 'rss', 0);
 
 -- 2) Ingilizce ekonomi ve is bolumleri
 INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) VALUES
@@ -581,7 +581,7 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) 
      'https://www.theguardian.com/business/economics', 'rss', 1),
     ('The New York Times Business', 'https://www.nytimes.com/section/business',
      'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml',
-     'https://www.nytimes.com/section/business/economy', 'rss', 1),
+     'https://www.nytimes.com/section/business/economy', 'rss', 0),
     ('The Economist Finans',    'https://www.economist.com',
      'https://www.economist.com/finance-and-economics/rss.xml',
      'https://www.economist.com/finance-and-economics', 'rss', 1),
@@ -1573,8 +1573,8 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) V
     ('CNN',                         'https://edition.cnn.com',     'http://rss.cnn.com/rss/edition_world.rss',                'rss', 'dunya', 1),
     ('Reuters',                     'https://www.reuters.com',     'https://www.reutersagency.com/feed/?best-topics=political-general&post_type=best', 'rss', 'dunya', 1),
     ('The Guardian',                'https://www.theguardian.com', 'https://www.theguardian.com/world/rss',                   'rss', 'dunya', 1),
-    ('The New York Times',          'https://www.nytimes.com',     'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',  'rss', 'dunya', 1),
-    ('France 24',                   'https://www.france24.com/en', 'https://www.france24.com/en/rss',                         'rss', 'dunya', 1),
+    ('The New York Times',          'https://www.nytimes.com',     'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',  'rss', 'dunya', 0),
+    ('France 24',                   'https://www.france24.com/en', 'https://www.france24.com/en/rss',                         'rss', 'dunya', 0),
     ('DW News',                     'https://www.dw.com/en',       'https://rss.dw.com/rdf/rss-en-world',                     'rss', 'dunya', 1),
     ('NPR',                         'https://www.npr.org',         'https://feeds.npr.org/1004/rss.xml',                      'rss', 'dunya', 1);
 
@@ -1899,3 +1899,18 @@ UPDATE haberler SET kaynak_tarihi = NULL
 UPDATE haberler SET kaynak_tarihi = NULL
  WHERE kaynak_baslik LIKE 'TCMB, indirime 1 puan ile başladı%'
    AND kaynak_tarihi IS NOT NULL;
+
+-- ---------------------------------------------------------------------------
+-- Alinamayan kaynaklar kapatildi (24.10.2026, site sahibi: "alinamayan haber
+-- sitelerini cikar, o kaynaklari arastirmasin"). IHS'in kayitlarina gore bu
+-- sitelerin sunuculari sunucudan gelen istekleri yanitsiz birakiyor ve
+-- /api/getir.php takiliyordu: Amerika'nin Sesi, BigPara, New York Times,
+-- France 24. Tek seferlik: panelden yeniden acilirsa ezilmez.
+-- ---------------------------------------------------------------------------
+UPDATE kaynaklar SET aktif = 0
+ WHERE (CONCAT_WS(' ', site_url, besleme_url, liste_url) LIKE '%amerikaninsesi.com%'
+     OR CONCAT_WS(' ', site_url, besleme_url, liste_url) LIKE '%bigpara.hurriyet.com.tr%'
+     OR CONCAT_WS(' ', site_url, besleme_url, liste_url) LIKE '%nytimes.com%'
+     OR CONCAT_WS(' ', site_url, besleme_url, liste_url) LIKE '%france24.com%')
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_alinamayan_kaynaklar_2026_10_24');
+INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_alinamayan_kaynaklar_2026_10_24', '24.10.2026');
