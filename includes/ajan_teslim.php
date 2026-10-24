@@ -29,8 +29,15 @@ const AJAN_TESLIM_SON_ID    = 'ajan_teslim_son_id';
 const AJAN_TESLIM_SON       = 'ajan_teslim_son';
 const AJAN_TESLIM_EN_BUYUK  = 10 * 1024 * 1024;
 
-/** Ziyaretçi tetiklemeli denemeler arası en az süre (saniye). */
-const AJAN_TESLIM_DENEME_ARALIGI = 1800;
+/**
+ * Ziyaretçi tetiklemeli denemeler arası en az süre (saniye).
+ *
+ * 30 dakikadan 10 dakikaya (24.10.2026): GitHub'dan siteye baglanti
+ * gunde birkac kez 15-20 dakika kesiliyor; bekleyen haberlerin sitede
+ * gorunmesi yarim saate kadar gecikiyordu. Her deneme tek bir GitHub
+ * API cagrisi (eser listesi); yeni eser yoksa indirme yok.
+ */
+const AJAN_TESLIM_DENEME_ARALIGI = 600;
 
 /**
  * GitHub'daki en yeni teslimi alır.
