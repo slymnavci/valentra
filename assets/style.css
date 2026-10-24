@@ -1460,6 +1460,32 @@ a.menu-oge.aktif::after,
 
 .ana-kolon { min-width: 0; }
 
+/*
+ * GENIS EKRANDA IKI SUTUNLU YAN PENCERE (site sahibinin istegi,
+ * 24.10.2026: "en sagda hem yazarlar kalsin hem de hava durumu; kayan
+ * haberleri biraz daha sola daralt"). Yazarlarimiz ve hava durumu yan
+ * yana; ana kolon (kaydirak, piyasa seridi, kartlar) o kadar daraliyor.
+ * Diger pencereler iki sutunu birden kapliyor. 1400 pikselden dar
+ * ekranda eski tek sutun (340 piksel); telefonda yan pencere ana
+ * kolonun altinda (asagida, 980px). Haber sayfasi (body.okuma) dar kalip
+ * tek sutunda: metin satiri kisalmasin.
+ */
+@media (min-width: 1400px) {
+    body:not(.okuma) .ana-duzen:not(.tam) { grid-template-columns: minmax(0, 1fr) 680px; }
+
+    body:not(.okuma) .ana-duzen:not(.tam) > .yan-pencere {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+        gap: 18px;
+    }
+
+    body:not(.okuma) .ana-duzen:not(.tam) > .yan-pencere > * { grid-column: 1 / -1; }
+
+    body:not(.okuma) .ana-duzen:not(.tam) > .yan-pencere > .kose-kutu,
+    body:not(.okuma) .ana-duzen:not(.tam) > .yan-pencere > .hava-kart { grid-column: auto; }
+}
+
 /* Piyasa ve sirket sayfalari: yan pencere yok, grafikler tam genislikte
    (site sahibinin istegi, 23.10.2026: "grafikler sayfaya yerlessin,
    yanlarda bosluklari azaltalim"). */
@@ -1809,6 +1835,23 @@ a.menu-oge.aktif::after,
 
 :where(:root[data-tema="koyu"]) .piyasa-oge .degisim.arti { color: #4ade80; }
 :where(:root[data-tema="koyu"]) .piyasa-oge .degisim.eksi { color: #ff6b70; }
+
+/*
+ * Genis ekranda sigmazsa alt satira gec (24.10.2026): ana kolon iki
+ * sutunlu yan pencere yuzunden daraldi; tek satirda BIST kesiliyordu.
+ * Ikinci kopya (kayma dongusu icin) genis ekranda tasma disinda kaliyor.
+ */
+@media (min-width: 721px) {
+    .piyasa-grup {
+        /* Genislik kutuya sabit; yoksa grup icerigi kadar genisliyor ve
+           alt satira hic gecmiyordu. */
+        flex: 0 0 100%;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        row-gap: 6px;
+        column-gap: 26px;
+    }
+}
 
 /*
  * Dar ekranda kaydir.
