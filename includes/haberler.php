@@ -208,6 +208,46 @@ const HABER_TOPLAMA_BOSLUGU_SANIYE = 600;
  */
 const HABER_SON_DAKIKA_EN_FAZLA_DAKIKA = 180;
 
+/**
+ * Üstteki kayan "Son Dakika" şeridi: kaynakta bugün yayımlanmış en yeni haberler.
+ *
+ * Site sahibinin istegi (24.10.2026): "en ustte de kayan son dakika
+ * haberleri gecsin". Sira kaynaktaki yayin anina gore (en yeni once);
+ * ana sayfanin kosulu gecerli (tarihi bilinen, Resmi Gazete ve tarif
+ * disinda). Bugun haber yoksa bos: serit basilmiyor.
+ *
+ * @return list<array{baslik:string,slug:string,zaman:string}>
+ */
+function haber_son_dakika_seridi(int $adet = 12): array
+{
+    static $onbellek = null;
+
+    if ($onbellek !== null) {
+        return $onbellek;
+    }
+
+    try {
+        $satirlar = db()->query(
+            'SELECT h.baslik, h.slug,
+                    DATE_FORMAT(LEAST(h.olusturuldu, COALESCE(h.kaynak_tarihi, h.olusturuldu)), \'%H:%i\') AS zaman
+               FROM haberler h
+              WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . haber_ana_akis_kosulu() . '
+                AND ' . haber_yas_dakika_ifadesi() . ' <= ' . haber_bugun_dakika() . '
+              ORDER BY LEAST(h.olusturuldu, COALESCE(h.kaynak_tarihi, h.olusturuldu)) DESC, h.id DESC
+              LIMIT ' . max(1, min(30, $adet))
+        )->fetchAll();
+    } catch (Throwable $e) {
+        error_log('[valentra] son dakika seridi: ' . $e->getMessage());
+        $satirlar = [];
+    }
+
+    return $onbellek = array_map(static fn (array $s): array => [
+        'baslik' => (string) $s['baslik'],
+        'slug'   => (string) $s['slug'],
+        'zaman'  => (string) $s['zaman'],
+    ], $satirlar);
+}
+
 function haber_son_dakika_id(): ?int
 {
     static $onbellek = false;

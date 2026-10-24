@@ -27,16 +27,8 @@ ziyaret_kaydet(
 );
 
 require_once __DIR__ . '/menu.php';
-require_once __DIR__ . '/hava.php';
 
 $menu = site_menusu();
-
-// Ust cubuktaki hava durumu (varsayilan il; ziyaretcinin secimi betikle).
-try {
-    $hava = hava_durumu();
-} catch (Throwable $e) {
-    $hava = null;
-}
 
 /*
  * Arama motoru etiketleri.
@@ -131,34 +123,49 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
      * ve akici yapalim; Milliyet'e benzesin ama tam benzemesin; beyaz ve
      * kirmizi tonlar, agirlikli beyaz; bir yere hava durumunu koyalim").
      *
-     *   1. Bilgi cubugu: tarih, hava durumu (il secilebilir), gece/gunduz.
-     *   2. Logo satiri: logo ve arama; beyaz.
+     *   1. Bilgi cubugu: tarih, gece/gunduz. (Hava durumu 24.10.2026'da
+     *      yan penceredeki karta tasindi, bkz. includes/hava_kutu.php.)
+     *   2. Logo satiri: menu dugmesi (acilir cekmece), logo, arama; beyaz.
      *   3. Menu: beyaz zemin, koyu kalin yazi, aktif ogede kirmizi cizgi;
      *      sayfadaki tek yapiskan serit.
      */
     ?>
+    <?php
+    /*
+     * KAYAN SON DAKIKA SERIDI (site sahibinin istegi, 24.10.2026: "en
+     * ustte de kayan son dakika haberleri gecsin"). Kaynakta bugun
+     * yayimlanmis en yeni haberler; liste iki kez basiliyor ki kayma
+     * kesintisiz donsun (ikinci kopya ekran okuyucudan gizli). Uzerine
+     * gelince ya da odaklaninca duruyor; hareket azaltma tercihinde
+     * kaymiyor, yatay kaydirilabiliyor.
+     */
+    $sonDakikaSeridi = haber_son_dakika_seridi();
+    ?>
+    <?php if ($sonDakikaSeridi !== []): ?>
+        <div class="sd-serit" aria-label="Son dakika haberleri">
+            <div class="sinirli sd-satir">
+                <span class="sd-etiket">Son Dakika</span>
+                <div class="sd-pencere">
+                    <div class="sd-akis" style="--sure: <?= max(30, count($sonDakikaSeridi) * 7) ?>s">
+                        <?php foreach ([false, true] as $kopya): ?>
+                            <ul class="sd-liste" <?= $kopya ? 'aria-hidden="true"' : '' ?>>
+                                <?php foreach ($sonDakikaSeridi as $sd): ?>
+                                    <li>
+                                        <span class="sd-saat"><?= e($sd['zaman']) ?></span>
+                                        <a href="<?= e(haber_yolu($sd['slug'])) ?>" <?= $kopya ? 'tabindex="-1"' : '' ?>><?= e($sd['baslik']) ?></a>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <div class="bilgi-cubugu">
         <div class="sinirli bilgi-satir">
             <span class="bilgi-tarih"><?= e(tarih_bicimle(date('Y-m-d H:i:s'), false)) ?></span>
-
-            <?php if ($hava !== null): ?>
-                <div class="hava" id="hava" data-il="<?= e($hava['il']) ?>">
-                    <span class="hava-ikon" data-hava="simge"><?= hava_simge_svg($hava['simge']) ?></span>
-                    <span class="hava-derece" data-hava="sicaklik"><?= (int) $hava['sicaklik'] ?>°</span>
-                    <span class="hava-durum" data-hava="durum"><?= e($hava['durum']) ?></span>
-                    <?php if ($hava['en_yuksek'] !== null && $hava['en_dusuk'] !== null): ?>
-                        <span class="hava-aralik" data-hava="aralik">
-                            <?= (int) $hava['en_yuksek'] ?>° / <?= (int) $hava['en_dusuk'] ?>°
-                        </span>
-                    <?php endif; ?>
-                    <label class="gizli-etiket" for="hava-il">Hava durumu ili</label>
-                    <select id="hava-il" class="hava-il">
-                        <?php foreach (HAVA_ILLERI as $anahtar => $il): ?>
-                            <option value="<?= e($anahtar) ?>" <?= $anahtar === $hava['il'] ? 'selected' : '' ?>><?= e($il[0]) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            <?php endif; ?>
 
             <button type="button" class="tema-dugme" id="tema-dugme"
                     aria-label="Gece / gündüz modu" title="Gece / gündüz modu">
@@ -175,6 +182,11 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
 
     <header class="ust-bant">
         <div class="sinirli ust-satir">
+            <button type="button" class="cekmece-dugme" id="cekmece-dugme"
+                    aria-controls="cekmece" aria-expanded="false" aria-label="Menüyü aç">
+                <span></span><span></span><span></span>
+            </button>
+
             <a class="logo" href="/">
                 <img class="marka" src="/assets/logo.svg" alt="" width="40" height="35">
                 <span class="yazi">
@@ -198,52 +210,80 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
         </div>
     </header>
 
-    <?php if ($hava !== null): ?>
+    <?php
+    /*
+     * ACILIR MENU (site sahibinin istegi, 24.10.2026: "Valentra'nin yanina
+     * acilir gizlenir bir menu isareti koyalim, basinca menu acilsin").
+     * Soldan kayan cekmece: butun basliklar ve alt basliklar tek listede.
+     * Ust menu de duruyor; cekmece ozellikle telefonda yatay kayan menu
+     * yerine hepsini bir bakista gosteriyor.
+     */
+    ?>
+    <div class="cekmece" id="cekmece" hidden>
+        <div class="cekmece-perde" data-kapat></div>
+        <nav class="cekmece-panel" aria-label="Tüm bölümler">
+            <div class="cekmece-ust">
+                <span class="cekmece-baslik">Menü</span>
+                <button type="button" class="cekmece-kapat" data-kapat aria-label="Menüyü kapat">&times;</button>
+            </div>
+
+            <a class="cekmece-oge <?= $aktifKategori === '' && $anaSayfa ? 'aktif' : '' ?>" href="/">Ana Sayfa</a>
+
+            <?php foreach ($menu as $oge): ?>
+                <?php if ($oge['href'] !== null): ?>
+                    <a class="cekmece-oge <?= site_menu_aktif($oge, $aktifKategori) ? 'aktif' : '' ?>"
+                       href="<?= e($oge['href']) ?>"><?= e($oge['ad']) ?></a>
+                <?php else: ?>
+                    <details class="cekmece-grup" <?= site_menu_aktif($oge, $aktifKategori) ? 'open' : '' ?>>
+                        <summary class="cekmece-oge"><?= e($oge['ad']) ?></summary>
+                        <?php foreach ($oge['altlar'] as $alt): ?>
+                            <a class="cekmece-alt <?= $aktifKategori === $alt['anahtar'] ? 'aktif' : '' ?>"
+                               href="<?= e($alt['href']) ?>"><?= e($alt['ad']) ?></a>
+                        <?php endforeach; ?>
+                    </details>
+                <?php endif; ?>
+            <?php endforeach; ?>
+        </nav>
+    </div>
+
     <script>
     (function () {
-        // Hava durumu ili: secim tarayicida kaliyor; veri api/hava.php'den.
-        var kutu = document.getElementById('hava');
-        var secim = document.getElementById('hava-il');
-        if (!kutu || !secim) { return; }
+        var cekmece = document.getElementById('cekmece');
+        var dugme = document.getElementById('cekmece-dugme');
+        if (!cekmece || !dugme) { return; }
 
-        function yaz(ad, deger, html) {
-            var e = kutu.querySelector('[data-hava="' + ad + '"]');
-            if (!e) { return; }
-            if (html) { e.innerHTML = deger; } else { e.textContent = deger; }
+        function ac() {
+            cekmece.hidden = false;
+            // Bir kare sonra: gecis (transition) gizli durumdan baslasin.
+            requestAnimationFrame(function () { cekmece.classList.add('acik'); });
+            dugme.setAttribute('aria-expanded', 'true');
+            document.documentElement.classList.add('cekmece-acik');
+            var ilk = cekmece.querySelector('.cekmece-kapat');
+            if (ilk) { ilk.focus(); }
         }
 
-        function getir(il) {
-            fetch('/api/hava.php?il=' + encodeURIComponent(il))
-                .then(function (y) { return y.ok ? y.json() : null; })
-                .then(function (v) {
-                    if (!v) { return; }
-                    yaz('simge', v.simge_svg, true);
-                    yaz('sicaklik', v.sicaklik + '°');
-                    yaz('durum', v.durum);
-                    if (v.en_yuksek !== null && v.en_dusuk !== null) {
-                        yaz('aralik', v.en_yuksek + '° / ' + v.en_dusuk + '°');
-                    }
-                    kutu.setAttribute('data-il', v.il);
-                })
-                .catch(function () { /* Gecici hata kutuyu bozmasin. */ });
+        function kapat() {
+            cekmece.classList.remove('acik');
+            dugme.setAttribute('aria-expanded', 'false');
+            document.documentElement.classList.remove('cekmece-acik');
+            setTimeout(function () { cekmece.hidden = true; }, 200);
+            dugme.focus();
         }
 
-        var kayitli = null;
-        try { kayitli = localStorage.getItem('valentra-il'); } catch (e) {}
+        dugme.addEventListener('click', function () {
+            if (cekmece.hidden) { ac(); } else { kapat(); }
+        });
 
-        if (kayitli && kayitli !== kutu.getAttribute('data-il')
-            && secim.querySelector('option[value="' + kayitli + '"]')) {
-            secim.value = kayitli;
-            getir(kayitli);
-        }
+        cekmece.addEventListener('click', function (olay) {
+            if (olay.target.closest('[data-kapat]')) { kapat(); }
+        });
 
-        secim.addEventListener('change', function () {
-            try { localStorage.setItem('valentra-il', secim.value); } catch (e) {}
-            getir(secim.value);
+        document.addEventListener('keydown', function (olay) {
+            if (olay.key === 'Escape' && !cekmece.hidden) { kapat(); }
         });
     })();
     </script>
-    <?php endif; ?>
+
 
     <script>
     (function () {

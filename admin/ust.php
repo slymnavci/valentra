@@ -85,19 +85,23 @@
                 // Site sahibinin istegi (23.10.2026): okunma istatistigi
                 // ust menude, acilir listenin icinde kaybolmasin.
                 'Ziyaretçiler'  => 'istatistik.php',
+                /*
+                 * Sitede gorunmeyen bolumler menuden cikti (site sahibinin
+                 * istegi, 24.10.2026: "yonetim alanindan egitim, rehberler
+                 * gibi ana sayfada olmayan bilgileri kaldiralim"): Egitim,
+                 * Egitim aktarimi, Rehberler, Pratik bilgiler, Kanun
+                 * metinleri. Sayfalar ve veriler duruyor; adresle
+                 * acilabiliyor. Grafikler kaldi: Piyasalar sayfasindaki
+                 * Ekonomik Gostergeler onlardan.
+                 */
                 'İçerik'        => [
                     'Köşe yazıları'   => 'kose-yazilari.php',
-                    'Rehberler'       => 'rehberler.php',
-                    'Pratik bilgiler' => 'pratik.php',
                     'Grafikler'       => 'grafikler.php',
-                    'Kanun metinleri' => 'kanunlar.php',
                 ],
-                'Eğitim'        => 'egitim.php',
                 'Ajan ve aktarım' => [
                     'Ajan'             => 'ajan.php',
                     'Kaynaklar'        => 'kaynaklar.php',
                     'Ajan anahtarları' => 'anahtarlar.php',
-                    'Eğitim aktarımı'  => 'egitim.php',
                 ],
                 'Arama motorları' => [
                     'Google görünürlüğü'       => 'google.php',

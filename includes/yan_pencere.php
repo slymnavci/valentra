@@ -38,6 +38,9 @@ try {
 
     <?php require __DIR__ . '/kose_kutu.php'; ?>
 
+    <?php // Yazarlarimiz'in altinda hava durumu (24.10.2026, bkz. includes/hava_kutu.php). ?>
+    <?php require __DIR__ . '/hava_kutu.php'; ?>
+
     <?php if (count($enCokOkunanlar) >= 3): ?>
         <section class="pencere" aria-labelledby="cok-okunan-baslik">
             <h2 class="pencere-baslik" id="cok-okunan-baslik">En Çok Okunanlar</h2>
