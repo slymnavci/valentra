@@ -68,7 +68,8 @@ const HABER_AKIS_DISI = ['yemek-tarifleri'];
  *   4. Esitlerde yeni olan once.
  *
  * Ana sayfada ayrica 1. yerde son dakika (haber_son_dakika_id) ve
- * kaydirakta spor kotasi var; yalnizca kaynakta bugun yayimlanmis haberler.
+ * kaydirakta spor kotasi var (son dakika yalnizca kaynakta bugun
+ * yayimlanmis haberlerden).
  *
  * Onceki "son 24 saat" penceresi sabah 08'de dun 08'den sonraki her
  * haberi yeni sayiyordu; dunun gun boyu okunma toplamis haberleri bu
@@ -124,8 +125,8 @@ function haber_yas_dakika_ifadesi(): string
  * ETKIN ONEM: onem puani haber eskidikce azaliyor (site sahibinin
  * karari, 23.10.2026: "haberin onem derecesi yayin tarihine de bakarak
  * karar verilmeli; eski haberlerin onem degeri gitgide azalsin; 4 saat
- * gectiyse %10 azalsin; dunun haberiyse 50 altinda olsun"). Ana sayfada
- * dunun haberleri yok (haber_ana_akis_kosulu); tavan konu sayfalari icin.
+ * gectiyse %10 azalsin; dunun haberiyse 50 altinda olsun"). Dunku haber ana
+ * sayfada bugunun haberlerinin arkasinda (gun basamagi, haber_sirasi_temel).
  *
  *   - Bugunun haberi: saatte %2,5 (4 saatte %10, 8 saatte %20, 12 saatte
  *     %30). Onem 75, 4 saatlik haber 67,5; yeni gelen onem 70 haber onun
@@ -209,12 +210,13 @@ const HABER_TOPLAMA_BOSLUGU_SANIYE = 600;
 const HABER_SON_DAKIKA_EN_FAZLA_DAKIKA = 180;
 
 /**
- * Üstteki kayan "Son Dakika" şeridi: kaynakta bugün yayımlanmış en yeni haberler.
+ * Üstteki kayan "Son Dakika" şeridi: kaynaktaki yayın anına göre en yeni haberler.
  *
  * Site sahibinin istegi (24.10.2026): "en ustte de kayan son dakika
  * haberleri gecsin". Sira kaynaktaki yayin anina gore (en yeni once);
  * ana sayfanin kosulu gecerli (tarihi bilinen, Resmi Gazete ve tarif
- * disinda). Bugun haber yoksa bos: serit basilmiyor.
+ * disinda). Onceden yalnizca bugunun haberleriydi; gece yarisi serit
+ * bosaliyordu (25.10.2026). Artik en yeni 12 haber, gun ayrimi yok.
  *
  * @return list<array{baslik:string,slug:string,zaman:string}>
  */
@@ -232,7 +234,6 @@ function haber_son_dakika_seridi(int $adet = 12): array
                     DATE_FORMAT(LEAST(h.olusturuldu, COALESCE(h.kaynak_tarihi, h.olusturuldu)), \'%H:%i\') AS zaman
                FROM haberler h
               WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . haber_ana_akis_kosulu() . '
-                AND ' . haber_yas_dakika_ifadesi() . ' <= ' . haber_bugun_dakika() . '
               ORDER BY LEAST(h.olusturuldu, COALESCE(h.kaynak_tarihi, h.olusturuldu)) DESC, h.id DESC
               LIMIT ' . max(1, min(30, $adet))
         )->fetchAll();
@@ -375,8 +376,8 @@ function haber_sirasi_temel(bool $anaSayfa): string
  * 1), sonra 4-6... Eski haber, onemi ne olursa olsun yeni toplamanin
  * arkasina geciyor; her yeni toplamada bir dalga geriye kayiyor.
  * Dalga toplanma anina gore (olusturuldu): ayni calismanin haberleri
- * ayni dalgada kaliyor. Kaynakta bugun yayimlanmamis haber zaten ana
- * sayfada yok (haber_ana_akis_kosulu).
+ * ayni dalgada kaliyor. Gun basamagi dalgadan once: dunku haber, dalgasi
+ * ne olursa olsun bugunun haberlerinin arkasinda.
  */
 const ANA_SAYFA_DALGA_DAKIKA = 120;
 
@@ -508,10 +509,13 @@ function haber_okunma_birlesimi(): string
                         GROUP BY haber_id) zo ON zo.haber_id = h.id';
 }
 
+/** Ana sayfa sorgusunun bakacagi en eski haber (gun); bkz. haber_ana_akis_kosulu. */
+const HABER_ANA_SAYFA_EN_FAZLA_GUN = 14;
+
 /**
  * Ana sayfa akisinin kosulu: Resmi Gazete kaynakli olmayan, haber olan
- * (yemek tarifi gibi akis disi bir baslikta olmayan), kaynakta BUGUN
- * yayimlanmis haber.
+ * (yemek tarifi gibi akis disi bir baslikta olmayan), kaynak tarihi
+ * bilinen haber. Tarih penceresi yok; siniri haber sayisi koyuyor.
  */
 function haber_ana_akis_kosulu(): string
 {
@@ -523,13 +527,21 @@ function haber_ana_akis_kosulu(): string
     /*
      * KAYAN ANA SAYFA (site sahibi, 23.10.2026: "yeni gune gecince tum
      * haberler gitti; eski haberler, mesela dunkuler kalsin; yeni haber
-     * eklendikce eskiler yavas yavas ana sayfadan kalksin").
+     * eklendikce eskiler yavas yavas ana sayfadan kalksin"; 25.10.2026:
+     * "gece saat 12 oldugunda eski haberler kayboluyor; eski haberler her
+     * zaman dursun, yeni haber geldikce kaybolsun").
      *
-     * Aday: kaynakta bugun ya da dun yayimlanmis haberler. Sira bugunu
-     * once aliyor (haber_sirasi_temel, gun basamagi); ana sayfa en fazla
-     * ANA_SAYFA_HABER_SINIRI haber gosteriyor. Bugunun haberleri arttikca
-     * dunkuler sinirin disina itilip ana sayfadan dusuyor; gece yarisi
-     * ana sayfa bosalmiyor. Daha eskiler konu sayfalarinda.
+     * Onceki kosul "kaynakta bugun ya da dun" idi: takvim gunune bagliydi,
+     * gece yarisi pencere bir gun kayinca dunku haberlerin hepsi BIRDEN
+     * dusuyordu. Artik tarih penceresi yok: sira bugunu once aliyor
+     * (haber_sirasi_temel, gun basamagi) ve ana sayfa en fazla
+     * ANA_SAYFA_HABER_SINIRI haber gosteriyor. Eski haberi ana sayfadan
+     * cikaran tek sey, onun yerine gelen yeni haber. Ajan bir sure haber
+     * getiremese de ana sayfa bosalmiyor; en son haberler duruyor.
+     *
+     * HABER_ANA_SAYFA_EN_FAZLA_GUN yalnizca sorguyu sinirli tutmak icin
+     * (binlerce eski haberi her acilista siralamamak); 56 haberi her gun
+     * fazlasiyla geciyor.
      *
      * Kaynakta yayin tarihi bilinmeyen haber (kaynak_tarihi bos) ana
      * sayfaya girmiyor ("haberlerin tarihleri cok onemli"): yasi toplandigi
@@ -541,7 +553,7 @@ function haber_ana_akis_kosulu(): string
         . ' AND (h.kategori_id IS NULL OR h.kategori_id NOT IN'
         . ' (SELECT id FROM kategoriler WHERE slug IN (' . $disarida . ')))'
         . ' AND h.kaynak_tarihi IS NOT NULL'
-        . ' AND ' . haber_yas_dakika_ifadesi() . ' <= ' . (haber_bugun_dakika() + 1440);
+        . ' AND h.olusturuldu >= NOW() - INTERVAL ' . HABER_ANA_SAYFA_EN_FAZLA_GUN . ' DAY';
 }
 
 /**
