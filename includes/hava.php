@@ -38,6 +38,35 @@ const HAVA_ILLERI = [
     'eskisehir' => ['Eskişehir', 39.78, 30.52],
     'kayseri'   => ['Kayseri',   38.73, 35.48],
     'van'       => ['Van',       38.49, 43.38],
+    // Buyuksehirlerin geri kalani (24.10.2026, hava kartindaki sehir listesi).
+    'aydin'         => ['Aydın',          37.85, 27.85],
+    'balikesir'     => ['Balıkesir',      39.65, 27.88],
+    'denizli'       => ['Denizli',        37.78, 29.09],
+    'hatay'         => ['Hatay',          36.20, 36.16],
+    'kahramanmaras' => ['Kahramanmaraş',  37.58, 36.94],
+    'kocaeli'       => ['Kocaeli',        40.77, 29.92],
+    'malatya'       => ['Malatya',        38.35, 38.31],
+    'manisa'        => ['Manisa',         38.61, 27.43],
+    'mardin'        => ['Mardin',         37.31, 40.74],
+    'mersin'        => ['Mersin',         36.81, 34.64],
+    'mugla'         => ['Muğla',          37.22, 28.36],
+    'ordu'          => ['Ordu',           40.98, 37.88],
+    'sakarya'       => ['Sakarya',        40.78, 30.40],
+    'sanliurfa'     => ['Şanlıurfa',      37.16, 38.79],
+    'tekirdag'      => ['Tekirdağ',       40.98, 27.51],
+];
+
+/**
+ * Hava kartındaki şehir listesi: 30 büyükşehir (site sahibi, 24.10.2026:
+ * "liste yap ve sadece büyük şehirleri listede göster"). Sıra listede
+ * Türkçe alfabetik (hava_kutu.php).
+ */
+const HAVA_BUYUKSEHIRLER = [
+    'adana', 'ankara', 'antalya', 'aydin', 'balikesir', 'bursa', 'denizli',
+    'diyarbakir', 'erzurum', 'eskisehir', 'gaziantep', 'hatay', 'istanbul',
+    'izmir', 'kahramanmaras', 'kayseri', 'kocaeli', 'konya', 'malatya',
+    'manisa', 'mardin', 'mersin', 'mugla', 'ordu', 'sakarya', 'samsun',
+    'sanliurfa', 'tekirdag', 'trabzon', 'van',
 ];
 
 const HAVA_VARSAYILAN_IL = 'istanbul';
@@ -122,15 +151,27 @@ const HAVA_BUYUK_SEHIRLER = ['istanbul', 'ankara', 'izmir', 'bursa', 'antalya', 
  */
 function hava_buyuk_sehirler(): array
 {
+    return hava_sehirler(HAVA_BUYUK_SEHIRLER, 'hava_sehirler');
+}
+
+/**
+ * Verilen illerin anlık ve günlük hava durumu, tek istekle (bkz.
+ * hava_buyuk_sehirler). $onbellek: liste başına ayrı önbellek anahtarı.
+ *
+ * @param list<string> $iller HAVA_ILLERI anahtarları
+ * @return list<array{il:string,ad:string,sicaklik:int,en_yuksek:?int,en_dusuk:?int,durum:string,simge:string}>
+ */
+function hava_sehirler(array $iller, string $onbellek): array
+{
     $enlemler = [];
     $boylamlar = [];
 
-    foreach (HAVA_BUYUK_SEHIRLER as $il) {
+    foreach ($iller as $il) {
         $enlemler[]  = HAVA_ILLERI[$il][1];
         $boylamlar[] = HAVA_ILLERI[$il][2];
     }
 
-    $kayit = canli_onbellek('hava_sehirler', HAVA_ONBELLEK_SURE, static function () use ($enlemler, $boylamlar): ?array {
+    $kayit = canli_onbellek($onbellek, HAVA_ONBELLEK_SURE, static function () use ($enlemler, $boylamlar, $iller): ?array {
         $ham = canli_indir(
             'https://api.open-meteo.com/v1/forecast?latitude=' . implode(',', $enlemler)
             . '&longitude=' . implode(',', $boylamlar)
@@ -145,7 +186,7 @@ function hava_buyuk_sehirler(): array
 
         $liste = json_decode($ham, true);
 
-        if (!is_array($liste) || !array_is_list($liste) || count($liste) !== count(HAVA_BUYUK_SEHIRLER)) {
+        if (!is_array($liste) || !array_is_list($liste) || count($liste) !== count($iller)) {
             return null;
         }
 
@@ -168,7 +209,7 @@ function hava_buyuk_sehirler(): array
     $sehirler = [];
 
     foreach ((array) ($kayit['veri'] ?? []) as $i => $veri) {
-        $il = HAVA_BUYUK_SEHIRLER[$i] ?? null;
+        $il = $iller[$i] ?? null;
 
         if ($il === null || !is_array($veri)) {
             continue;

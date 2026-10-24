@@ -1538,7 +1538,37 @@ a.menu-oge.aktif::after,
     padding: 10px 0;
 }
 
-.hava-kart-sehirler li + li { border-top: 1px solid var(--cizgi); }
+.hava-kart-sehirler li[hidden] { display: none; }
+
+/* Satir cizgisi gorunen satirlar arasinda: siralama CSS order ile,
+   ilk satir (order 0) cizgisiz. */
+.hava-kart-sehirler li { border-top: 1px solid var(--cizgi); }
+.hava-kart-sehirler li[style*="order:0"],
+.hava-kart-sehirler li[style*="order: 0"] { border-top: none; }
+
+/* Sehir listesi baslik satirinin sagina oturuyor; akisin disinda,
+   kartin boyunu degistirmiyor (site sahibi: "kutularin boyutlariyla
+   oynama"). */
+.hava-kart { position: relative; }
+
+.hava-sec {
+    position: absolute;
+    top: 12px;
+    right: 18px;
+}
+
+.hava-sec select {
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--metin);
+    background: var(--kart);
+    border: 1px solid var(--cizgi);
+    border-radius: 6px;
+    padding: 3px 6px;
+    max-width: 140px;
+    cursor: pointer;
+}
 .hava-kart-sehirler .hava-ikon { color: var(--altin); display: inline-flex; }
 .hava-kart-sehirler .hava-ikon .hava-simge { width: 46px; height: 46px; }
 .hava-kart-sehirler .hava-bilgi { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
