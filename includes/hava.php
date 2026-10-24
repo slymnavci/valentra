@@ -59,7 +59,7 @@ function hava_durumu(string $il = HAVA_VARSAYILAN_IL): ?array
     $kayit = canli_onbellek('hava_' . $il, HAVA_ONBELLEK_SURE, static function () use ($enlem, $boylam): ?array {
         $ham = canli_indir(
             'https://api.open-meteo.com/v1/forecast?latitude=' . $enlem . '&longitude=' . $boylam
-            . '&current=temperature_2m,weather_code,is_day'
+            . '&current=temperature_2m,weather_code,is_day,apparent_temperature,relative_humidity_2m,wind_speed_10m'
             . '&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=4&timezone=Europe%2FIstanbul',
             6
         );
@@ -98,6 +98,10 @@ function hava_durumu(string $il = HAVA_VARSAYILAN_IL): ?array
         'en_dusuk'  => $veri['en_dusuk'] !== null ? (int) round((float) $veri['en_dusuk']) : null,
         'durum'     => $durum,
         'simge'     => $simge,
+        // Ek bilgiler (24.10.2026); eski onbellek kaydinda yok.
+        'hissedilen' => isset($veri['hissedilen']) ? (int) round((float) $veri['hissedilen']) : null,
+        'nem'        => isset($veri['nem']) ? (int) round((float) $veri['nem']) : null,
+        'ruzgar'     => isset($veri['ruzgar']) ? (int) round((float) $veri['ruzgar']) : null,
         'gunler'    => $gunler,
         'zaman'     => (int) $kayit['zaman'],
     ];
@@ -228,6 +232,9 @@ function hava_coz(string $ham): ?array
         'gunduz'    => (int) ($simdi['is_day'] ?? 1) === 1,
         'en_yuksek' => isset($gun['temperature_2m_max'][0]) ? (float) $gun['temperature_2m_max'][0] : null,
         'en_dusuk'  => isset($gun['temperature_2m_min'][0]) ? (float) $gun['temperature_2m_min'][0] : null,
+        'hissedilen' => isset($simdi['apparent_temperature']) ? (float) $simdi['apparent_temperature'] : null,
+        'nem'        => isset($simdi['relative_humidity_2m']) ? (float) $simdi['relative_humidity_2m'] : null,
+        'ruzgar'     => isset($simdi['wind_speed_10m']) ? (float) $simdi['wind_speed_10m'] : null,
         'gunler'    => $gunler,
     ];
 }

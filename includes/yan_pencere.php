@@ -25,21 +25,16 @@ require_once __DIR__ . '/ziyaret.php';
 
 $etiketler = haber_etiket_bulutu(12);
 $enCokOkunanlar = haber_en_cok_okunanlar(6);
-
-$yazarYazilari = [];
-
-try {
-    $yazarYazilari = kose_yazarlarin_son_yazilari();
-} catch (PDOException $e) {
-    error_log('[valentra] kose yazilari okunamadi: ' . $e->getMessage());
-}
 ?>
 <aside class="yan-pencere">
 
-    <?php require __DIR__ . '/kose_kutu.php'; ?>
-
-    <?php // Yazarlarimiz'in altinda hava durumu (24.10.2026, bkz. includes/hava_kutu.php). ?>
-    <?php require __DIR__ . '/hava_kutu.php'; ?>
+    <?php
+    /*
+     * Yazarlarimiz ve hava durumu YALNIZCA ana sayfanin vitrininde
+     * (index.php). Site sahibinin istegi (24.10.2026): "diger sayfalarda
+     * olmasina gerek yok, orada kendi haberlerimiz olsun yeter".
+     */
+    ?>
 
     <?php if (count($enCokOkunanlar) >= 3): ?>
         <section class="pencere" aria-labelledby="cok-okunan-baslik">

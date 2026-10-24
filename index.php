@@ -80,30 +80,53 @@ require __DIR__ . '/includes/sayfa_ust.php';
     </div>
 <?php else: ?>
 
-    <?php /* Ana kolon + yan pencere. Yan pencere mobilde ana kolonun altina duser. */ ?>
-    <div class="ana-duzen">
-        <div class="ana-kolon">
-            <?php
-            /*
-             * Manset ana kolonun tam genisliginde (22.10.2026, site
-             * sahibinin istegi: "ana haber alani daha buyuk olsun").
-             * "Valentra Diyor ki…" kutusu eskiden mansetle ayni siradaydi
-             * ve mansetı daraltiyordu; artik yan pencerede, "Konular"in
-             * yerinde (includes/yan_pencere.php).
-             *
-             * "Bugun bilmeniz gerekenler" (vergi takvimi, KDV hesabi,
-             * pratik bilgiler kisayollari) Ekim 2026'da kaldirildi; site
-             * genel haber ozetlerine dondu.
-             */
-            ?>
+    <?php
+    /*
+     * VITRIN (site sahibinin istegi, 24.10.2026: "yazarlar en sagda;
+     * hava durumunun boyu ile slaytlarin boyu, yazarlarin boyu ayni; alti
+     * haber olacak; seritte bosluklar istemiyorum, yerlesim cok muntazam
+     * olmali" ve "hava durumunda seride paralel buyuk sehir havasi").
+     *
+     *   1. sira, ayni yukseklikte: kaydirak | hava durumu | Yazarlarimiz
+     *   2. sira, ayni yukseklikte: piyasa seridi | buyuk sehirler seridi
+     *   Altinda haberler (ana kolon) ve yan pencerenin geri kalani.
+     *
+     * Dar ekranda kaydirak tam genislikte, hava ve Yazarlarimiz yan
+     * yana; telefonda hepsi alt alta (assets/style.css, .vitrin).
+     */
+    require_once __DIR__ . '/includes/kose.php';
+
+    try {
+        $yazarYazilari = $sayfa === 1 ? kose_yazarlarin_son_yazilari() : [];
+    } catch (PDOException $e) {
+        $yazarYazilari = [];
+    }
+
+    $havaSehirListesi = false;
+    ?>
+    <?php if ($sayfa === 1): ?>
+    <section class="vitrin">
+        <div class="vitrin-manset">
             <?php require __DIR__ . '/includes/kaydirak.php'; ?>
+        </div>
 
-            <?php /* Piyasa seridi kaydiragin hemen altinda: sayfa acilir
-                     acilmaz gorunen, surekli degisen tek veri. */ ?>
+        <?php require __DIR__ . '/includes/hava_kutu.php'; ?>
+        <?php require __DIR__ . '/includes/kose_kutu.php'; ?>
+
+        <div class="vitrin-piyasa">
             <?php require __DIR__ . '/includes/piyasa_serit.php'; ?>
+        </div>
 
-            <?php /* Kur grafikleri ana sayfadan kaldirildi (22.10.2026, site
-                     sahibinin karari); kurlar ve BIST seritte kaliyor. */ ?>
+        <div class="vitrin-sehirler">
+            <?php require __DIR__ . '/includes/hava_sehir_seridi.php'; ?>
+        </div>
+    </section>
+    <?php endif; ?>
+
+    <?php /* Ana kolon + yan pencere. Yan pencere mobilde ana kolonun altina duser.
+             Vitrin (Yazarlarimiz, hava) yalnizca ilk sayfada. */ ?>
+    <div class="ana-duzen anasayfa">
+        <div class="ana-kolon">
 
             <?php
             /*

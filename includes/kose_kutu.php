@@ -43,3 +43,27 @@ if (($yazarYazilari ?? []) === []) {
         <a href="<?= e(kose_liste_yolu()) ?>">Tüm yazılar &rarr;</a>
     </p>
 </section>
+
+<script>
+(function () {
+    /*
+     * Ana sayfa vitrininde kutu yuksekligi sabit (kaydirakla esit): sigmayan
+     * yazar yarim kesik gorunmesin, tamamen gizlensin; hepsi "Tum yazilar"da.
+     * Yeniden boyutlanmada tekrar hesaplaniyor.
+     */
+    var liste = document.currentScript.previousElementSibling.querySelector('.yazar-listesi');
+    if (!liste || !liste.closest('.vitrin')) { return; }
+
+    function sigdir() {
+        var ogeler = liste.querySelectorAll('li');
+        ogeler.forEach(function (li) { li.hidden = false; });
+        var alt = liste.getBoundingClientRect().bottom;
+        ogeler.forEach(function (li) {
+            if (li.getBoundingClientRect().bottom > alt + 1) { li.hidden = true; }
+        });
+    }
+
+    sigdir();
+    window.addEventListener('resize', sigdir);
+})();
+</script>
