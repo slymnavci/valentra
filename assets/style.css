@@ -1646,37 +1646,6 @@ a.menu-oge.aktif::after,
 
 .ana-kolon { min-width: 0; }
 
-/*
- * GENIS EKRANDA IKI SUTUNLU YAN PENCERE (site sahibinin istegi,
- * 24.10.2026: "en sagda hem yazarlar kalsin hem de hava durumu; kayan
- * haberleri biraz daha sola daralt"). Yazarlarimiz ve hava durumu yan
- * yana; ana kolon (kaydirak, piyasa seridi, kartlar) o kadar daraliyor.
- * Diger pencereler iki sutunu birden kapliyor. 1400 pikselden dar
- * ekranda eski tek sutun (340 piksel); telefonda yan pencere ana
- * kolonun altinda (asagida, 980px). Haber sayfasi (body.okuma) dar kalip
- * tek sutunda: metin satiri kisalmasin.
- */
-@media (min-width: 1400px) {
-    body:not(.okuma) .ana-duzen:not(.tam):not(.anasayfa) { grid-template-columns: minmax(0, 1fr) 680px; }
-
-    body:not(.okuma) .ana-duzen:not(.tam):not(.anasayfa) > .yan-pencere {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        align-items: start;
-        gap: 18px;
-    }
-
-    body:not(.okuma) .ana-duzen:not(.tam):not(.anasayfa) > .yan-pencere > * { grid-column: 1 / -1; }
-
-    body:not(.okuma) .ana-duzen:not(.tam):not(.anasayfa) > .yan-pencere > .kose-kutu,
-    body:not(.okuma) .ana-duzen:not(.tam):not(.anasayfa) > .yan-pencere > .hava-kart { grid-column: auto; }
-
-    /* Hava durumu ortada, Yazarlarimiz en sagda (site sahibi, 24.10.2026).
-       Tek sutunda (dar ekran) sira degismiyor: Yazarlarimiz ustte. */
-    body:not(.okuma) .ana-duzen:not(.tam):not(.anasayfa) > .yan-pencere > .hava-kart { order: 1; }
-    body:not(.okuma) .ana-duzen:not(.tam):not(.anasayfa) > .yan-pencere > .kose-kutu { order: 2; }
-    body:not(.okuma) .ana-duzen:not(.tam):not(.anasayfa) > .yan-pencere > :not(.hava-kart):not(.kose-kutu) { order: 3; }
-}
 
 /* Piyasa ve sirket sayfalari: yan pencere yok, grafikler tam genislikte
    (site sahibinin istegi, 23.10.2026: "grafikler sayfaya yerlessin,

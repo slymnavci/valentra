@@ -124,8 +124,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
     <?php endif; ?>
 
     <?php /* Ana kolon + yan pencere. Yan pencere mobilde ana kolonun altina duser.
-             Sonraki sayfalarda vitrin yok; Yazarlarimiz ve hava yan pencerede. */ ?>
-    <?php $yanPencereVitrinli = $sayfa === 1; ?>
+             Vitrin (Yazarlarimiz, hava) yalnizca ilk sayfada. */ ?>
     <div class="ana-duzen anasayfa">
         <div class="ana-kolon">
 
