@@ -1,17 +1,25 @@
 /* Valentra - vergi haberleri portali */
 
 :root {
-    --lacivert:      #17304f;
-    --lacivert-acik: #2b4a73;
-    --altin:         #c9a86a;
-    --altin-koyu:    #a8854a;
-    --zemin:         #f6f7f9;
+    /*
+     * BEYAZ VE KIRMIZI (site sahibinin istegi, 24.10.2026: "beyaz kirmizi
+     * tonlar daha iyi, ama agirlikli beyaz; boylece haber daha etkili
+     * olur"). Degisken adlari eski paletten kaldi (lacivert/altin) ve
+     * 100'den fazla yerde kullaniliyor; adlari degistirmek yerine
+     * degerleri degisti: "altin" artik vurgu kirmizisi, "lacivert" koyu
+     * antrasit. Logo kendi renklerini koruyor.
+     */
+    --lacivert:      #1f1f23;
+    --lacivert-acik: #3a3a40;
+    --altin:         #d7161f;
+    --altin-koyu:    #b3111a;
+    --zemin:         #f7f7f8;
     --kart:          #ffffff;
-    --metin:         #14213a;
-    --metin-soluk:   #5d6a80;
-    --cizgi:         #e2e6ec;
-    --vurgu:         #1b4f8f;
-    --golge:         0 1px 2px rgba(20, 33, 58, .05), 0 4px 16px rgba(20, 33, 58, .06);
+    --metin:         #18181b;
+    --metin-soluk:   #5f6168;
+    --cizgi:         #e6e6ea;
+    --vurgu:         #c0121b;
+    --golge:         0 1px 2px rgba(24, 24, 27, .05), 0 4px 16px rgba(24, 24, 27, .06);
     --yuvarlak:      10px;
     /* Genislik ucuncu kez artti (1180 -> 1460 -> 1680 -> 1880).
        Olculen sebep: 1680'lik kapak 1920px'lik ekranda iki yana
@@ -29,23 +37,27 @@
 
 @media (prefers-color-scheme: dark) {
     :root:where(:not([data-tema="acik"])) {
-        --zemin:       #0d1522;
-        --kart:        #151f30;
-        --metin:       #eef2f8;
-        --metin-soluk: #97a3b8;
-        --cizgi:       #24314a;
-        --vurgu:       #7aa9e8;
+        --zemin:       #111113;
+        --kart:        #1c1c20;
+        --metin:       #f2f2f4;
+        --metin-soluk: #a3a3ab;
+        --cizgi:       #2e2e34;
+        --vurgu:       #ff6b70;
+        --altin:       #ef3b43;
+        --altin-koyu:  #ff6b70;
         --golge:       0 1px 2px rgba(0, 0, 0, .4);
     }
 }
 
 :root:where([data-tema="koyu"]) {
-    --zemin:       #0d1522;
-    --kart:        #151f30;
-    --metin:       #eef2f8;
-    --metin-soluk: #97a3b8;
-    --cizgi:       #24314a;
-    --vurgu:       #7aa9e8;
+    --zemin:       #111113;
+    --kart:        #1c1c20;
+    --metin:       #f2f2f4;
+    --metin-soluk: #a3a3ab;
+    --cizgi:       #2e2e34;
+    --vurgu:       #ff6b70;
+    --altin:       #ef3b43;
+    --altin-koyu:  #ff6b70;
     --golge:       0 1px 2px rgba(0, 0, 0, .4);
 }
 
@@ -90,6 +102,9 @@ img { max-width: 100%; display: block; }
     margin: 0 auto;
     padding: 0 24px;
 }
+
+/* Beyaz menuyle icerik arasinda nefes payi (24.10.2026). */
+main.sinirli { padding-top: 18px; }
 
 /*
  * Okuma sayfalari (haber detayi gibi duz metin agirlikli olanlar)
@@ -188,9 +203,60 @@ body.okuma .sinirli { max-width: 1320px; }
     .logo .alt { display: none; }
 }
 
+.ust-bant .ust-arama { margin-left: auto; }
+
 .ust-bilgi {
     font-size: .90rem;
     color: var(--metin-soluk);
+}
+
+/* --- Bilgi cubugu: tarih, hava durumu, gece/gunduz (24.10.2026) ---------- */
+
+.bilgi-cubugu {
+    background: var(--zemin);
+    border-top: 3px solid var(--altin);
+    border-bottom: 1px solid var(--cizgi);
+    font-size: .86rem;
+    color: var(--metin-soluk);
+}
+
+.bilgi-satir {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    min-height: 36px;
+}
+
+.bilgi-tarih { white-space: nowrap; }
+
+.hava {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--metin);
+    white-space: nowrap;
+}
+
+.hava-ikon { display: inline-flex; color: var(--altin); }
+.hava-derece { font-weight: 700; font-size: .96rem; }
+.hava-aralik { color: var(--metin-soluk); }
+
+.hava-il {
+    border: 1px solid var(--cizgi);
+    border-radius: 6px;
+    background: var(--kart);
+    color: var(--metin);
+    font: inherit;
+    font-size: .84rem;
+    padding: 2px 6px;
+    cursor: pointer;
+}
+
+.bilgi-satir .tema-dugme { margin-left: auto; }
+
+@media (max-width: 640px) {
+    .bilgi-satir { gap: 10px; }
+    .bilgi-tarih, .hava-durum, .hava-aralik { display: none; }
 }
 
 /* --- Bolum basligi ------------------------------------------------------- */
@@ -208,7 +274,7 @@ body.okuma .sinirli { max-width: 1320px; }
     font-weight: 700;
     letter-spacing: .12em;
     text-transform: uppercase;
-    background: var(--lacivert);
+    background: var(--altin);
     color: #fff;
     padding: 6px 14px;
     border-radius: 4px;
@@ -248,7 +314,7 @@ body.okuma .sinirli { max-width: 1320px; }
 
 .manset-ana .gorsel {
     aspect-ratio: 16 / 9;
-    background: linear-gradient(135deg, #17304f, #2b4a73);
+    background: linear-gradient(135deg, #1f1f23, #3a3a40);
     object-fit: cover;
     width: 100%;
 }
@@ -262,14 +328,14 @@ body.okuma .sinirli { max-width: 1320px; }
 
 /* Gorseli olmayan manset: bos blok yerine lacivert tipografik panel */
 .manset-ana.yazili {
-    background: linear-gradient(150deg, #17304f 0%, #23405f 55%, #2b4a73 100%);
+    background: linear-gradient(150deg, #1f1f23 0%, #2c2c31 55%, #3a3a40 100%);
     color: #fff;
 }
 
 .manset-ana.yazili .govde { justify-content: center; padding: 40px 36px 44px; }
 .manset-ana.yazili h1 { color: #fff; }
 .manset-ana.yazili .ozet { color: #c3d0e2; }
-.manset-ana.yazili .kart-alt { color: #9db0c9; }
+.manset-ana.yazili .kart-alt { color: #c4c4cc; }
 .manset-ana.yazili .etiket { color: var(--altin); }
 
 .manset-ana.yazili::before {
@@ -350,7 +416,7 @@ body.okuma .sinirli { max-width: 1320px; }
 
 .kart .gorsel {
     aspect-ratio: 16 / 9;
-    background: linear-gradient(135deg, #17304f, #2b4a73);
+    background: linear-gradient(135deg, #1f1f23, #3a3a40);
     object-fit: cover;
     width: 100%;
 }
@@ -549,13 +615,19 @@ body.okuma .sinirli { max-width: 1320px; }
 }
 
 .menu-bant {
-    background: var(--lacivert);
+    /*
+     * BEYAZ MENU (24.10.2026): lacivert serit yerine beyaz zemin, koyu
+     * kalin yazi; aktif ve uzerine gelinen ogede kirmizi alt cizgi. Alt
+     * kenardaki ince kirmizi cizgi menuyu sayfadan ayiriyor.
+     */
+    background: var(--kart);
+    border-bottom: 2px solid var(--altin);
 
     /* Sayfadaki TEK yapiskan serit; bkz. .ust-bant aciklamasi. */
     position: sticky;
     top: 0;
     z-index: 30;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset;
+    box-shadow: 0 2px 10px rgba(24, 24, 27, .06);
 }
 
 .menu-satir {
@@ -577,44 +649,46 @@ body.okuma .sinirli { max-width: 1320px; }
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    padding: 0 18px;
-    min-height: 48px;
+    padding: 0 16px;
+    min-height: 50px;
     border: none;
     background: none;
-    color: #c8d5e6;
+    color: var(--metin);
     font-family: inherit;
-    font-size: .96rem;
-    font-weight: 600;
-    letter-spacing: .01em;
+    font-size: .98rem;
+    font-weight: 700;
+    letter-spacing: .005em;
     white-space: nowrap;
     cursor: pointer;
     position: relative;
-    transition: color .14s ease, background .14s ease;
+    transition: color .14s ease;
 }
 
 .menu-oge::after {
     content: "";
     position: absolute;
-    left: 14px;
-    right: 14px;
+    left: 12px;
+    right: 12px;
     bottom: 0;
-    height: 2px;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
     background: var(--altin);
     transform: scaleX(0);
     transition: transform .16s ease;
 }
 
-.menu-oge:hover { color: #fff; background: rgba(255, 255, 255, .06); }
+.menu-oge:hover { color: var(--altin); }
+.menu-oge:hover::after { transform: scaleX(1); }
 
 a.menu-oge.aktif,
-.menu-grup.aktif > .menu-oge { color: #fff; }
+.menu-grup.aktif > .menu-oge { color: var(--altin); }
 
 a.menu-oge.aktif::after,
 .menu-grup.aktif > .menu-oge::after { transform: scaleX(1); }
 
-.menu-oge .ok { transition: transform .16s ease; opacity: .7; }
+.menu-oge .ok { transition: transform .16s ease; opacity: .6; }
 .menu-grup.acik .menu-oge .ok { transform: rotate(180deg); }
-.menu-grup.acik > .menu-oge { color: #fff; background: rgba(255, 255, 255, .09); }
+.menu-grup.acik > .menu-oge { color: var(--altin); }
 
 /* --- Acilir liste -------------------------------------------------------- */
 
@@ -659,11 +733,11 @@ a.menu-oge.aktif::after,
     transition: background .12s ease, color .12s ease;
 }
 
-.menu-acilir a:hover { background: rgba(23, 48, 79, .07); color: var(--lacivert); }
+.menu-acilir a:hover { background: rgba(215, 22, 31, .06); color: var(--altin); }
 
 .menu-acilir a.aktif {
-    background: rgba(201, 168, 106, .16);
-    color: var(--lacivert);
+    background: rgba(215, 22, 31, .09);
+    color: var(--altin);
     font-weight: 700;
 }
 
@@ -676,15 +750,15 @@ a.menu-oge.aktif::after,
     padding: 1px 8px;
 }
 
-.menu-acilir a.aktif .adet { background: var(--altin); color: #14213a; }
+.menu-acilir a.aktif .adet { background: var(--altin); color: #fff; }
 
 @media (prefers-color-scheme: dark) {
-    :where(:root:not([data-tema="acik"])) .menu-acilir a:hover { background: rgba(255, 255, 255, .07); color: #fff; }
-    :where(:root:not([data-tema="acik"])) .menu-acilir a.aktif { color: #fff; }
+    :where(:root:not([data-tema="acik"])) .menu-acilir a:hover { background: rgba(255, 255, 255, .07); color: var(--altin); }
+    :where(:root:not([data-tema="acik"])) .menu-acilir a.aktif { color: var(--altin); }
 }
 
-:where(:root[data-tema="koyu"]) .menu-acilir a:hover { background: rgba(255, 255, 255, .07); color: #fff; }
-:where(:root[data-tema="koyu"]) .menu-acilir a.aktif { color: #fff; }
+:where(:root[data-tema="koyu"]) .menu-acilir a:hover { background: rgba(255, 255, 255, .07); color: var(--altin); }
+:where(:root[data-tema="koyu"]) .menu-acilir a.aktif { color: var(--altin); }
 
 /* Dar ekranda acilir liste yatay kaydirmayi bozmasin: akisa gecer. */
 @media (max-width: 720px) {
@@ -781,15 +855,15 @@ a.menu-oge.aktif::after,
      * kart sirasinin ust kenari 900 piksellik ekranda hala katlanin
      * ustunde kaliyor.
      */
-    height: clamp(320px, 48vh, 460px);
-    background: linear-gradient(150deg, #17304f 0%, #23405f 55%, #2b4a73 100%);
+    height: clamp(360px, 54vh, 520px);
+    background: linear-gradient(150deg, #1f1f23 0%, #2c2c31 55%, #3a3a40 100%);
     color: #fff;
 }
 
 .kaydirak-slayt.gorselli > a {
     position: relative;
     justify-content: flex-end;
-    background: #17304f;
+    background: #1f1f23;
     /* Bulanik arka gorsel kutudan tasmasin. */
     overflow: hidden;
 }
@@ -879,10 +953,10 @@ a.menu-oge.aktif::after,
      * fotografin ust yarisi net duruyor.
      */
     background: linear-gradient(to top,
-        rgba(8, 16, 30, .97) 0%,
-        rgba(8, 16, 30, .93) 38%,
-        rgba(8, 16, 30, .55) 68%,
-        rgba(8, 16, 30, .12) 88%,
+        rgba(12, 12, 14, .96) 0%,
+        rgba(12, 12, 14, .90) 42%,
+        rgba(12, 12, 14, .55) 70%,
+        rgba(12, 12, 14, .12) 90%,
         transparent 100%);
 
     /*
@@ -896,8 +970,8 @@ a.menu-oge.aktif::after,
 .kaydirak-govde .grup {
     align-self: flex-start;
     background: var(--altin);
-    color: #14213a;
-    font-size: .82rem;
+    color: #fff;
+    font-size: .86rem;
     font-weight: 700;
     letter-spacing: .06em;
     text-transform: uppercase;
@@ -905,13 +979,20 @@ a.menu-oge.aktif::after,
     border-radius: 3px;
 }
 
+/*
+ * YAZI DAHA BOL (site sahibinin istegi, 24.10.2026: "resim uzerindeki
+ * yazilari biraz daha bol yapabiliriz"): baslik daha buyuk ve uc
+ * satira kadar, spot uc satira kadar; slayt da biraz yukseldi ki
+ * fotograf yazinin altinda kaybolmasin.
+ */
 .kaydirak-govde h2 {
     margin: 0;
-    font-size: clamp(1.45rem, 3.3vw, 2.3rem);
+    font-size: clamp(1.6rem, 3.6vw, 2.75rem);
     font-weight: 800;
-    line-height: 1.16;
-    letter-spacing: -.012em;
+    line-height: 1.14;
+    letter-spacing: -.014em;
     color: #fff;
+    text-shadow: 0 1px 12px rgba(0, 0, 0, .35);
 
     /*
      * En fazla iki satir.
@@ -922,28 +1003,27 @@ a.menu-oge.aktif::after,
      * habere tiklandiginda tam gorunuyor.
      */
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
 
 .kaydirak-govde .ozet {
     margin: 0;
-    color: #c8d5e6;
-    font-size: 1rem;
-    max-width: 62ch;
+    color: #ececf0;
+    font-size: clamp(1rem, 1.25vw, 1.16rem);
+    line-height: 1.5;
+    max-width: 72ch;
 
-    /* Ayni gerekce: uc satirlik spot kutuyu buyutup gorseli
-       karartma altinda birakiyordu. Iki satir ozeti veriyor. */
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
 
 .kaydirak-govde .kunye {
-    font-size: .90rem;
-    color: #9db0c9;
+    font-size: .92rem;
+    color: #c4c4cc;
 }
 
 .kaydirak-ok {
@@ -1001,8 +1081,8 @@ a.menu-oge.aktif::after,
 .kaydirak-sayfalar button:hover { border-color: var(--altin); color: var(--metin); }
 
 .kaydirak-sayfalar button[aria-current="true"] {
-    background: var(--lacivert);
-    border-color: var(--lacivert);
+    background: var(--altin);
+    border-color: var(--altin);
     color: #fff;
 }
 
@@ -1031,7 +1111,7 @@ a.menu-oge.aktif::after,
 /* --- Kategori basligi ---------------------------------------------------- */
 
 .kategori-basligi {
-    margin: 30px 0 4px;
+    margin: 14px 0 4px;
 }
 
 .kategori-basligi h1 {
@@ -1051,7 +1131,8 @@ a.menu-oge.aktif::after,
 
     /* Telefonda ekranin yarisindan fazlasini tek habere vermek,
        altindaki listeyi tamamen gorunmez yapiyor. */
-    .kaydirak-slayt > a { height: clamp(280px, 46vh, 380px); }
+    .kaydirak-slayt > a { height: clamp(300px, 50vh, 400px); }
+    .kaydirak-govde h2 { font-size: 1.42rem; }
 
     /*
      * Telefonda spot gizleniyor.
@@ -1128,16 +1209,12 @@ a.menu-oge.aktif::after,
     color: var(--metin-soluk);
 }
 
+/* Beyaz kart, ustte kirmizi serit (24.10.2026; onceden koyu zemin). */
 .pencere-vurgu {
-    background: var(--lacivert);
+    border-top: 3px solid var(--altin);
 }
 
-.pencere-vurgu .pencere-baslik {
-    color: #fff;
-    border-bottom-color: var(--altin);
-}
-
-.pencere-vurgu .pencere-metin { color: rgba(255, 255, 255, .82); }
+.pencere-vurgu .pencere-baslik { border-bottom-color: var(--altin); }
 
 /* Son eklenenler */
 
@@ -1357,8 +1434,11 @@ a.menu-oge.aktif::after,
 
 /* --- Piyasa seridi -------------------------------------------------------- */
 
+/* Beyaz serit, kirmizi etiketler (24.10.2026; bkz. :root renk notu). */
 .piyasa-serit {
-    background: var(--lacivert);
+    background: var(--kart);
+    border: 1px solid var(--cizgi);
+    border-left: 3px solid var(--altin);
     border-radius: var(--yuvarlak);
     margin: 0 0 8px;
     overflow: hidden;
@@ -1397,7 +1477,7 @@ a.menu-oge.aktif::after,
 .piyasa-oge .deger {
     font-size: 1.04rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--metin);
     font-variant-numeric: tabular-nums;
 }
 
@@ -1407,9 +1487,9 @@ a.menu-oge.aktif::after,
     font-variant-numeric: tabular-nums;
 }
 
-.piyasa-oge .degisim.arti   { color: #57d38c; }
-.piyasa-oge .degisim.eksi   { color: #ff8a80; }
-.piyasa-oge .degisim.duraan { color: #b9c8dd; }
+.piyasa-oge .degisim.arti   { color: #15803d; }
+.piyasa-oge .degisim.eksi   { color: #d7161f; }
+.piyasa-oge .degisim.duraan { color: var(--metin-soluk); }
 
 /*
  * Degisim bilinmiyorsa kutu hic yer kaplamasin.
@@ -1423,8 +1503,16 @@ a.menu-oge.aktif::after,
 .piyasa-zaman .deger {
     font-size: .90rem;
     font-weight: 600;
-    color: #b9c8dd;
+    color: var(--metin-soluk);
 }
+
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) .piyasa-oge .degisim.arti { color: #4ade80; }
+    :where(:root:not([data-tema="acik"])) .piyasa-oge .degisim.eksi { color: #ff6b70; }
+}
+
+:where(:root[data-tema="koyu"]) .piyasa-oge .degisim.arti { color: #4ade80; }
+:where(:root[data-tema="koyu"]) .piyasa-oge .degisim.eksi { color: #ff6b70; }
 
 /*
  * Dar ekranda kaydir.
@@ -2198,7 +2286,7 @@ a.menu-oge.aktif::after,
     padding: 2px 8px;
     border-radius: 999px;
     background: var(--altin);
-    color: #3c2d10;
+    color: #fff;
     font-size: .62rem;
     font-weight: 700;
     letter-spacing: .04em;

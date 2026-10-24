@@ -27,8 +27,16 @@ ziyaret_kaydet(
 );
 
 require_once __DIR__ . '/menu.php';
+require_once __DIR__ . '/hava.php';
 
 $menu = site_menusu();
+
+// Ust cubuktaki hava durumu (varsayilan il; ziyaretcinin secimi betikle).
+try {
+    $hava = hava_durumu();
+} catch (Throwable $e) {
+    $hava = null;
+}
 
 /*
  * Arama motoru etiketleri.
@@ -117,6 +125,54 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
 $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
 ?>
 <body<?= $govdeSinifi !== '' ? ' class="' . e($govdeSinifi) . '"' : '' ?>>
+    <?php
+    /*
+     * UST BOLUM (site sahibinin istegi, 24.10.2026: "menuleri daha kolay
+     * ve akici yapalim; Milliyet'e benzesin ama tam benzemesin; beyaz ve
+     * kirmizi tonlar, agirlikli beyaz; bir yere hava durumunu koyalim").
+     *
+     *   1. Bilgi cubugu: tarih, hava durumu (il secilebilir), gece/gunduz.
+     *   2. Logo satiri: logo ve arama; beyaz.
+     *   3. Menu: beyaz zemin, koyu kalin yazi, aktif ogede kirmizi cizgi;
+     *      sayfadaki tek yapiskan serit.
+     */
+    ?>
+    <div class="bilgi-cubugu">
+        <div class="sinirli bilgi-satir">
+            <span class="bilgi-tarih"><?= e(tarih_bicimle(date('Y-m-d H:i:s'), false)) ?></span>
+
+            <?php if ($hava !== null): ?>
+                <div class="hava" id="hava" data-il="<?= e($hava['il']) ?>">
+                    <span class="hava-ikon" data-hava="simge"><?= hava_simge_svg($hava['simge']) ?></span>
+                    <span class="hava-derece" data-hava="sicaklik"><?= (int) $hava['sicaklik'] ?>°</span>
+                    <span class="hava-durum" data-hava="durum"><?= e($hava['durum']) ?></span>
+                    <?php if ($hava['en_yuksek'] !== null && $hava['en_dusuk'] !== null): ?>
+                        <span class="hava-aralik" data-hava="aralik">
+                            <?= (int) $hava['en_yuksek'] ?>° / <?= (int) $hava['en_dusuk'] ?>°
+                        </span>
+                    <?php endif; ?>
+                    <label class="gizli-etiket" for="hava-il">Hava durumu ili</label>
+                    <select id="hava-il" class="hava-il">
+                        <?php foreach (HAVA_ILLERI as $anahtar => $il): ?>
+                            <option value="<?= e($anahtar) ?>" <?= $anahtar === $hava['il'] ? 'selected' : '' ?>><?= e($il[0]) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            <?php endif; ?>
+
+            <button type="button" class="tema-dugme" id="tema-dugme"
+                    aria-label="Gece / gündüz modu" title="Gece / gündüz modu">
+                <svg class="tema-ay" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                </svg>
+                <svg class="tema-gunes" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                    <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
     <header class="ust-bant">
         <div class="sinirli ust-satir">
             <a class="logo" href="/">
@@ -126,35 +182,68 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
                     <span class="alt">GÜNCEL HABER ÖZETLERİ</span>
                 </span>
             </a>
-            <div class="ust-sag">
-                <div class="ust-bilgi"><?= e(tarih_bicimle(date('Y-m-d H:i:s'), false)) ?></div>
 
-                <button type="button" class="tema-dugme" id="tema-dugme"
-                        aria-label="Gece / gündüz modu" title="Gece / gündüz modu">
-                    <svg class="tema-ay" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                    </svg>
-                    <svg class="tema-gunes" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                        <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/>
-                        <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <form class="ust-arama" action="<?= e(arama_yolu()) ?>" method="get" role="search">
+                <label class="gizli-etiket" for="ust-arama-q">Sitede ara</label>
+                <input id="ust-arama-q" type="search" name="q" placeholder="Haber ara"
+                       value="<?= e(($aktifKategori ?? '') === 'ara' ? (string) ($_GET['q'] ?? '') : '') ?>"
+                       maxlength="100" autocomplete="off">
+                <button type="submit" aria-label="Ara">
+                    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                        <circle cx="7" cy="7" r="5.2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                        <path d="M11 11l3.6 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                     </svg>
                 </button>
-
-                <form class="ust-arama" action="<?= e(arama_yolu()) ?>" method="get" role="search">
-                    <label class="gizli-etiket" for="ust-arama-q">Sitede ara</label>
-                    <input id="ust-arama-q" type="search" name="q" placeholder="Haber ara"
-                           value="<?= e(($aktifKategori ?? '') === 'ara' ? (string) ($_GET['q'] ?? '') : '') ?>"
-                           maxlength="100" autocomplete="off">
-                    <button type="submit" aria-label="Ara">
-                        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                            <circle cx="7" cy="7" r="5.2" fill="none" stroke="currentColor" stroke-width="1.8"/>
-                            <path d="M11 11l3.6 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                        </svg>
-                    </button>
-                </form>
-            </div>
+            </form>
         </div>
     </header>
+
+    <?php if ($hava !== null): ?>
+    <script>
+    (function () {
+        // Hava durumu ili: secim tarayicida kaliyor; veri api/hava.php'den.
+        var kutu = document.getElementById('hava');
+        var secim = document.getElementById('hava-il');
+        if (!kutu || !secim) { return; }
+
+        function yaz(ad, deger, html) {
+            var e = kutu.querySelector('[data-hava="' + ad + '"]');
+            if (!e) { return; }
+            if (html) { e.innerHTML = deger; } else { e.textContent = deger; }
+        }
+
+        function getir(il) {
+            fetch('/api/hava.php?il=' + encodeURIComponent(il))
+                .then(function (y) { return y.ok ? y.json() : null; })
+                .then(function (v) {
+                    if (!v) { return; }
+                    yaz('simge', v.simge_svg, true);
+                    yaz('sicaklik', v.sicaklik + '°');
+                    yaz('durum', v.durum);
+                    if (v.en_yuksek !== null && v.en_dusuk !== null) {
+                        yaz('aralik', v.en_yuksek + '° / ' + v.en_dusuk + '°');
+                    }
+                    kutu.setAttribute('data-il', v.il);
+                })
+                .catch(function () { /* Gecici hata kutuyu bozmasin. */ });
+        }
+
+        var kayitli = null;
+        try { kayitli = localStorage.getItem('valentra-il'); } catch (e) {}
+
+        if (kayitli && kayitli !== kutu.getAttribute('data-il')
+            && secim.querySelector('option[value="' + kayitli + '"]')) {
+            secim.value = kayitli;
+            getir(kayitli);
+        }
+
+        secim.addEventListener('change', function () {
+            try { localStorage.setItem('valentra-il', secim.value); } catch (e) {}
+            getir(secim.value);
+        });
+    })();
+    </script>
+    <?php endif; ?>
 
     <script>
     (function () {
