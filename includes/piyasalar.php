@@ -282,8 +282,12 @@ function piyasa_sirket_fiyatlari(): array
     });
 }
 
-/** @return array<string,array{fiyat:float,degisim:?float}> kod (".IS"siz) => fiyat */
-function yahoo_spark_coz(string $ham): array
+/**
+ * @param int  $hane    fiyatin ondalik hanesi (doviz ve kripto icin daha fazla)
+ * @param bool $isAtilsin ".IS" eki atilsin mi (sirket listesi kodla anahtarlaniyor)
+ * @return array<string,array{fiyat:float,degisim:?float}> kod (".IS"siz) => fiyat
+ */
+function yahoo_spark_coz(string $ham, int $hane = 2, bool $isAtilsin = true): array
 {
     $veri  = json_decode($ham, true);
     $sonuc = [];
@@ -311,8 +315,10 @@ function yahoo_spark_coz(string $ham): array
             $degisim = $onceki > 0 ? ((float) $fiyat - $onceki) / $onceki * 100 : null;
         }
 
-        $sonuc[preg_replace('/\.IS$/', '', (string) $sembol) ?? (string) $sembol] = [
-            'fiyat'   => round((float) $fiyat, 2),
+        $anahtar = $isAtilsin ? (preg_replace('/\.IS$/', '', (string) $sembol) ?? (string) $sembol) : (string) $sembol;
+
+        $sonuc[$anahtar] = [
+            'fiyat'   => round((float) $fiyat, $hane),
             'degisim' => $degisim !== null ? round((float) $degisim, 2) : null,
         ];
     }

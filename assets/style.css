@@ -4945,3 +4945,82 @@ a.rg-madde:hover { color: var(--vurgu); }
 
 .yazar-portre.foto { object-fit: cover; object-position: center top; }
 .yazar-basligi .yazar-not { margin: 6px 0 0; font-size: .8rem; color: var(--metin-soluk); }
+
+/* ===== Piyasa tablolari (BigPara benzeri; includes/piyasa_tablolari.php) =====
+   En az 320px'lik sutunlar, sigdigi kadar (genis ekranda 4); az tablolu
+   bolumde tablolar satiri dolduracak kadar genisliyor. Yukselen/dusen
+   cifti kendi icinde iki tablo; izgarada iki sutun kapliyor (dense:
+   arkasindaki tablo bosluga yerlesiyor). */
+.ptablo-kap { container-type: inline-size; margin: 18px 0 26px; }
+.ptablo-izgara {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    grid-auto-flow: row dense;
+    gap: 16px;
+    align-items: start;
+}
+.ptablo-cift { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@container (min-width: 656px) {
+    .ptablo-cift { grid-column: span 2; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.ptablo {
+    background: var(--kart);
+    border: 1px solid var(--cizgi);
+    border-radius: var(--yuvarlak);
+    overflow: hidden;
+}
+.ptablo h3 {
+    margin: 0;
+    padding: 11px 14px;
+    font-size: .95rem;
+    font-weight: 800;
+    border-bottom: 2px solid var(--altin);
+    background: var(--kart);
+}
+.ptablo table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.ptablo thead th {
+    padding: 7px 14px;
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: var(--metin-soluk);
+    text-align: left;
+    border-bottom: 1px solid var(--cizgi);
+}
+.ptablo th.sayi, .ptablo td.sayi { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ptablo tbody th, .ptablo tbody td { padding: 7px 14px; border-bottom: 1px solid var(--cizgi); font-weight: 400; text-align: left; }
+.ptablo tbody td.sayi { text-align: right; font-weight: 600; }
+.ptablo tbody tr:last-child th, .ptablo tbody tr:last-child td { border-bottom: 0; }
+.ptablo tbody tr:nth-child(even) { background: color-mix(in srgb, var(--zemin) 60%, transparent); }
+.ptablo tbody tr:hover { background: color-mix(in srgb, var(--altin) 6%, transparent); }
+.ptablo tbody th a { color: inherit; text-decoration: none; display: block; }
+.ptablo tbody th a:hover .pt-kisa { color: var(--vurgu); }
+.pt-kisa { display: block; font-weight: 700; }
+.pt-ad { display: block; font-size: .76rem; color: var(--metin-soluk); }
+.ptablo tbody th .pt-ad:only-child { font-size: .86rem; color: var(--metin); font-weight: 600; }
+.ptablo .canli-not { margin: 0; padding: 8px 14px 10px; font-size: .72rem; border-top: 1px solid var(--cizgi); }
+
+.cevirici-form { display: grid; gap: 10px; padding: 14px; }
+.cevirici-form label { display: grid; gap: 4px; font-size: .76rem; font-weight: 700; color: var(--metin-soluk); }
+.cevirici-form input, .cevirici-form select {
+    font: inherit;
+    font-size: .95rem;
+    padding: 8px 10px;
+    border: 1px solid var(--cizgi);
+    border-radius: 8px;
+    background: var(--kart);
+    color: var(--metin);
+}
+.cevirici-sonuc {
+    display: block;
+    padding: 12px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--altin) 8%, transparent);
+    color: var(--metin);
+    font-size: 1.35rem;
+    font-weight: 800;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}

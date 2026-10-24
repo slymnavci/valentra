@@ -12,6 +12,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/piyasalar.php';
+require_once __DIR__ . '/piyasa_tablolari.php';
 require_once __DIR__ . '/piyasa.php';
 require_once __DIR__ . '/grafik.php';
 
@@ -28,29 +29,48 @@ function piyasa_bolumleri(): array
 {
     return [
         'bist' => [
-            'ad'       => 'BIST 100',
-            'baslik'   => 'BIST 100 ve Borsa İstanbul Şirketleri',
-            'aciklama' => 'BIST 100 endeksinin gün içi ve dönem grafikleri, dönem analizi ve büyük şirketlerin fiyatları.',
+            'ad'       => 'Borsa',
+            'baslik'   => 'Borsa İstanbul: BIST 100, Endeksler ve Hisseler',
+            'aciklama' => 'BIST 100 ve sektör endeksleri, günün yükselen ve düşen hisseleri, büyük şirketlerin fiyatları, dönem grafikleri ve analizi.',
             'araclar'  => ['bist'],
+            'tablolar' => ['endeks', 'yukselen'],
             'sirketler' => true,
         ],
         'doviz' => [
             'ad'       => 'Döviz',
-            'baslik'   => 'Döviz: Dolar ve Euro',
-            'aciklama' => 'Dolar/TL ve Euro/TL: anlık kur, gün içi hareket, 3 ay, 1 yıl ve 5 yıllık grafikler ve dönem analizi.',
+            'baslik'   => 'Döviz Kurları ve Pariteler',
+            'aciklama' => 'Dolar, euro, sterlin ve diğer döviz kurları; pariteler, döviz çevirici, dönem grafikleri ve analizi.',
             'araclar'  => ['usd', 'eur'],
+            'tablolar' => ['doviz', 'parite', 'cevirici'],
         ],
         'altin' => [
             'ad'       => 'Altın',
-            'baslik'   => 'Altın: Gram ve Ons',
-            'aciklama' => 'Gram ve ons altın: anlık fiyat, dönem grafikleri ve dönem analizi.',
+            'baslik'   => 'Altın Fiyatları: Gram, Çeyrek, Ons',
+            'aciklama' => 'Gram, çeyrek, yarım, tam ve Cumhuriyet altını, ons altın ve gümüş: anlık fiyat, dönem grafikleri ve analizi.',
             'araclar'  => ['altin', 'ons'],
+            'tablolar' => ['altin'],
         ],
+        // Anahtar "petrol" kaldi: eski adresler (?bolum=petrol) bozulmasin.
         'petrol' => [
-            'ad'       => 'Petrol',
-            'baslik'   => 'Brent Petrol',
-            'aciklama' => 'Brent petrol: anlık fiyat, dönem grafikleri ve dönem analizi.',
+            'ad'       => 'Emtia',
+            'baslik'   => 'Emtia: Petrol, Değerli Madenler, Tarım',
+            'aciklama' => 'Brent ve WTI petrol, doğal gaz, gümüş, platin, bakır, buğday: anlık fiyatlar, Brent grafikleri ve dönem analizi.',
             'araclar'  => ['brent'],
+            'tablolar' => ['emtia'],
+        ],
+        'kripto' => [
+            'ad'       => 'Kripto',
+            'baslik'   => 'Kripto Paralar: Bitcoin, Ethereum',
+            'aciklama' => 'Bitcoin, Ethereum ve diğer büyük kripto paraların dolar ve TL fiyatları, günlük değişim.',
+            'araclar'  => [],
+            'tablolar' => ['kripto'],
+        ],
+        'dunya' => [
+            'ad'       => 'Dünya Borsaları',
+            'baslik'   => 'Dünya Borsaları',
+            'aciklama' => 'ABD, Avrupa ve Asya borsalarının endeksleri: S&P 500, Dow Jones, Nasdaq, DAX, FTSE, Nikkei; pariteler.',
+            'araclar'  => [],
+            'tablolar' => ['dunya', 'parite'],
         ],
         'gostergeler' => [
             'ad'       => 'Ekonomik Göstergeler',
