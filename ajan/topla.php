@@ -323,8 +323,11 @@ if ($yapilandirmaKaynagi !== 'site') {
      * haber yok) site sorunu yine de sessiz kalmasin.
      */
     register_shutdown_function(static function () use (&$siteSorunuBildirildi, $siteHatasi, $kuruCalisma): void {
+        // Uyari: gonderilecek haber yoksa kaybolan bir sey yok. Uzun
+        // kesinti panelde ayrica gorunuyor ("ajandan N saattir haber
+        // ulasmadi", bkz. includes/ajan_tetikle.php).
         if (!$siteSorunuBildirildi && !$kuruCalisma) {
-            Bildirim::sorun(site_ulasilamadi_mesaji($siteHatasi, null));
+            Bildirim::uyari(site_ulasilamadi_mesaji($siteHatasi, null));
         }
     });
 
@@ -2116,7 +2119,6 @@ try {
      */
     gunluk('Gönderim başarısız: ' . $e->getMessage());
     $videoSonuc = 'Siteye gönderilemedi, sonraki çalışmada gönderilecek: ' . $e->getMessage();
-    Bildirim::sorun(site_ulasilamadi_mesaji($e->getMessage(), count($gonderilecek)));
     $siteSorunuBildirildi = true;
 
     /*
@@ -2136,6 +2138,23 @@ try {
     if ($teslimYazildi) {
         gunluk(count($gonderilecek) . ' haber GitHub\'a bırakıldı; site bunları kendisi alacak '
             . '(panel → Günlük işler → "GitHub\'da bekleyen haberleri al").');
+    }
+
+    /*
+     * Haberler GitHub'a birakildiysa bu bir HATA degil, gecikme
+     * (24.10.2026): site 10 dakikada bir bekleyenleri kendisi aliyor
+     * (includes/ajan_teslim.php). IHS gunde birkac calismada GitHub'in
+     * o anki adresinden gelen baglantilari 15-20 dakika kabul etmiyor;
+     * her seferinde calisma kirmiziya donuyor ve site sahibi "hata
+     * duzelmiyor" diye goruyordu. Uyari olarak kaliyor; birakilamadiysa
+     * (dosya yazilamadi) gercek hata.
+     */
+    if ($teslimYazildi) {
+        Bildirim::uyari('Ajan siteye ulaşamadı (hosting bağlantıyı geçici olarak kabul etmedi); '
+            . count($gonderilecek) . ' haber GitHub\'a bırakıldı, site birkaç dakika içinde kendisi alacak. '
+            . 'Teknik ayrıntı: ' . $e->getMessage());
+    } else {
+        Bildirim::sorun(site_ulasilamadi_mesaji($e->getMessage(), count($gonderilecek)));
     }
 
     if ($depo->yaz('bekleyen_haberler', $gonderilecek)) {

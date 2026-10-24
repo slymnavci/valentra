@@ -424,8 +424,7 @@ jobs:
             -H "X-Valentra-Key: $VALENTRA_AGENT_KEY" \
             -H "Authorization: Bearer $VALENTRA_AGENT_KEY" \
             "${VALENTRA_SITE_URL%/}/api/gsc-tazele.php" \
-            || { echo "::warning::Search Console tazeleme istegi basarisiz; panel acildiginda kendini tazeler."; \
-                 echo "Search Console verisi tazelenemedi: siteye ulaşılamadı." >> "$AJAN_SORUN_DOSYASI"; }
+            || echo "::warning::Search Console tazeleme istegi basarisiz; panel acildiginda kendini tazeler." 
           echo
 
       - name: Ajan deposunu kaydet

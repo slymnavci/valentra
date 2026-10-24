@@ -140,7 +140,10 @@ try {
      * Burada 1 donmek sonraki adimlari ve ajan deposunun kaydini
      * etkiliyordu; sorun yine de bildiriliyor.
      */
-    Bildirim::sorun('Köşe yazısı ajanı siteye ulaşamadı, bu çalışmada yazı yazılmadı. '
+    // Uyari (24.10.2026): model cagrisi yapilmadi, hicbir sey kaybolmadi;
+    // sonraki calisma yaziyor. Hosting gunde birkac kez GitHub'dan gelen
+    // baglantiyi 15-20 dakika kabul etmiyor (bkz. topla.php gonderim).
+    Bildirim::uyari('Köşe yazısı ajanı siteye ulaşamadı, bu çalışmada yazı yazılmadı; sonraki çalışmada yazılacak. '
         . 'Teknik ayrıntı: ' . $e->getMessage());
     exit(0);
 }
