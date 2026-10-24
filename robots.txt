@@ -19,3 +19,4 @@ Disallow: /egitim/content/
 Disallow: /*?sayfa=
 
 Sitemap: https://valentra.com.tr/sitemap.php
+Sitemap: https://valentra.com.tr/haber-haritasi.php
