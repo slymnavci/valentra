@@ -245,6 +245,13 @@ final class Yazar implements SemaliIstemci
           önemli diplomatik görüşmeler, büyük kulüplerin ve milli
           takımların maçları, piyasalarda belirgin hareket, önemli bilim
           ve sağlık haberleri.
+        - SPOR: Galatasaray, Fenerbahçe, Beşiktaş ve Trabzonspor'un
+          maçları (sonuç, maç öncesi, kadro) ve önemli gelişmeleri
+          (transfer, teknik direktör, sakatlık) 70-85; okurun en çok
+          ilgilendiği spor haberleri bunlardır. Milli takımlar 70-85.
+          Dünya sporunda büyük olaylar (Şampiyonlar Ligi, büyük
+          Avrupa ligleri, NBA ve EuroLeague'de öne çıkan gelişmeler,
+          büyük turnuvalar) 55-70. Diğer Süper Lig kulüpleri 55-70.
         - 30-59: Sınırlı etkili ya da rutin haberler: sektörel
           açıklamalar, alt lig ve küçük branş sonuçları, yerel olaylar,
           kültür-sanat etkinlikleri.

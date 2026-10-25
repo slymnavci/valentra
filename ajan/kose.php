@@ -83,6 +83,42 @@ register_shutdown_function(static function (): void {
         . str_replace(['%', "\r", "\n"], ['%25', '%0D', '%0A'], $metin) . PHP_EOL;
 });
 
+/**
+ * Haber, yazarın sözcük süzgecinden geçiyor mu?
+ *
+ * $gerekli bos degilse en az biri, $haric'ten hicbiri baslikta ya da
+ * ozette gecmeli (buyuk-kucuk harf farksiz, Turkce harflerle).
+ *
+ * @param list<string> $gerekli
+ * @param list<string> $haric
+ */
+function kelime_uyar(array $haber, array $gerekli, array $haric): bool
+{
+    if ($gerekli === [] && $haric === []) {
+        return true;
+    }
+
+    $metin = mb_strtolower(str_replace(['I', 'İ'], ['ı', 'i'], (string) ($haber['baslik'] ?? '') . ' ' . (string) ($haber['ozet'] ?? '')), 'UTF-8');
+
+    foreach ($haric as $k) {
+        if ($k !== '' && str_contains($metin, mb_strtolower((string) $k, 'UTF-8'))) {
+            return false;
+        }
+    }
+
+    if ($gerekli === []) {
+        return true;
+    }
+
+    foreach ($gerekli as $k) {
+        if ($k !== '' && str_contains($metin, mb_strtolower((string) $k, 'UTF-8'))) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function ayar(string $ad): string
 {
     $deger = getenv($ad);
@@ -152,7 +188,7 @@ $haberler = $malzeme['haberler'];
 
 /*
  * YAZARLAR (site sahibinin istegi, 23.10.2026): her gun her yazar kendi
- * alanindan TEK konu secip kendi uslubuyla bir yazi yaziyor (en fazla 7
+ * alanindan TEK konu secip kendi uslubuyla bir yazi yaziyor (en fazla 12
  * yazi). Site yazar listesini ve bugun yazanlari veriyor; eski site
  * surumu vermiyorsa tek bir "Valentra Yorumu" yazari varsayiliyor.
  * Valentra Yorumu en sonda: diger yazarlarin almadigi en onemli konu.
@@ -217,6 +253,12 @@ foreach ($bekleyenYazarlar as $kalem) {
         }
 
         if ($kategoriler !== [] && !in_array((string) ($h['kategori_slug'] ?? ''), $kategoriler, true)) {
+            continue;
+        }
+
+        // Kulup ve basketbol yazarlari: baslikta ya da ozette sozcuk aranir
+        // (25.10.2026; bkz. includes/yazarlar.php).
+        if (!kelime_uyar($h, (array) ($kalem['anahtar_kelimeler'] ?? []), (array) ($kalem['haric_kelimeler'] ?? []))) {
             continue;
         }
 
