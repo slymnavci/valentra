@@ -591,6 +591,26 @@ function ziyaret_yeni_sema(): bool
  */
 function haber_en_cok_okunanlar(int $adet = 6): array
 {
+    /*
+     * 5 dakika onbellek (25.10.2026): sayim ziyaretler tablosunun son iki
+     * gununu tariyor; ana sayfanin alt yarisi bunu beklerken
+     * gecikmeli aciliyordu. Bayatsa eskisi gosterilip sayfa gittikten
+     * sonra tazeleniyor (canli_onbellek).
+     */
+    require_once __DIR__ . '/canli_onbellek.php';
+
+    $liste = canli_onbellek('en_cok_okunan_' . $adet, 300, static function () use ($adet): ?array {
+        $liste = haber_en_cok_okunanlar_say($adet);
+
+        return $liste !== [] ? ['liste' => $liste] : null;
+    })['veri']['liste'] ?? null;
+
+    return is_array($liste) ? $liste : [];
+}
+
+/** @return list<array{baslik:string,slug:string,okuyucu:int}> */
+function haber_en_cok_okunanlar_say(int $adet): array
+{
     $yeni   = ziyaret_yeni_sema();
     $kimlik = $yeni ? ziyaret_kimlik_ifadesi('z') : 'z.ziyaretci';
     $insan  = $yeni ? ziyaret_insan_kosulu('z') : '1=1';

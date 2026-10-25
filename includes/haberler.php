@@ -488,10 +488,32 @@ function haber_ana_sayfa_ilk_set(): array
 /**
  * Son 24 saatin okunma sayıları (farklı okuyucu), ana sayfa sırası için.
  *
- * Ziyaret tablosu yoksa ya da bos ise birlesim bos donuyor; sira yalnizca
- * onem puanina gore kurulur.
+ * Sayim haber_okuyucu tablosunda, 5 dakikada bir tazeleniyor (sayfa
+ * gonderildikten sonra; bkz. haber_okuyucu_tazele). Onceden her sorguda
+ * ziyaretler tablosunun son gunu yeniden sayiliyordu: ana sayfa bunu
+ * dort bes kez yapiyordu ve buyuk tabloda sayfa saniyelerce bekliyordu
+ * (site sahibi, 25.10.2026: "site acilinca once ust, biraz sonra alt
+ * aciliyor"). Tablo henuz hic dolmadiysa (ilk kurulum) eski yol.
  */
 function haber_okunma_birlesimi(): string
+{
+    require_once __DIR__ . '/canli_onbellek.php';
+
+    static $hazir = null;
+
+    if ($hazir === null) {
+        $hazir = canli_onbellek('haber_okuyucu', 300, 'haber_okuyucu_tazele')['veri'] !== null;
+    }
+
+    if ($hazir) {
+        return 'LEFT JOIN haber_okuyucu zo ON zo.haber_id = h.id';
+    }
+
+    return 'LEFT JOIN (' . haber_okuyucu_sayim_sorgusu() . ') zo ON zo.haber_id = h.id';
+}
+
+/** Son 24 saatte haberi acan farkli okuyucu sayisi (haber_id, okuyucu). */
+function haber_okuyucu_sayim_sorgusu(): string
 {
     // Botlar ve hic gosterilmeyen onyuklemeler sayilmasin; ayni kisi
     // adres degistirdiginde iki okuyucu sayilmasin (bkz. includes/ziyaret.php).
@@ -501,12 +523,38 @@ function haber_okunma_birlesimi(): string
     $kimlik = $yeni ? ziyaret_kimlik_ifadesi() : 'ziyaretci';
     $insan  = $yeni ? ziyaret_insan_kosulu() : '1=1';
 
-    return 'LEFT JOIN (SELECT haber_id, COUNT(DISTINCT ' . $kimlik . ') AS okuyucu
-                         FROM ziyaretler
-                        WHERE haber_id IS NOT NULL
-                          AND zaman >= NOW() - INTERVAL 1 DAY
-                          AND ' . $insan . '
-                        GROUP BY haber_id) zo ON zo.haber_id = h.id';
+    return 'SELECT haber_id, COUNT(DISTINCT ' . $kimlik . ') AS okuyucu
+              FROM ziyaretler
+             WHERE haber_id IS NOT NULL
+               AND zaman >= NOW() - INTERVAL 1 DAY
+               AND ' . $insan . '
+             GROUP BY haber_id';
+}
+
+/**
+ * haber_okuyucu tablosunu yeniden doldurur (canli_onbellek uretici).
+ *
+ * @return array{adet:int}|null tablo yoksa (sema henuz guncellenmediyse) null
+ */
+function haber_okuyucu_tazele(): ?array
+{
+    try {
+        $pdo = db();
+        $pdo->beginTransaction();
+        $pdo->exec('DELETE FROM haber_okuyucu');
+        $adet = $pdo->exec('INSERT INTO haber_okuyucu (haber_id, okuyucu) ' . haber_okuyucu_sayim_sorgusu());
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if (isset($pdo) && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        error_log('[valentra] haber okuyucu sayimi: ' . $e->getMessage());
+
+        return null;
+    }
+
+    return ['adet' => (int) $adet];
 }
 
 /** Ana sayfa sorgusunun bakacagi en eski haber (gun); bkz. haber_ana_akis_kosulu. */
