@@ -54,6 +54,23 @@ function piyasa_verisi(bool $zorla = false): array
         if ($onbellek !== null) {
             return $onbellek + ['tazelendi' => false];
         }
+
+        /*
+         * Bayat ama gecerli veri varsa onu goster, yenisini SAYFA
+         * GONDERILDIKTEN SONRA cek (site sahibi, 25.10.2026: "site
+         * acilinca once ust, biraz sonra alt aciliyor"). Onceden serit
+         * 2 dakikadan eski veride ziyaretciyi bekletip dolar, euro, BIST
+         * ve altini sirayla kaynaktan cekiyordu; ana sayfanin alt yarisi
+         * bu sure boyunca gelmiyordu (yerel olcum: 1,4 sn). Ziyaretci
+         * artik hic beklemiyor; bir sonraki ziyaretci taze veriyi goruyor.
+         */
+        $eski = piyasa_onbellekten(true);
+
+        if ($eski !== null && piyasa_kur_makul($eski['usd'], $eski['eur'])) {
+            piyasa_sonra_tazele();
+
+            return $eski + ['tazelendi' => false];
+        }
     }
 
     $veri = piyasa_cek();
@@ -75,6 +92,54 @@ function piyasa_verisi(bool $zorla = false): array
     ayar_yaz(PIYASA_ONBELLEK_ANAHTAR, json_encode($veri, JSON_UNESCAPED_UNICODE));
 
     return $veri + ['tazelendi' => true];
+}
+
+/**
+ * Piyasa verisini yanıt gönderildikten sonra tazeler (istek başına bir kez).
+ *
+ * Ayni dakikada ikinci bir ziyaretci yeniden cekmesin diye deneme zamani
+ * ayarlarda: kaynaklar yavas ya da kapaliyken her ziyaretci denemesin.
+ */
+function piyasa_sonra_tazele(): void
+{
+    static $kuruldu = false;
+
+    if ($kuruldu) {
+        return;
+    }
+
+    $kuruldu = true;
+
+    if (time() - (int) ayar_oku('piyasa_son_deneme', '0') < 60) {
+        return;
+    }
+
+    ayar_yaz('piyasa_son_deneme', (string) time());
+
+    register_shutdown_function(static function (): void {
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        } elseif (function_exists('litespeed_finish_request')) {
+            litespeed_finish_request();
+        } else {
+            // Sayfayi en azindan tarayiciya gonder; baglanti acik kalsa da
+            // ziyaretci sayfanin tamamini goruyor.
+            while (ob_get_level() > 0) {
+                ob_end_flush();
+            }
+
+            flush();
+        }
+
+        ignore_user_abort(true);
+        @set_time_limit(60);
+
+        try {
+            piyasa_verisi(true);
+        } catch (Throwable $e) {
+            error_log('[valentra] piyasa tazeleme: ' . $e->getMessage());
+        }
+    });
 }
 
 /**

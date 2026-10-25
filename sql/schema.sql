@@ -706,6 +706,21 @@ CREATE TABLE IF NOT EXISTS ziyaretler (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
+-- Haber okuyucu sayilari (son 24 saat): ana sayfa sirasi icin onbellek.
+--
+-- Ana sayfa sirasina okunma da giriyor (bkz. haber_okunma_birlesimi).
+-- Onceden her sorguda ziyaretler tablosunun son gunu yeniden
+-- sayiliyordu; ana sayfa bunu dort bes kez yapiyor ve tablo buyudukce
+-- sayfa saniyelerce bekliyordu (25.10.2026). Sayim 5 dakikada bir,
+-- sayfa gonderildikten sonra buraya yaziliyor.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS haber_okuyucu (
+    haber_id    INT UNSIGNED NOT NULL,
+    okuyucu     INT UNSIGNED NOT NULL DEFAULT 0,
+    PRIMARY KEY (haber_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
 -- Pratik bilgiler
 --
 -- Asgari ucret, gelir vergisi tarifesi, KDV oranlari, SGK taban/tavan
