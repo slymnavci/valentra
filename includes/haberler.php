@@ -178,6 +178,30 @@ function haber_son_dakika_ifadesi(): string
 }
 
 /*
+ * DORT BUYUK KULUP (site sahibinin istegi, 25.10.2026: "spor haberlerinde
+ * Galatasaray, Fenerbahce, Besiktas, Trabzonspor'un maclari daha agirlikli
+ * olsun; en cok okunma buradan geliyor; ama dunyadan spor haberleri de
+ * olsun"). Basliginda bu kuluplerden biri gecen spor haberine siralamada
+ * +15 puan: ayni gunun diger spor haberlerinin onune geciyor, ama gun
+ * basamagi ve dalga degismiyor; dunya sporu sayfadan cikmiyor, arkaya
+ * diziliyor. Ajan da bu haberlere yuksek onem veriyor (ajan/src/Yazar.php).
+ * Sutunlar utf8mb4_unicode_ci: "BEŞİKTAŞ", "Besiktas" ayni.
+ */
+const HABER_BUYUK_KULUP_PUANI = 15;
+const HABER_BUYUK_KULUPLER    = ['galatasaray', 'fenerbahçe', 'beşiktaş', 'trabzonspor'];
+
+function haber_buyuk_kulup_ifadesi(): string
+{
+    $kosullar = array_map(
+        static fn (string $k): string => 'h.baslik LIKE ' . db()->quote('%' . $k . '%'),
+        HABER_BUYUK_KULUPLER
+    );
+
+    return "CASE WHEN k.slug = 'spor' AND (" . implode(' OR ', $kosullar) . ') THEN '
+        . HABER_BUYUK_KULUP_PUANI . ' ELSE 0 END';
+}
+
+/*
  * SON DAKIKA YUVASI (site sahibinin karari, 23.10.2026: "en basa en yeni
  * haberleri koyup son dakika yapalim; bir sonrakinde onem derecesine
  * gore geri gitsin, oradaki haber son dakika olsun; her seferinde en
@@ -342,7 +366,7 @@ function haber_sirasi_temel(bool $anaSayfa): string
      * kultur en sonda"). Konu sayfalarinda ikisi de yok: orada hepsi ayni
      * baslikta.
      */
-    $onem = haber_etkin_onem_ifadesi() . ' + ' . haber_son_dakika_ifadesi();
+    $onem = haber_etkin_onem_ifadesi() . ' + ' . haber_son_dakika_ifadesi() . ' + ' . haber_buyuk_kulup_ifadesi();
     $puan = $anaSayfa
         ? '(k.slug IN (\'teknoloji\', \'kultur-sanat\')) ASC,
            ' . $onem . ' + LEAST(30, 10 * LOG2(1 + COALESCE(zo.okuyucu, 0))) DESC'

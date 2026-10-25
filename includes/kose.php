@@ -17,7 +17,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/yazarlar.php';
 
 /** Bir günün en fazla kaç yazısı olabilir: her yazara bir yazı. */
-const KOSE_GUNLUK_TAVAN = 7;
+const KOSE_GUNLUK_TAVAN = 12;   // 7 genel + 5 spor yorumcusu (25.10.2026)
 
 /** Yazının asgari uzunluğu (karakter). Kısa bir yazı köşe yazısı değildir. */
 const KOSE_ASGARI_METIN = 800;
@@ -456,7 +456,7 @@ function kose_icerik_html(string $icerik): string
  *
  * @return list<array<string,mixed>>
  */
-function kose_malzeme(int $saat = 36, int $limit = 150): array
+function kose_malzeme(int $saat = 36, int $limit = 300): array
 {
     $kullanilan = [];
 
@@ -627,6 +627,8 @@ function kose_yazarlar_ajan_icin(?string $gun = null): array
             'ad'          => $y['ad'],
             'alan'        => $y['alan'],
             'kategoriler' => $y['kategoriler'],
+            'anahtar_kelimeler' => $y['anahtar_kelimeler'] ?? [],
+            'haric_kelimeler'   => $y['haric_kelimeler'] ?? [],
             'uslup'       => $y['uslup'],
             'bugun_yazdi' => isset($yazanlar[$anahtar]),
         ];

@@ -126,6 +126,10 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <?php require __DIR__ . '/includes/kaydirak.php'; ?>
         <?php endif; ?>
 
+        <?php if ($kategori['slug'] === 'spor' && $sporBolum === '' && $sayfa === 1): ?>
+            <?php require __DIR__ . '/includes/spor_yazarlari.php'; ?>
+        <?php endif; ?>
+
         <?php
         /*
          * Canli bolumler (22.10.2026, site sahibinin istegi): Spor'un
