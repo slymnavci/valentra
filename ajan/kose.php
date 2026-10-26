@@ -272,7 +272,11 @@ $yazar = new Yazar(ayar('GEMINI_API_KEY'), Yazar::koseModeli());
 // Uzun yazi 90 saniyeyi asabiliyor: istege 180 saniye, ama zaman asimi
 // ya da 5xx'te yalnizca iki yeniden deneme (eskiden alti, 11 dakikaya kadar).
 $yazar->sureSiniri(180, [10, 30], $bitis);
-gunluk('Model: ' . $yazar->model() . ' (köşe yazısı; GEMINI_KOSE_MODEL ile değiştirilebilir).');
+
+// Kose modeli yogunken (503) ayni istek haber modeline (bkz. Yazar::yedekModel).
+$yazar->yedekModel(Yazar::haberModeli());
+gunluk('Model: ' . $yazar->model() . ' (köşe yazısı; GEMINI_KOSE_MODEL ile değiştirilebilir; yoğunlukta yedek: '
+    . Yazar::haberModeli() . ').');
 $kose  = new KoseYazari($yazar);
 $sayfa = new Sayfa(new Http());
 
