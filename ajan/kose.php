@@ -19,7 +19,9 @@ declare(strict_types=1);
  * panelde reddedip yeniden calistirmak yeni yazi uretir.
  *
  * Calistirma:
- *   php ajan/kose.php [--zamanli] [--kuru] [--saat=36] [--en-erken=12]
+ *   php ajan/kose.php [--zamanli] [--kuru] [--saat=36] [--en-erken=12] [--sure=18]
+ *
+ * --sure: dakika cinsinden calisma butcesi (bkz. SURE BUTCESI).
  */
 
 // Yalnizca komut satirindan: sunucuya yuklenen kopya tarayicidan calismasin
@@ -48,11 +50,28 @@ use Valentra\Ajan\{Bildirim, Depo, Http, KoseYazari, KotaBittiException, ModelEr
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
-$secenekler = getopt('', ['zamanli', 'kuru', 'saat::', 'en-erken::']);
+$secenekler = getopt('', ['zamanli', 'kuru', 'saat::', 'en-erken::', 'sure::']);
 $zamanli    = isset($secenekler['zamanli']);
 $kuru       = isset($secenekler['kuru']);
 $saat       = max(6, (int) ($secenekler['saat'] ?? 36));
 $enErken    = max(0, min(23, (int) ($secenekler['en-erken'] ?? 12)));
+
+/*
+ * SURE BUTCESI (26.10.2026).
+ *
+ * Kose adimi bir calismada 44 dakika surdu, isin 45 dakikalik sinirina
+ * takilip iptal edildi ve yazilan yazilarin hicbiri siteye gitmedi
+ * (yazilar en sonda toplu gonderiliyordu). Simdi:
+ *   - butce dolunca yeni yazara gecilmiyor; kalanlar bugun yazmamis
+ *     sayildigi icin sonraki calismada yaziyor,
+ *   - model istegi butceyi asamiyor (Yazar::sureSiniri),
+ *   - her yazi yazildigi anda gonderiliyor.
+ */
+$baslangic = time();
+$bitis     = $baslangic + max(5, (int) ($secenekler['sure'] ?? 18)) * 60;
+
+/** Bir yazara baslamak icin kalmasi gereken en az sure (saniye): konu + yazi. */
+const YAZAR_ASGARI_SURE = 4 * 60;
 
 /** Madde başına okunacak en fazla kaynak sayfa. */
 const KAYNAK_SAYFA_TAVANI = 2;
@@ -232,6 +251,10 @@ gunluk(count($haberler) . ' haber malzeme; bugün yazacak ' . count($bekleyenYaz
 
 // Kose yazisi haberden ayri, daha guclu modelle (GEMINI_KOSE_MODEL; bkz. Yazar).
 $yazar = new Yazar(ayar('GEMINI_API_KEY'), Yazar::koseModeli());
+
+// Uzun yazi 90 saniyeyi asabiliyor: istege 180 saniye, ama zaman asimi
+// ya da 5xx'te yalnizca iki yeniden deneme (eskiden alti, 11 dakikaya kadar).
+$yazar->sureSiniri(180, [10, 30], $bitis);
 gunluk('Model: ' . $yazar->model() . ' (köşe yazısı; GEMINI_KOSE_MODEL ile değiştirilebilir).');
 $kose  = new KoseYazari($yazar);
 $sayfa = new Sayfa(new Http());
@@ -240,8 +263,21 @@ $yazilar    = [];
 $kullanilan = [];   // bu calismada baska yazarin konusu olmus haberler (indis)
 $sira       = $malzeme['bugun_sayisi'];
 
-foreach ($bekleyenYazarlar as $kalem) {
+// Siteye gonderilemeyenler; calisma sonunda depoya (bkz. 0. adim).
+$gonderilemeyen = [];
+$eklenen        = 0;
+$siteDustu      = false;
+
+foreach ($bekleyenYazarlar as $yazarNo => $kalem) {
     $ad = (string) $kalem['ad'];
+
+    if ($bitis - time() < YAZAR_ASGARI_SURE) {
+        $kalanlar = array_map(static fn (array $y): string => (string) $y['ad'], array_slice($bekleyenYazarlar, $yazarNo));
+        gunluk('Süre bütçesi doldu (' . intdiv(time() - $baslangic, 60) . ' dk); sonraki çalışmaya kalan '
+            . count($kalanlar) . ' yazar: ' . implode(', ', $kalanlar) . '.');
+        break;
+    }
+
     $kategoriler = array_map('strval', (array) ($kalem['kategoriler'] ?? []));
 
     // Yazarin alanindaki, baska yazara verilmemis haberler (Valentra: hepsi).
@@ -304,6 +340,11 @@ foreach ($bekleyenYazarlar as $kalem) {
     $kaynakMetinleri = [];
 
     foreach (array_slice($madde['haberler'], 0, KAYNAK_SAYFA_TAVANI) as $altIndis) {
+        // Sayfa okumak istege bagli: sure azaldiysa yazi haber metniyle.
+        if ($bitis - time() < YAZAR_ASGARI_SURE / 2) {
+            break;
+        }
+
         $url = (string) ($altHaberler[$altIndis]['kaynak_url'] ?? '');
 
         if (!preg_match('#^https?://#i', $url)) {
@@ -347,7 +388,7 @@ foreach ($bekleyenYazarlar as $kalem) {
         $idler[] = (int) ($altHaberler[$altIndis]['id'] ?? 0);
     }
 
-    $yazilar[] = [
+    $yazilar[] = $yeni = [
         'gun'          => $malzeme['bugun'],
         'sira'         => ++$sira,
         'gundem'       => $madde['gundem'],
@@ -360,7 +401,34 @@ foreach ($bekleyenYazarlar as $kalem) {
     ];
 
     gunluk('  yazıldı: ' . $yazi['baslik'] . ' (' . count(preg_split('/\s+/u', $yazi['icerik']) ?: []) . ' kelime, '
-         . count($kaynakMetinleri) . ' kaynak sayfa)');
+         . count($kaynakMetinleri) . ' kaynak sayfa, ' . (time() - $baslangic) . ' sn)');
+
+    /*
+     * Yazi hemen gonderiliyor: calisma sonradan kesilse de kaybolmasin.
+     * Site bir kez dustuyse bu calismada yeniden denenmiyor (her deneme
+     * dakikalar suruyor); kalanlar depoda bekliyor.
+     */
+    if ($kuru) {
+        continue;
+    }
+
+    if ($siteDustu) {
+        $gonderilemeyen[] = $yeni;
+        continue;
+    }
+
+    try {
+        $sonuc = $site->koseGonder([$yeni]);
+        $eklenen += (int) ($sonuc['eklenen'] ?? 0);
+
+        foreach ((array) ($sonuc['hatalar'] ?? []) as $hata) {
+            gunluk('  hata: ' . json_encode($hata, JSON_UNESCAPED_UNICODE));
+        }
+    } catch (Throwable $e) {
+        gunluk('  gönderilemedi, bekletiliyor: ' . $e->getMessage());
+        $gonderilemeyen[] = $yeni;
+        $siteDustu        = true;
+    }
 }
 
 $kullanim = $yazar->kullanim();
@@ -387,25 +455,15 @@ if ($kuru) {
 
 // --- 4. Gonder ------------------------------------------------------------------
 
-try {
-    $sonuc = $site->koseGonder($yazilar);
-} catch (Throwable $e) {
-    gunluk('Gönderim başarısız: ' . $e->getMessage());
-
-    if ($depo->yaz('bekleyen_kose', $yazilar)) {
-        gunluk(count($yazilar) . ' yazı saklandı; siteye ulaşılabilen ilk çalışmada gönderilecek.');
-    }
-
-    exit(0);
+// Yazilar yazildikca gonderildi; burada yalnizca gonderilemeyenler.
+if ($gonderilemeyen !== [] && $depo->yaz('bekleyen_kose', $gonderilemeyen)) {
+    gunluk(count($gonderilemeyen) . ' yazı saklandı; siteye ulaşılabilen ilk çalışmada gönderilecek.');
 }
 
 gunluk(sprintf(
-    '%d yazı gönderildi (%d yinelenen, %d hata). ' . (string) ($sonuc['not'] ?? ''),
-    (int) ($sonuc['eklenen'] ?? 0),
-    (int) ($sonuc['yinelenen'] ?? 0),
-    count((array) ($sonuc['hatalar'] ?? []))
+    '%d yazı yazıldı, %d siteye eklendi%s; süre %d dk.',
+    count($yazilar),
+    $eklenen,
+    $gonderilemeyen !== [] ? ', ' . count($gonderilemeyen) . ' bekletiliyor' : '',
+    intdiv(time() - $baslangic, 60)
 ));
-
-foreach ((array) ($sonuc['hatalar'] ?? []) as $hata) {
-    gunluk('  hata: ' . json_encode($hata, JSON_UNESCAPED_UNICODE));
-}
