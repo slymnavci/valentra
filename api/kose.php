@@ -73,8 +73,17 @@ foreach ($veri['yazilar'] as $sira => $yazi) {
         }
     } catch (InvalidArgumentException $e) {
         $hatalar[] = ['sira' => $sira, 'mesaj' => $e->getMessage()];
-    } catch (PDOException $e) {
-        $hatalar[] = ['sira' => $sira, 'mesaj' => 'Kaydedilemedi.'];
+    } catch (Throwable $e) {
+        /*
+         * 26.10.2026: dort yazi "HTTP 500" ile geri dondu; hata yerelde
+         * cikmiyor, ayrintisi yalnizca sunucu gunlugundeydi. Artik bir
+         * yazinin hatasi digerlerini dusurmuyor ve sebebi ajana (anahtarla
+         * korunan uc) donuyor; ajan gunlugune yaziyor.
+         */
+        error_log('[valentra] kose yazisi kaydedilemedi: ' . get_class($e) . ': ' . $e->getMessage()
+            . ' @ ' . $e->getFile() . ':' . $e->getLine());
+        $hatalar[] = ['sira' => $sira, 'mesaj' => 'Kaydedilemedi: ' . get_class($e) . ': '
+            . mb_substr($e->getMessage(), 0, 300, 'UTF-8') . ' (' . basename($e->getFile()) . ':' . $e->getLine() . ')'];
     }
 }
 
