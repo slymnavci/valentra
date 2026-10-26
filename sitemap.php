@@ -22,10 +22,12 @@ header('Content-Type: application/xml; charset=utf-8');
 
 $taban = site_adresi();
 
+// Cok kisa haberler Google'a sunulmuyor (bkz. haber_ince_mi).
 $haberler = db()->query(
     'SELECT slug, yayin_tarihi, guncellendi
        FROM haberler
       WHERE durum = ' . db()->quote(HABER_YAYINDA) . '
+        AND ' . haber_dizinlenir_kosulu() . '
       ORDER BY yayin_tarihi DESC
       LIMIT 2000'
 )->fetchAll();

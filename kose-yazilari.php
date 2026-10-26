@@ -31,6 +31,12 @@ $sayfaAciklama = 'Valentra\'nın her gün gündemin ve dünyanın en önemli kon
                . 'değerlendirdiği köşe yazıları.';
 $seoAdres      = site_adresi() . kose_liste_yolu($sayfa);
 
+// Liste sayfalarinin 2., 3. ... sayfalari Google'a sunulmuyor (26.10.2026):
+// icerikleri haberlerin kendisinde; 'follow' ile baglantilar yine taraniyor.
+if ($sayfa > 1) {
+    $seoRobots = 'noindex, follow';
+}
+
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
 

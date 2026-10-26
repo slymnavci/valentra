@@ -127,6 +127,8 @@ CREATE TABLE IF NOT EXISTS haberler (
     isletme_etkisi   VARCHAR(800) NOT NULL DEFAULT '',
     uygulama_ornegi  TEXT         NULL,
     resmi_dayanak    VARCHAR(400) NOT NULL DEFAULT '',
+    -- Haberin kaynakta olmayan acisi: "Neden onemli?" (26.10.2026).
+    neden_onemli     VARCHAR(800) NOT NULL DEFAULT '',
 
     onaylayan_id    INT UNSIGNED  NULL,
     onay_tarihi     DATETIME      NULL,

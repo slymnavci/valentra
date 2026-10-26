@@ -964,13 +964,13 @@ function haber_taslak_ekle(array $veri): array
              kaynak_id, kaynak_adi, kaynak_url, kaynak_parmak, url_parmak,
              baslik_parmak, kaynak_baslik, kaynak_baslik_parmak, iframe_url, guven_skoru, onem, ajan_notu, ajan_modeli,
              analiz_degisen, analiz_etkilenen, analiz_zaman, analiz_islem,
-             isletme_etkisi, uygulama_ornegi, resmi_dayanak, kaynak_tarihi)
+             isletme_etkisi, uygulama_ornegi, resmi_dayanak, neden_onemli, kaynak_tarihi)
          VALUES
             (:baslik, :slug, :ozet, :icerik, :gorsel_url, :etiketler, :durum, :kategori_id,
              :kaynak_id, :kaynak_adi, :kaynak_url, :kaynak_parmak, :url_parmak,
              :baslik_parmak, :kaynak_baslik, :kaynak_baslik_parmak, :iframe_url, :guven_skoru, :onem, :ajan_notu, :ajan_modeli,
              :analiz_degisen, :analiz_etkilenen, :analiz_zaman, :analiz_islem,
-             :isletme_etkisi, :uygulama_ornegi, :resmi_dayanak,
+             :isletme_etkisi, :uygulama_ornegi, :resmi_dayanak, :neden_onemli,
              IF(:kaynak_var = 1, NOW() - INTERVAL :kaynak_gecikme MINUTE, NULL))'
     );
 
@@ -1508,7 +1508,8 @@ function haber_guncelle(int $id, array $veri): bool
                 analiz_islem = :analiz_islem,
                 isletme_etkisi = :isletme_etkisi,
                 uygulama_ornegi = :uygulama_ornegi,
-                resmi_dayanak = :resmi_dayanak
+                resmi_dayanak = :resmi_dayanak,
+                neden_onemli = :neden_onemli
           WHERE id = :id'
     );
 
@@ -1551,7 +1552,10 @@ function haber_guncelle(int $id, array $veri): bool
  * model cevabi INSERT'i dusurmesin. Bos birakilan alan sayfada gorunmez.
  *
  * @param array<string,mixed> $veri
- * @return array{isletme_etkisi:string,uygulama_ornegi:?string,resmi_dayanak:string}
+ * "Neden onemli?" da burada (26.10.2026): ajandan ve panelden ayni
+ * kirpma; editor bos birakirsa sayfada gorunmez.
+ *
+ * @return array{isletme_etkisi:string,uygulama_ornegi:?string,resmi_dayanak:string,neden_onemli:string}
  */
 function haber_format_alanlari(array $veri): array
 {
@@ -1561,6 +1565,7 @@ function haber_format_alanlari(array $veri): array
         'isletme_etkisi'  => mb_substr(trim((string) ($veri['isletme_etkisi'] ?? '')), 0, 800, 'UTF-8'),
         'uygulama_ornegi' => $ornek !== '' ? mb_substr($ornek, 0, 6000, 'UTF-8') : null,
         'resmi_dayanak'   => mb_substr(trim((string) ($veri['resmi_dayanak'] ?? '')), 0, 400, 'UTF-8'),
+        'neden_onemli'    => mb_substr(trim((string) ($veri['neden_onemli'] ?? '')), 0, 800, 'UTF-8'),
     ];
 }
 
@@ -2073,4 +2078,111 @@ function haber_belge_turu(array $haber): ?string
     }
 
     return null;
+}
+
+/* ------------------------------------------------------------------ *
+ * Google'a sunulan haberler ve ilgili haberler (26.10.2026)
+ *
+ * Search Console: 166 sayfa "Tarandi - dizine eklenmemis", 254 sayfa
+ * "Kesfedildi". Google bir haber ozetini, aslinin zaten dizininde olmasi
+ * nedeniyle cogu zaman almiyor; cok sayida kisa sayfa da butun sitenin
+ * degerlendirmesini dusuruyor. Iki onlem:
+ *   - Cok kisa haberler (metin + "Neden onemli?" toplami bu sinirin
+ *     altinda) "noindex, follow" ile isaretleniyor ve site
+ *     haritalarina konmuyor. Okuyucu icin sitede kalmaya devam ediyor.
+ *   - Her haberin altinda ayni baslik ve etiketlerden ilgili haberler:
+ *     ic baglanti hem okuru sitede tutuyor hem Google'in sayfalari
+ *     kesfetmesini hizlandiriyor.
+ * ------------------------------------------------------------------ */
+
+/** Bu uzunluğun (karakter) altındaki haber Google'a sunulmuyor (~90 kelime). */
+const HABER_INCE_KARAKTER = 600;
+
+/** @param array<string,mixed> $haber */
+function haber_ince_mi(array $haber): bool
+{
+    $uzunluk = mb_strlen(trim((string) ($haber['icerik'] ?? '')), 'UTF-8')
+             + mb_strlen(trim((string) ($haber['neden_onemli'] ?? '')), 'UTF-8');
+
+    return $uzunluk < HABER_INCE_KARAKTER;
+}
+
+/**
+ * Site haritalarında kullanılan SQL koşulu (haber_ince_mi'nin karşılığı).
+ *
+ * "neden_onemli" sutunu yoksa (sema yukseltmesi dustuyse) yalnizca metin
+ * uzunlugu: site haritasi hata verip bos kalmasin.
+ */
+function haber_dizinlenir_kosulu(string $takma = ''): string
+{
+    static $neden = null;
+
+    if ($neden === null) {
+        try {
+            db()->query('SELECT neden_onemli FROM haberler LIMIT 0');
+            $neden = true;
+        } catch (Throwable $e) {
+            $neden = false;
+        }
+    }
+
+    $p = $takma !== '' ? $takma . '.' : '';
+
+    return '(CHAR_LENGTH(' . $p . 'icerik)' . ($neden ? ' + CHAR_LENGTH(' . $p . 'neden_onemli)' : '')
+         . ' >= ' . HABER_INCE_KARAKTER . ')';
+}
+
+/**
+ * Bir haberin ilgili haberleri.
+ *
+ * Son 30 gunun haberleri puanlaniyor: once ortak etiket sayisi, sonra
+ * ayni baslik (kategori), esitse yeniden eskiye. Kendisi ve ayni olayin
+ * kopyalari (ayni baslik parmagi) disarida.
+ *
+ * @param array<string,mixed> $haber
+ * @return list<array<string,mixed>>
+ */
+function haber_ilgililer(array $haber, int $adet = 4): array
+{
+    $etiketler = array_map(
+        static fn (string $e): string => mb_strtolower($e, 'UTF-8'),
+        etiketleri_coz((string) ($haber['etiketler'] ?? ''))
+    );
+
+    try {
+        $ifade = db()->prepare(
+            'SELECT h.id, h.baslik, h.slug, h.ozet, h.etiketler, h.gorsel_url, h.yayin_tarihi, h.kategori_id,
+                    k.ad AS kategori_adi, k.slug AS kategori_slug
+               FROM haberler h
+          LEFT JOIN kategoriler k ON k.id = h.kategori_id
+              WHERE h.durum = :d
+                AND h.id <> :id
+                AND h.yayin_tarihi >= NOW() - INTERVAL 30 DAY
+                AND (h.baslik_parmak IS NULL OR CHAR_LENGTH(:bp) = 0 OR h.baslik_parmak <> :bp2)
+              ORDER BY h.yayin_tarihi DESC
+              LIMIT 200'
+        );
+        $bp = (string) ($haber['baslik_parmak'] ?? '');
+        $ifade->execute(['d' => HABER_YAYINDA, 'id' => (int) $haber['id'], 'bp' => $bp, 'bp2' => $bp]);
+        $adaylar = $ifade->fetchAll();
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    $puanli = [];
+
+    foreach ($adaylar as $sira => $aday) {
+        $ortak = array_intersect(
+            $etiketler,
+            array_map(static fn (string $e): string => mb_strtolower($e, 'UTF-8'), etiketleri_coz((string) $aday['etiketler']))
+        );
+        $ayniBaslik = (string) ($aday['kategori_id'] ?? '') === (string) ($haber['kategori_id'] ?? '');
+        // Ortak etiket once, sonra ayni baslik; esitse daha yeni olan
+        // (sira zaten yeniden eskiye).
+        $puanli[] = ['puan' => count($ortak) * 1000 + ($ayniBaslik ? 500 : 0) - $sira, 'haber' => $aday];
+    }
+
+    usort($puanli, static fn (array $a, array $b): int => $b['puan'] <=> $a['puan']);
+
+    return array_slice(array_column($puanli, 'haber'), 0, $adet);
 }

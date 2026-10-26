@@ -224,6 +224,20 @@ final class Yazar implements SemaliIstemci
            analiz_zaman, analiz_islem, isletme_etkisi, uygulama_ornegi,
            resmi_dayanak) artık kullanılmıyor: HEPSİNİ BOŞ BIRAK.
 
+        NEDEN ÖNEMLİ (neden_onemli): Haber metninden AYRI, 2-3 cümlelik
+        bir değerlendirme: bu gelişme okur için ne anlama geliyor, kimi
+        nasıl etkiliyor, hangi sürecin parçası. Haberin özetini tekrar
+        etme; metinde olmayan bir açı ekle. KURALLAR:
+           - Yalnızca kaynak metindeki olgulara dayan. Yeni rakam, tarih,
+             isim, iddia ya da tahmin EKLEME; "artacak, düşecek" gibi
+             kehanette bulunma.
+           - Taraf tutma, siyasi değerlendirme yapma, kimseyi övme ya da
+             eleştirme.
+           - Kaynak bunu söylemeye yetmiyorsa (çok kısa haber, sonuç
+             maçı, magazin) BOŞ BIRAK. Boş bırakmak, zorlama bir cümleden
+             iyidir.
+           - Yemek tariflerinde her zaman boş.
+
         GÜVEN SKORU (0-100): Haberin doğruluğundan ve yayın politikasına
         uygunluğundan ne kadar eminsin. Haber ajansı ya da resmî kurum
         kaynaklı, olguya dayanan haber yüksek (85-100). Tek kaynaklı,
@@ -349,6 +363,7 @@ final class Yazar implements SemaliIstemci
             'guven_skoru' => ['type' => 'integer', 'description' => '0-100 arası güven'],
             'onem'        => ['type' => 'integer', 'description' => '0-100 arası önem puanı: haberin kamuoyu için ne kadar önemli olduğu (bkz. ÖNEM PUANI)'],
             'ajan_notu'   => ['type' => 'string',  'description' => 'Onaylayacak editöre tek cümlelik not'],
+            'neden_onemli'=> ['type' => 'string',  'description' => '2-3 cümle: gelişmenin okur için anlamı, yalnızca kaynaktaki olgulardan (bkz. NEDEN ÖNEMLİ). Yemek tarifinde boş.'],
 
             /*
              * Eski VALENTRA ANALIZ alanlari (vergi yayini donemi).
@@ -367,7 +382,7 @@ final class Yazar implements SemaliIstemci
         ],
         'required' => [
             'sira', 'ilgili', 'red_nedeni', 'baslik', 'ozet', 'icerik',
-            'etiketler', 'kategori', 'guven_skoru', 'onem', 'ajan_notu',
+            'etiketler', 'kategori', 'guven_skoru', 'onem', 'ajan_notu', 'neden_onemli',
             'analiz_degisen', 'analiz_etkilenen', 'analiz_zaman', 'analiz_islem',
             'isletme_etkisi', 'uygulama_ornegi', 'resmi_dayanak',
         ],

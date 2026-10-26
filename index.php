@@ -68,6 +68,12 @@ $sayfaBasligi = $sayfa > 1
     ? 'Güncel Haberler — Sayfa ' . $sayfa . ' | Valentra'
     : 'Valentra — Güncel Haberler';
 
+// Ana sayfanin 2., 3. ... sayfalari Google'a sunulmuyor (26.10.2026):
+// icerikleri haberlerin kendisinde; 'follow' ile baglantilar yine taraniyor.
+if ($sayfa > 1) {
+    $seoRobots = 'noindex, follow';
+}
+
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
 

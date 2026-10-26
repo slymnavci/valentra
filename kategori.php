@@ -58,6 +58,12 @@ $haberler   = haber_kategoride((int) $kategori['id'], $adet, $tuketilen + ($sayf
 $aktifKategori = $kategori['slug'];
 require_once __DIR__ . '/includes/seo.php';
 $seoAdres      = site_adresi() . kategori_yolu((string) $kategori['slug'], $sayfa);
+
+// Liste sayfalarinin 2., 3. ... sayfalari Google'a sunulmuyor (26.10.2026):
+// icerikleri haberlerin kendisinde; 'follow' ile baglantilar yine taraniyor.
+if ($sayfa > 1) {
+    $seoRobots = 'noindex, follow';
+}
 $sayfaBasligi  = $kategori['ad'] . ' — Valentra';
 $sayfaAciklama = $kategori['aciklama'] !== ''
     ? $kategori['aciklama']

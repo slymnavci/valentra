@@ -207,6 +207,10 @@ require __DIR__ . '/ust.php';
                         <span class="rozet rozet-skor" title="Önem haber eskidikçe azalıyor: saatte %2,5; dünün haberi en fazla 49">önem <?= (int) ($haber['onem'] ?? 50) ?><?php if (isset($haber['etkin_onem']) && (int) $haber['etkin_onem'] !== (int) ($haber['onem'] ?? 50)): ?> → şimdi <?= (int) $haber['etkin_onem'] ?><?php endif; ?></span>
                     <?php endif; ?>
 
+                    <?php if (haber_ince_mi($haber)): ?>
+                        <span class="rozet rozet-reddedildi" title="Metin + Neden önemli toplamı <?= (int) HABER_INCE_KARAKTER ?> karakterden kısa: sitede görünür ama Google'a sunulmaz (noindex). Metni ya da Neden önemli? bölümünü genişletin.">kısa · Google'a sunulmuyor</span>
+                    <?php endif; ?>
+
                     <?php if (!empty($haber['kategori_adi'])): ?>
                         <span class="rozet rozet-skor"><?= e($haber['kategori_adi']) ?></span>
                     <?php endif; ?>
