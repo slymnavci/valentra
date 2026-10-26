@@ -374,8 +374,14 @@ jobs:
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
         run: php portre.php
 
+      # Sure (26.10.2026): adim bir kez 44 dakika surup butun isi 45
+      # dakikalik sinira takip iptal ettirdi. kose.php 18 dakikalik butceyle
+      # calisiyor (--sure) ve yazilari yazdikca gonderiyor; buradaki sinir
+      # yalnizca son emniyet. Asilirsa adim kirmizi biter, sonraki adimlar
+      # (canli veri, ajan deposu) yine calisir.
       - name: Kose yazilarini yaz
         if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'kose-yazisi' || inputs.mod == 'gunluk') }}
+        timeout-minutes: 22
         working-directory: ajan
         env:
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}

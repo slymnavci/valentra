@@ -405,6 +405,35 @@ final class Yazar implements SemaliIstemci
     /** @var array{girdi:int,cikti:int,istek:int} Calisma boyunca biriken kullanim */
     private array $kullanim = ['girdi' => 0, 'cikti' => 0, 'istek' => 0];
 
+    /** Tek Gemini isteginin suresi (saniye); bkz. sureSiniri(). */
+    private int $istekZamanAsimi = 90;
+
+    /** @var list<int>|null Yeniden deneme beklemeleri; null: varsayilan liste */
+    private ?array $beklemeler = null;
+
+    /** Bu zamandan (Unix) sonra yeni istek ya da yeniden deneme yapilmaz. */
+    private ?int $sonZaman = null;
+
+    /**
+     * Istek suresini ve yeniden denemeleri sinirlar.
+     *
+     * Kose yazisi adimi 26.10.2026'da 44 dakika surdu ve isin 45 dakikalik
+     * sinirina takilip iptal edildi; yazilan hicbir yazi siteye gitmedi.
+     * Sebep: uzun bir yazinin uretimi 90 saniyelik istek suresini
+     * asabiliyor, zaman asimi ise "gecici ag hatasi" sayilip artan
+     * beklemelerle alti kez deneniyordu (tek istek 11 dakikaya kadar).
+     * Kose ajani istege daha uzun sure, ama daha az deneme veriyor; son
+     * zamandan sonra yeni istek acilmiyor ve calisma butcesi asilmiyor.
+     *
+     * @param list<int> $beklemeler
+     */
+    public function sureSiniri(int $istekZamanAsimi, array $beklemeler, ?int $sonZaman = null): void
+    {
+        $this->istekZamanAsimi = max(10, $istekZamanAsimi);
+        $this->beklemeler      = array_values(array_map('intval', $beklemeler));
+        $this->sonZaman        = $sonZaman;
+    }
+
     /** Kose yazisi ajaninin modeli: GEMINI_KOSE_MODEL, yoksa guclu varsayilan. */
     public static function koseModeli(): string
     {
@@ -765,10 +794,25 @@ final class Yazar implements SemaliIstemci
         // Ucretsiz katmanda 503 ("yogun talep") sik gorulur; birkac
         // saniyelik bekleme yetmez. Artan bekleme ile daha uzun israr
         // edilir: 4, 10, 20, 35, 60 saniye.
-        $beklemeler = [4, 10, 20, 35, 60];
+        $beklemeler = $this->beklemeler ?? [4, 10, 20, 35, 60];
         $enFazlaDeneme = count($beklemeler) + 1;
 
         for ($deneme = 1; $deneme <= $enFazlaDeneme; $deneme++) {
+            // Calisma butcesi (bkz. sureSiniri): kalan sure yeni bir istege
+            // yetmiyorsa acilmiyor; istek de butceyi asacak kadar surmuyor.
+            $zamanAsimi = $this->istekZamanAsimi;
+
+            if ($this->sonZaman !== null) {
+                $kalan = $this->sonZaman - time();
+
+                if ($kalan < 30) {
+                    throw new \RuntimeException('çalışma için ayrılan süre doldu'
+                        . ($sonMesaj !== '' ? ' (son hata: ' . $sonMesaj . ')' : ''));
+                }
+
+                $zamanAsimi = min($zamanAsimi, $kalan);
+            }
+
             $ch = curl_init($adres);
 
             curl_setopt_array($ch, [
@@ -780,7 +824,7 @@ final class Yazar implements SemaliIstemci
                     'x-goog-api-key: ' . $this->apiKey,
                 ],
                 CURLOPT_CONNECTTIMEOUT => 20,
-                CURLOPT_TIMEOUT        => 90,
+                CURLOPT_TIMEOUT        => $zamanAsimi,
                 CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
                 CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
             ]);
