@@ -229,17 +229,36 @@ function seo_rehber_semasi(array $rehber): string
 /** Sitenin kendisi için Organization + WebSite şeması. */
 function seo_site_semasi(): string
 {
+    require_once __DIR__ . '/kurumsal.php';
+
+    /*
+     * NewsMediaOrganization: Google'in haber yayincisinda aradigi
+     * seffaflik baglantilari (yayin ilkeleri, duzeltme politikasi, kunye)
+     * kurumsal sayfalara gidiyor (26.10.2026). E-posta yalnizca panelde
+     * girilmisse.
+     */
+    $kurum = [
+        '@type'                => 'NewsMediaOrganization',
+        '@id'                  => site_adresi() . '/#kurum',
+        'name'                 => 'Valentra',
+        'description'          => 'Türkiye ve dünyadan güncel haber özetleri',
+        'url'                  => site_adresi() . '/',
+        'logo'                 => site_adresi() . '/assets/logo.svg',
+        'publishingPrinciples' => site_adresi() . kurumsal_yolu('yayin-ilkeleri'),
+        'correctionsPolicy'    => site_adresi() . kurumsal_yolu('yayin-ilkeleri') . '#duzeltme',
+        'masthead'             => site_adresi() . kurumsal_yolu('kunye'),
+    ];
+
+    $eposta = trim(ayar_oku('kunye_eposta'));
+
+    if ($eposta !== '') {
+        $kurum['email'] = $eposta;
+    }
+
     return json_encode([
         '@context' => 'https://schema.org',
         '@graph'   => [
-            [
-                '@type'       => 'Organization',
-                '@id'         => site_adresi() . '/#kurum',
-                'name'        => 'Valentra',
-                'description' => 'Türkiye ve dünyadan güncel haber özetleri',
-                'url'         => site_adresi() . '/',
-                'logo'        => site_adresi() . '/assets/logo.svg',
-            ],
+            $kurum,
             [
                 '@type'       => 'WebSite',
                 '@id'         => site_adresi() . '/#site',
