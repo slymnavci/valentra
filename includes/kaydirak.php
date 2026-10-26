@@ -86,10 +86,13 @@ if (($mansetler ?? []) === []) {
 
     var aktif = 0;
     var kullaniciMudahalesi = false;
+    var uzerinde = false;   // fare manset ya da numaralarin uzerindeyken otomatik ilerleme durur
 
-    function git(sira) {
+    // aninda: fareyle numara uzerine gelindiginde kaydirma animasyonu yok,
+    // haber hemen degisiyor (site sahibinin istegi, 26.10.2026).
+    function git(sira, aninda) {
         aktif = (sira + slaytlar.length) % slaytlar.length;
-        pencere.scrollTo({ left: slaytlar[aktif].offsetLeft - pencere.offsetLeft, behavior: 'smooth' });
+        pencere.scrollTo({ left: slaytlar[aktif].offsetLeft - pencere.offsetLeft, behavior: aninda ? 'instant' : 'smooth' });
         isaretle();
     }
 
@@ -102,8 +105,23 @@ if (($mansetler ?? []) === []) {
     dugmeler.forEach(function (dugme) {
         dugme.addEventListener('click', function () {
             kullaniciMudahalesi = true;
-            git(parseInt(dugme.dataset.sira, 10));
+            git(parseInt(dugme.dataset.sira, 10), true);
         });
+
+        // Fare numaranin uzerine gelir gelmez o haber. Dokunmatik ekranda
+        // "uzerine gelme" yok; orada dokunma (click) calisiyor.
+        dugme.addEventListener('pointerenter', function (olay) {
+            if (olay.pointerType !== 'mouse') { return; }
+            var sira = parseInt(dugme.dataset.sira, 10);
+            if (sira !== aktif) { git(sira, true); }
+        });
+    });
+
+    // Fare manset ya da numaralar uzerindeyken otomatik ilerleme beklesin:
+    // okunan haber elden kaymasin.
+    [pencere.parentNode, sayfalar].forEach(function (alan) {
+        alan.addEventListener('mouseenter', function () { uzerinde = true; });
+        alan.addEventListener('mouseleave', function () { uzerinde = false; });
     });
 
     document.querySelectorAll('.kaydirak-ok').forEach(function (ok) {
@@ -129,7 +147,7 @@ if (($mansetler ?? []) === []) {
 
     // Kendiliğinden ilerler; kullanıcı dokununca durur.
     var otomatik = setInterval(function () {
-        if (kullaniciMudahalesi || document.hidden) { return; }
+        if (kullaniciMudahalesi || uzerinde || document.hidden) { return; }
         git(aktif + 1);
     }, 6000);
 
