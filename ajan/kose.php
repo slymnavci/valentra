@@ -19,9 +19,10 @@ declare(strict_types=1);
  * panelde reddedip yeniden calistirmak yeni yazi uretir.
  *
  * Calistirma:
- *   php ajan/kose.php [--zamanli] [--kuru] [--saat=36] [--en-erken=12] [--sure=18]
+ *   php ajan/kose.php [--zamanli] [--kuru] [--saat=36] [--en-erken=12] [--sure=18] [--en-fazla=4]
  *
  * --sure: dakika cinsinden calisma butcesi (bkz. SURE BUTCESI).
+ * --en-fazla: bir calismada yazacak en fazla yazar (bkz. ASAMALI YAZIM).
  */
 
 // Yalnizca komut satirindan: sunucuya yuklenen kopya tarayicidan calismasin
@@ -50,11 +51,20 @@ use Valentra\Ajan\{Bildirim, Depo, Http, KoseYazari, KotaBittiException, ModelEr
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
-$secenekler = getopt('', ['zamanli', 'kuru', 'saat::', 'en-erken::', 'sure::']);
+$secenekler = getopt('', ['zamanli', 'kuru', 'saat::', 'en-erken::', 'sure::', 'en-fazla::']);
 $zamanli    = isset($secenekler['zamanli']);
 $kuru       = isset($secenekler['kuru']);
 $saat       = max(6, (int) ($secenekler['saat'] ?? 36));
 $enErken    = max(0, min(23, (int) ($secenekler['en-erken'] ?? 12)));
+
+/*
+ * ASAMALI YAZIM (26.10.2026, site sahibinin istegi): 12 yazar tek
+ * calismaya sigmiyordu; haber toplamadan sonra kalan sureyle isin 45
+ * dakikalik siniri yazilari kesiyordu. Bir calismada en fazla bu kadar
+ * yazar yaziyor; kalanlar bugun yazmamis sayildigi icin sonraki
+ * calismalarda (iki saatte bir) siradakiler yaziyor: 12 yazar 3 asamada.
+ */
+$enFazla    = max(1, (int) ($secenekler['en-fazla'] ?? 4));
 
 /*
  * SURE BUTCESI (26.10.2026).
@@ -230,6 +240,13 @@ $bekleyenYazarlar = array_values(array_filter($yazarlar, static fn (array $y): b
 if ($bekleyenYazarlar === []) {
     gunluk('Bugün bütün yazarların yazısı var.');
     exit(0);
+}
+
+if (count($bekleyenYazarlar) > $enFazla) {
+    $sonraki = array_map(static fn (array $y): string => (string) $y['ad'], array_slice($bekleyenYazarlar, $enFazla));
+    gunluk('Bu çalışmada en fazla ' . $enFazla . ' yazar yazıyor; sonraki çalışmaya kalan ' . count($sonraki)
+        . ' yazar: ' . implode(', ', $sonraki) . '.');
+    $bekleyenYazarlar = array_slice($bekleyenYazarlar, 0, $enFazla);
 }
 
 if (count($haberler) < 2) {

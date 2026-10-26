@@ -101,6 +101,11 @@ jobs:
     timeout-minutes: 45
 
     steps:
+      # Isin baslangici: kose adimi 45 dakikalik sinirdan kalan sureyi
+      # buna gore hesapliyor (bkz. "Kose yazilarini yaz").
+      - name: Baslangic zamani
+        run: echo "IS_BASLANGIC=$(date +%s)" >> "$GITHUB_ENV"
+
       - name: Repository kodlarini al
         uses: actions/checkout@v5
 
@@ -399,7 +404,22 @@ jobs:
             BAYRAKLAR="$BAYRAKLAR --kuru"
           fi
 
-          php kose.php $BAYRAKLAR
+          # Asamali yazim (26.10.2026): haber toplama uzadiginda kose adimi
+          # isin 45 dakikalik sinirina takilip yazilar kesiliyordu. Butce
+          # isin kalan suresinden (5 dk pay birakilarak, en fazla 18 dk);
+          # bir calismada en fazla 4 yazar, kalanlar sonraki calismalarda.
+          KALAN=$(( (45 * 60 - ($(date +%s) - ${IS_BASLANGIC:-$(date +%s)})) / 60 - 5 ))
+
+          if [ "$KALAN" -lt 6 ]; then
+            echo "::notice title=Valentra köşe yazıları::İşin süresi azaldı (${KALAN} dk); köşe yazıları sonraki çalışmada."
+            exit 0
+          fi
+
+          if [ "$KALAN" -gt 18 ]; then
+            KALAN=18
+          fi
+
+          php kose.php $BAYRAKLAR --sure=$KALAN --en-fazla=4
 
       # Sayfalardaki canli veri (23.10.2026, site sahibi: "haberleri ceken
       # robot borsa grafiklerini, mac sonuclarini da ceksin; eski bilgi
