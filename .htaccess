@@ -42,6 +42,30 @@
     # bagli degil: robots.txt dogrudan /sitemap.php adresini bildiriyor,
     # cunku arama motorlari harita adresinde .xml uzantisi sart
     # kosmuyor.
+    # --- Tek adres: https://valentra.com.tr (26.10.2026) ----------------
+    #
+    # Google'dan neredeyse hic ziyaretci gelmiyordu ve ayni sayfa http://,
+    # https://, www. ile dort ayri adreste aciliyordu. Search Console'da
+    # kayitli adres https://valentra.com.tr; digerleri kalici yonleniyor.
+    #
+    # /api/ disarida: ajan POST istekleri gonderiyor ve yonlendirmeyi
+    # izlemiyor; VALENTRA_SITE_URL http:// ya da www. ile girilmisse
+    # ajan bozulmasin.
+    #
+    # HTTPS uc yoldan taniniyor (sunucu degiskeni, vekil sunucu basligi,
+    # 443 portu): vekil arkasinda HTTPS degiskeni bos gelirse sonsuz
+    # yonlendirme olmasin.
+    RewriteCond %{HTTP_HOST} ^www\.valentra\.com\.tr(:\d+)?$ [NC]
+    RewriteCond %{REQUEST_URI} !^/api/
+    RewriteRule ^ https://valentra.com.tr%{REQUEST_URI} [R=301,L]
+
+    RewriteCond %{HTTP_HOST} ^valentra\.com\.tr(:\d+)?$ [NC]
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+    RewriteCond %{SERVER_PORT} !=443
+    RewriteCond %{REQUEST_URI} !^/api/
+    RewriteRule ^ https://valentra.com.tr%{REQUEST_URI} [R=301,L]
+
     RewriteRule ^sitemap\.xml$ /sitemap.php [L]
 
     # IndexNow anahtar dosyasi: Bing/Yandex anahtari /<anahtar>.txt

@@ -56,6 +56,8 @@ $mansetler  = $sayfa === 1 ? haber_kategoride((int) $kategori['id'], $mansetAdet
 $haberler   = haber_kategoride((int) $kategori['id'], $adet, $tuketilen + ($sayfa - 1) * $adet);
 
 $aktifKategori = $kategori['slug'];
+require_once __DIR__ . '/includes/seo.php';
+$seoAdres      = site_adresi() . kategori_yolu((string) $kategori['slug'], $sayfa);
 $sayfaBasligi  = $kategori['ad'] . ' — Valentra';
 $sayfaAciklama = $kategori['aciklama'] !== ''
     ? $kategori['aciklama']

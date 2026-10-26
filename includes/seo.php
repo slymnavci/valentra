@@ -23,22 +23,67 @@ declare(strict_types=1);
  */
 const SEO_GOOGLE_DOGRULAMA = 'vKzjIi4Q2RMg9zdzN8djF6vX-f3Rtc9WjlwRiA6by2A';
 
-/** Sitenin kendi adresi (protokol dahil, sonda / yok). */
+/**
+ * Sitenin kendi adresi (protokol dahil, sonda / yok).
+ *
+ * KANONIK ADRES (26.10.2026, Google'dan neredeyse hic ziyaretci gelmiyor):
+ * canonical etiketi, site haritalari ve yapisal veri bu adresi kullaniyor;
+ * istegin geldigi adresi aynen yansitirsa ayni haber Google'a birden cok
+ * adresle bildiriliyor. Iki duzeltme:
+ *   - www. atiliyor: Search Console'da kayitli adres https://valentra.com.tr.
+ *   - HTTPS, barindiricinin vekil sunucusu basliklariyla da taniniyor
+ *     (includes/auth.php ile ayni olcut); vekil arkasinda $_SERVER['HTTPS']
+ *     bos geldiginde canonical "http://" yaziyordu.
+ * Yerel gelistirmede (localhost, IP) istek nasil geldiyse o.
+ */
 function site_adresi(): string
 {
-    $sema = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = (string) ($_SERVER['HTTP_HOST'] ?? 'valentra.com.tr');
+    $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? 'valentra.com.tr'));
 
     // Host basligi istemciden gelir; beklenmedik karakterleri ayikla.
-    $host = preg_replace('/[^A-Za-z0-9.\-:]/', '', $host) ?? 'valentra.com.tr';
+    $host = preg_replace('/[^a-z0-9.\-:]/', '', $host) ?? 'valentra.com.tr';
 
-    return $sema . '://' . $host;
+    if (preg_match('/(^|\.)valentra\.com\.tr(:\d+)?$/', $host) === 1) {
+        return 'https://valentra.com.tr';
+    }
+
+    $guvenli = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+
+    return ($guvenli ? 'https' : 'http') . '://' . $host;
 }
 
-/** Geçerli sayfanın tam adresi (sorgu dizesiyle birlikte). */
+/**
+ * Geçerli sayfanın kanonik adresi.
+ *
+ * Izleme parametreleri (utm_*, fbclid, gclid...) atiliyor: paylasilan
+ * bir baglanti "?utm_source=whatsapp" ile geldiginde sayfa kendini o
+ * adresle canonical ilan ediyordu. Sayfanin icerigini degistiren
+ * parametreler (sayfa, k, h...) kaliyor.
+ */
 function gecerli_adres(): string
 {
-    return site_adresi() . (string) ($_SERVER['REQUEST_URI'] ?? '/');
+    $istek = (string) ($_SERVER['REQUEST_URI'] ?? '/');
+    $yol   = (string) (parse_url($istek, PHP_URL_PATH) ?? '/');
+    $sorgu = (string) (parse_url($istek, PHP_URL_QUERY) ?? '');
+
+    if ($sorgu !== '') {
+        parse_str($sorgu, $parametreler);
+
+        foreach (array_keys($parametreler) as $ad) {
+            $kucuk = strtolower((string) $ad);
+
+            if (str_starts_with($kucuk, 'utm_')
+                || in_array($kucuk, ['fbclid', 'gclid', 'yclid', 'msclkid', 'mc_cid', 'mc_eid',
+                                     'ref', 'amp', 'source', 'src', 'igshid'], true)) {
+                unset($parametreler[$ad]);
+            }
+        }
+
+        $sorgu = http_build_query($parametreler);
+    }
+
+    return site_adresi() . ($yol !== '' ? $yol : '/') . ($sorgu !== '' ? '?' . $sorgu : '');
 }
 
 /**

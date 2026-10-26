@@ -41,6 +41,9 @@ require_once __DIR__ . '/includes/seo.php';
 $seoTur  = 'article';
 $seoSema = seo_haber_semasi($haber);
 
+// Haberin tek adresi: haber.php?h=... ya da sonda / ile gelse de ayni.
+$seoAdres = site_adresi() . haber_yolu((string) $haber['slug']);
+
 // Gorsel sitenin kendi sunucusundan (bkz. includes/gorsel_onbellek.php).
 $haberGorseli = haber_gorsel($haber);
 
