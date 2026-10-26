@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/seo.php';
+require_once __DIR__ . '/includes/kurumsal.php';
 require_once __DIR__ . '/includes/pratik.php';
 require_once __DIR__ . '/includes/piyasalar.php';
 
@@ -73,6 +74,14 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         <changefreq>monthly</changefreq>
         <priority>0.7</priority>
     </url>
+
+    <?php foreach (array_keys(kurumsal_sayfalar()) as $kurumsalAnahtar): ?>
+        <url>
+            <loc><?= e($taban . kurumsal_yolu($kurumsalAnahtar)) ?></loc>
+            <changefreq>monthly</changefreq>
+            <priority>0.3</priority>
+        </url>
+    <?php endforeach; ?>
 
     <?php /* TMS/TFRS egitim platformu: giris sayfasi herkese acik, icerik uyelere. */ ?>
     <url>

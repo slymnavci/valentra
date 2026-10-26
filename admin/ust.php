@@ -108,6 +108,7 @@
                     'Arama motoru ayarları'    => 'seo.php',
                 ],
                 'Site'          => [
+                    'Künye ve iletişim' => 'kunye.php',
                     'Spor verisi'  => 'spor.php',
                     'Veritabanı'   => 'veritabani.php',
                     'Siteyi gör ↗' => '/',
