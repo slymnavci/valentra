@@ -429,6 +429,12 @@ final class Yazar implements SemaliIstemci
     /** Bu zamandan (Unix) sonra yeni istek ya da yeniden deneme yapilmaz. */
     private ?int $sonZaman = null;
 
+    /** Gecici hatada denenecek ikinci Gemini modeli; bos: yok (bkz. yedekModel()). */
+    private string $yedekModel = '';
+
+    /** Son Gemini hatasi gecici miydi (5xx, zaman asimi)? */
+    private bool $sonGeciciHata = false;
+
     /**
      * Istek suresini ve yeniden denemeleri sinirlar.
      *
@@ -759,7 +765,6 @@ final class Yazar implements SemaliIstemci
         ];
 
         $yanit = $this->geminiIstegi($govde);
-        $this->sonYanitlayan = $this->model;
 
         $adaylar = $yanit['candidates'] ?? [];
         if (!is_array($adaylar) || $adaylar === []) {
@@ -797,7 +802,55 @@ final class Yazar implements SemaliIstemci
      */
     private function geminiIstegi(array $govde): array
     {
-        $adres = self::API . $this->model . ':generateContent';
+        $this->sonGeciciHata = false;
+
+        try {
+            $yanit = $this->geminiModelIstegi($govde, $this->model);
+            $this->sonYanitlayan = $this->model;
+
+            return $yanit;
+        } catch (\RuntimeException $e) {
+            if (!$this->sonGeciciHata || $this->yedekModel === '' || $this->yedekModel === $this->model
+                || $e instanceof ModelErisimYokException || $e instanceof KotaBittiException) {
+                throw $e;
+            }
+
+            fwrite(STDERR, '[uyari] ' . $this->model . ' yanit vermedi (' . mb_substr($e->getMessage(), 0, 160)
+                . '); yedek model ' . $this->yedekModel . ' deneniyor.' . PHP_EOL);
+        }
+
+        $yanit = $this->geminiModelIstegi($govde, $this->yedekModel);
+        $this->sonYanitlayan = $this->yedekModel;
+
+        return $yanit;
+    }
+
+    /**
+     * Gecici hatada (5xx, zaman asimi) denenecek ikinci Gemini modeli.
+     *
+     * Kose yazilari 26.10.2026'da yazilamadi: kose modeli butun yazarlarda
+     * "HTTP 503: high demand" dondu ve yedek yoktu (haber toplamada OpenAI
+     * ve Claude once geliyor, Gemini yedek). Yogunluk genellikle tek
+     * modelde oluyor; ayni istek haber modeline gidiyor.
+     */
+    public function yedekModel(string $model): void
+    {
+        $this->yedekModel = $model;
+    }
+
+    /** Haber modeli (GEMINI_MODEL, yoksa varsayilan); kose yazisinin yedegi. */
+    public static function haberModeli(): string
+    {
+        return self::ortamModeli('GEMINI_MODEL', self::VARSAYILAN_MODEL);
+    }
+
+    /**
+     * @param array<string,mixed> $govde
+     * @return array<string,mixed>
+     */
+    private function geminiModelIstegi(array $govde, string $model): array
+    {
+        $adres = self::API . $model . ':generateContent';
         $json  = json_encode($govde, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         if (!is_string($json)) {
@@ -862,6 +915,8 @@ final class Yazar implements SemaliIstemci
                     continue;
                 }
 
+                $this->sonGeciciHata = in_array($errno, [CURLE_COULDNT_CONNECT, CURLE_OPERATION_TIMEDOUT], true);
+
                 throw new \RuntimeException('Gemini API erişim hatası: ' . $sonMesaj);
             }
 
@@ -899,6 +954,8 @@ final class Yazar implements SemaliIstemci
                 sleep($onerilen ?? $beklemeler[$deneme - 1]);
                 continue;
             }
+
+            $this->sonGeciciHata = $kod >= 500;
 
             throw new \RuntimeException('Gemini API hatası (HTTP ' . $kod . '): ' . $sonMesaj);
         }
@@ -980,7 +1037,6 @@ final class Yazar implements SemaliIstemci
         ];
 
         $yanit    = $this->geminiIstegi($govde);
-        $this->sonYanitlayan = $this->model;
         $parcalar = $yanit['candidates'][0]['content']['parts'] ?? [];
 
         if (!is_array($parcalar)) {
