@@ -44,6 +44,19 @@ $seoSema = seo_haber_semasi($haber);
 // Haberin tek adresi: haber.php?h=... ya da sonda / ile gelse de ayni.
 $seoAdres = site_adresi() . haber_yolu((string) $haber['slug']);
 
+/*
+ * Cok kisa haber Google'a sunulmuyor (bkz. haber_ince_mi): okuyucu icin
+ * sayfa acik, "follow" sayesinde icindeki baglantilar yine taraniyor.
+ */
+if (haber_ince_mi($haber)) {
+    $seoRobots = 'noindex, follow';
+}
+
+require_once __DIR__ . '/includes/kurumsal.php';
+
+$nedenOnemli = trim((string) ($haber['neden_onemli'] ?? ''));
+$ilgililer   = haber_ilgililer($haber, 4);
+
 // Gorsel sitenin kendi sunucusundan (bkz. includes/gorsel_onbellek.php).
 $haberGorseli = haber_gorsel($haber);
 
@@ -100,7 +113,8 @@ require __DIR__ . '/includes/sayfa_ust.php';
     $revize = $guncel && $yayin && ($guncel - $yayin) > 60;
     ?>
     <div class="kunye">
-        <span class="hazirlayan">Valentra Yayın Kurulu</span>
+        <?php /* Imza yayin ilkelerine bagli: kimin, hangi kurallarla hazirladigi tek tikla. */ ?>
+        <a class="hazirlayan" href="<?= e(kurumsal_yolu('yayin-ilkeleri')) ?>">Valentra Yayın Kurulu</a>
         <span>&middot; <?= e(tarih_bicimle($haber['yayin_tarihi'])) ?></span>
 
         <?php if ($revize): ?>
@@ -126,6 +140,23 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
     <?php if ($haber['ozet'] !== ''): ?>
         <p class="spot"><?= e($haber['ozet']) ?></p>
+    <?php endif; ?>
+
+    <?php
+    /*
+     * NEDEN ONEMLI? — haberin kaynakta olmayan acisi (26.10.2026).
+     *
+     * Haber metni kaynagin ozeti; bu bolum Valentra'nin kendi katkisi:
+     * gelismenin okur icin anlami. Google'in bir ozeti dizine almasinin
+     * en guclu gerekcesi, aslinda olmayan bir sey sunmasi. Ajan
+     * yaziyor, editor onayda duzeltiyor; bossa hic gosterilmiyor.
+     */
+    ?>
+    <?php if ($nedenOnemli !== ''): ?>
+        <section class="neden-onemli" aria-label="Neden önemli">
+            <h2>Neden önemli?</h2>
+            <?= bicimli_metin_html($nedenOnemli) ?>
+        </section>
     <?php endif; ?>
 
     <?php
@@ -283,6 +314,21 @@ require __DIR__ . '/includes/sayfa_ust.php';
                 <span class="etiket">#<?= e($etiket) ?></span>
             <?php endforeach; ?>
         </div>
+    <?php endif; ?>
+
+    <?php /* Ilgili haberler: okuru sitede tutuyor, Google'in sayfalari bulmasini hizlandiriyor. */ ?>
+    <?php if ($ilgililer !== []): ?>
+        <section class="ilgili-haberler" aria-label="İlgili haberler">
+            <h2>İlgili haberler</h2>
+            <ul>
+                <?php foreach ($ilgililer as $ilgili): ?>
+                    <li>
+                        <a href="<?= e(haber_yolu((string) $ilgili['slug'])) ?>"><?= e((string) $ilgili['baslik']) ?></a>
+                        <span class="ilgili-tarih"><?= e(tarih_bicimle((string) $ilgili['yayin_tarihi'])) ?></span>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </section>
     <?php endif; ?>
 </article>
 

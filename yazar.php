@@ -38,6 +38,12 @@ $sayfaBasligi  = $yazar['ad'] . ' — Yazıları' . ($sayfa > 1 ? ' — Sayfa ' 
 $sayfaAciklama = $yazar['ad'] . ': ' . $yazar['tanitim'];
 $seoAdres      = site_adresi() . yazar_yolu($yazar['anahtar'], $sayfa);
 
+// Liste sayfalarinin 2., 3. ... sayfalari Google'a sunulmuyor (26.10.2026):
+// icerikleri haberlerin kendisinde; 'follow' ile baglantilar yine taraniyor.
+if ($sayfa > 1) {
+    $seoRobots = 'noindex, follow';
+}
+
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
 

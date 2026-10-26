@@ -1903,6 +1903,9 @@ foreach ($gruplar as $grupNo => $grup) {
             'guven_skoru' => (int) ($sonuc['guven_skoru'] ?? 0),
             'onem'        => (int) ($sonuc['onem'] ?? 50),
             'ajan_notu'   => (string) ($sonuc['ajan_notu'] ?? ''),
+            // Haberin kaynakta olmayan acisi; sayfada "Neden onemli?"
+            // (Google'in ozgun katki aradigi kisim, 26.10.2026).
+            'neden_onemli' => (string) ($sonuc['neden_onemli'] ?? ''),
             // Haberi yazan model: site otomatik yayin esigini buna gore
             // seciyor (Luna guveni daha temkinli puanliyor).
             'model'       => $yanitlayanModel,

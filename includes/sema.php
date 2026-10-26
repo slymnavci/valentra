@@ -226,6 +226,8 @@ function sema_yukselt(array &$hatalar = []): array
     $sutunEkle('haberler', 'tarih_denetlendi', 'DATETIME NULL AFTER kaynak_tarihi');
     // Haberi yazan model; otomatik yayin esigi buna gore (23.10.2026).
     $sutunEkle('haberler', 'ajan_modeli', "VARCHAR(80) NOT NULL DEFAULT '' AFTER ajan_notu");
+    // "Neden onemli?" — haberin ozgun katkisi (26.10.2026; bkz. haber.php).
+    $sutunEkle('haberler', 'neden_onemli', "VARCHAR(800) NOT NULL DEFAULT ''");
 
     /*
      * Kopya denetimi alanlari.
@@ -595,6 +597,8 @@ function sema_guncel_mi(): bool
             ['rehberler', 'kontrol_eden'],
             // Ziyaret dogrulamasi (api/gorunum.php bunlara yaziyor).
             ['ziyaretler', 'insan'],
+            // haber_taslak_ekle() ve haber_guncelle() yaziyor.
+            ['haberler', 'neden_onemli'],
             ['ziyaretler', 'kampanya'],
         ];
 

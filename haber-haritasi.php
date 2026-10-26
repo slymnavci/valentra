@@ -29,6 +29,7 @@ $haberler = db()->query(
        FROM haberler
       WHERE durum = ' . db()->quote(HABER_YAYINDA) . '
         AND yayin_tarihi >= NOW() - INTERVAL 2 DAY
+        AND ' . haber_dizinlenir_kosulu() . '
       ORDER BY yayin_tarihi DESC
       LIMIT 1000'
 )->fetchAll();
