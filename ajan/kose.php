@@ -267,7 +267,9 @@ gunluk(count($haberler) . ' haber malzeme; bugün yazacak ' . count($bekleyenYaz
      . implode(', ', array_map(static fn (array $y): string => (string) $y['ad'], $bekleyenYazarlar)) . '.');
 
 // Kose yazisi haberden ayri, daha guclu modelle (GEMINI_KOSE_MODEL; bkz. Yazar).
-$yazar = new Yazar(ayar('GEMINI_API_KEY'), Yazar::koseModeli());
+// Gemini yogunken Claude ya da Luna yaziyor (26.10.2026; bkz. Yazar::geminiOnce).
+$yazar = new Yazar(ayar('GEMINI_API_KEY'), Yazar::koseModeli(), trim((string) getenv('OPENAI_API_KEY')), trim((string) getenv('ANTHROPIC_API_KEY')));
+$yazar->geminiOnce();
 
 // Uzun yazi 90 saniyeyi asabiliyor: istege 180 saniye, ama zaman asimi
 // ya da 5xx'te yalnizca iki yeniden deneme (eskiden alti, 11 dakikaya kadar).

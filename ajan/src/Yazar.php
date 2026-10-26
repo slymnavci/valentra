@@ -432,6 +432,9 @@ final class Yazar implements SemaliIstemci
     /** Gecici hatada denenecek ikinci Gemini modeli; bos: yok (bkz. yedekModel()). */
     private string $yedekModel = '';
 
+    /** Gemini once, Claude/Luna yedek mi (bkz. geminiOnce())? */
+    private bool $geminiOnce = false;
+
     /** Son Gemini hatasi gecici miydi (5xx, zaman asimi)? */
     private bool $sonGeciciHata = false;
 
@@ -838,6 +841,20 @@ final class Yazar implements SemaliIstemci
         $this->yedekModel = $model;
     }
 
+    /**
+     * Gemini once, Claude ve Luna yedek (kose yazisi).
+     *
+     * Haber toplamada sira Claude -> Luna -> Gemini. Kose yazilari site
+     * sahibinin karariyla Gemini'de (23.10.2026); 26.10.2026'da iki Gemini
+     * modeli de "503 high demand" dondu ve hic yazi cikmadi. Site sahibinin
+     * karari (26.10.2026): Gemini yine once, gecici hatada Claude ya da
+     * Luna yaziyor. Kredi ve kota hatalari yedeklenmiyor.
+     */
+    public function geminiOnce(bool $acik = true): void
+    {
+        $this->geminiOnce = $acik;
+    }
+
     /** Haber modeli (GEMINI_MODEL, yoksa varsayilan); kose yazisinin yedegi. */
     public static function haberModeli(): string
     {
@@ -1014,11 +1031,16 @@ final class Yazar implements SemaliIstemci
         int $adayAdedi = 0,
         string $zorunluAlan = ''
     ): array {
-        $birincil = $this->birincildenIste($yonerge, $istem, $sema, $enFazlaToken,
-            fn (array $v): bool => $this->sonuclariAyikla($v, $adayAdedi, $zorunluAlan) !== []);
+        $gecerli = fn (array $v): bool => $this->sonuclariAyikla($v, $adayAdedi, $zorunluAlan) !== [];
 
-        if ($birincil !== null) {
-            return $this->sonuclariAyikla($birincil, $adayAdedi, $zorunluAlan);
+        // Gemini once (kose yazisi): Claude ve Luna yalnizca Gemini gecici
+        // hatayla dustugunde (bkz. geminiOnce()).
+        if (!$this->geminiOnce) {
+            $birincil = $this->birincildenIste($yonerge, $istem, $sema, $enFazlaToken, $gecerli);
+
+            if ($birincil !== null) {
+                return $this->sonuclariAyikla($birincil, $adayAdedi, $zorunluAlan);
+            }
         }
 
         $govde = [
@@ -1036,7 +1058,25 @@ final class Yazar implements SemaliIstemci
             ],
         ];
 
-        $yanit    = $this->geminiIstegi($govde);
+        try {
+            $yanit = $this->geminiIstegi($govde);
+        } catch (\RuntimeException $e) {
+            if (!$this->geminiOnce || !$this->sonGeciciHata
+                || $e instanceof ModelErisimYokException || $e instanceof KotaBittiException) {
+                throw $e;
+            }
+
+            $birincil = $this->birincildenIste($yonerge, $istem, $sema, $enFazlaToken, $gecerli);
+
+            if ($birincil === null) {
+                throw $e;
+            }
+
+            fwrite(STDERR, '[uyari] Gemini yoğun; yanıtı ' . $this->sonYanitlayan . ' verdi.' . PHP_EOL);
+
+            return $this->sonuclariAyikla($birincil, $adayAdedi, $zorunluAlan);
+        }
+
         $parcalar = $yanit['candidates'][0]['content']['parts'] ?? [];
 
         if (!is_array($parcalar)) {

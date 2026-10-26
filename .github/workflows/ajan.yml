@@ -392,6 +392,11 @@ jobs:
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
           GEMINI_KOSE_MODEL:   ${{ secrets.GEMINI_KOSE_MODEL }}
           GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          # Gemini yogunken yedek (26.10.2026): Claude, sonra Luna.
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
         run: |
