@@ -1472,33 +1472,26 @@ a.menu-oge.aktif::after,
     .vitrin-piyasa   { grid-column: 1; grid-row: 2; }
     .vitrin-sehirler { grid-column: 2 / 4; grid-row: 2; }
 
-    /* Kaydirak kutunun tamamini dolduruyor; numaralar resmin icinde,
-       altta (kutunun disinda kalip yuksekligi bozmasin). */
-    .vitrin-manset .kaydirak,
+    /*
+     * Numarali dugmeler resmin ALTINDA, kutunun icinde (26.10.2026, site
+     * sahibi: "resmin altinda 1 2 3 4 5 6 gibi rakamlarla gosterelim,
+     * fare gelince diger haber gelsin"). Kaydirak kalan yuksekligi
+     * dolduruyor; kutu boyu (460px) degismiyor, yan kutularla hizali.
+     */
+    .vitrin-manset { display: flex; flex-direction: column; }
+
+    .vitrin-manset .kaydirak { flex: 1; min-height: 0; }
+
     .vitrin-manset .kaydirak-pencere,
     .vitrin-manset .kaydirak-slayt,
     .vitrin-manset .kaydirak-slayt > a { height: 100%; }
 
-    .vitrin-manset .kaydirak-govde { padding-bottom: 52px; }
-
     .vitrin-manset .kaydirak-sayfalar {
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 14px;
-        padding: 0;
-        z-index: 3;
-        grid-template-columns: repeat(var(--adet, 10), minmax(0, 12px));
-        gap: 6px;
+        flex: none;
+        padding: 10px 0 0;
+        grid-template-columns: repeat(var(--adet, 10), minmax(0, 28px));
+        gap: 5px;
     }
-
-    .vitrin-manset .kaydirak-sayfalar button {
-        font-size: 0;
-        border: none;
-        background: rgba(255, 255, 255, .45);
-    }
-
-    .vitrin-manset .kaydirak-sayfalar button[aria-current="true"] { background: var(--altin); }
 
     /* Yan kutular kendi iclerinde kayiyor; sira yuksekligi sabit. */
     .vitrin > .hava-kart,
