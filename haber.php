@@ -122,16 +122,6 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <span>&middot; Güncelleme: <?= e(tarih_bicimle((string) $haber['guncellendi'])) ?></span>
         <?php endif; ?>
 
-        <?php if ($haber['kaynak_adi'] !== ''): ?>
-            <?php $kunyeKaynakUrl = guvenli_url((string) $haber['kaynak_url']); ?>
-            <span>&middot; Kaynak:
-                <?php if ($kunyeKaynakUrl !== ''): ?>
-                    <a href="<?= e($kunyeKaynakUrl) ?>" target="_blank" rel="noopener nofollow ugc"><?= e(kaynak_gorunen_ad((string) $haber['kaynak_adi'])) ?></a>
-                <?php else: ?>
-                    <?= e(kaynak_gorunen_ad((string) $haber['kaynak_adi'])) ?>
-                <?php endif; ?>
-            </span>
-        <?php endif; ?>
     </div>
 
     <?php if ($haberGorseli !== ''): ?>
@@ -273,18 +263,12 @@ require __DIR__ . '/includes/sayfa_ust.php';
      *
      * Ekim 2026'dan beri site genel haber OZETLERI yayimliyor (MSN
      * Haberler gibi): metin Valentra'nin kendi cumleleriyle yazilmis bir
-     * ozet, haberin tamami kaynakta. Kaynak adi ve "haberin tamami"
-     * baglantisi bu yuzden metnin hemen altinda ve belirgin; okuyucu
-     * kaynaga bir tikla gidebilmeli. Telif acisindan da sart: ozet,
-     * kaynagin yerine gecmiyor, ona yonlendiriyor.
-     *
-     * Resmi dayanak ve yururluk alanlari eski vergi haberlerinde dolu;
-     * yenilerde bos kaliyor ve gosterilmiyor.
+     * ozet, haberin tamami kaynakta. Kaynak, metnin altinda kucuk bir
+     * satirda ve asil habere bagli (asagida KAYNAK SATIRI): ozet kaynagin
+     * yerine gecmiyor, ona yonlendiriyor.
      */
     $kaynakUrl    = guvenli_url((string) $haber['kaynak_url']);
     $kaynakAdi    = $haber['kaynak_adi'] !== '' ? kaynak_gorunen_ad((string) $haber['kaynak_adi']) : 'kaynak';
-    $resmiDayanak = trim((string) ($haber['resmi_dayanak'] ?? ''));
-    $yururluk     = trim((string) ($haber['analiz_zaman'] ?? ''));
 
     /*
      * Derleme haber (28.10.2026): tek kaynak yerine yararlanilan butun
@@ -300,86 +284,43 @@ require __DIR__ . '/includes/sayfa_ust.php';
     $ozgunVeri  = str_starts_with((string) ($haber['ajan_modeli'] ?? ''), 'valentra-');
     $ozgunDosya = str_starts_with((string) ($haber['ajan_modeli'] ?? ''), 'valentra-dosya');
     ?>
-    <?php if ($derlemeKaynaklari !== []): ?>
-    <section class="kaynak-tarih" aria-label="Haberin kaynakları">
-        <h2>Bu haber şu kaynaklardan derlendi</h2>
+    <?php
+    /*
+     * KAYNAK SATIRI (site sahibinin istegi, 29.10.2026: "kaynak gosterme,
+     * sadece haberin altinda cok kucuk yazalim"). Onceden metnin altinda
+     * buyuk bir "Haberin kaynagi" kutusu ve kunyede "Kaynak:" vardi; ana
+     * sayfa kartlarinda da kaynak adi yaziyordu. Artik yalnizca metnin
+     * altinda tek, kucuk bir satir: kaynak adi (kaynaga bagli) ya da
+     * derlemede kaynaklarin adlari. Bag kalsin: ozet kaynagin yerine
+     * gecmiyor, okur isterse asil habere gidebiliyor.
+     */
+    if ($derlemeKaynaklari !== []) {
+        $kaynakSatiri = [];
 
-        <ul class="derleme-kaynaklar">
-            <?php foreach ($derlemeKaynaklari as $dk): ?>
-                <li>
-                    <?php $dkUrl = guvenli_url((string) $dk['url']); ?>
-                    <?php if ($dkUrl !== ''): ?>
-                        <a href="<?= e($dkUrl) ?>" target="_blank" rel="noopener nofollow ugc"><?= e(kaynak_gorunen_ad((string) $dk['ad'])) ?></a>
-                    <?php else: ?>
-                        <?= e(kaynak_gorunen_ad((string) $dk['ad'])) ?>
-                    <?php endif; ?>
-                    <?php if ((string) $dk['baslik'] !== ''): ?>
-                        — <?= e((string) $dk['baslik']) ?>
-                    <?php endif; ?>
-                </li>
-            <?php endforeach; ?>
-        </ul>
+        foreach ($derlemeKaynaklari as $dk) {
+            $dkUrl = guvenli_url((string) $dk['url']);
+            $ad    = e(kaynak_gorunen_ad((string) $dk['ad']));
+            $kaynakSatiri[$ad] = $dkUrl !== ''
+                ? '<a href="' . e($dkUrl) . '" target="_blank" rel="noopener nofollow ugc">' . $ad . '</a>'
+                : $ad;
+        }
 
-        <?php if ($resmiDayanak !== ''): ?>
-            <dl>
-                <div><dt>Resmî dayanak</dt><dd><?= e($resmiDayanak) ?></dd></div>
-            </dl>
-        <?php endif; ?>
-    </section>
-    <?php elseif ($ozgunVeri): ?>
-    <section class="kaynak-tarih" aria-label="Haberin kaynağı">
-        <h2>Haberin kaynağı</h2>
-
-        <p class="kaynak-tarih-ad"><?= $ozgunDosya ? 'Valentra Dosya' : 'Valentra Veri' ?></p>
-
-        <?php if ($kaynakUrl !== '' && !$ozgunDosya): ?>
-            <a class="kaynak-tarih-dugme" href="<?= e((string) preg_replace('/[?&]veri=[^&]*$/', '', $kaynakUrl)) ?>">
-                Güncel verileri Valentra'da görün &rarr;
-            </a>
-        <?php endif; ?>
-
-        <dl>
-            <div><dt>Valentra'da yayım</dt><dd><?= e(tarih_bicimle($haber['yayin_tarihi'])) ?></dd></div>
-        </dl>
-
-        <p class="kaynak-tarih-not">
-            <?php if ($ozgunDosya): ?>
-                Bu yazı, Valentra'da yayımlanan ve metinde adı geçen kaynaklara dayanan haberlerden derlenmiş,
-                yayından önce editör onayından geçmiştir.
-            <?php else: ?>
-                Bu haber, Valentra'nın kendi derlediği veriden otomatik olarak hazırlanmıştır. Rakamlar
-                metinde adı geçen kaynakların verisidir; yayım anındaki değerleri gösterir.
-            <?php endif; ?>
-        </p>
-    </section>
-    <?php else: ?>
-    <section class="kaynak-tarih" aria-label="Haberin kaynağı">
-        <h2>Haberin kaynağı</h2>
-
-        <p class="kaynak-tarih-ad"><?= e($kaynakAdi) ?></p>
-
-        <?php if ($kaynakUrl !== ''): ?>
-            <a class="kaynak-tarih-dugme" href="<?= e($kaynakUrl) ?>" target="_blank" rel="noopener nofollow ugc">
-                Haberin tamamını <?= e($kaynakAdi) ?> sitesinde okuyun &rarr;
-            </a>
-        <?php endif; ?>
-
-        <dl>
-            <?php if ($resmiDayanak !== ''): ?>
-                <div><dt>Resmî dayanak</dt><dd><?= e($resmiDayanak) ?></dd></div>
-            <?php endif; ?>
-            <?php if ($yururluk !== ''): ?>
-                <div><dt>Yürürlük</dt><dd><?= e($yururluk) ?></dd></div>
-            <?php endif; ?>
-            <div><dt>Valentra'da yayım</dt><dd><?= e(tarih_bicimle($haber['yayin_tarihi'])) ?></dd></div>
-        </dl>
-
-        <p class="kaynak-tarih-not">
-            Bu metin, <?= e($kaynakAdi) ?> tarafından yayımlanan haberden
-            Valentra tarafından hazırlanmış bir özettir. Haberin tamamı ve
-            ayrıntılar için kaynağına başvurun.
-        </p>
-    </section>
+        $kaynakEtiketi = 'Kaynaklar';
+        $kaynakSatiri  = implode(', ', $kaynakSatiri);
+    } elseif ($ozgunVeri) {
+        $kaynakEtiketi = 'Kaynak';
+        $kaynakSatiri  = $ozgunDosya ? 'Valentra Dosya' : 'Valentra Veri';
+    } elseif ($haber['kaynak_adi'] !== '') {
+        $kaynakEtiketi = 'Kaynak';
+        $kaynakSatiri  = $kaynakUrl !== ''
+            ? '<a href="' . e($kaynakUrl) . '" target="_blank" rel="noopener nofollow ugc">' . e($kaynakAdi) . '</a>'
+            : e($kaynakAdi);
+    } else {
+        $kaynakSatiri = '';
+    }
+    ?>
+    <?php if ($kaynakSatiri !== ''): ?>
+        <p class="kaynak-satiri"><?= $kaynakEtiketi ?>: <?= $kaynakSatiri ?></p>
     <?php endif; ?>
 
     <?php if ($etiketler !== []): ?>
