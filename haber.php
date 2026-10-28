@@ -326,15 +326,16 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
     // Ozgun veri haberi (includes/ozgun_haber.php): baska sitenin haberinin
     // ozeti degil; kaynak kutusu bunu soyluyor, bag sitenin veri sayfasina.
-    $ozgunVeri = ($haber['ajan_modeli'] ?? '') === 'valentra-veri';
+    $ozgunVeri  = str_starts_with((string) ($haber['ajan_modeli'] ?? ''), 'valentra-');
+    $ozgunDosya = str_starts_with((string) ($haber['ajan_modeli'] ?? ''), 'valentra-dosya');
     ?>
     <?php if ($ozgunVeri): ?>
     <section class="kaynak-tarih" aria-label="Haberin kaynağı">
         <h2>Haberin kaynağı</h2>
 
-        <p class="kaynak-tarih-ad">Valentra Veri</p>
+        <p class="kaynak-tarih-ad"><?= $ozgunDosya ? 'Valentra Dosya' : 'Valentra Veri' ?></p>
 
-        <?php if ($kaynakUrl !== ''): ?>
+        <?php if ($kaynakUrl !== '' && !$ozgunDosya): ?>
             <a class="kaynak-tarih-dugme" href="<?= e((string) preg_replace('/[?&]veri=[^&]*$/', '', $kaynakUrl)) ?>">
                 Güncel verileri Valentra'da görün &rarr;
             </a>
@@ -345,8 +346,13 @@ require __DIR__ . '/includes/sayfa_ust.php';
         </dl>
 
         <p class="kaynak-tarih-not">
-            Bu haber, Valentra'nın kendi derlediği veriden otomatik olarak hazırlanmıştır. Rakamlar
-            metinde adı geçen kaynakların verisidir; yayım anındaki değerleri gösterir.
+            <?php if ($ozgunDosya): ?>
+                Bu yazı, Valentra'da yayımlanan ve metinde adı geçen kaynaklara dayanan haberlerden derlenmiş,
+                yayından önce editör onayından geçmiştir.
+            <?php else: ?>
+                Bu haber, Valentra'nın kendi derlediği veriden otomatik olarak hazırlanmıştır. Rakamlar
+                metinde adı geçen kaynakların verisidir; yayım anındaki değerleri gösterir.
+            <?php endif; ?>
         </p>
     </section>
     <?php else: ?>

@@ -17,6 +17,7 @@ declare(strict_types=1);
  *   hava_hafta_sonu persembe: hafta sonu hava durumu
  *   vergi_takvimi   pazartesi: bu hafta son gunu dolan vergi odemeleri
  *   ekonomik_veri   yeni gozlem gelince: enflasyon gibi aylik gostergeler
+ *   hafta_ozeti     pazar 17:00 sonrasi: haftanin en onemli 10 gelismesi
  *
  * METIN SABLONLA, MODELSIZ: rakamlar yalnizca verinin kendisinden; yapay
  * zeka rakam uyduramiyor. Veri eksikse ya da bayatsa (tatil gunu borsa
@@ -47,6 +48,7 @@ const OZGUN_TURLER = [
     'hava_hafta_sonu' => ['gundem', 'hava'],
     'vergi_takvimi'   => ['ekonomi', 'vergi'],
     'ekonomik_veri'   => ['ekonomi', 'ekonomi'],
+    'hafta_ozeti'     => ['gundem', 'hafta'],
 ];
 
 /** Dört büyük kulüp (spor haberlerinde öne alınıyor; bkz. HABER_BUYUK_KULUPLER). */
@@ -102,6 +104,7 @@ function ozgun_uretici_calistir(string $tur, DateTimeImmutable $simdi): string
         'hava_hafta_sonu' => ozgun_hava_hafta_sonu($simdi),
         'vergi_takvimi'   => ozgun_vergi_takvimi($simdi),
         'ekonomik_veri'   => ozgun_ekonomik_veri(),
+        'hafta_ozeti'     => ozgun_hafta_ozeti($simdi),
     };
 
     if ($haber === null) {
@@ -146,6 +149,7 @@ function ozgun_donem(string $tur, DateTimeImmutable $simdi): ?string
         'hava_hafta_sonu' => $gun === 4 && $saat >= 10 ? $simdi->format('o-\WW') : null,
         'vergi_takvimi'   => $gun === 1 && $saat >= 8 ? $simdi->format('o-\WW') : null,
         'ekonomik_veri'   => 'gosterge',
+        'hafta_ozeti'     => $gun === 7 && $saat >= 17 ? $simdi->format('o-\\WW') : null,
         default           => null,
     };
 }
@@ -1099,4 +1103,80 @@ function ozgun_ekonomik_veri(): ?array
     }
 
     return $haberler === [] ? null : $haberler;
+}
+
+/* ------------------------------------------------------------------------
+ * 7. Haftanın özeti: en önemli 10 gelişme
+ * --------------------------------------------------------------------- */
+
+/**
+ * Son 7 günün en önemli haberleri (önem puanına göre), konu başına en
+ * fazla 3; veri haberleri ve tarifler hariç. Metin haberlerin kendi
+ * özetlerinden, model yok.
+ *
+ * @return array<string,mixed>|null
+ */
+function ozgun_hafta_ozeti(DateTimeImmutable $simdi): ?array
+{
+    $ifade = db()->prepare(
+        'SELECT h.baslik, h.ozet, h.slug, k.slug AS kategori_slug, k.ad AS kategori
+           FROM haberler h
+           LEFT JOIN kategoriler k ON k.id = h.kategori_id
+          WHERE h.durum = :d
+            AND COALESCE(h.ajan_modeli, \'\') NOT LIKE \'valentra-%\'
+            AND COALESCE(k.slug, \'\') <> \'yemek-tarifleri\'
+            AND NOT (' . HABER_RG_KOSULU . ')
+            AND COALESCE(h.kaynak_tarihi, h.yayin_tarihi) >= NOW() - INTERVAL 7 DAY
+          ORDER BY h.onem DESC, h.yayin_tarihi DESC
+          LIMIT 80'
+    );
+    $ifade->execute(['d' => HABER_YAYINDA]);
+
+    $secilen = [];
+    $konu    = [];
+    $gorulen = [];
+
+    foreach ($ifade->fetchAll() as $h) {
+        $k = (string) ($h['kategori_slug'] ?? '');
+        // Ayni olayin ikinci haberi: basligin ilk 5 kelimesi ayniysa atla.
+        $iz = implode(' ', array_slice(preg_split('/\s+/u', mb_strtolower((string) $h['baslik'], 'UTF-8')) ?: [], 0, 5));
+
+        if (($konu[$k] ?? 0) >= 3 || isset($gorulen[$iz])) {
+            continue;
+        }
+
+        $konu[$k] = ($konu[$k] ?? 0) + 1;
+        $gorulen[$iz] = true;
+        $secilen[]    = $h;
+
+        if (count($secilen) >= 10) {
+            break;
+        }
+    }
+
+    if (count($secilen) < 6) {
+        return null;
+    }
+
+    $bas = $simdi->modify('-6 days');
+    $ilk = ozgun_tarih($bas, false) . ' ile ' . ozgun_tarih($simdi, false) . ' arasında Türkiye\'de ve dünyada öne çıkan '
+        . count($secilen) . ' gelişmeyi sizin için derledik.';
+
+    $paragraflar = [$ilk];
+
+    foreach ($secilen as $i => $h) {
+        $paragraflar[] = '## ' . ($i + 1) . '. ' . trim((string) $h['baslik']);
+        $paragraflar[] = trim((string) $h['ozet']) . ' (' . ((string) ($h['kategori'] ?? '') !== '' ? $h['kategori'] : 'Gündem') . ')';
+    }
+
+    $paragraflar[] = 'Liste, Valentra\'da bu hafta yayımlanan haberlerin önem puanına göre hazırlanmıştır; haberlerin tamamı ilgili konu sayfalarında.';
+
+    return [
+        'baslik'      => 'Haftanın özeti: ' . count($secilen) . ' başlıkta bu hafta neler oldu? (' . ozgun_tarih($bas, false) . ' - ' . ozgun_tarih($simdi, false) . ')',
+        'ozet'        => $ilk,
+        'icerik'      => implode("\n\n", $paragraflar),
+        'onem'        => 70,
+        'kaynak_yolu' => '/',
+        'etiketler'   => 'haftanın özeti, gündem, bu hafta',
+    ];
 }

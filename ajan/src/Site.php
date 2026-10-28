@@ -326,6 +326,49 @@ final class Site
      *
      * @return array{bugun:string,bugun_sayisi:int,gunluk_tavan:int,haberler:list<array<string,mixed>>,onceki:list<array<string,mixed>>}
      */
+    /**
+     * "Valentra Dosya" malzemesi (derleme ve açıklayıcı yazılar; bkz. api/dosya.php).
+     *
+     * @return array<string,mixed>
+     */
+    public function dosyaMalzeme(int $saat = 36): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/dosya.php?saat=' . max(6, $saat));
+
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Dosya malzemesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return [
+            'sayilar'   => (array) ($veri['sayilar'] ?? []),
+            'tavan'     => (array) ($veri['tavan'] ?? []),
+            'haberler'  => array_values((array) ($veri['haberler'] ?? [])),
+            'onceki'    => array_values((array) ($veri['onceki'] ?? [])),
+            'firsatlar' => array_values((array) ($veri['firsatlar'] ?? [])),
+        ];
+    }
+
+    /**
+     * Dosya yazılarını TASLAK olarak gönderir.
+     *
+     * @param list<array<string,mixed>> $haberler
+     * @return array<string,mixed>
+     */
+    public function dosyaGonder(array $haberler): array
+    {
+        [$kod, $govde] = $this->istek('POST', '/api/dosya.php', json_encode(['haberler' => $haberler], JSON_UNESCAPED_UNICODE), true);
+
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Dosya gönderimi başarısız (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return $veri;
+    }
+
     public function koseMalzeme(int $saat = 36): array
     {
         [$kod, $govde] = $this->istek('GET', '/api/kose.php?saat=' . max(6, $saat));

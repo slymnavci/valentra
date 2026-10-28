@@ -427,6 +427,39 @@ jobs:
 
           php kose.php $BAYRAKLAR --sure=$KALAN --en-fazla=4
 
+      # Valentra Dosya (28.10.2026, site sahibinin istegi: ozgun haber):
+      # 3+ kaynagin verdigi olaya "Ne biliyoruz, ne bilmiyoruz" derlemesi ve
+      # Search Console firsat sorgularina aciklayici yazi. Gunluk tavan
+      # sitede (derleme 2, aciklayici 1); doluysa model cagrilmiyor. Yazilar
+      # onay bekliyor. Kose adimindan sonra, isin kalan suresine gore.
+      - name: Valentra Dosya yazilari
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'gunluk') }}
+        timeout-minutes: 10
+        working-directory: ajan
+        env:
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_KOSE_MODEL:   ${{ secrets.GEMINI_KOSE_MODEL }}
+          GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: |
+          KALAN=$(( (45 * 60 - ($(date +%s) - ${IS_BASLANGIC:-$(date +%s)})) / 60 - 4 ))
+
+          if [ "$KALAN" -lt 4 ]; then
+            echo "::notice title=Valentra Dosya::İşin süresi azaldı (${KALAN} dk); dosya yazıları sonraki çalışmada."
+            exit 0
+          fi
+
+          if [ "$KALAN" -gt 8 ]; then
+            KALAN=8
+          fi
+
+          php dosya.php --sure=$KALAN || true
+
       # Sayfalardaki canli veri (23.10.2026, site sahibi: "haberleri ceken
       # robot borsa grafiklerini, mac sonuclarini da ceksin; eski bilgi
       # kalmasin"): piyasa seridi ve Piyasalar sayfasi (gosterge
