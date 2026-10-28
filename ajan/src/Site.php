@@ -379,6 +379,63 @@ final class Site
     }
 
     /**
+     * Derleme malzemesi (api/derleme.php): son saatlerin haberleri, son
+     * günlerin derlemeleri, bugün kaç derleme olduğu, konu listesi.
+     *
+     * @return array{bugun:string,bugun_sayisi:int,gunluk_tavan:int,haberler:list<array<string,mixed>>,onceki:list<array<string,mixed>>,kategoriler:list<string>}
+     */
+    public function derlemeMalzeme(int $saat = 24): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/derleme.php?saat=' . max(6, $saat));
+
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException(
+                'Derleme malzemesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde)
+            );
+        }
+
+        return [
+            'bugun'        => (string) ($veri['bugun'] ?? date('Y-m-d')),
+            'bugun_sayisi' => (int) ($veri['bugun_sayisi'] ?? 0),
+            'gunluk_tavan' => (int) ($veri['gunluk_tavan'] ?? 20),
+            'haberler'     => array_values((array) ($veri['haberler'] ?? [])),
+            'onceki'       => array_values((array) ($veri['onceki'] ?? [])),
+            'kategoriler'  => array_values(array_map('strval', (array) ($veri['kategoriler'] ?? []))),
+        ];
+    }
+
+    /**
+     * Derleme haberleri TASLAK olarak gönderir; yayına alma panelde.
+     *
+     * @param list<array<string,mixed>> $derlemeler
+     * @return array<string,mixed>
+     */
+    public function derlemeGonder(array $derlemeler): array
+    {
+        if ($derlemeler === []) {
+            return ['eklenen' => 0, 'yinelenen' => 0, 'hatalar' => []];
+        }
+
+        [$kod, $govde] = $this->istek(
+            'POST',
+            '/api/derleme.php',
+            json_encode(['derlemeler' => $derlemeler], JSON_UNESCAPED_UNICODE)
+        );
+
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException(
+                'Gönderim başarısız (HTTP ' . $kod . '): ' . $this->hatayiOku($govde)
+            );
+        }
+
+        return $veri;
+    }
+
+    /**
      * Sunucunun JSON hata yanıtını okunur hâle getirir.
      *
      * Uç, sorunun ne olduğunu ve nasıl çözüleceğini "detay" alanında
