@@ -588,35 +588,56 @@ function google_denetimi(int $sureButcesi = 80): array
                 $eksik === [] ? 'Zorunlu ve önerilen alanlar tam: ' . $haberOrnegi : 'Eksik/sorunlu: ' . implode(', ', $eksik) . ' — ' . $haberOrnegi);
         }
 
-        // Google'in kendi gozuyle: URL denetimi (zengin sonuc dahil)
-        if ($jeton !== '' && $site !== '' && $sureVar()) {
-            foreach ([$taban . '/' => 'Ana sayfa', $haberOrnegi => 'Örnek haber'] as $adres => $ad) {
-                $d = gsc_istek('POST', GSC_DENETIM_API, ['inspectionUrl' => $adres, 'siteUrl' => $site, 'languageCode' => 'tr-TR'], $jeton, 30);
-
-                if (!$d['tamam']) {
-                    $ekle('URL denetimi (Google)', $ad, 'hata', $d['hata']);
-                    continue;
-                }
-
-                $r  = (array) ($d['veri']['inspectionResult'] ?? []);
-                $ix = (array) ($r['indexStatusResult'] ?? []);
-                $zengin = (array) ($r['richResultsResult'] ?? []);
-                $zenginTurler = array_map(static fn ($i) => (string) ($i['richResultType'] ?? ''), (array) ($zengin['detectedItems'] ?? []));
-                $dizinde = ($ix['verdict'] ?? '') === 'PASS';
-                $kanonikFarkli = !empty($ix['googleCanonical']) && !empty($ix['userCanonical']) && $ix['googleCanonical'] !== $ix['userCanonical'];
-
-                $ekle('URL denetimi (Google)', $ad, $dizinde && !$kanonikFarkli ? 'tamam' : 'uyari',
-                    (string) ($ix['coverageState'] ?? 'bilinmiyor')
-                    . '; tarama: ' . (!empty($ix['lastCrawlTime']) ? date('d.m.Y H:i', (int) strtotime((string) $ix['lastCrawlTime'])) : 'yok')
-                    . '; getirme: ' . (string) ($ix['pageFetchState'] ?? '-')
-                    . '; robots.txt: ' . (string) ($ix['robotsTxtState'] ?? '-')
-                    . ($kanonikFarkli ? '; Google kanonik olarak ' . $ix['googleCanonical'] . ' seçmiş' : '')
-                    . ($zenginTurler !== [] ? '; zengin sonuç: ' . implode(', ', $zenginTurler) . ' (' . (string) ($zengin['verdict'] ?? '') . ')' : ''),
-                    $dizinde ? '' : 'Search Console\'da bu adres için "Dizine eklenmesini iste" kullanılabilir: ' . gsc_denetim_adresi($adres));
-            }
-        }
     } else {
         $ekle('Yapısal veri', 'Haber şeması (NewsArticle)', 'bilgi', 'Denetlenecek yayında haber bulunamadı.');
+    }
+
+    // Google'in kendi gozuyle: URL denetimi (zengin sonuc dahil)
+    if ($jeton !== '' && $site !== '' && $sureVar()) {
+        // Ana sayfa, ornek haber ve haritadan birer kategori, rehber, kurumsal sayfa
+        $denetlenecek = [$taban . '/' => 'Ana sayfa'];
+
+        if ($haberOrnegi !== '') {
+            $denetlenecek[$haberOrnegi] = 'Örnek haber';
+        }
+
+        foreach (['kategori' => 'Kategori sayfası', 'rehber' => 'Rehber', 'kurumsal' => 'Kurumsal sayfa'] as $parca => $etiket) {
+            foreach ($tumAdresler as $a) {
+                if (str_contains($a, $parca) && !isset($denetlenecek[$a])) {
+                    $denetlenecek[$a] = $etiket . ' (' . gd_kisa_adres($a) . ')';
+                    break;
+                }
+            }
+        }
+
+        foreach ($denetlenecek as $adres => $ad) {
+            if (!$sureVar()) {
+                break;
+            }
+
+            $d = gsc_istek('POST', GSC_DENETIM_API, ['inspectionUrl' => $adres, 'siteUrl' => $site, 'languageCode' => 'tr-TR'], $jeton, 30);
+
+            if (!$d['tamam']) {
+                $ekle('URL denetimi (Google)', $ad, 'hata', $d['hata']);
+                continue;
+            }
+
+            $r  = (array) ($d['veri']['inspectionResult'] ?? []);
+            $ix = (array) ($r['indexStatusResult'] ?? []);
+            $zengin = (array) ($r['richResultsResult'] ?? []);
+            $zenginTurler = array_map(static fn ($i) => (string) ($i['richResultType'] ?? ''), (array) ($zengin['detectedItems'] ?? []));
+            $dizinde = ($ix['verdict'] ?? '') === 'PASS';
+            $kanonikFarkli = !empty($ix['googleCanonical']) && !empty($ix['userCanonical']) && $ix['googleCanonical'] !== $ix['userCanonical'];
+
+            $ekle('URL denetimi (Google)', $ad, $dizinde && !$kanonikFarkli ? 'tamam' : 'uyari',
+                (string) ($ix['coverageState'] ?? 'bilinmiyor')
+                . '; tarama: ' . (!empty($ix['lastCrawlTime']) ? date('d.m.Y H:i', (int) strtotime((string) $ix['lastCrawlTime'])) : 'yok')
+                . '; getirme: ' . (string) ($ix['pageFetchState'] ?? '-')
+                . '; robots.txt: ' . (string) ($ix['robotsTxtState'] ?? '-')
+                . ($kanonikFarkli ? '; Google kanonik olarak ' . $ix['googleCanonical'] . ' seçmiş' : '')
+                . ($zenginTurler !== [] ? '; zengin sonuç: ' . implode(', ', $zenginTurler) . ' (' . (string) ($zengin['verdict'] ?? '') . ')' : ''),
+                $dizinde ? '' : 'Search Console\'da bu adres için "Dizine eklenmesini iste" kullanılabilir: ' . gsc_denetim_adresi($adres));
+        }
     }
 
     /* -------------------------------------------------------------- *
@@ -626,20 +647,21 @@ function google_denetimi(int $sureButcesi = 80): array
         $s = db()->query(
             "SELECT COUNT(*) AS toplam,
                     SUM(" . haber_dizinlenir_kosulu() . ") AS dizinlenir,
-                    SUM(COALESCE(gorsel_url, '') = '') AS gorselsiz,
-                    SUM(TRIM(ozet) = '') AS ozetsiz
+                    SUM(" . haber_dizinlenir_kosulu() . " AND COALESCE(gorsel_url, '') = '') AS gorselsiz,
+                    SUM(" . haber_dizinlenir_kosulu() . " AND TRIM(ozet) = '') AS ozetsiz
                FROM haberler WHERE durum = 'yayinda'"
         )->fetch();
         $kopya = (int) db()->query(
-            "SELECT COUNT(*) FROM (SELECT baslik FROM haberler WHERE durum = 'yayinda' GROUP BY baslik HAVING COUNT(*) > 1) t"
+            "SELECT COUNT(*) FROM (SELECT baslik FROM haberler WHERE durum = 'yayinda' AND " . haber_dizinlenir_kosulu()
+            . " GROUP BY baslik HAVING COUNT(*) > 1) t"
         )->fetchColumn();
 
         $ekle('İçerik', 'Yayındaki haberler', 'bilgi',
-            (int) $s['toplam'] . ' haber; Google\'a sunulan ' . (int) $s['dizinlenir'] . ', kısa olduğu için sunulmayan '
+            (int) $s['toplam'] . ' haber; Google\'a sunulan ' . (int) $s['dizinlenir'] . ', sunulmayan (kısa ya da tek kaynağın özeti; okuyucuya açık) '
             . ((int) $s['toplam'] - (int) $s['dizinlenir']));
-        $ekle('İçerik', 'Aynı başlıklı haberler', $kopya === 0 ? 'tamam' : 'uyari', $kopya . ' başlık birden fazla haberde',
+        $ekle('İçerik', 'Aynı başlıklı haberler (Google\'a sunulanlar)', $kopya === 0 ? 'tamam' : 'uyari', $kopya . ' başlık birden fazla haberde',
             $kopya === 0 ? '' : 'Aynı başlık Google\'da kopya sayfa gibi görünür; başlıkları ayırın ya da birini kaldırın.');
-        $ekle('İçerik', 'Görselsiz / özetsiz haber', ((int) $s['gorselsiz'] + (int) $s['ozetsiz']) === 0 ? 'tamam' : 'uyari',
+        $ekle('İçerik', 'Görselsiz / özetsiz haber (Google\'a sunulanlar)', ((int) $s['gorselsiz'] + (int) $s['ozetsiz']) === 0 ? 'tamam' : 'uyari',
             (int) $s['gorselsiz'] . ' görselsiz, ' . (int) $s['ozetsiz'] . ' özetsiz',
             ((int) $s['gorselsiz'] + (int) $s['ozetsiz']) === 0 ? '' : 'Discover ve Haberler görselsiz haberi göstermez; özet arama sonucundaki açıklamadır.');
     } catch (Throwable $e) {
