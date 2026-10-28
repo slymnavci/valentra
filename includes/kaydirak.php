@@ -53,9 +53,6 @@ if (($mansetler ?? []) === []) {
 
                         <div class="kunye">
                             <?= e(tarih_bicimle($haber['yayin_tarihi'])) ?>
-                            <?php if ($haber['kaynak_adi'] !== ''): ?>
-                                &middot; <?= e(kaynak_gorunen_ad((string) $haber['kaynak_adi'])) ?>
-                            <?php endif; ?>
                         </div>
                     </div>
                 </a>
