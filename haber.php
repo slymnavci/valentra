@@ -45,10 +45,11 @@ $seoSema = seo_haber_semasi($haber);
 $seoAdres = site_adresi() . haber_yolu((string) $haber['slug']);
 
 /*
- * Cok kisa haber Google'a sunulmuyor (bkz. haber_ince_mi): okuyucu icin
- * sayfa acik, "follow" sayesinde icindeki baglantilar yine taraniyor.
+ * Cok kisa haber ve tek kaynagin ozeti Google'a sunulmuyor (bkz.
+ * haber_google_sunulur_mu): okuyucu icin sayfa acik, "follow" sayesinde
+ * icindeki baglantilar yine taraniyor.
  */
-if (haber_ince_mi($haber)) {
+if (!haber_google_sunulur_mu($haber)) {
     $seoRobots = 'noindex, follow';
 }
 
@@ -80,7 +81,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
 <div class="ana-duzen">
 <div class="ana-kolon">
 
-<article class="detay">
+<article class="detay<?= haber_derleme_mi($haber) ? ' detay-derleme' : '' ?>">
     <?php $etiketler = etiketleri_coz($haber['etiketler']); ?>
     <?php if (!empty($haber['kategori_slug'])): ?>
         <a class="etiket" href="<?= e(kategori_yolu((string) $haber['kategori_slug'])) ?>">
@@ -243,9 +244,14 @@ require __DIR__ . '/includes/sayfa_ust.php';
     <?php endif; ?>
 
     <div class="icerik">
-        <?php foreach (preg_split('/\n\s*\n/u', trim($haber['icerik'])) ?: [] as $paragraf): ?>
-            <p><?= nl2br(e(trim($paragraf))) ?></p>
-        <?php endforeach; ?>
+        <?php if (haber_derleme_mi($haber)): ?>
+            <?php /* Derleme: ara basliklar ("## ") ve madde listeleri (bkz. includes/derleme.php). */ ?>
+            <?= bicimli_metin_html((string) $haber['icerik']) ?>
+        <?php else: ?>
+            <?php foreach (preg_split('/\n\s*\n/u', trim($haber['icerik'])) ?: [] as $paragraf): ?>
+                <p><?= nl2br(e(trim($paragraf))) ?></p>
+            <?php endforeach; ?>
+        <?php endif; ?>
     </div>
 
     <?php if ($iframeUrl !== '' && !$videoMu): ?>
@@ -279,7 +285,42 @@ require __DIR__ . '/includes/sayfa_ust.php';
     $kaynakAdi    = $haber['kaynak_adi'] !== '' ? kaynak_gorunen_ad((string) $haber['kaynak_adi']) : 'kaynak';
     $resmiDayanak = trim((string) ($haber['resmi_dayanak'] ?? ''));
     $yururluk     = trim((string) ($haber['analiz_zaman'] ?? ''));
+
+    /*
+     * Derleme haber (28.10.2026): tek kaynak yerine yararlanilan butun
+     * kaynaklar, her biri kendi haberine bagli. Hem okuyucu icin acik
+     * kaynaklandirma hem telif: derleme kaynaklarin yerine gecmiyor.
+     */
+    require_once __DIR__ . '/includes/derleme.php';
+    $derlemeKaynaklari = haber_derleme_mi($haber) ? derleme_kaynaklari_coz((string) ($haber['derleme_kaynaklari'] ?? '')) : [];
     ?>
+    <?php if ($derlemeKaynaklari !== []): ?>
+    <section class="kaynak-tarih" aria-label="Haberin kaynakları">
+        <h2>Bu haber şu kaynaklardan derlendi</h2>
+
+        <ul class="derleme-kaynaklar">
+            <?php foreach ($derlemeKaynaklari as $dk): ?>
+                <li>
+                    <?php $dkUrl = guvenli_url((string) $dk['url']); ?>
+                    <?php if ($dkUrl !== ''): ?>
+                        <a href="<?= e($dkUrl) ?>" target="_blank" rel="noopener nofollow ugc"><?= e(kaynak_gorunen_ad((string) $dk['ad'])) ?></a>
+                    <?php else: ?>
+                        <?= e(kaynak_gorunen_ad((string) $dk['ad'])) ?>
+                    <?php endif; ?>
+                    <?php if ((string) $dk['baslik'] !== ''): ?>
+                        — <?= e((string) $dk['baslik']) ?>
+                    <?php endif; ?>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+
+        <?php if ($resmiDayanak !== ''): ?>
+            <dl>
+                <div><dt>Resmî dayanak</dt><dd><?= e($resmiDayanak) ?></dd></div>
+            </dl>
+        <?php endif; ?>
+    </section>
+    <?php else: ?>
     <section class="kaynak-tarih" aria-label="Haberin kaynağı">
         <h2>Haberin kaynağı</h2>
 
@@ -307,6 +348,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
             ayrıntılar için kaynağına başvurun.
         </p>
     </section>
+    <?php endif; ?>
 
     <?php if ($etiketler !== []): ?>
         <div class="kart-alt" style="margin-top:20px;">

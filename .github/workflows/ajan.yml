@@ -46,6 +46,7 @@ on:
           - gunluk
           - pratik-bilgiler
           - kose-yazisi
+          - derleme
           - kaynak-testi
           - kanun-testi
           - ag-tanisi
@@ -426,6 +427,50 @@ jobs:
           fi
 
           php kose.php $BAYRAKLAR --sure=$KALAN --en-fazla=4
+
+      # Derleme haberler (28.10.2026, site sahibinin karari): ayni olayi
+      # veren birden cok yayinin haberlerinden ozgun haber; Google'a
+      # yalnizca bunlar sunuluyor (bkz. includes/derleme.php). Gunde en
+      # fazla 20, bir calismada en fazla 5; saat 07'den itibaren. Kose
+      # yazilarindan SONRA ve isin kalan suresiyle (5 dk pay, en fazla 15).
+      # Hepsi onaya duser.
+      - name: Derleme haberleri yaz
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'derleme' || inputs.mod == 'gunluk') }}
+        timeout-minutes: 20
+        working-directory: ajan
+        env:
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_KOSE_MODEL:   ${{ secrets.GEMINI_KOSE_MODEL }}
+          GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: |
+          BAYRAKLAR=""
+
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            BAYRAKLAR="--zamanli"
+          fi
+
+          if [ "${{ inputs.kuru }}" = "true" ]; then
+            BAYRAKLAR="$BAYRAKLAR --kuru"
+          fi
+
+          KALAN=$(( (45 * 60 - ($(date +%s) - ${IS_BASLANGIC:-$(date +%s)})) / 60 - 5 ))
+
+          if [ "$KALAN" -lt 6 ]; then
+            echo "::notice title=Valentra derleme haberler::İşin süresi azaldı (${KALAN} dk); derlemeler sonraki çalışmada."
+            exit 0
+          fi
+
+          if [ "$KALAN" -gt 15 ]; then
+            KALAN=15
+          fi
+
+          php derle.php $BAYRAKLAR --sure=$KALAN --en-fazla=5
 
       # Sayfalardaki canli veri (23.10.2026, site sahibi: "haberleri ceken
       # robot borsa grafiklerini, mac sonuclarini da ceksin; eski bilgi

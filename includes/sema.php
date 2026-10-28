@@ -228,6 +228,9 @@ function sema_yukselt(array &$hatalar = []): array
     $sutunEkle('haberler', 'ajan_modeli', "VARCHAR(80) NOT NULL DEFAULT '' AFTER ajan_notu");
     // "Neden onemli?" — haberin ozgun katkisi (26.10.2026; bkz. haber.php).
     $sutunEkle('haberler', 'neden_onemli', "VARCHAR(800) NOT NULL DEFAULT ''");
+    // Derleme haber (28.10.2026; bkz. includes/derleme.php).
+    $sutunEkle('haberler', 'derleme', 'TINYINT(1) NOT NULL DEFAULT 0');
+    $sutunEkle('haberler', 'derleme_kaynaklari', 'TEXT NULL');
 
     /*
      * Kopya denetimi alanlari.
@@ -599,6 +602,9 @@ function sema_guncel_mi(): bool
             ['ziyaretler', 'insan'],
             // haber_taslak_ekle() ve haber_guncelle() yaziyor.
             ['haberler', 'neden_onemli'],
+            // derleme_taslak_ekle() yaziyor, site haritalari okuyor.
+            ['haberler', 'derleme'],
+            ['haberler', 'derleme_kaynaklari'],
             ['ziyaretler', 'kampanya'],
         ];
 
