@@ -39,11 +39,16 @@ if (!is_array($veri) || !is_array($veri['haberler'] ?? null) || count($veri['hab
     ajan_json(400, ['hata' => 'Gövde {"haberler": [...]} biçiminde ve en fazla 6 kayıt olmalı.']);
 }
 
-$sonuc = ['eklenen' => 0, 'yinelenen' => 0, 'tavan' => 0, 'hatalar' => []];
+$sonuc = ['eklenen' => 0, 'yayinlanan' => 0, 'yinelenen' => 0, 'tavan' => 0, 'hatalar' => []];
 
 foreach ($veri['haberler'] as $sira => $h) {
     try {
         $kayit = dosya_kaydet(is_array($h) ? $h : []);
+
+        // Onay yok (28.10.2026): eklenen yazi hemen yayinda.
+        if ($kayit['durum'] === 'eklendi' && haber_otomatik_yayin_acik() && haber_otomatik_yayinla((int) $kayit['id'])) {
+            $sonuc['yayinlanan']++;
+        }
 
         match ($kayit['durum']) {
             'eklendi' => $sonuc['eklenen']++,

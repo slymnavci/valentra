@@ -186,7 +186,7 @@ function dosya_kaydet(array $v): array
         'kaynak_url'    => site_adresi() . '/?dosya=' . rawurlencode($kimlik),
         'kaynak_baslik' => $baslik,
         'kaynak_zamani' => time(),
-        // Esigin (80) altinda: otomatik yayina girmez, panelde onay bekler.
+        // 28.10.2026'dan beri guven yayini engellemiyor; api/dosya.php hemen yayina aliyor.
         'guven_skoru'   => 70,
         'onem'          => max(40, min(85, (int) ($v['onem'] ?? 65))),
         'model'         => DOSYA_MODEL_ONEKI . '-' . $tur,

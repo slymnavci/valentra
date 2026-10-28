@@ -29,7 +29,7 @@ $haberler = db()->query(
       WHERE durum = ' . db()->quote(HABER_YAYINDA) . '
         AND ' . haber_dizinlenir_kosulu() . '
       ORDER BY yayin_tarihi DESC
-      LIMIT 2000'
+      LIMIT 10000'
 )->fetchAll();
 
 $kategoriler = db()->query(

@@ -120,10 +120,9 @@ require __DIR__ . '/ust.php';
     <p class="ipucu" style="margin:0 0 16px;">
         Tüm aktif kaynaklar taranır, haberler ayıklanıp yazılır.
         <?php if (haber_otomatik_yayin_acik()): ?>
-            <strong>Otomatik yayın açık:</strong> güven puanı
-            %<?= HABER_OTOMATIK_GUVEN_ESIGI ?> (GPT-6 Luna'nın yazdıklarında
-            %<?= HABER_OTOMATIK_GUVEN_ESIGI_OPENAI ?>) ve üzeri olan haberler geldiği anda
-            ana sayfaya çıkar; güveni düşük olanlar onay bekleyen listesine düşer.
+            <strong>Otomatik yayın açık:</strong> bütün haberler (derlemeler ve
+            Valentra Dosya yazıları dahil) geldiği anda yayına girer ve Google'a
+            bildirilir; onay beklenmez.
         <?php else: ?>
             Haberler <strong>onay bekleyen</strong> listesine eklenir; hiçbiri
             doğrudan yayımlanmaz.
@@ -138,7 +137,7 @@ require __DIR__ . '/ust.php';
             <button type="submit" class="dugme">Otomatik yayını kapat (haberler onay beklesin)</button>
         <?php else: ?>
             <input type="hidden" name="acik" value="1">
-            <button type="submit" class="dugme dugme-onay">Otomatik yayını aç (bugün bekleyen güvenli haberler de yayına alınır)</button>
+            <button type="submit" class="dugme dugme-onay">Otomatik yayını aç (bekleyen bütün haberler de yayına alınır)</button>
         <?php endif; ?>
     </form>
 
