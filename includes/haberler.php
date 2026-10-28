@@ -2116,7 +2116,10 @@ function haber_ince_mi(array $haber): bool
  * Google'a sunulanlar:
  *   - derleme haberler: ayni olayi veren birden cok kaynaktan Valentra'nin
  *     yazdigi ozgun haber (bkz. includes/derleme.php),
- *   - kaynagi olmayan, panelde yazilmis haberler.
+ *   - kaynagi olmayan, panelde yazilmis haberler,
+ *   - ozgun haberler (28.10.2026): Valentra Veri (sitenin kendi verisinden;
+ *     includes/ozgun_haber.php) ve Valentra Dosya aciklayici yazilari
+ *     (includes/dosya.php); ajan_modeli "valentra-" ile basliyor.
  * Geri almak icin false: eskisi gibi yalnizca kisa haberler disarida.
  */
 const HABER_YALNIZCA_OZGUN_DIZINDE = true;
@@ -2142,7 +2145,8 @@ function haber_google_sunulur_mu(array $haber): bool
         return true;
     }
 
-    return haber_derleme_mi($haber) || trim((string) ($haber['kaynak_url'] ?? '')) === '';
+    return haber_derleme_mi($haber) || trim((string) ($haber['kaynak_url'] ?? '')) === ''
+        || str_starts_with((string) ($haber['ajan_modeli'] ?? ''), 'valentra-');
 }
 
 /**
@@ -2168,7 +2172,7 @@ function haber_dizinlenir_kosulu(string $takma = ''): string
            . ' >= ' . HABER_INCE_KARAKTER . ')';
 
     if (HABER_YALNIZCA_OZGUN_DIZINDE) {
-        $kosul .= ' AND (' . ($derleme ? $p . 'derleme = 1 OR ' : '') . $p . "kaynak_url = '')";
+        $kosul .= ' AND (' . ($derleme ? $p . 'derleme = 1 OR ' : '') . $p . "kaynak_url = '' OR " . $p . "ajan_modeli LIKE 'valentra-%')";
     }
 
     return $kosul;

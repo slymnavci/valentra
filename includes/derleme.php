@@ -51,6 +51,8 @@ function derleme_malzeme(int $saat = 24, int $limit = 250): array
           WHERE h.durum IN (:y, :t)
             AND h.derleme = 0
             AND h.kaynak_url <> \'\'
+            -- Ozgun veri ve aciklayici yazilar (valentra-*) baska yayinin haberi degil.
+            AND COALESCE(h.ajan_modeli, \'\') NOT LIKE \'valentra-%\'
             AND COALESCE(h.yayin_tarihi, h.olusturuldu) >= :sinir
           ORDER BY h.onem DESC, COALESCE(h.yayin_tarihi, h.olusturuldu) DESC
           LIMIT ' . max(1, $limit)

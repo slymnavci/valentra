@@ -73,6 +73,14 @@ function haber_gorsel(array $haber): string
         return '';
     }
 
+    // Sitenin kendi gorseli (ozgun veri haberleri, /assets/ozgun/):
+    // indirmeye gerek yok, dogrudan yol.
+    $taban = rtrim(site_adresi(), '/');
+
+    if (str_starts_with($url, $taban . '/assets/')) {
+        return substr($url, strlen($taban));
+    }
+
     $yerel = haber_gorsel_yerel($url);
 
     if ($yerel !== '') {
