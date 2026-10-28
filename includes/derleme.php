@@ -276,8 +276,8 @@ function derleme_taslak_ekle(array $veri): array
         'kategori'      => (string) ($veri['kategori'] ?? ''),
         'kaynak_url'    => '',
         'kaynak_adi'    => '',
-        // Guven 0 ve kaynak zamani yok: otomatik yayin derlemeyi almaz,
-        // panelde onay bekler (bkz. haber_guven_esigi_kosulu).
+        // Guven 0: 28.10.2026'dan beri yayini engellemiyor (bkz.
+        // haber_guven_esigi_kosulu); api/derleme.php hemen yayina aliyor.
         'guven_skoru'   => 0,
         // Birden cok kaynagin verdigi olay: en onemli kaynaktan biraz yukarida.
         'onem'          => min(100, max((int) ($veri['onem'] ?? 0), $onem + 5)),

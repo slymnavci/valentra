@@ -43,7 +43,7 @@ $toplam = haber_yayinda_sayisi(true);
 // Kaydirak yalnizca ilk sayfada; tukettigi haberler izgarada tekrarlanmaz.
 // Iki sorgu da ayni siralamayi (one_cikan, yayin_tarihi) kullandigi icin
 // kaydiragin tukettigi kadar atlamak yeterli.
-// Bugun toplanip taslakta kalan haberler (otomatik yayin acikken).
+// Taslakta kalan haberler (otomatik yayin acikken; bkz. haber_bugunku_taslaklari_yayinla).
 haber_bugunku_taslaklari_yayinla_arada();
 
 // Ajan iki saatte bir: GitHub zamanlamasi guvenilmez, site de tetikliyor

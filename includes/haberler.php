@@ -1363,11 +1363,19 @@ const HABER_OTOMATIK_GUVEN_ESIGI_OPENAI = 70;
  * dunku bir mac "bugun" diye one cikabiliyor.
  */
 
-/** Otomatik yayin icin guven kosulu (SQL); haberler tablosu takma adsiz. */
+/*
+ * ONAY YOK (site sahibinin karari, 28.10.2026: "onay beklemeden butun
+ * haberleri gonderelim"). Otomatik yayin acikken guven puani ve kaynak
+ * tarihi artik yayini engellemiyor: derleme, Valentra Dosya ve dusuk
+ * guvenli haberler de geldigi anda yayinda. Tarihsiz haber yine son
+ * dakika olamiyor (haber_son_dakika_id). Esikler eski davranisa donmek
+ * icin duruyor; kosulu yeniden kurmak yeterli.
+ */
+
+/** Otomatik yayin kosulu (SQL); haberler tablosu takma adsiz. */
 function haber_guven_esigi_kosulu(): string
 {
-    return "kaynak_tarihi IS NOT NULL AND guven_skoru >= IF(ajan_modeli LIKE 'gpt-%', "
-        . HABER_OTOMATIK_GUVEN_ESIGI_OPENAI . ', ' . HABER_OTOMATIK_GUVEN_ESIGI . ')';
+    return '1 = 1';
 }
 
 function haber_otomatik_yayin_acik(): bool
@@ -1389,7 +1397,7 @@ function haber_otomatik_yayinla(int $id): bool
         'UPDATE haberler
             SET durum = :yayinda,
                 onay_tarihi = NOW(),
-                yayin_tarihi = COALESCE(yayin_tarihi, NOW())
+                yayin_tarihi = COALESCE(yayin_tarihi, olusturuldu, NOW())
           WHERE id = :id AND durum = :taslak AND ' . haber_guven_esigi_kosulu()
     );
     $ifade->execute(['yayinda' => HABER_YAYINDA, 'taslak' => HABER_TASLAK, 'id' => $id]);
@@ -1405,9 +1413,11 @@ function haber_otomatik_yayinla(int $id): bool
 }
 
 /**
- * Bugun (Istanbul gece yarisindan beri) toplanip taslakta kalan haberleri
- * yayina alir; kac haber alindigini dondurur. Otomatik yayin kapaliysa
- * hicbir sey yapmaz. Reddedilen haberlere dokunmaz.
+ * Taslakta kalan BUTUN haberleri yayina alir (28.10.2026'ya kadar yalnizca
+ * bugunkuleri); kac haber alindigini dondurur. Eski taslak kendi toplanma
+ * zamaniyla yayina giriyor (yayin_tarihi = olusturuldu): ana sayfanin
+ * basina "yeni" diye cikmiyor. Otomatik yayin kapaliysa hicbir sey
+ * yapmaz. Reddedilen haberlere dokunmaz.
  */
 function haber_bugunku_taslaklari_yayinla(): int
 {
@@ -1419,7 +1429,6 @@ function haber_bugunku_taslaklari_yayinla(): int
         'SELECT id FROM haberler
           WHERE durum = :taslak
             AND ' . haber_guven_esigi_kosulu() . '
-            AND olusturuldu >= NOW() - INTERVAL ' . haber_bugun_dakika() . ' MINUTE
           ORDER BY id'
     );
     $ifade->execute(['taslak' => HABER_TASLAK]);
@@ -2120,9 +2129,13 @@ function haber_ince_mi(array $haber): bool
  *   - ozgun haberler (28.10.2026): Valentra Veri (sitenin kendi verisinden;
  *     includes/ozgun_haber.php) ve Valentra Dosya aciklayici yazilari
  *     (includes/dosya.php); ajan_modeli "valentra-" ile basliyor.
- * Geri almak icin false: eskisi gibi yalnizca kisa haberler disarida.
+ * false: eskisi gibi yalnizca kisa haberler disarida.
+ *
+ * KAPATILDI (site sahibinin karari, 28.10.2026 aksami: "tum haberler
+ * gonderilsin"): yayindaki butun haberler yine Google'a sunuluyor;
+ * yalnizca cok kisa (HABER_INCE_KARAKTER alti) haberler disarida.
  */
-const HABER_YALNIZCA_OZGUN_DIZINDE = true;
+const HABER_YALNIZCA_OZGUN_DIZINDE = false;   // 28.10.2026 aksami: site sahibi "tum haberler gonderilsin" dedi
 
 /** @param array<string,mixed> $haber */
 function haber_derleme_mi(array $haber): bool

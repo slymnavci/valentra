@@ -59,6 +59,7 @@ if (count($veri['derlemeler']) > DERLEME_GUNLUK_TAVAN) {
 
 $eklenen   = 0;
 $yinelenen = 0;
+$yayinlanan = 0;
 $hatalar   = [];
 
 foreach ($veri['derlemeler'] as $sira => $derleme) {
@@ -72,6 +73,10 @@ foreach ($veri['derlemeler'] as $sira => $derleme) {
 
         if ($sonuc['durum'] === 'eklendi') {
             $eklenen++;
+
+            if (haber_otomatik_yayin_acik() && haber_otomatik_yayinla((int) $sonuc['id'])) {
+                $yayinlanan++;
+            }
         } else {
             $yinelenen++;
         }
@@ -91,6 +96,9 @@ ajan_json(200, [
     'durum'     => 'tamam',
     'eklenen'   => $eklenen,
     'yinelenen' => $yinelenen,
+    'yayinlanan' => $yayinlanan,
     'hatalar'   => $hatalar,
-    'not'       => 'Derlemeler taslak olarak kaydedildi, yönetici onayı bekliyor.',
+    'not'       => haber_otomatik_yayin_acik()
+        ? 'Derlemeler yayına alındı (otomatik yayın açık).'
+        : 'Derlemeler taslak olarak kaydedildi, yönetici onayı bekliyor.',
 ]);
