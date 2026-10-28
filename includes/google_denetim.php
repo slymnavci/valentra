@@ -601,9 +601,12 @@ function google_denetimi(int $sureButcesi = 80): array
             $denetlenecek[$haberOrnegi] = 'Örnek haber';
         }
 
-        foreach (['kategori' => 'Kategori sayfası', 'rehber' => 'Rehber', 'kurumsal' => 'Kurumsal sayfa'] as $parca => $etiket) {
+        require_once __DIR__ . '/kurumsal.php';
+        $denetlenecek[$taban . kurumsal_yolu('yayin-ilkeleri')] = 'Yayın ilkeleri';
+
+        foreach (['/kategori' => 'Kategori sayfası', '/rehber' => 'Rehber'] as $onek => $etiket) {
             foreach ($tumAdresler as $a) {
-                if (str_contains($a, $parca) && !isset($denetlenecek[$a])) {
+                if (str_starts_with(substr($a, strlen($taban)), $onek) && !isset($denetlenecek[$a])) {
                     $denetlenecek[$a] = $etiket . ' (' . gd_kisa_adres($a) . ')';
                     break;
                 }

@@ -37,3 +37,25 @@ jobs:
           VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}
         run: php google_denetim.php
+
+      # Google'in hiz ve sayfa kalitesi olcumu (PageSpeed Insights'in
+      # kullandigi Lighthouse). PSI'nin anahtarsiz ortak kotasi cogu gun
+      # dolu oldugu icin ayni olcum burada, makinenin Chrome'uyla yapiliyor.
+      - name: Lighthouse (mobil ve masaustu)
+        if: ${{ !cancelled() }}
+        env:
+          VALENTRA_SITE_URL: ${{ secrets.VALENTRA_SITE_URL }}
+        run: |
+          site="${VALENTRA_SITE_URL%/}"
+          for tur in mobil masaustu; do
+            ek=""
+            [ "$tur" = masaustu ] && ek="--preset=desktop"
+            npx -y lighthouse@12.8.2 "$site/" $ek --quiet --output=json --output-path="lh-$tur.json" \
+              --only-categories=performance,seo,best-practices,accessibility \
+              --chrome-flags="--headless=new --no-sandbox" || { echo "::warning::Lighthouse $tur calismadi"; continue; }
+            echo "== Lighthouse: $tur =="
+            jq -r '.categories[] | "\(.title): \((.score*100)|round)"' "lh-$tur.json"
+            jq -r '.audits | to_entries[] | select(.value.score != null and .value.score < 0.9
+                   and (.value.scoreDisplayMode == "binary" or .value.scoreDisplayMode == "numeric" or .value.scoreDisplayMode == "metricSavings"))
+                   | "  - \(.value.title)\(if .value.displayValue then " (" + .value.displayValue + ")" else "" end)"' "lh-$tur.json"
+          done
