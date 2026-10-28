@@ -244,8 +244,8 @@ require __DIR__ . '/includes/sayfa_ust.php';
     <?php endif; ?>
 
     <div class="icerik">
-        <?php if (haber_derleme_mi($haber)): ?>
-            <?php /* Derleme: ara basliklar ("## ") ve madde listeleri (bkz. includes/derleme.php). */ ?>
+        <?php if (haber_derleme_mi($haber) || str_starts_with((string) ($haber['ajan_modeli'] ?? ''), 'valentra-')): ?>
+            <?php /* Derleme ve ozgun haber (Valentra Veri / Dosya): ara basliklar ("## ") ve madde listeleri. */ ?>
             <?= bicimli_metin_html((string) $haber['icerik']) ?>
         <?php else: ?>
             <?php foreach (preg_split('/\n\s*\n/u', trim($haber['icerik'])) ?: [] as $paragraf): ?>
@@ -293,6 +293,12 @@ require __DIR__ . '/includes/sayfa_ust.php';
      */
     require_once __DIR__ . '/includes/derleme.php';
     $derlemeKaynaklari = haber_derleme_mi($haber) ? derleme_kaynaklari_coz((string) ($haber['derleme_kaynaklari'] ?? '')) : [];
+
+    // Ozgun haber (28.10.2026): Valentra Veri (includes/ozgun_haber.php,
+    // sablonla veriden) ve Valentra Dosya aciklayici yazilari
+    // (includes/dosya.php). Baska sitenin haberinin ozeti degil.
+    $ozgunVeri  = str_starts_with((string) ($haber['ajan_modeli'] ?? ''), 'valentra-');
+    $ozgunDosya = str_starts_with((string) ($haber['ajan_modeli'] ?? ''), 'valentra-dosya');
     ?>
     <?php if ($derlemeKaynaklari !== []): ?>
     <section class="kaynak-tarih" aria-label="Haberin kaynakları">
@@ -319,6 +325,32 @@ require __DIR__ . '/includes/sayfa_ust.php';
                 <div><dt>Resmî dayanak</dt><dd><?= e($resmiDayanak) ?></dd></div>
             </dl>
         <?php endif; ?>
+    </section>
+    <?php elseif ($ozgunVeri): ?>
+    <section class="kaynak-tarih" aria-label="Haberin kaynağı">
+        <h2>Haberin kaynağı</h2>
+
+        <p class="kaynak-tarih-ad"><?= $ozgunDosya ? 'Valentra Dosya' : 'Valentra Veri' ?></p>
+
+        <?php if ($kaynakUrl !== '' && !$ozgunDosya): ?>
+            <a class="kaynak-tarih-dugme" href="<?= e((string) preg_replace('/[?&]veri=[^&]*$/', '', $kaynakUrl)) ?>">
+                Güncel verileri Valentra'da görün &rarr;
+            </a>
+        <?php endif; ?>
+
+        <dl>
+            <div><dt>Valentra'da yayım</dt><dd><?= e(tarih_bicimle($haber['yayin_tarihi'])) ?></dd></div>
+        </dl>
+
+        <p class="kaynak-tarih-not">
+            <?php if ($ozgunDosya): ?>
+                Bu yazı, Valentra'da yayımlanan ve metinde adı geçen kaynaklara dayanan haberlerden derlenmiş,
+                yayından önce editör onayından geçmiştir.
+            <?php else: ?>
+                Bu haber, Valentra'nın kendi derlediği veriden otomatik olarak hazırlanmıştır. Rakamlar
+                metinde adı geçen kaynakların verisidir; yayım anındaki değerleri gösterir.
+            <?php endif; ?>
+        </p>
     </section>
     <?php else: ?>
     <section class="kaynak-tarih" aria-label="Haberin kaynağı">
