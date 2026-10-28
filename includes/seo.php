@@ -121,7 +121,9 @@ function seo_haber_semasi(array $haber): string
             'name'  => 'Valentra',
             'logo'  => [
                 '@type' => 'ImageObject',
-                'url'   => site_adresi() . '/assets/logo.svg',
+                'url'   => site_adresi() . '/assets/logo-512.png',
+                'width' => 512,
+                'height' => 512,
             ],
         ],
     ];
@@ -146,9 +148,9 @@ function seo_haber_semasi(array $haber): string
 
     $gorsel = haber_gorsel($haber);
 
-    if ($gorsel !== '') {
-        $sema['image'] = [str_starts_with($gorsel, '/') ? site_adresi() . $gorsel : $gorsel];
-    }
+    // Gorselsiz haberde marka gorseli: "image" alani bos kalmasin.
+    $sema['image'] = [$gorsel !== '' ? (str_starts_with($gorsel, '/') ? site_adresi() . $gorsel : $gorsel)
+                                     : site_adresi() . '/assets/paylasim.png'];
 
     if (!empty($haber['kategori_adi'])) {
         $sema['articleSection'] = (string) $haber['kategori_adi'];
@@ -194,7 +196,7 @@ function seo_rehber_semasi(array $rehber): string
         'publisher'        => [
             '@type' => 'Organization',
             'name'  => 'Valentra',
-            'logo'  => ['@type' => 'ImageObject', 'url' => site_adresi() . '/assets/logo.svg'],
+            'logo'  => ['@type' => 'ImageObject', 'url' => site_adresi() . '/assets/logo-512.png', 'width' => 512, 'height' => 512],
         ],
     ];
 
@@ -243,7 +245,7 @@ function seo_site_semasi(): string
         'name'                 => 'Valentra',
         'description'          => 'Türkiye ve dünyadan güncel haber özetleri',
         'url'                  => site_adresi() . '/',
-        'logo'                 => site_adresi() . '/assets/logo.svg',
+        'logo'                 => ['@type' => 'ImageObject', 'url' => site_adresi() . '/assets/logo-512.png', 'width' => 512, 'height' => 512],
         'publishingPrinciples' => site_adresi() . kurumsal_yolu('yayin-ilkeleri'),
         'correctionsPolicy'    => site_adresi() . kurumsal_yolu('yayin-ilkeleri') . '#duzeltme',
         'masthead'             => site_adresi() . kurumsal_yolu('kunye'),

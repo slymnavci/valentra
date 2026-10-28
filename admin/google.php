@@ -19,6 +19,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/search_console.php';
 require_once __DIR__ . '/../includes/rehberler.php';
 require_once __DIR__ . '/../includes/arama_bildirim.php';
+require_once __DIR__ . '/../includes/google_denetim.php';
 
 giris_zorunlu();
 
@@ -60,6 +61,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $hata = 'Site haritası gönderilemedi: ' . $sonucHa['hata'];
         }
+    } elseif ($islem === 'tam_denetim') {
+        @set_time_limit(150);
+        google_denetimi(100);
+        $bildirim = 'Google tam denetimi tamamlandı; sonuç aşağıda.';
     } elseif ($islem === 'tazele') {
         @set_time_limit(90);
         $tazeleme = gsc_tazele(60);
@@ -81,6 +86,7 @@ $firsat   = gsc_firsatlar($sorgular['satirlar']);
 $denetim  = gsc_denetimler();
 $haritalar = json_decode(ayar_oku('gsc_site_haritalari'), true) ?: [];
 $kalite   = gsc_kalite_denetimi();
+$tamDenetim = json_decode(ayar_oku('google_denetim_son'), true) ?: null;
 
 // Otomatik tazeleme: sayfa gittikten sonra, bekletmeden.
 if ($tazeleme === null && gsc_tazelenmeli()) {
@@ -328,6 +334,50 @@ require __DIR__ . '/ust.php';
              . (isset($r['adet']) ? ' · ' . (int) $r['adet'] . ' adres' : '');
     };
     ?>
+    <div class="kutu" style="margin-top:20px;">
+        <h2 style="margin-top:0;">Tam denetim</h2>
+        <p class="ipucu">
+            Site Google'a bağlanıp her şeyi sınar: anahtar ve yetkiler, mülk izni, site haritaları
+            (gönderilmemiş olan varsa gönderir), arama performansı, Google'ın adres denetimi ve zengin
+            sonuçlar; sayfalar Googlebot gözüyle (noindex, kanonik, başlık, açıklama, yapısal veri,
+            büyük görsel izni, paylaşım görseli), robots.txt, yönlendirmeler, IndexNow ve içerik sağlığı.
+        </p>
+        <?php if ($tamDenetim !== null): ?>
+            <p style="margin:8px 0;">
+                Son denetim: <?= e(tarih_bicimle((string) $tamDenetim['zaman'])) ?> ·
+                <strong style="color:var(--yesil);"><?= (int) $tamDenetim['ozet']['tamam'] ?> tamam</strong> ·
+                <strong style="color:#b7791f;"><?= (int) $tamDenetim['ozet']['uyari'] ?> uyarı</strong> ·
+                <strong style="color:var(--kirmizi);"><?= (int) $tamDenetim['ozet']['hata'] ?> hata</strong>
+            </p>
+            <table class="liste-tablo" style="margin-bottom:12px;">
+                <thead><tr><th>Bölüm</th><th>Denetim</th><th>Durum</th><th>Ayrıntı</th></tr></thead>
+                <tbody>
+                <?php
+                $durumSira = ['hata' => 0, 'uyari' => 1, 'bilgi' => 2, 'tamam' => 3];
+                $maddeler = (array) $tamDenetim['maddeler'];
+                usort($maddeler, static fn ($a, $b) => $durumSira[$a['durum']] <=> $durumSira[$b['durum']]);
+                $etiket = ['tamam' => ['Tamam', 'var(--yesil)'], 'uyari' => ['Uyarı', '#b7791f'],
+                           'hata' => ['Hata', 'var(--kirmizi)'], 'bilgi' => ['Bilgi', 'var(--metin-soluk)']];
+                foreach ($maddeler as $m): ?>
+                    <tr>
+                        <td><?= e((string) $m['grup']) ?></td>
+                        <td><?= e((string) $m['ad']) ?></td>
+                        <td><strong style="color:<?= $etiket[$m['durum']][1] ?>;"><?= $etiket[$m['durum']][0] ?></strong></td>
+                        <td style="word-break:break-word;">
+                            <?= e((string) $m['ayrinti']) ?>
+                            <?php if ((string) $m['oneri'] !== ''): ?><br><small class="ipucu"><?= e((string) $m['oneri']) ?></small><?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
+        <form method="post" action="google.php" style="margin:0;">
+            <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+            <button type="submit" name="islem" value="tam_denetim" class="dugme">Tam denetimi şimdi çalıştır (1–2 dakika)</button>
+        </form>
+    </div>
+
     <div class="kutu" style="margin-top:20px;">
         <h2 style="margin-top:0;">Otomatik bildirim</h2>
         <p class="ipucu">
