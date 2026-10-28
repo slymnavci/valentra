@@ -13,7 +13,7 @@ declare(strict_types=1);
  * sayfalarini da Googlebot'un gorecegi gibi indirip inceliyor. Sonuc
  * panelde (Arama motorlari -> Google gorunurlugu -> Tam denetim) ve
  * ajan anahtariyla api/google-denetim.php'den okunabiliyor; GitHub'daki
- * "google-denetim" calismasi bunu cagirip kayda yaziyor.
+ * "Google denetimi" is akisi bunu cagirip kayda yaziyor.
  *
  * Her madde: ['grup', 'ad', 'durum' (tamam|uyari|hata|bilgi), 'ayrinti',
  * 'oneri']. Bir madde dusse de digerleri calisiyor.

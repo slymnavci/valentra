@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * Google tam denetimini siteye calistirtir ve sonucu kayda yazar
- * (ajan.yml "google-denetim" modu).
+ * (.github/workflows/google-denetim.yml).
  *
  * Search Console anahtari yalnizca sitede; denetimi site yapiyor
  * (api/google-denetim.php), bu betik sonucu okunur bicimde basiyor.

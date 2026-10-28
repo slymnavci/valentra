@@ -7,7 +7,7 @@ declare(strict_types=1);
  *   POST -> denetimi calistirir, sonucu JSON dondurur
  *   GET  -> son denetimin sonucunu dondurur (calistirmaz)
  *
- * GitHub'daki "google-denetim" calismasi bunu cagirip sonucu kayda
+ * GitHub'daki "Google denetimi" is akisi bunu cagirip sonucu kayda
  * yaziyor; boylece anahtar sitede kalirken sonuc disaridan okunabiliyor.
  */
 
