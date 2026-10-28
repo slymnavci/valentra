@@ -2107,9 +2107,21 @@ function haber_belge_turu(array $haber): ?string
 /** Bu uzunluğun (karakter) altındaki haber Google'a sunulmuyor (~90 kelime). */
 const HABER_INCE_KARAKTER = 600;
 
+/*
+ * KISA HABERLER DE GOOGLE'A (site sahibinin karari, 28.10.2026 aksami:
+ * "kisa haberleri de ac"). true iken uzunluk siniri dizine almayi
+ * engellemiyor; HABER_INCE_KARAKTER yalnizca ozgun haber uretiminde
+ * (includes/ozgun_haber.php) kullaniliyor. false: 600 alti yine noindex.
+ */
+const HABER_KISA_DA_DIZINDE = true;
+
 /** @param array<string,mixed> $haber */
 function haber_ince_mi(array $haber): bool
 {
+    if (HABER_KISA_DA_DIZINDE) {
+        return false;
+    }
+
     $uzunluk = mb_strlen(trim((string) ($haber['icerik'] ?? '')), 'UTF-8')
              + mb_strlen(trim((string) ($haber['neden_onemli'] ?? '')), 'UTF-8');
 
@@ -2181,8 +2193,9 @@ function haber_dizinlenir_kosulu(string $takma = ''): string
 
     $p = $takma !== '' ? $takma . '.' : '';
 
-    $kosul = '(CHAR_LENGTH(' . $p . 'icerik)' . ($neden ? ' + CHAR_LENGTH(' . $p . 'neden_onemli)' : '')
-           . ' >= ' . HABER_INCE_KARAKTER . ')';
+    $kosul = HABER_KISA_DA_DIZINDE ? '(1 = 1)'
+           : '(CHAR_LENGTH(' . $p . 'icerik)' . ($neden ? ' + CHAR_LENGTH(' . $p . 'neden_onemli)' : '')
+             . ' >= ' . HABER_INCE_KARAKTER . ')';
 
     if (HABER_YALNIZCA_OZGUN_DIZINDE) {
         $kosul .= ' AND (' . ($derleme ? $p . 'derleme = 1 OR ' : '') . $p . "kaynak_url = '' OR " . $p . "ajan_modeli LIKE 'valentra-%')";
