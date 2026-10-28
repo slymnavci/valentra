@@ -98,6 +98,16 @@ if ($kategori['slug'] === 'spor') {
             : 'Süper Lig';
         $baslik = SPOR_BOLUMLERI[$sporBolum] ?? SPOR_ALT_BOLUMLER[$sporBolum];
 
+        // Bolum sayfasinin kanonigi kendisi (28.10.2026 Google denetimi):
+        // Spor ana sayfasini gosterdigi icin site haritasindaki puan
+        // durumu, fikstur ve gol kralligi Google'da "kopya" sayiliyordu.
+        // Hafta/gun gezintisi ayri sayfa sayilmiyor.
+        $seoAdres = site_adresi() . spor_bolum_yolu($sporBolum, [
+            'lig'   => $sporP['lig'] !== FUTBOL_VARSAYILAN_LIG ? $sporP['lig'] : '',
+            'takim' => $sporP['takim'],
+            'mac'   => $sporP['mac'],
+        ]);
+
         $sayfaBasligi  = trim($ligAdi . ' ' . $baslik) . ' — Valentra';
         $sayfaAciklama = match ($sporBolum) {
             'puan-durumu'  => $ligAdi . ' güncel puan durumu.',

@@ -52,6 +52,7 @@ on:
           - ag-tanisi
           - canli
           - yazar-portre
+          - google-denetim
       kuru:
         description: 'Kuru calisma (siteye gonderme, sadece ciktiyi goster)'
         type: boolean
@@ -160,7 +161,7 @@ jobs:
       # Kurulum basarisiz olursa is DURMUYOR: ajan araci bulamazsa o
       # adaylari eskisi gibi baslik ve ozetle degerlendiriyor.
       - name: PDF araci kur
-        if: inputs.mod != 'ag-tanisi' && inputs.mod != 'kanun-testi' && inputs.mod != 'canli'
+        if: inputs.mod != 'ag-tanisi' && inputs.mod != 'kanun-testi' && inputs.mod != 'canli' && inputs.mod != 'google-denetim'
         run: |
           sudo apt-get install -y -q poppler-utils \
             || (sudo apt-get update -q && sudo apt-get install -y -q poppler-utils) \
@@ -503,6 +504,17 @@ jobs:
             "${VALENTRA_SITE_URL%/}/api/gsc-tazele.php" \
             || echo "::warning::Search Console tazeleme istegi basarisiz; panel acildiginda kendini tazeler." 
           echo
+
+      # Google tam denetimi: site Search Console'a kendi anahtariyla
+      # baglanip her seyi sinar (api/google-denetim.php); sonuc ve
+      # PageSpeed Insights olcumu bu calismanin kaydina yaziliyor.
+      - name: Google tam denetimi
+        if: inputs.mod == 'google-denetim'
+        working-directory: ajan
+        env:
+          VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: php google_denetim.php
 
       - name: Ajan deposunu kaydet
         if: ${{ always() && hashFiles('ajan/onbellek/**') != '' }}

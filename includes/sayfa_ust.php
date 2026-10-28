@@ -38,7 +38,8 @@ $menu = site_menusu();
  * varsayilanla yetiniyor.
  */
 $seoAdres  = $seoAdres  ?? gecerli_adres();
-$seoGorsel = $seoGorsel ?? (site_adresi() . '/assets/logo.svg');
+// Varsayilan paylasim gorseli PNG: SVG'yi Facebook, WhatsApp ve X gostermiyor.
+$seoGorsel = $seoGorsel ?? (site_adresi() . '/assets/paylasim.png');
 $seoTur    = $seoTur    ?? 'website';
 $seoSema   = $seoSema   ?? seo_site_semasi();
 
@@ -53,7 +54,9 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="description" content="<?= e($sayfaAciklama) ?>">
     <title><?= e($sayfaBasligi) ?></title>
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/assets/ikon-180.png">
     <?php /* Gece/gunduz modu: ziyaretcinin sectigi tema stil dosyasindan
              ONCE uygulaniyor, yoksa sayfa bir an yanlis renkte gorunup
              sonra degisirdi. Secim yoksa sistem ayari gecerli. */ ?>
@@ -65,9 +68,9 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
              sayfa sanip ikisinin de degerini dusurur. */ ?>
     <link rel="canonical" href="<?= e($seoAdres) ?>">
 
-    <?php if (($seoRobots ?? '') !== ''): ?>
-        <meta name="robots" content="<?= e($seoRobots) ?>">
-    <?php endif; ?>
+    <?php /* Dizine acik sayfalarda buyuk gorsel onizleme izni: yoksa
+             Google Discover ve Haberler haberi kucuk resimle gosteriyor. */ ?>
+    <meta name="robots" content="<?= e(($seoRobots ?? '') !== '' ? $seoRobots : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1') ?>">
 
     <?php
     /*
