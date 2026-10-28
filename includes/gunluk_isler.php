@@ -32,6 +32,8 @@ function gunluk_isler(): array
         // (22.10.2026, site sahibinin karari: ajan yalnizca haber ve
         // kose yazisi uretiyor; ana sayfada grafik yok). Islevleri
         // asagida duruyor, geri almak icin satirlari eklemek yeterli.
+        'ozgun'    => ['grup' => 'veri',  'ad' => 'Özgün veri haberleri',
+                       'aciklama' => 'Zamanı gelen veri haberlerini şimdi yazar: piyasa kapanışı, Süper Lig, Resmî Gazete özeti, hava, vergi takvimi, ekonomik veri. Normalde iki saatte bir kendiliğinden.'],
         'gsc'      => ['grup' => 'arama', 'ad' => 'Search Console verisi',
                        'aciklama' => 'Google\'daki tıklama, gösterim ve dizin durumunu günceller.'],
         'indexnow' => ['grup' => 'arama', 'ad' => 'Bing ve Yandex\'e bildir',
@@ -59,6 +61,7 @@ function gunluk_is_calistir(string $is): array
     try {
         return match ($is) {
             'piyasa'      => gunluk_piyasa(),
+            'ozgun'       => gunluk_ozgun(),
             'gsc'         => gunluk_gsc(),
             'indexnow'    => gunluk_indexnow(),
             'harita'      => gunluk_harita(),
@@ -73,6 +76,34 @@ function gunluk_is_calistir(string $is): array
 
         return ['tamam' => false, 'mesaj' => 'Beklenmeyen hata: ' . $e->getMessage()];
     }
+}
+
+/** @return array{tamam:bool, mesaj:string} */
+function gunluk_ozgun(): array
+{
+    require_once __DIR__ . '/ozgun_haber.php';
+
+    @set_time_limit(110);
+    canli_zorla(true);
+
+    try {
+        $sonuc = ozgun_haberleri_uret();
+    } finally {
+        canli_zorla(false);
+    }
+
+    $yazilan = array_filter($sonuc, static fn (string $s): bool => str_starts_with($s, 'yayında') || str_starts_with($s, 'taslakta'));
+    $satirlar = [];
+
+    foreach ($sonuc as $tur => $durum) {
+        $satirlar[] = $tur . ': ' . $durum;
+    }
+
+    return [
+        'tamam' => true,
+        'mesaj' => ($yazilan === [] ? 'Şu an yazılacak yeni veri haberi yok. ' : count($yazilan) . ' haber yazıldı. ')
+            . implode(' | ', $satirlar),
+    ];
 }
 
 /** @return array{tamam:bool, mesaj:string} */

@@ -243,8 +243,52 @@ require __DIR__ . '/includes/sayfa_ust.php';
     <?php endif; ?>
 
     <div class="icerik">
+        <?php
+        /*
+         * "## " ile baslayan paragraf ara baslik, butun satirlari "- " ile
+         * baslayan paragraf madde listesi (28.10.2026; ozgun veri
+         * haberleri bu bicimde yaziliyor, bkz. includes/ozgun_haber.php).
+         * Diger paragraflar eskisi gibi.
+         */
+        ?>
         <?php foreach (preg_split('/\n\s*\n/u', trim($haber['icerik'])) ?: [] as $paragraf): ?>
-            <p><?= nl2br(e(trim($paragraf))) ?></p>
+            <?php
+            $paragraf = trim($paragraf);
+            $satirlar = preg_split('/\n/u', $paragraf) ?: [];
+            ?>
+            <?php if (str_starts_with($paragraf, '## ') && count($satirlar) === 1): ?>
+                <h2><?= e(trim(substr($paragraf, 3))) ?></h2>
+            <?php elseif (array_filter($satirlar, static fn (string $s): bool => !str_starts_with(trim($s), '- ')) === []): ?>
+                <ul>
+                    <?php foreach ($satirlar as $satir): ?>
+                        <li><?= e(trim(substr(trim($satir), 2))) ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php elseif (str_starts_with($paragraf, '## ')): ?>
+                <h2><?= e(trim(substr($satirlar[0], 3))) ?></h2>
+                <p><?= nl2br(e(trim(implode("\n", array_slice($satirlar, 1))))) ?></p>
+            <?php else: ?>
+                <?php
+                // Duz metin ardindan madde listesi ("...:\n- a\n- b").
+                $ilkMadde = null;
+                foreach ($satirlar as $i => $satir) {
+                    if (str_starts_with(trim($satir), '- ')) { $ilkMadde = $i; break; }
+                }
+                $maddeler = $ilkMadde !== null ? array_slice($satirlar, $ilkMadde) : [];
+                $listeMi  = $ilkMadde !== null && $ilkMadde > 0
+                    && array_filter($maddeler, static fn (string $s): bool => !str_starts_with(trim($s), '- ')) === [];
+                ?>
+                <?php if ($listeMi): ?>
+                    <p><?= nl2br(e(trim(implode("\n", array_slice($satirlar, 0, $ilkMadde))))) ?></p>
+                    <ul>
+                        <?php foreach ($maddeler as $satir): ?>
+                            <li><?= e(trim(substr(trim($satir), 2))) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php else: ?>
+                    <p><?= nl2br(e($paragraf)) ?></p>
+                <?php endif; ?>
+            <?php endif; ?>
         <?php endforeach; ?>
     </div>
 
@@ -279,7 +323,33 @@ require __DIR__ . '/includes/sayfa_ust.php';
     $kaynakAdi    = $haber['kaynak_adi'] !== '' ? kaynak_gorunen_ad((string) $haber['kaynak_adi']) : 'kaynak';
     $resmiDayanak = trim((string) ($haber['resmi_dayanak'] ?? ''));
     $yururluk     = trim((string) ($haber['analiz_zaman'] ?? ''));
+
+    // Ozgun veri haberi (includes/ozgun_haber.php): baska sitenin haberinin
+    // ozeti degil; kaynak kutusu bunu soyluyor, bag sitenin veri sayfasina.
+    $ozgunVeri = ($haber['ajan_modeli'] ?? '') === 'valentra-veri';
     ?>
+    <?php if ($ozgunVeri): ?>
+    <section class="kaynak-tarih" aria-label="Haberin kaynağı">
+        <h2>Haberin kaynağı</h2>
+
+        <p class="kaynak-tarih-ad">Valentra Veri</p>
+
+        <?php if ($kaynakUrl !== ''): ?>
+            <a class="kaynak-tarih-dugme" href="<?= e((string) preg_replace('/[?&]veri=[^&]*$/', '', $kaynakUrl)) ?>">
+                Güncel verileri Valentra'da görün &rarr;
+            </a>
+        <?php endif; ?>
+
+        <dl>
+            <div><dt>Valentra'da yayım</dt><dd><?= e(tarih_bicimle($haber['yayin_tarihi'])) ?></dd></div>
+        </dl>
+
+        <p class="kaynak-tarih-not">
+            Bu haber, Valentra'nın kendi derlediği veriden otomatik olarak hazırlanmıştır. Rakamlar
+            metinde adı geçen kaynakların verisidir; yayım anındaki değerleri gösterir.
+        </p>
+    </section>
+    <?php else: ?>
     <section class="kaynak-tarih" aria-label="Haberin kaynağı">
         <h2>Haberin kaynağı</h2>
 
@@ -307,6 +377,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
             ayrıntılar için kaynağına başvurun.
         </p>
     </section>
+    <?php endif; ?>
 
     <?php if ($etiketler !== []): ?>
         <div class="kart-alt" style="margin-top:20px;">

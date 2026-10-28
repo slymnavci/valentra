@@ -15,7 +15,8 @@ if [ -z "${VALENTRA_SITE_URL:-}" ] || [ -z "${VALENTRA_AGENT_KEY:-}" ]; then
   exit 0
 fi
 
-for bolum in piyasa spor gostergeler resmi-gazete; do
+# ozgun en sonda: digerlerinin tazeledigi veriden haber yaziyor.
+for bolum in piyasa spor gostergeler resmi-gazete ozgun; do
   echo "== $bolum"
 
   if yanit=$(curl -sS --fail-with-body --max-time 120 -X POST \

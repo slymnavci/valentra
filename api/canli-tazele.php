@@ -11,6 +11,9 @@ declare(strict_types=1);
  *   POST ?bolum=gostergeler   Piyasalar sayfasindaki ekonomik gosterge
  *                             grafikleri (panelden tanimlanan EVDS serileri)
  *   POST ?bolum=resmi-gazete  bugunun ve dunun fihristi
+ *   POST ?bolum=ozgun         ozgun veri haberleri (piyasa kapanisi, Super
+ *                             Lig, Resmi Gazete ozeti, hava, vergi takvimi,
+ *                             ekonomik veri; bkz. includes/ozgun_haber.php)
  *
  * NEDEN (23.10.2026, site sahibi: "haberleri ceken robot gunluk olarak
  * borsa grafikleri, mac sonuclarini da ceksin; eski bilgi kalmasin"):
@@ -43,8 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $bolum = (string) ($_GET['bolum'] ?? '');
 
-if (!in_array($bolum, ['piyasa', 'spor', 'gostergeler', 'resmi-gazete'], true)) {
-    ajan_json(400, ['hata' => 'bolum: piyasa, spor, gostergeler ya da resmi-gazete olmalı.']);
+if (!in_array($bolum, ['piyasa', 'spor', 'gostergeler', 'resmi-gazete', 'ozgun'], true)) {
+    ajan_json(400, ['hata' => 'bolum: piyasa, spor, gostergeler, resmi-gazete ya da ozgun olmalı.']);
 }
 
 @set_time_limit(110);
@@ -146,6 +149,14 @@ try {
         if ($rg['gunler'] === 0) {
             $ozet['hatalar'] = $rg['hatalar'];
         }
+    }
+
+    if ($bolum === 'ozgun') {
+        // Veriler zorla kipte (taze) cekiliyor; her uretici kendi saat
+        // penceresine ve donem kaydina bakiyor.
+        require_once __DIR__ . '/../includes/ozgun_haber.php';
+
+        $ozet['uretim'] = ozgun_haberleri_uret();
     }
 } catch (Throwable $e) {
     canli_zorla(false);
