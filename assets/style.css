@@ -5216,6 +5216,41 @@ a.bulut-etiket:hover,
     color: var(--vurgu);
 }
 
+/* Kaynak: haberin en altinda kucuk bir satir (28.10.2026). */
+.haber-kaynak {
+    margin-top: 22px;
+    padding-top: 12px;
+    border-top: 1px solid var(--cizgi);
+    font-size: .8rem;
+    line-height: 1.55;
+    color: var(--metin-soluk);
+}
+
+.haber-kaynak p { margin: 0 0 4px; }
+.haber-kaynak p:last-child { margin-bottom: 0; }
+.haber-kaynak a { color: inherit; text-decoration: underline; }
+.haber-kaynak a:hover { color: var(--vurgu); }
+
+/* Kaydirma akisi: siradaki haberin ustundeki ayrac. */
+.sonraki-ayrac {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 36px 0 -8px;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--metin-soluk);
+}
+
+.sonraki-ayrac::before,
+.sonraki-ayrac::after {
+    content: "";
+    flex: 1;
+    border-top: 1px solid var(--cizgi);
+}
+
 .ilgili-kartlar {
     margin-top: 30px;
     padding-top: 20px;
