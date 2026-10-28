@@ -3033,6 +3033,15 @@ a.menu-oge.aktif::after,
 .kaynak-tarih dd { margin: 0; color: var(--metin); }
 .kaynak-tarih a { color: var(--vurgu); text-decoration: underline; }
 
+/* Derleme haberin kaynak listesi (28.10.2026). */
+.derleme-kaynaklar {
+    margin: 0 0 8px;
+    padding-left: 1.2em;
+    line-height: 1.55;
+}
+
+.derleme-kaynaklar li { margin: 3px 0; overflow-wrap: anywhere; }
+
 .kaynak-tarih-not {
     margin: 8px 0 0;
     font-size: .82rem;
@@ -3411,16 +3420,19 @@ a.rg-madde:hover { color: var(--vurgu); }
     color: var(--altin-koyu);
 }
 
-.kose-detay .icerik h2 {
+.kose-detay .icerik h2,
+.detay-derleme .icerik h2 {
     margin: 1.6em 0 .6em;
     font-size: 1.25rem;
     font-weight: 800;
     line-height: 1.3;
 }
 
-.kose-detay .icerik ul { margin: 0 0 1.05em; padding-left: 1.3em; }
+.kose-detay .icerik ul,
+.detay-derleme .icerik ul { margin: 0 0 1.05em; padding-left: 1.3em; }
 
-.kose-detay .icerik li { margin-bottom: .35em; }
+.kose-detay .icerik li,
+.detay-derleme .icerik li { margin-bottom: .35em; }
 
 .kose-dayanak {
     margin-top: 28px;

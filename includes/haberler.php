@@ -2107,29 +2107,82 @@ function haber_ince_mi(array $haber): bool
     return $uzunluk < HABER_INCE_KARAKTER;
 }
 
+/*
+ * YALNIZCA DERLEME VE KENDI HABERLERIMIZ GOOGLE'A (site sahibinin karari,
+ * 28.10.2026). Tek bir kaynagin haberinin ozeti, ne kadar uzun olursa
+ * olsun, Google'a gore aslinin kopyasi: 26.10'da 166 sayfa "Tarandi -
+ * dizine eklenmemis", 254 sayfa "Kesfedildi". Bu sayfalar sitede okuyucu
+ * icin kaliyor ama "noindex, follow" ve site haritalarinin disinda.
+ * Google'a sunulanlar:
+ *   - derleme haberler: ayni olayi veren birden cok kaynaktan Valentra'nin
+ *     yazdigi ozgun haber (bkz. includes/derleme.php),
+ *   - kaynagi olmayan, panelde yazilmis haberler.
+ * Geri almak icin false: eskisi gibi yalnizca kisa haberler disarida.
+ */
+const HABER_YALNIZCA_OZGUN_DIZINDE = true;
+
+/** @param array<string,mixed> $haber */
+function haber_derleme_mi(array $haber): bool
+{
+    return (int) ($haber['derleme'] ?? 0) === 1;
+}
+
 /**
- * Site haritalarında kullanılan SQL koşulu (haber_ince_mi'nin karşılığı).
+ * Haber Google'a sunuluyor mu (sayfada "index", site haritalarinda)?
  *
- * "neden_onemli" sutunu yoksa (sema yukseltmesi dustuyse) yalnizca metin
- * uzunlugu: site haritasi hata verip bos kalmasin.
+ * @param array<string,mixed> $haber
+ */
+function haber_google_sunulur_mu(array $haber): bool
+{
+    if (haber_ince_mi($haber)) {
+        return false;
+    }
+
+    if (!HABER_YALNIZCA_OZGUN_DIZINDE) {
+        return true;
+    }
+
+    return haber_derleme_mi($haber) || trim((string) ($haber['kaynak_url'] ?? '')) === '';
+}
+
+/**
+ * Site haritalarında kullanılan SQL koşulu (haber_google_sunulur_mu'nun
+ * karşılığı).
+ *
+ * "neden_onemli" ya da "derleme" sutunu yoksa (sema yukseltmesi dustuyse)
+ * olmayan sutun kosula girmiyor: site haritasi hata verip bos kalmasin.
  */
 function haber_dizinlenir_kosulu(string $takma = ''): string
 {
     static $neden = null;
+    static $derleme = null;
 
     if ($neden === null) {
-        try {
-            db()->query('SELECT neden_onemli FROM haberler LIMIT 0');
-            $neden = true;
-        } catch (Throwable $e) {
-            $neden = false;
-        }
+        $neden   = haber_sutun_var('neden_onemli');
+        $derleme = haber_sutun_var('derleme');
     }
 
     $p = $takma !== '' ? $takma . '.' : '';
 
-    return '(CHAR_LENGTH(' . $p . 'icerik)' . ($neden ? ' + CHAR_LENGTH(' . $p . 'neden_onemli)' : '')
-         . ' >= ' . HABER_INCE_KARAKTER . ')';
+    $kosul = '(CHAR_LENGTH(' . $p . 'icerik)' . ($neden ? ' + CHAR_LENGTH(' . $p . 'neden_onemli)' : '')
+           . ' >= ' . HABER_INCE_KARAKTER . ')';
+
+    if (HABER_YALNIZCA_OZGUN_DIZINDE) {
+        $kosul .= ' AND (' . ($derleme ? $p . 'derleme = 1 OR ' : '') . $p . "kaynak_url = '')";
+    }
+
+    return $kosul;
+}
+
+function haber_sutun_var(string $sutun): bool
+{
+    try {
+        db()->query('SELECT ' . $sutun . ' FROM haberler LIMIT 0');
+
+        return true;
+    } catch (Throwable $e) {
+        return false;
+    }
 }
 
 /**

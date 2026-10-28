@@ -46,6 +46,8 @@ function gunluk_isler(): array
                           'aciklama' => 'Kaynakları tarar, yeni haberleri onay bekleyenlere ekler.'],
         'ajan_kose'   => ['grup' => 'ajan', 'ad' => 'Yalnızca köşe yazılarını yaz',
                           'aciklama' => 'Günün köşe yazılarını yazar (günlük tavan dolmuşsa yazmaz).'],
+        'ajan_derleme' => ['grup' => 'ajan', 'ad' => 'Yalnızca derleme haberleri yaz',
+                          'aciklama' => 'Birden çok yayının verdiği olaylardan derleme haber yazar (çalışma başına en fazla 5, günde 20). Google\'a yalnızca derlemeler sunulur; hepsi onayınıza düşer.'],
     ];
 }
 
@@ -66,6 +68,7 @@ function gunluk_is_calistir(string $is): array
             'ajan'        => gunluk_ajan('gunluk'),
             'ajan_haber'  => gunluk_ajan('topla'),
             'ajan_kose'   => gunluk_ajan('kose-yazisi'),
+            'ajan_derleme' => gunluk_ajan('derleme'),
             default       => ['tamam' => false, 'mesaj' => 'Bilinmeyen iş.'],
         };
     } catch (Throwable $e) {

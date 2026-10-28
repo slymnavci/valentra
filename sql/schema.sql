@@ -129,6 +129,13 @@ CREATE TABLE IF NOT EXISTS haberler (
     resmi_dayanak    VARCHAR(400) NOT NULL DEFAULT '',
     -- Haberin kaynakta olmayan acisi: "Neden onemli?" (26.10.2026).
     neden_onemli     VARCHAR(800) NOT NULL DEFAULT '',
+    -- DERLEME HABER (28.10.2026): ayni olayi veren birden cok kaynagin
+    -- haberlerinden Valentra'nin yazdigi ozgun haber (bkz.
+    -- includes/derleme.php). Google'a yalnizca derlemeler ve sitenin kendi
+    -- haberleri sunuluyor; tek kaynagin ozeti noindex. Kaynaklar JSON:
+    -- [{"id":..,"ad":..,"url":..,"baslik":..}].
+    derleme            TINYINT(1)   NOT NULL DEFAULT 0,
+    derleme_kaynaklari TEXT         NULL,
 
     onaylayan_id    INT UNSIGNED  NULL,
     onay_tarihi     DATETIME      NULL,
