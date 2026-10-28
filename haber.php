@@ -56,7 +56,7 @@ if (!haber_google_sunulur_mu($haber)) {
 require_once __DIR__ . '/includes/kurumsal.php';
 
 $nedenOnemli = trim((string) ($haber['neden_onemli'] ?? ''));
-$ilgililer   = haber_ilgililer($haber, 4);
+$ilgililer   = haber_ilgililer($haber, 6);
 
 // Gorsel sitenin kendi sunucusundan (bkz. includes/gorsel_onbellek.php).
 $haberGorseli = haber_gorsel($haber);
@@ -89,7 +89,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
         </a>
     <?php else: ?>
         <?php if ($etiketler !== []): ?>
-            <span class="etiket">#<?= e($etiketler[0]) ?></span>
+            <a class="etiket" href="<?= e(etiket_yolu($etiketler[0])) ?>">#<?= e($etiketler[0]) ?></a>
         <?php endif; ?>
     <?php endif; ?>
 
@@ -356,13 +356,23 @@ require __DIR__ . '/includes/sayfa_ust.php';
     <section class="kaynak-tarih" aria-label="Haberin kaynağı">
         <h2>Haberin kaynağı</h2>
 
-        <p class="kaynak-tarih-ad"><?= e($kaynakAdi) ?></p>
-
-        <?php if ($kaynakUrl !== ''): ?>
-            <a class="kaynak-tarih-dugme" href="<?= e($kaynakUrl) ?>" target="_blank" rel="noopener nofollow ugc">
-                Haberin tamamını <?= e($kaynakAdi) ?> sitesinde okuyun &rarr;
-            </a>
-        <?php endif; ?>
+        <?php
+        /*
+         * Kaynak sade bir metin baglantisi (site sahibinin istegi,
+         * 28.10.2026): Google'dan gelen okuyucu tek sayfaya bakip
+         * cikiyordu ve metnin hemen altindaki buyuk "Haberin tamamini ...
+         * okuyun" dugmesi onu kaynak siteye gonderiyordu. Kaynak adi ve
+         * baglantisi telif ve seffaflik icin yerinde duruyor; yalnizca
+         * dugme degil.
+         */
+        ?>
+        <p class="kaynak-tarih-ad">
+            <?php if ($kaynakUrl !== ''): ?>
+                <a href="<?= e($kaynakUrl) ?>" target="_blank" rel="noopener nofollow ugc"><?= e($kaynakAdi) ?> &#8599;</a>
+            <?php else: ?>
+                <?= e($kaynakAdi) ?>
+            <?php endif; ?>
+        </p>
 
         <dl>
             <?php if ($resmiDayanak !== ''): ?>
@@ -382,26 +392,35 @@ require __DIR__ . '/includes/sayfa_ust.php';
     </section>
     <?php endif; ?>
 
+    <?php /* Etiketler etiket sayfasina bagli (28.10.2026; bkz. includes/etiket.php). */ ?>
     <?php if ($etiketler !== []): ?>
-        <div class="kart-alt" style="margin-top:20px;">
+        <div class="kart-alt haber-etiketleri" style="margin-top:20px;">
             <?php foreach ($etiketler as $etiket): ?>
-                <span class="etiket">#<?= e($etiket) ?></span>
+                <a class="etiket" href="<?= e(etiket_yolu($etiket)) ?>">#<?= e($etiket) ?></a>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
 
-    <?php /* Ilgili haberler: okuru sitede tutuyor, Google'in sayfalari bulmasini hizlandiriyor. */ ?>
+    <?php
+    /*
+     * BUNLAR DA ILGINIZI CEKEBILIR (28.10.2026): eski ilgili haberler
+     * listesi (4 gorselsiz baslik) yerine 6 gorselli kart. Okuyucunun
+     * ikinci haberi secmesi gorselle kat kat kolay. kart_izgara.php
+     * $haber ve $etiketler degiskenlerini kullaniyor; haberin kendisi
+     * korunuyor.
+     */
+    ?>
     <?php if ($ilgililer !== []): ?>
-        <section class="ilgili-haberler" aria-label="İlgili haberler">
-            <h2>İlgili haberler</h2>
-            <ul>
-                <?php foreach ($ilgililer as $ilgili): ?>
-                    <li>
-                        <a href="<?= e(haber_yolu((string) $ilgili['slug'])) ?>"><?= e((string) $ilgili['baslik']) ?></a>
-                        <span class="ilgili-tarih"><?= e(tarih_bicimle((string) $ilgili['yayin_tarihi'])) ?></span>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
+        <section class="ilgili-kartlar" aria-label="Bunlar da ilginizi çekebilir">
+            <h2>Bunlar da ilginizi çekebilir</h2>
+            <?php
+            $anaHaber        = $haber;
+            $anaEtiketler    = $etiketler;
+            $izgaraHaberleri = $ilgililer;
+            require __DIR__ . '/includes/kart_izgara.php';
+            $haber     = $anaHaber;
+            $etiketler = $anaEtiketler;
+            ?>
         </section>
     <?php endif; ?>
 </article>

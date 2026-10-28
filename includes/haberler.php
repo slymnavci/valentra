@@ -2209,7 +2209,7 @@ function haber_ilgililer(array $haber, int $adet = 4): array
     try {
         $ifade = db()->prepare(
             'SELECT h.id, h.baslik, h.slug, h.ozet, h.etiketler, h.gorsel_url, h.yayin_tarihi, h.kategori_id,
-                    k.ad AS kategori_adi, k.slug AS kategori_slug
+                    h.iframe_url, h.kaynak_adi, k.ad AS kategori_adi, k.slug AS kategori_slug
                FROM haberler h
           LEFT JOIN kategoriler k ON k.id = h.kategori_id
               WHERE h.durum = :d
