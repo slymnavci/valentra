@@ -184,6 +184,10 @@ if (!$kuru && is_array($bekleyen) && $bekleyen !== []) {
         $sonuc = $site->koseGonder(array_values($bekleyen));
         $depo->sil('bekleyen_kose');
         gunluk(count($bekleyen) . ' bekleyen yazı gönderildi: ' . (int) ($sonuc['eklenen'] ?? 0) . ' eklendi.');
+
+        foreach ((array) ($sonuc['hatalar'] ?? []) as $hata) {
+            gunluk('  hata: ' . json_encode($hata, JSON_UNESCAPED_UNICODE));
+        }
     } catch (Throwable $e) {
         gunluk('Bekleyen yazılar yine gönderilemedi: ' . $e->getMessage());
         Bildirim::sorun('Köşe yazısı ajanı siteye ulaşamadı; ' . count($bekleyen)
