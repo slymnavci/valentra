@@ -53,7 +53,47 @@ $adayGirdi  = trim((string) ($secenekler['aday'] ?? ''));
 function yaz(string $mesaj = ''): void
 {
     echo $mesaj . PHP_EOL;
+    $GLOBALS['kaynakDeneGunlugu'][] = $mesaj;
 }
+
+/*
+ * Ozet GitHub'da da gorunsun (29.10.2026): sonuc yalnizca is gunlugundeydi.
+ * Calisanlar, calismayanlar ve oneriler "notice" olarak; bir notun boyu
+ * sinirli oldugu icin parcalara bolunuyor.
+ */
+$GLOBALS['kaynakDeneGunlugu'] = [];
+
+register_shutdown_function(static function (): void {
+    if (getenv('GITHUB_ACTIONS') !== 'true') {
+        return;
+    }
+
+    $satirlar = $GLOBALS['kaynakDeneGunlugu'];
+    $ozet     = array_search('================ ÖZET ================', $satirlar, true);
+    $secilen  = $ozet !== false ? array_slice($satirlar, (int) $ozet + 1) : [];
+
+    foreach ($satirlar as $s) {
+        if (str_contains($s, 'ÖNERİ')) {
+            $secilen[] = trim($s);
+        }
+    }
+
+    $parca = '';
+    $no    = 0;
+
+    foreach (array_filter($secilen, static fn (string $s): bool => trim($s) !== '') as $s) {
+        if (mb_strlen($parca . $s) > 3500 && $parca !== '' && $no < 8) {
+            echo '::notice title=Valentra kaynak testi ' . (++$no) . '::' . str_replace(['%', "\r", "\n"], ['%25', '%0D', '%0A'], $parca) . PHP_EOL;
+            $parca = '';
+        }
+
+        $parca .= mb_substr($s, 0, 300) . "\n";
+    }
+
+    if ($parca !== '' && $no < 9) {
+        echo '::notice title=Valentra kaynak testi ' . (++$no) . '::' . str_replace(['%', "\r", "\n"], ['%25', '%0D', '%0A'], $parca) . PHP_EOL;
+    }
+});
 
 /**
  * JSON'un yapisini satir satir ozetler: her anahtar, dizilerin uzunlugu
