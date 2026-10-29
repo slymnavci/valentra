@@ -5486,3 +5486,5 @@ a.bulut-etiket:hover,
     .gazete-sekmeler::-webkit-scrollbar { display: none; }
     .gazete-sekmeler a { flex: none; }
 }
+/* Menude gazete adlari kunyedeki gibi: ikinci yari gazetenin renginde. */
+.menu-gazete .alt { color: var(--gazete-renk); }
