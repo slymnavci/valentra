@@ -155,6 +155,8 @@ if ($secili !== null && count($secili['noktalar']) >= 2) {
         'kaynak'   => 'Yahoo Finance',
         'sifirdan' => false,
         'hane'     => 2,
+        'golge'    => true,
+        'yon_renk' => true,
     ]);
 }
 

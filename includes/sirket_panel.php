@@ -86,6 +86,8 @@ function sirket_bist_bolumu_html(): string
             'kaynak'   => 'Yahoo Finance',
             'sifirdan' => false,
             'hane'     => 2,
+            'golge'    => true,
+            'yon_renk' => true,
         ]);
     }
 
