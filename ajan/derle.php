@@ -61,7 +61,17 @@ $bitis     = $baslangic + max(5, (int) ($secenekler['sure'] ?? 15)) * 60;
 const OLAY_ASGARI_SURE = 4 * 60;
 
 /** Olay başına okunacak en fazla kaynak sayfa. */
-const KAYNAK_SAYFA_TAVANI = 3;
+const KAYNAK_SAYFA_TAVANI = 2;
+
+/*
+ * HIZ (29.10.2026): ilk calismada tek derleme 14,5 dakika surdu ve butce
+ * doldu (5 olaydan 1'i). Secim istemine 233 haberin hepsi gidiyordu
+ * (~50 bin token) ve model istegi 180 saniye bekleyip iki kez yeniden
+ * deneniyordu. Simdi: secime en onemli SECIM_HABER_TAVANI haber, hizli
+ * haber modeli once, istek 120 sn ve tek yeniden deneme (sonra Claude /
+ * Luna), her adimin suresi gunlukte.
+ */
+const SECIM_HABER_TAVANI = 150;
 
 function gunluk(string $mesaj): void
 {
@@ -157,17 +167,22 @@ if (count($haberler) < Derleyici::ASGARI_YAYIN) {
 
 $hedef = min($enFazla, $kalan);
 
-// Model: kose yazisiyla ayni zincir (Gemini once, yogunlukta Claude ya da Luna).
-$yazar = new Yazar(ayar('GEMINI_API_KEY'), Yazar::koseModeli(), trim((string) getenv('OPENAI_API_KEY')), trim((string) getenv('ANTHROPIC_API_KEY')));
+// Malzeme onem sirasiyla geliyor (bkz. derleme_malzeme): secime en onemlileri.
+$haberler = array_slice($haberler, 0, SECIM_HABER_TAVANI);
+
+// Model: hizli haber modeli once, kose modeli yedek; Gemini yogunsa Claude ya da Luna.
+$yazar = new Yazar(ayar('GEMINI_API_KEY'), Yazar::haberModeli(), trim((string) getenv('OPENAI_API_KEY')), trim((string) getenv('ANTHROPIC_API_KEY')));
 $yazar->geminiOnce();
-$yazar->sureSiniri(180, [10, 30], $bitis);
-$yazar->yedekModel(Yazar::haberModeli());
+$yazar->sureSiniri(120, [10], $bitis);
+$yazar->yedekModel(Yazar::koseModeli());
 gunluk('Model: ' . $yazar->model() . '; bu çalışmada en fazla ' . $hedef . ' derleme.');
 
 $derleyici = new Derleyici($yazar);
 $sayfa     = new Sayfa(new Http());
 
 // --- 2. Olaylar ----------------------------------------------------------------
+
+$adimBas = time();
 
 try {
     $olaylar = $derleyici->olaySec($haberler, $malzeme['onceki'], $malzeme['kategoriler'], $hedef);
@@ -188,7 +203,8 @@ if ($olaylar === []) {
     exit(0);
 }
 
-gunluk(count($olaylar) . ' olay seçildi.');
+gunluk(count($olaylar) . ' olay seçildi (' . (time() - $adimBas) . ' sn, ' . count($haberler) . ' haber, yanıtlayan: '
+    . $yazar->sonYanitlayan() . ').');
 
 // --- 3. Yaz ve gonder -------------------------------------------------------
 
@@ -216,6 +232,7 @@ foreach ($olaylar as $no => $olay) {
      * engelliyor), olmazsa dogrudan. Alinamazsa haber metniyle yaziliyor.
      */
     $kaynakMetinleri = [];
+    $adimBas         = time();
 
     foreach (array_slice($olay['haberler'], 0, KAYNAK_SAYFA_TAVANI) as $indis) {
         if ($bitis - time() < OLAY_ASGARI_SURE / 2) {
@@ -228,9 +245,11 @@ foreach ($olaylar as $no => $olay) {
             continue;
         }
 
-        $metin = $site->sayfaGetir($url) ?? '';
+        $sayfaBas = time();
+        $metin    = $site->sayfaGetir($url) ?? '';
 
-        if (trim($metin) === '' && !$site->cekimserMi()) {
+        // Site uzerinden 15 saniyede gelmediyse dogrudan da denenmiyor: yavas kaynak.
+        if (trim($metin) === '' && !$site->cekimserMi() && time() - $sayfaBas < 15) {
             $metin = $sayfa->metin($url, 12000);
         }
 
@@ -238,6 +257,9 @@ foreach ($olaylar as $no => $olay) {
             $kaynakMetinleri[$indis] = $metin;
         }
     }
+
+    $sayfaSuresi = time() - $adimBas;
+    $adimBas     = time();
 
     try {
         $yazi = $derleyici->yaz($olay, $haberler, $kaynakMetinleri);
@@ -274,7 +296,8 @@ foreach ($olaylar as $no => $olay) {
     ];
 
     gunluk('  yazıldı: ' . $yazi['baslik'] . ' (' . count(preg_split('/\s+/u', $yazi['icerik']) ?: []) . ' kelime, '
-        . count($kaynakMetinleri) . ' kaynak sayfa, ' . (time() - $baslangic) . ' sn)');
+        . count($kaynakMetinleri) . ' kaynak sayfa ' . $sayfaSuresi . ' sn, yazım ' . (time() - $adimBas) . ' sn ('
+        . $yazar->sonYanitlayan() . '), toplam ' . (time() - $baslangic) . ' sn)');
 
     if ($kuru) {
         echo "\n==== " . $yeni['baslik'] . " ====\n" . $yeni['ozet'] . "\n\n" . $yeni['icerik']
