@@ -615,7 +615,22 @@ function google_denetimi(int $sureButcesi = 80): array
         // Ana sayfa, ornek haber ve haritadan birer kategori, rehber, kurumsal sayfa
         $denetlenecek = [$taban . '/' => 'Ana sayfa'];
 
-        if ($haberOrnegi !== '') {
+        /*
+         * Ornek haber 2-5 gun once yayimlanmis olsun (site sahibinin sorusu,
+         * 29.10.2026: "bu URL denetimi hatasi nedir?"). En yeni haberi Google
+         * henuz gormemis oluyor ve satir her denetimde kendiliginden "uyari"
+         * veriyordu. Birkac gunluk haber dizinde degilse gercekten bakilacak
+         * bir sey var demektir. Uygun haber yoksa en yenisi.
+         */
+        $eskiOrnek = (string) db()->query(
+            "SELECT slug FROM haberler WHERE durum = 'yayinda' AND " . haber_dizinlenir_kosulu()
+            . ' AND yayin_tarihi BETWEEN NOW() - INTERVAL 5 DAY AND NOW() - INTERVAL 2 DAY'
+            . ' ORDER BY onem DESC, yayin_tarihi DESC LIMIT 1'
+        )->fetchColumn();
+
+        if ($eskiOrnek !== '') {
+            $denetlenecek[$taban . haber_yolu($eskiOrnek)] = 'Örnek haber (2-5 gün önce yayımlanmış)';
+        } elseif ($haberOrnegi !== '') {
             $denetlenecek[$haberOrnegi] = 'Örnek haber';
         }
 

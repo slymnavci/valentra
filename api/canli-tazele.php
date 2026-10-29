@@ -157,6 +157,9 @@ try {
         require_once __DIR__ . '/../includes/ozgun_haber.php';
 
         $ozet['uretim'] = ozgun_haberleri_uret();
+
+        // Gorselsiz habere konu gorseli (bkz. haber_kategori_gorsellerini_doldur).
+        $ozet['kategori_gorseli'] = haber_kategori_gorsellerini_doldur();
     }
 } catch (Throwable $e) {
     canli_zorla(false);
