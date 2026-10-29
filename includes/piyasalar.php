@@ -389,10 +389,17 @@ function piyasa_kivrim(array $noktalar, ?float $degisim): string
     static $no = 0;
     $id = 'kivrim-' . (++$no);
 
+    // Renk dogrudan: Safari gradyanda currentColor'u siyah ciziyor.
+    $renk = match (trim($sinif)) {
+        'arti'  => '#157a43',
+        'eksi'  => '#c23a2e',
+        default => '#c0121b',
+    };
+
     return '<svg class="kivrim' . $sinif . '" viewBox="0 0 200 50" preserveAspectRatio="none" aria-hidden="true">'
         . '<defs><linearGradient id="' . $id . '" x1="0" y1="0" x2="0" y2="1">'
-        . '<stop offset="0" stop-color="currentColor" stop-opacity=".35"/>'
-        . '<stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>'
+        . '<stop offset="0" stop-color="' . $renk . '" stop-opacity=".25"/>'
+        . '<stop offset="1" stop-color="' . $renk . '" stop-opacity="0"/></linearGradient></defs>'
         . '<path class="kivrim-dolgu" d="' . $yol . ' L200 50 L0 50 Z" fill="url(#' . $id . ')"/>'
         . '<path class="kivrim-cizgi" d="' . $yol . '" vector-effect="non-scaling-stroke"/></svg>';
 }

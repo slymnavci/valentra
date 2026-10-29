@@ -253,9 +253,21 @@ function grafik_ciz(array $seri, array $ayar = []): string
                  preserveAspectRatio="none" aria-hidden="true" focusable="false">
                 <?php if ($golgeYolu !== ''): ?>
                     <defs>
+                        <?php
+                        /*
+                         * Renk dogrudan yaziliyor, currentColor degil: Safari
+                         * gradyan durağında currentColor'u SIYAH ciziyordu
+                         * (site sahibi, 29.10.2026: "borsa siyah olmus").
+                         */
+                        $golgeRengi = match (trim($yonSinif)) {
+                            'arti'  => '#157a43',
+                            'eksi'  => '#c23a2e',
+                            default => '#205698',
+                        };
+                        ?>
                         <linearGradient id="<?= $golgeId ?>" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0" stop-color="currentColor" stop-opacity=".30"/>
-                            <stop offset="1" stop-color="currentColor" stop-opacity="0"/>
+                            <stop offset="0" stop-color="<?= $golgeRengi ?>" stop-opacity=".22"/>
+                            <stop offset="1" stop-color="<?= $golgeRengi ?>" stop-opacity="0"/>
                         </linearGradient>
                     </defs>
                 <?php endif; ?>
