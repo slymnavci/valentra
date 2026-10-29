@@ -75,6 +75,15 @@ if (($mansetler ?? []) === []) {
     <?php endforeach; ?>
 </div>
 
+<?php /* Telefonda dugmeler yerine yalnizca gosterge (dokunulmuyor; gecis
+         parmakla kaydirarak). Bkz. style.css .kaydirak-noktalar. */ ?>
+<div class="kaydirak-noktalar" id="kaydirakNoktalar" aria-hidden="true"
+     style="--adet: <?= count($mansetler) ?>">
+    <?php foreach ($mansetler as $sira => $haber): ?>
+        <span<?= $sira === 0 ? ' class="aktif"' : '' ?>></span>
+    <?php endforeach; ?>
+</div>
+
 <script>
 (function () {
     var pencere  = document.getElementById('kaydirakPencere');
@@ -82,8 +91,10 @@ if (($mansetler ?? []) === []) {
     if (!pencere || !sayfalar) { return; }
 
     var dugmeler = Array.prototype.slice.call(sayfalar.querySelectorAll('button'));
+    var noktaKutu = document.getElementById('kaydirakNoktalar');
+    var noktalar = noktaKutu ? Array.prototype.slice.call(noktaKutu.children) : [];
     var slaytlar = Array.prototype.slice.call(pencere.children);
-    if (slaytlar.length < 2) { sayfalar.hidden = true; return; }
+    if (slaytlar.length < 2) { sayfalar.hidden = true; if (noktaKutu) { noktaKutu.hidden = true; } return; }
 
     var aktif = 0;
     var kullaniciMudahalesi = false;
@@ -101,6 +112,7 @@ if (($mansetler ?? []) === []) {
         dugmeler.forEach(function (d, i) {
             d.setAttribute('aria-current', i === aktif ? 'true' : 'false');
         });
+        noktalar.forEach(function (n, i) { n.classList.toggle('aktif', i === aktif); });
     }
 
     dugmeler.forEach(function (dugme) {
