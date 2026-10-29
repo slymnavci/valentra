@@ -51,7 +51,7 @@ function gunluk_isler(): array
         'ajan_derleme' => ['grup' => 'ajan', 'ad' => 'Yalnızca derleme haberleri yaz',
                           'aciklama' => 'Birden çok yayının verdiği olaylardan derleme haber yazar (çalışma başına en fazla 5, günde 20). Google\'a yalnızca derlemeler sunulur; hepsi onayınıza düşer.'],
         'ajan_burc'    => ['grup' => 'ajan', 'ad' => 'Bugünün burç yorumlarını yaz',
-                          'aciklama' => '12 burcun günlük yorumunu yapay zekâ ile yazar (bugünün yorumları varsa bir şey yapmaz). Normalde gece yarısından sonraki ilk çalışmada kendiliğinden.'],
+                          'aciklama' => '12 burcun günlük yorumunu yapay zekâ ile yazar; bugünün yorumları varsa yeniden yazar. Normalde gece yarısından sonraki ilk çalışmada kendiliğinden.'],
     ];
 }
 
