@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 @set_time_limit(150);
 
 try {
-    $sonuc = google_denetimi(100);
+    $sonuc = google_denetimi(55);
 } catch (Throwable $e) {
     ajan_json(500, ['hata' => 'Denetim çalışamadı: ' . $e->getMessage() . ' (' . basename($e->getFile()) . ':' . $e->getLine() . ')']);
 }

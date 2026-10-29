@@ -59,3 +59,11 @@ jobs:
                    and (.value.scoreDisplayMode == "binary" or .value.scoreDisplayMode == "numeric" or .value.scoreDisplayMode == "metricSavings"))
                    | "  - \(.value.title)\(if .value.displayValue then " (" + .value.displayValue + ")" else "" end)"' "lh-$tur.json"
           done
+          # Lighthouse robots.txt'yi gecersiz bulursa sebebini ve dosyanin canli halini goster.
+          for tur in mobil masaustu; do
+            [ -f "lh-$tur.json" ] || continue
+            jq -r '.audits["robots-txt"].details.items[]? | "  robots.txt satir \(.index): \(.line) -> \(.message)"' "lh-$tur.json"
+            break
+          done
+          echo "== Canli robots.txt =="
+          curl -sS --max-time 20 "$site/robots.txt" | cat -A | head -60
