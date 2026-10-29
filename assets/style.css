@@ -4946,9 +4946,14 @@ a.rg-madde:hover { color: var(--vurgu); }
 
 /* Yan pencere: Yazarlarimiz */
 .yazar-listesi { list-style: none; margin: 0; padding: 0; }
-.yazar-listesi li { display: flex; gap: 12px; align-items: flex-start; padding: 11px 0; }
+/* Ad ve yazi bagi en az 24 piksel yuksek (29.10.2026, Lighthouse "dokunma
+   hedefi kucuk": 20,7 pikseldi). Artan yukseklik satir boslugundan ve
+   bag arasindaki 2 pikselden aliniyor; kutunun boyu degismiyor. */
+.yazar-listesi li { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; }
 .yazar-listesi li + li { border-top: 1px solid var(--cizgi); }
-.yazar-metin { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.yazar-metin { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.yazar-listesi .yazar-ad,
+.yazar-listesi .yazar-yazi { padding-block: 2px; }
 .yazar-listesi .yazar-ad { font-size: .8rem; font-weight: 800; letter-spacing: .02em; color: var(--altin); text-transform: uppercase; }
 .yazar-listesi .yazar-yazi { font-weight: 700; line-height: 1.3; color: var(--metin); }
 .yazar-listesi .yazar-yazi:hover { color: var(--vurgu); }
@@ -5095,7 +5100,10 @@ a.rg-madde:hover { color: var(--vurgu); }
     border-radius: var(--yuvarlak);
 }
 .spor-yazar-izgara .yazar-portre { border-radius: 50%; flex: none; }
-.spor-yazar-izgara .yazar-metin { display: grid; gap: 3px; min-width: 0; }
+.spor-yazar-izgara .yazar-metin { display: grid; gap: 0; min-width: 0; }
+/* Bag en az 24 piksel (dokunma hedefi; bkz. .yazar-listesi). */
+.spor-yazar-izgara .yazar-ad,
+.spor-yazar-izgara .yazar-yazi { padding-block: 2px; }
 .spor-yazar-izgara .yazar-ad { font-size: .8rem; font-weight: 800; letter-spacing: .02em; color: var(--altin); text-transform: uppercase; }
 .spor-yazar-izgara .yazar-alan { font-size: .74rem; color: var(--metin-soluk); font-weight: 600; }
 .spor-yazar-izgara .yazar-yazi { font-weight: 700; line-height: 1.3; color: var(--metin); }
