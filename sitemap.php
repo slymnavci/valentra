@@ -124,6 +124,21 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         <priority>0.7</priority>
     </url>
 
+    <?php // Gunluk burc yorumlari (29.10.2026): her gun yenileniyor. ?>
+    <?php require_once __DIR__ . '/includes/burclar.php'; ?>
+    <url>
+        <loc><?= e($taban . burclar_yolu()) ?></loc>
+        <changefreq>daily</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <?php foreach (array_keys(BURCLAR) as $burcAnahtari): ?>
+        <url>
+            <loc><?= e($taban . burc_yolu($burcAnahtari)) ?></loc>
+            <changefreq>daily</changefreq>
+            <priority>0.6</priority>
+        </url>
+    <?php endforeach; ?>
+
     <url>
         <loc><?= e($taban . piyasalar_yolu()) ?></loc>
         <changefreq>hourly</changefreq>

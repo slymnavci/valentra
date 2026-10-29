@@ -5,7 +5,8 @@ declare(strict_types=1);
  * Ust menu.
  *
  *   Ana Sayfa · Gundem · Politika · Ekonomi · Dunya · Spor (acilir) ·
- *   Teknoloji · Saglik · Kultur-Sanat · Kose Yazilari · Yemek Tarifleri
+ *   Teknoloji · Saglik · Kultur-Sanat · Kose Yazilari · Burclar (acilir) ·
+ *   Yemek Tarifleri
  *
  * Ekim 2026'da site vergi/muhasebe yayinindan genel haber ozetlerine
  * dondu (site sahibinin karari). Eski menu (Vergi ve Mevzuat, Muhasebe
@@ -91,6 +92,17 @@ function site_menusu(): array
     // Kose yazilari: gunun en onemli konularinin yorumu (yapay zeka ile
     // yaziliyor, onaydan geciyor). Haber basliklarinin sonunda.
     $menu[] = ['ad' => 'Köşe Yazıları', 'anahtar' => 'kose', 'href' => kose_liste_yolu(), 'altlar' => []];
+
+    // Burclar (29.10.2026, site sahibinin istegi: "ana baslik yapalim"):
+    // gunluk yorumlar, acilir menude 12 burc (bkz. includes/burclar.php).
+    require_once __DIR__ . '/burclar.php';
+    $burcAltlar = [['ad' => 'Bugün Tüm Burçlar', 'anahtar' => 'burclar', 'href' => burclar_yolu(), 'adet' => 0]];
+
+    foreach (BURCLAR as $burc => [$ad, $sembol]) {
+        $burcAltlar[] = ['ad' => $sembol . ' ' . $ad, 'anahtar' => 'burc-' . $burc, 'href' => burc_yolu($burc), 'adet' => 0];
+    }
+
+    $menu[] = ['ad' => 'Burçlar', 'anahtar' => 'burclar-menu', 'href' => null, 'altlar' => $burcAltlar];
 
     // Yemek tarifleri menunun EN SONUNDA (site sahibinin istegi):
     // haber basliklarindan ve kose yazilarindan sonra.

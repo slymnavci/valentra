@@ -242,6 +242,10 @@
 
     # Kose yazari sayfasi (23.10.2026): /yazar/ahmet-sami-gumus
     RewriteRule ^yazar/([a-z0-9-]+)/?$ yazar.php?y=$1 [L,QSA]
+
+    # Gunluk burc yorumlari (29.10.2026): /burclar ve /burc/koc
+    RewriteRule ^burclar/?$ burclar.php [L,QSA]
+    RewriteRule ^burc/([a-z]+)/?$ burc.php?b=$1 [L,QSA]
 </IfModule>
 
 # --- Statik dosyalarin tarayici onbellegi (29.10.2026) ----------------

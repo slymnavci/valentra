@@ -368,6 +368,43 @@ final class Site
         return $veri;
     }
 
+    /**
+     * Bugünün burç yorumları sitede var mı? (bkz. api/burc.php)
+     *
+     * @return array{bugun:string,var:bool}
+     */
+    public function burcDurum(): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/burc.php');
+
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Burç durumu alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return ['bugun' => (string) ($veri['bugun'] ?? date('Y-m-d')), 'var' => !empty($veri['var'])];
+    }
+
+    /**
+     * Bir günün burç yorumlarını gönderir.
+     *
+     * @param list<array<string,mixed>> $yorumlar
+     * @return array<string,mixed>
+     */
+    public function burcGonder(string $gun, array $yorumlar): array
+    {
+        [$kod, $govde] = $this->istek('POST', '/api/burc.php', json_encode(['gun' => $gun, 'yorumlar' => $yorumlar], JSON_UNESCAPED_UNICODE), true);
+
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Burç yorumları gönderilemedi (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return $veri;
+    }
+
     public function koseMalzeme(int $saat = 36): array
     {
         [$kod, $govde] = $this->istek('GET', '/api/kose.php?saat=' . max(6, $saat));

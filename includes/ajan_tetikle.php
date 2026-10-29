@@ -63,7 +63,7 @@ function ajan_tetikle(bool $kuru = false, int $saat = 2, int $enFazla = 25, stri
         'inputs' => [
             // Bilinmeyen bir mod GitHub'dan 422 dondurur; bilinen
             // degerlerle sinirlayip anlasilir hata veriyoruz.
-            'mod'     => in_array($mod, ['gunluk', 'kaynak-testi', 'kanun-testi', 'pratik-bilgiler', 'kose-yazisi', 'derleme'], true)
+            'mod'     => in_array($mod, ['gunluk', 'kaynak-testi', 'kanun-testi', 'pratik-bilgiler', 'kose-yazisi', 'derleme', 'burc'], true)
                 ? $mod
                 : 'topla',
             'kuru'    => $kuru ? 'true' : 'false',
