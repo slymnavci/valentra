@@ -38,6 +38,19 @@ if (!in_array((string) $kategori['slug'], HABER_AKIS_KATEGORILERI, true)
 }
 
 /*
+ * ValPapel, ValSpor, ValMagazin (29.10.2026, site sahibinin istegi; bkz.
+ * includes/gazeteler.php): ekonomi, spor, kultur-sanat, magazin ve yemek
+ * tarifleri haberleri gazetelerin sayfalarinda. Eski adres kalici olarak
+ * oraya yonleniyor. Spor'un puan durumu, fikstur, kulup ve mac bolumleri
+ * (?bolum=) burada kaliyor, ValSpor'un kunyesiyle.
+ */
+if (isset(KATEGORI_GAZETESI[(string) $kategori['slug']])
+    && !($kategori['slug'] === 'spor' && (string) ($_GET['bolum'] ?? '') !== '')) {
+    header('Location: ' . kategori_yolu((string) $kategori['slug'], max(1, (int) ($_GET['sayfa'] ?? 1))), true, 301);
+    exit;
+}
+
+/*
  * Konu sayfasinin basinda ana sayfadaki gibi kayan manset (site
  * sahibinin istegi, 23.10.2026: "spor haberlerine tikladim; ana sayfadaki
  * gibi 10 haberlik bir slayt kaydirici gelsin, yalnizca spor haberlerini
@@ -124,15 +137,19 @@ if ($kategori['slug'] === 'spor') {
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
 
+<?php if ($kategori['slug'] === 'spor'): ?>
+    <?php require_once __DIR__ . '/includes/gazeteler.php'; ?>
+    <?= gazete_ust_html('valspor', isset(SPOR_BOLUMLERI[$sporBolum]) ? $sporBolum : '') ?>
+<?php else: ?>
 <div class="kategori-basligi">
     <h1><?= e($kategori['ad']) ?></h1>
     <?php if ($kategori['aciklama'] !== ''): ?>
         <p><?= e($kategori['aciklama']) ?></p>
     <?php endif; ?>
 </div>
+<?php endif; ?>
 
 <?php if ($kategori['slug'] === 'spor'): ?>
-    <?= spor_sekmeleri_html($sporBolum, (string) $sporP['lig']) ?>
     <?php if (isset(SPOR_BOLUMLERI[$sporBolum])): ?>
         <?= spor_secici_html($sporBolum, $sporP) ?>
     <?php endif; ?>

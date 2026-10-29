@@ -59,6 +59,29 @@ function haber_yolu(string $slug): string
  */
 function kategori_yolu(string $slug, int $sayfa = 1): string
 {
+    /*
+     * Ekonomi, spor, kultur-sanat, magazin ve yemek tarifleri ValPapel,
+     * ValSpor ve ValMagazin'in sayfalarinda (29.10.2026; bkz.
+     * includes/gazeteler.php). Eski /kategori/... adresi kalici olarak
+     * oraya yonleniyor (kategori.php).
+     */
+    if (isset(KATEGORI_GAZETESI[$slug])) {
+        [$gazete, $bolum] = KATEGORI_GAZETESI[$slug];
+
+        // On sayfa bir liste degil; 2. sayfa ve sonrasi "tum haberler".
+        if ($bolum === '' && $sayfa > 1) {
+            $bolum = 'haberler';
+        }
+
+        return gazete_yolu($gazete, $bolum, $sayfa);
+    }
+
+    return kategori_ham_yolu($slug, $sayfa);
+}
+
+/** Kategori sayfasinin kendi adresi (gazeteye eslenmeden; spor bolumleri). */
+function kategori_ham_yolu(string $slug, int $sayfa = 1): string
+{
     $yol = temiz_adres_acik()
         ? '/kategori/' . rawurlencode($slug)
         : '/kategori.php?k=' . rawurlencode($slug);
@@ -68,6 +91,29 @@ function kategori_yolu(string $slug, int $sayfa = 1): string
     }
 
     return $yol;
+}
+
+/** Gazetesi olan kategoriler: slug => [gazete, bolum]. */
+const KATEGORI_GAZETESI = [
+    'ekonomi'         => ['valpapel', ''],
+    'spor'            => ['valspor', ''],
+    'kultur-sanat'    => ['valmagazin', 'sanat'],
+    'magazin'         => ['valmagazin', 'sanatcilar'],
+    'yemek-tarifleri' => ['valmagazin', 'yemek-tarifleri'],
+];
+
+/** ValPapel, ValSpor, ValMagazin: on sayfa ya da bir bolumu (bkz. includes/gazeteler.php). */
+function gazete_yolu(string $gazete, string $bolum = '', int $sayfa = 1): string
+{
+    if (temiz_adres_acik()) {
+        $yol = '/' . rawurlencode($gazete) . ($bolum !== '' ? '/' . rawurlencode($bolum) : '');
+
+        return $sayfa > 1 ? $yol . '?sayfa=' . $sayfa : $yol;
+    }
+
+    $parametre = array_filter(['g' => $gazete, 'b' => $bolum, 'sayfa' => $sayfa > 1 ? (string) $sayfa : '']);
+
+    return '/gazete.php?' . http_build_query($parametre);
 }
 
 /**

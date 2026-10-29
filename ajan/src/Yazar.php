@@ -142,9 +142,14 @@ final class Yazar implements SemaliIstemci
            g) Yorum ve görüş ağırlıklı içerik: köşe yazısı, analiz,
               "uzman görüşü", taraf tutan değerlendirme. Haberde olgu
               yerine yorum ağırlıklıysa yayımlama.
-           h) Magazin ve dedikodu, özel hayat, tık tuzağı, burç,
-              şans oyunu, reklam ve tanıtım içeriği, içeriği olmayan
-              "şu yayına katılacak" duyuruları.
+           h) Dedikodu ve özel hayat (ilişki, ayrılık, evlilik, kavga,
+              aile meselesi, görünüş, tatil, sosyal medya atışması), tık
+              tuzağı, burç, şans oyunu, reklam ve tanıtım içeriği,
+              içeriği olmayan "şu yayına katılacak" duyuruları.
+              ÖLÇÜLÜ MAGAZİN YAYIMLANIR: sanatçıların kendi açıklamaları
+              ve röportajları, yeni albüm, şarkı, dizi, film, kitap,
+              konser ve turneleri, ödüller, sanat hayatına dair
+              gelişmeler. Bunlar "magazin" grubuna yazılır.
            i) Ölüm, yaralanma ya da suç olaylarında mağdurların ve
               çocukların kimliğini açık eden ayrıntılar (bunlar özete
               hiç girmez; haber başka açıdan uygunsa kimlik vermeden
@@ -288,6 +293,9 @@ final class Yazar implements SemaliIstemci
           -> "ekonomi".
         - Diğerleri kendi başlıklarına: "spor", "teknoloji", "saglik",
           "kultur-sanat".
+        - Sanatçıların açıklaması, röportajı, yeni işi, konseri, ödülü
+          (ölçülü magazin) -> "magazin". Sergi, tiyatro, edebiyat,
+          kültürel miras ve kurum haberi -> "kultur-sanat".
         - Yemek tarifi -> "yemek-tarifleri" (yalnızca tarifler; yemek
           kültürü haberi, restoran ya da gıda sektörü haberi değil).
 

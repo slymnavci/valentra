@@ -65,11 +65,13 @@ const SPOR_ISTATISTIK_ADLARI = [
  */
 function spor_bolum_yolu(string $bolum = '', array $ek = []): string
 {
-    $yol = kategori_yolu('spor');
+    // Haberler ValSpor'da (29.10.2026); puan durumu, fikstur, kulup ve mac
+    // sayfalari kategori sayfasinda kaliyor.
+    $yol = kategori_ham_yolu('spor');
     $parametre = array_filter(['bolum' => $bolum] + $ek, static fn ($d): bool => $d !== '' && $d !== 0 && $d !== null);
 
     if ($parametre === []) {
-        return $yol;
+        return kategori_yolu('spor');
     }
 
     return $yol . (str_contains($yol, '?') ? '&' : '?') . http_build_query($parametre);
@@ -138,7 +140,7 @@ function spor_secici_html(string $bolum, array $p): string
     $ulke   = $p['ulke'] !== '' ? $p['ulke'] : (futbol_lig_ulkesi($p['lig']) ?: 'Türkiye');
     $ligler = FUTBOL_LIGLER[$ulke] ?? [];
 
-    $hedef = kategori_yolu('spor');
+    $hedef = kategori_ham_yolu('spor');
     [$yol, $sorgu] = array_pad(explode('?', $hedef, 2), 2, '');
     parse_str($sorgu, $gizli);
 

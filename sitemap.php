@@ -195,7 +195,27 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         </url>
     <?php endforeach; ?>
 
+    <?php // ValPapel, ValSpor, ValMagazin ve haber basliklari (29.10.2026). ?>
+    <?php require_once __DIR__ . '/includes/gazeteler.php'; ?>
+    <?php foreach (gazeteler() as $gazeteAnahtari => $gazete): ?>
+        <url>
+            <loc><?= e($taban . gazete_yolu($gazeteAnahtari)) ?></loc>
+            <changefreq>hourly</changefreq>
+            <priority>0.8</priority>
+        </url>
+        <?php foreach ($gazete['bolumler'] as $bolumAnahtari => $gazeteBolumu): ?>
+            <?php if (!isset($gazeteBolumu['kosullar'])) { continue; } ?>
+            <url>
+                <loc><?= e($taban . gazete_yolu($gazeteAnahtari, $bolumAnahtari)) ?></loc>
+                <changefreq>daily</changefreq>
+                <priority>0.6</priority>
+            </url>
+        <?php endforeach; ?>
+    <?php endforeach; ?>
+
     <?php foreach ($kategoriler as $kategori): ?>
+        <?php // Gazetesi olan kategorinin adresi gazeteye yonleniyor; yukarida. ?>
+        <?php if (isset(KATEGORI_GAZETESI[(string) $kategori['slug']])) { continue; } ?>
         <url>
             <loc><?= e($taban . kategori_yolu((string) $kategori['slug'])) ?></loc>
             <lastmod><?= e($zaman($kategori['son'])) ?></lastmod>

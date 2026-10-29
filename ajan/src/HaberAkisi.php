@@ -19,7 +19,7 @@ final class HaberAkisi
     public const KATEGORILER = [
         'gundem', 'politika', 'ekonomi', 'dunya',
         'spor', 'teknoloji', 'saglik', 'kultur-sanat',
-        'yemek-tarifleri',
+        'magazin', 'yemek-tarifleri',
     ];
 
     /**
@@ -43,6 +43,9 @@ final class HaberAkisi
         'ekonomi'      => 8,
         'saglik'       => 5,
         'kultur-sanat' => 5,
+        // Magazin (29.10.2026, ValMagazin): olculu; sanatcilarin
+        // aciklamalari, roportajlari, yeni isleri.
+        'magazin'      => 5,
         // Tarifler haber degil; surekli. 4'ten 12'ye (22.10.2026, site
         // sahibinin istegi: "yemek tarifi sayisini artiralim"; 7 kaynak).
         'yemek-tarifleri' => 12,
@@ -61,7 +64,7 @@ final class HaberAkisi
      */
     public const SIRA = [
         'gundem', 'spor', 'politika', 'ekonomi',
-        'saglik', 'kultur-sanat', 'yemek-tarifleri',
+        'saglik', 'kultur-sanat', 'magazin', 'yemek-tarifleri',
         'dunya', 'teknoloji',
     ];
 
@@ -75,6 +78,7 @@ final class HaberAkisi
         'teknoloji'    => 'Teknoloji',
         'saglik'       => 'Sağlık',
         'kultur-sanat' => 'Kültür-Sanat',
+        'magazin'      => 'Magazin',
         'yemek-tarifleri' => 'Yemek Tarifleri',
     ];
 
