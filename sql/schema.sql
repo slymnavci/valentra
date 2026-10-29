@@ -1938,3 +1938,27 @@ UPDATE kaynaklar SET aktif = 0
      OR CONCAT_WS(' ', site_url, besleme_url, liste_url) LIKE '%france24.com%')
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_alinamayan_kaynaklar_2026_10_24');
 INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_alinamayan_kaynaklar_2026_10_24', '24.10.2026');
+
+-- ---------------------------------------------------------------------------
+-- Gunluk burc yorumlari (29.10.2026, site sahibinin istegi: "burc ve
+-- yorumlari gunluk yapalim, ana baslik olsun; yorumlari yapay zeka
+-- yapsin"). Her gun 12 burc; ajan (ajan/burc.php) yazip api/burc.php ile
+-- gonderiyor. Ayni gun ve burc icin tek kayit.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS burc_yorumlari (
+    id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    gun          DATE         NOT NULL,
+    burc         VARCHAR(20)  NOT NULL,
+    baslik       VARCHAR(200) NOT NULL DEFAULT '',
+    genel        TEXT         NOT NULL,
+    ask          TEXT         NOT NULL,
+    para         TEXT         NOT NULL,
+    saglik       TEXT         NOT NULL,
+    sans_sayisi  TINYINT UNSIGNED NULL,
+    sans_rengi   VARCHAR(40)  NOT NULL DEFAULT '',
+    olusturuldu  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_burc_gun (gun, burc),
+    KEY ix_burc_burc (burc, gun)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

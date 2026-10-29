@@ -5271,3 +5271,42 @@ a.bulut-etiket:hover,
 .kaynak-satiri { margin: 18px 0 0; font-size: .74rem; color: var(--metin-soluk); }
 .kaynak-satiri a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .kaynak-satiri a:hover { color: var(--vurgu); }
+
+/* ===== Gunluk burc yorumlari (burclar.php, burc.php; 29.10.2026) ===== */
+.burc-izgara {
+    list-style: none; margin: 0 0 18px; padding: 0;
+    display: grid; gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+}
+.burc-izgara a {
+    display: grid; gap: 4px; height: 100%; padding: 16px;
+    background: var(--kart); border: 1px solid var(--cizgi); border-radius: var(--yuvarlak);
+    color: var(--metin); text-decoration: none; transition: border-color .15s, box-shadow .15s;
+}
+.burc-izgara a:hover { border-color: var(--altin); box-shadow: var(--golge); }
+.burc-sembol {
+    display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
+    background: color-mix(in srgb, var(--altin) 10%, transparent); color: var(--altin);
+    font-size: 1.5rem; line-height: 1;
+    font-family: "Segoe UI Symbol", "Noto Sans Symbols", "Noto Sans Symbols 2", "DejaVu Sans", "Apple Symbols", sans-serif;
+    font-variant-emoji: text;
+}
+.burc-sembol.buyuk { width: 72px; height: 72px; font-size: 2.4rem; flex: none; }
+.burc-izgara .burc-ad { font-size: 1.1rem; font-weight: 800; }
+.burc-izgara .burc-tarih { font-size: .76rem; color: var(--metin-soluk); }
+.burc-izgara .burc-baslik { margin-top: 6px; font-weight: 700; line-height: 1.3; }
+.burc-izgara .burc-ozet { font-size: .88rem; color: var(--metin-soluk); line-height: 1.45; }
+.burc-izgara .burc-devam { margin-top: 4px; font-size: .8rem; font-weight: 700; color: var(--vurgu); }
+.burc-not { margin: 18px 0 0; font-size: .74rem; color: var(--metin-soluk); }
+.burc-ust { display: flex; gap: 16px; align-items: center; margin-bottom: 14px; }
+.burc-ust h1 { margin: 0 0 4px; }
+.burc-ust .kunye { margin: 0; }
+.burc-sans { display: flex; flex-wrap: wrap; gap: 12px; margin: 18px 0 0; }
+.burc-sans div { padding: 10px 16px; border-radius: 10px; background: color-mix(in srgb, var(--altin) 8%, transparent); }
+.burc-sans dt { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--metin-soluk); }
+.burc-sans dd { margin: 2px 0 0; font-size: 1.15rem; font-weight: 800; }
+.burc-liste { list-style: none; margin: 0; padding: 0; }
+.burc-liste li + li { border-top: 1px solid var(--cizgi); }
+.burc-liste a { display: block; padding: 8px 0; color: var(--metin); text-decoration: none; font-weight: 600; }
+.burc-liste a:hover, .burc-liste .aktif a { color: var(--vurgu); }
+.burc-liste small { display: block; font-weight: 400; color: var(--metin-soluk); font-size: .74rem; }
