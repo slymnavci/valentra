@@ -159,13 +159,24 @@ function gazeteler(): array
             'slogan'   => 'Valentra Spor Gazetesi',
             'aciklama' => 'Süper Lig, dünya futbolu, basketbol, voleybol ve diğer branşlar: güncel spor haberleri, puan durumu ve fikstür.',
             'bolumler' => [
+                /*
+                 * Ust sekmeler sporlar; her sporun kendi alt sekmeleri ('ust')
+                 * ve istatistikleri ('veri'). Site sahibinin istegi (30.10.2026):
+                 * "ValSpor'da ilk tiklandiginda genel spor sayfasi gelsin; ust
+                 * basliklarda futbol, basketbol, voleybol ve diger olsun;
+                 * futbola bastigimizda puan durumu, gol kralligi gibi
+                 * istatistikler, baskette de basketbolun verileri".
+                 */
                 'futbol' => [
                     'ad'       => 'Futbol',
-                    'aciklama' => 'Futbol haberleri: maçlar, transferler, milli takım.',
+                    'alt_ad'   => 'Futbol Haberleri',
+                    'aciklama' => 'Futbol haberleri: maçlar, transferler, milli takım; Süper Lig puan durumu ve gol krallığı.',
+                    'veri'     => 'futbol',
                     'kosullar' => [['kategoriler' => ['spor'], 'haric' => $sporDisi]],
                 ],
                 'super-lig' => [
                     'ad'       => 'Süper Lig',
+                    'ust'      => 'futbol',
                     'aciklama' => 'Trendyol Süper Lig: maçlar, kulüpler, transferler.',
                     'kosullar' => [['kategoriler' => ['spor'], 'kelimeler' => [
                         'süper lig', 'galatasaray', 'fenerbahçe', 'beşiktaş', 'trabzonspor', 'başakşehir',
@@ -176,6 +187,7 @@ function gazeteler(): array
                 ],
                 'dunya-futbolu' => [
                     'ad'       => 'Dünya Futbolu',
+                    'ust'      => 'futbol',
                     'aciklama' => 'Avrupa ligleri ve kupaları, dünya futbolundan haberler.',
                     'kosullar' => [['kategoriler' => ['spor'], 'kelimeler' => [
                         'premier lig', 'premier league', 'la liga', 'serie a', 'bundesliga', 'ligue 1',
@@ -187,6 +199,7 @@ function gazeteler(): array
                 ],
                 'basketbol' => [
                     'ad'       => 'Basketbol',
+                    'veri'     => 'basketbol',
                     'aciklama' => 'NBA, EuroLeague, Basketbol Süper Ligi ve 12 Dev Adam.',
                     'kosullar' => [['kategoriler' => ['spor'], 'kelimeler' => GAZETE_BASKETBOL_KELIMELERI]],
                 ],
@@ -200,9 +213,9 @@ function gazeteler(): array
                     'aciklama' => 'Tenis, Formula 1, atletizm, güreş ve diğer branşlar.',
                     'kosullar' => [['kategoriler' => ['spor'], 'kelimeler' => GAZETE_DIGER_SPOR_KELIMELERI]],
                 ],
-                'puan-durumu'  => ['ad' => 'Puan Durumu',  'yol' => ['spor_bolum_yolu', 'puan-durumu'],  'anahtar' => 'spor-puan'],
-                'fikstur'      => ['ad' => 'Fikstür',      'yol' => ['spor_bolum_yolu', 'fikstur'],      'anahtar' => 'spor-fikstur'],
-                'gol-kralligi' => ['ad' => 'Gol Krallığı', 'yol' => ['spor_bolum_yolu', 'gol-kralligi'], 'anahtar' => 'spor-gol'],
+                'puan-durumu'  => ['ad' => 'Puan Durumu',  'ust' => 'futbol', 'yol' => ['spor_bolum_yolu', 'puan-durumu'],  'anahtar' => 'spor-puan'],
+                'fikstur'      => ['ad' => 'Fikstür',      'ust' => 'futbol', 'yol' => ['spor_bolum_yolu', 'fikstur'],      'anahtar' => 'spor-fikstur'],
+                'gol-kralligi' => ['ad' => 'Gol Krallığı', 'ust' => 'futbol', 'yol' => ['spor_bolum_yolu', 'gol-kralligi'], 'anahtar' => 'spor-gol'],
             ],
         ],
         'valmagazin' => [
@@ -425,15 +438,93 @@ function gazete_ust_html(string $gazete, string $aktif = ''): string
           . '<span class="gazete-slogan">' . e($g['slogan']) . ' · ' . e(tarih_uzun_bugun()) . '</span>'
           . '</header>';
 
-    $html .= '<nav class="spor-sekmeler gazete-sekmeler" aria-label="' . e($g['ad']) . ' başlıkları">'
+    /*
+     * Iki kat sekme: ustte basliklar, secili basligin alt basliklari
+     * ('ust' => ...) altta. Alt baslik acikken ustte babasi secili.
+     */
+    $ustAktif = $aktif !== '' ? (string) ($g['bolumler'][$aktif]['ust'] ?? $aktif) : '';
+
+    $html .= '<nav class="spor-sekmeler gazete-sekmeler gazete-' . e($gazete) . '" aria-label="' . e($g['ad']) . ' başlıkları">'
            . '<a href="' . e(gazete_yolu($gazete)) . '"' . ($aktif === '' ? ' class="aktif" aria-current="page"' : '') . '>Ön Sayfa</a>';
 
     foreach ($g['bolumler'] as $anahtar => $b) {
-        $html .= '<a href="' . e(gazete_bolum_yolu($gazete, $anahtar)) . '"'
-               . ($anahtar === $aktif ? ' class="aktif" aria-current="page"' : '') . '>' . e($b['ad']) . '</a>';
+        if (isset($b['ust'])) {
+            continue;
+        }
+
+        $secili = $anahtar === $ustAktif;
+        $html  .= '<a href="' . e(gazete_bolum_yolu($gazete, $anahtar)) . '"'
+                . ($secili ? ' class="aktif"' . ($anahtar === $aktif ? ' aria-current="page"' : '') : '') . '>' . e($b['ad']) . '</a>';
     }
 
-    return $html . '</nav>';
+    $html .= '</nav>';
+
+    $altlar = array_filter($g['bolumler'], static fn (array $b): bool => ($b['ust'] ?? '') === $ustAktif && $ustAktif !== '');
+
+    if ($altlar !== []) {
+        $baba  = $g['bolumler'][$ustAktif];
+        $html .= '<nav class="spor-sekmeler gazete-sekmeler gazete-alt-sekmeler gazete-' . e($gazete) . '" aria-label="' . e($baba['ad']) . ' alt başlıkları">'
+               . '<a href="' . e(gazete_bolum_yolu($gazete, $ustAktif)) . '"' . ($aktif === $ustAktif ? ' class="aktif" aria-current="page"' : '') . '>'
+               . e((string) ($baba['alt_ad'] ?? $baba['ad'])) . '</a>';
+
+        foreach ($altlar as $anahtar => $b) {
+            $html .= '<a href="' . e(gazete_bolum_yolu($gazete, $anahtar)) . '"'
+                   . ($anahtar === $aktif ? ' class="aktif" aria-current="page"' : '') . '>' . e($b['ad']) . '</a>';
+        }
+
+        $html .= '</nav>';
+    }
+
+    return $html;
+}
+
+/**
+ * Basligin istatistikleri ('veri'): sayfada haberlerin ustunde. Veri
+ * alinamazsa bos; haberler yine gorunuyor.
+ */
+function gazete_veri_html(string $veri): string
+{
+    if ($veri === 'futbol') {
+        require_once __DIR__ . '/spor_panel.php';
+
+        $p    = spor_parametreleri([]);
+        $html = '';
+        $puan = spor_paneli_html('puan-durumu', $p);
+
+        if ($puan !== '') {
+            $html .= '<div class="bolum-basligi"><h2><a href="' . e(spor_bolum_yolu('puan-durumu')) . '">Süper Lig Puan Durumu</a></h2>'
+                   . '<span class="cizgi"></span><a class="gazete-tumu" href="' . e(spor_bolum_yolu('puan-durumu')) . '">Tüm ligler &rarr;</a></div>'
+                   . $puan;
+        }
+
+        $gol = futbol_api_acik() ? spor_paneli_html('gol-kralligi', $p) : '';
+
+        if ($gol !== '') {
+            $html .= '<div class="bolum-basligi"><h2><a href="' . e(spor_bolum_yolu('gol-kralligi')) . '">Gol Krallığı</a></h2>'
+                   . '<span class="cizgi"></span><a class="gazete-tumu" href="' . e(spor_bolum_yolu('fikstur')) . '">Fikstür &rarr;</a></div>'
+                   . $gol;
+        }
+
+        return $html;
+    }
+
+    if ($veri === 'basketbol') {
+        require_once __DIR__ . '/basketbol.php';
+
+        $html = '';
+
+        foreach (BASKETBOL_LIGLERI as $lig => $ad) {
+            $tablo = basketbol_puan_html($lig);
+
+            if ($tablo !== '') {
+                $html .= '<div class="bolum-basligi"><h2>' . e($ad) . ' Puan Durumu</h2><span class="cizgi"></span></div>' . $tablo;
+            }
+        }
+
+        return $html;
+    }
+
+    return '';
 }
 
 /** "29 Ekim 2026 Perşembe" */

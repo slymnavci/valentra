@@ -5488,3 +5488,12 @@ a.bulut-etiket:hover,
 }
 /* Menude gazete adlari kunyedeki gibi: ikinci yari gazetenin renginde. */
 .menu-gazete .alt { color: var(--gazete-renk); }
+/* Alt sekmeler (ValSpor'da sporun alt basliklari): daha kucuk, ince. */
+.gazete-alt-sekmeler { margin-top: -10px; }
+.gazete-alt-sekmeler a { padding: 5px 12px; font-size: .82rem; background: transparent; }
+.gazete-alt-sekmeler a.aktif { background: var(--gazete-renk, var(--metin)); border-color: var(--gazete-renk, var(--metin)); color: #fff; }
+.gazete-veri .bolum-basligi:first-child { margin-top: 8px; }
+/* Kunye ve sekmeler sola dayali (site sahibinin istegi, 30.10.2026). */
+.gazete-kunye { text-align: left; }
+.gazete-sekmeler { justify-content: flex-start; }
+.gazete-alt-sekmeler { margin-top: -10px; }

@@ -70,8 +70,10 @@ if ($onSayfa) {
     $mansetler  = gazete_haberleri($gazete, '', 6);
     $gosterilen = array_map(static fn (array $h): int => (int) $h['id'], $mansetler);
 
+    // Ust basliklarin bloklari (ValSpor'da futbol, basketbol, voleybol,
+    // diger); alt basliklar kendi sporunun sayfasinda.
     foreach ($g['bolumler'] as $anahtar => $bb) {
-        if (!isset($bb['kosullar'])) {
+        if (!isset($bb['kosullar']) || isset($bb['ust'])) {
             continue;
         }
 
@@ -91,7 +93,7 @@ if ($onSayfa) {
             $gosterilen[] = (int) $h['id'];
         }
     }
-} else {
+} elseif ($bolum === 'haberler' || isset($b['kosullar'])) {
     // Kategori sayfasi gibi: ilk sayfada bes haberlik manset, sonra izgara.
     $mansetAdet = 5;
     $adet       = 12;
@@ -127,11 +129,8 @@ if ($gazete === 'valpapel' && $sayfa === 1 && ($onSayfa || isset($b['piyasa'])))
     }
 }
 
-if ($gazete === 'valspor' && $onSayfa) {
-    require_once __DIR__ . '/includes/spor_panel.php';
-
-    $canli = spor_paneli_html('puan-durumu', spor_parametreleri([]));
-}
+// Basligin istatistikleri (ValSpor'da futbolun puan durumu, gol kralligi).
+$veri = $sayfa === 1 && isset($b['veri']) ? gazete_veri_html((string) $b['veri']) : '';
 
 $burclar = [];
 
@@ -156,15 +155,20 @@ require __DIR__ . '/includes/sayfa_ust.php';
             </div>
         <?php endif; ?>
 
+        <?php // Istatistikler once (site sahibi: "futbola bastigimizda puan durumu, gol kralligi gelsin"). ?>
+        <?php if ($veri !== ''): ?>
+            <?php require_once __DIR__ . '/includes/canli_betik.php'; ?>
+            <section class="gazete-veri"><?= $veri ?></section>
+            <?= canli_betik() ?>
+        <?php endif; ?>
+
         <?php if ($mansetler !== []): ?>
             <?php require __DIR__ . '/includes/kaydirak.php'; ?>
         <?php endif; ?>
 
         <?php if ($canli !== ''): ?>
             <?php require_once __DIR__ . '/includes/canli_betik.php'; ?>
-            <?php if ($gazete === 'valspor'): ?>
-                <div class="bolum-basligi"><h2><a href="<?= e(gazete_bolum_yolu('valspor', 'puan-durumu')) ?>">Süper Lig Puan Durumu</a></h2><span class="cizgi"></span></div>
-            <?php elseif ($onSayfa): ?>
+            <?php if ($onSayfa): ?>
                 <div class="bolum-basligi"><h2><a href="<?= e(piyasalar_yolu()) ?>">Piyasalar</a></h2><span class="cizgi"></span></div>
             <?php endif; ?>
             <section class="piyasa-panel gazete-canli"><?= $canli ?></section>
@@ -206,7 +210,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <?php else: ?>
                 <p class="gazete-devam"><a href="<?= e(gazete_yolu($gazete, 'haberler')) ?>"><?= e($g['ad']) ?>: tüm haberler &rarr;</a></p>
             <?php endif; ?>
-        <?php else: ?>
+        <?php elseif ($bolum === 'haberler' || isset($b['kosullar'])): ?>
             <?php if ($haberler === [] && $mansetler === []): ?>
                 <div class="bos-durum">
                     <strong>Bu başlıkta henüz haber yok.</strong>
