@@ -8,14 +8,16 @@ declare(strict_types=1);
  * bakiliyorsa onlari one cikaracagim; biraz istatistik tutmam lazim,
  * cok iyi bir raporlama araci yapalim".
  *
- * Sayfa sirasi bilincli: once anlik durum ve ozet, sonra karar
- * verdiren tablo (haberler; dogrudan "one cikar" dugmesiyle), sonra
- * okuyucunun nereden geldigi ve ne zaman okudugu, en sonda tek tek
- * ziyaretciler ve sayimin dogrulugu.
+ * Gosterge paneli (29.10.2026, site sahibi: "daha detayli bir raporlama
+ * alani; grafikler: kullanici nereden geldi, son bir haftalik trendler,
+ * Google'dan gelen okuyucu, ortalama tiklama, haberlerin okunma sayisi
+ * ve adedi; diger bilgiler altta kalsin"). Ustte ozet kutulari ve
+ * grafikler; eski bolumlerin hepsi altta acilir "Ayrintili raporlar".
  *
- * Grafik icin bir kutuphane YOK: cizgi/cubuk grafigi satir ici SVG,
- * isi haritasi tablo. Disaridan betik cekmek paylasimli hostingde
- * gereksiz bir bagimlilik olurdu.
+ * Grafik icin bir kutuphane YOK: grafikleri assets/rapor-grafik.js
+ * satir ici SVG olarak ciziyor (veri sayfada JSON); her grafigin tablo
+ * gorunumu de var. Disaridan betik cekmek paylasimli hostingde gereksiz
+ * bir bagimlilik olurdu.
  */
 
 require_once __DIR__ . '/../includes/bootstrap.php';
@@ -113,6 +115,14 @@ $aramalar  = zr_aramalar($a, $ham, 20);
 $kampanya  = zr_kampanyalar($a, $ham, 10);
 $sayfalar  = zr_sayfalar($a, $ham, 20);
 $dogruluk  = zr_dogruluk();
+
+// Gosterge paneli (29.10.2026)
+$gsTrend    = zr_trend_araligi($a);
+$gsSeri     = zr_gosterge_serisi($gsTrend, $ham);
+$gsOzet     = zr_gosterge_ozet($a['bas'], $a['bit'], $ham);
+$gsOnceki   = zr_gosterge_ozet($a['onceki_bas'], $a['onceki_bit'], $ham);
+$gsPaylar   = zr_kaynak_paylari($a, $ham);
+$gsHaberler = array_slice($sira === 'okuyucu' ? $haberler : zr_haberler($a, $ham, 'okuyucu', 10), 0, 10);
 $saymaAcik = ($_COOKIE[ZIYARET_SAYMA_CEREZI] ?? '') === '1';
 
 $kisi     = trim((string) ($_GET['kisi'] ?? ''));
@@ -191,7 +201,236 @@ require __DIR__ . '/ust.php';
     </div>
 </div>
 
-<!-- Ozet -->
+<!-- Gosterge paneli (29.10.2026): ozet kutulari ve grafikler; ayrintilar asagida -->
+<?php
+$gsKutular = [
+    ['ad' => 'Ziyaretçi', 'alt' => 'tekil kişi', 'deger' => $sayi($olcu['ziyaretci']),
+     'degisim' => $degisim($olcu['ziyaretci'], $onceki['ziyaretci']), 'seri' => array_column($gsSeri, 'ziyaretci')],
+    ['ad' => 'Google’dan gelen', 'alt' => 'tekil okuyucu', 'deger' => $sayi($gsOzet['google']),
+     'degisim' => $degisim($gsOzet['google'], $gsOnceki['google']), 'seri' => array_column($gsSeri, 'google')],
+    ['ad' => 'Kişi başı sayfa', 'alt' => 'ortalama tıklama', 'deger' => $sayi($olcu['sayfa_kisi'], 1),
+     'degisim' => $degisim($olcu['sayfa_kisi'], $onceki['sayfa_kisi']), 'seri' => array_column($gsSeri, 'sayfa_kisi')],
+    ['ad' => 'Haber okunma', 'alt' => 'haber sayfası açılışı', 'deger' => $sayi($olcu['haber_goruntulenme']),
+     'degisim' => $degisim($olcu['haber_goruntulenme'], $onceki['haber_goruntulenme']), 'seri' => array_column($gsSeri, 'haber_okunma')],
+    ['ad' => 'Okunan haber', 'alt' => 'farklı haber adedi', 'deger' => $sayi($gsOzet['okunan_haber']),
+     'degisim' => $degisim($gsOzet['okunan_haber'], $gsOnceki['okunan_haber']), 'seri' => array_column($gsSeri, 'okunan_haber')],
+];
+
+/** Kucuk egilim cizgisi: son nokta vurgulu. */
+$kivilcim = static function (array $degerler): string {
+    $n = count($degerler);
+
+    if ($n < 2) {
+        return '';
+    }
+
+    $enCok = max(1, ...array_map('floatval', $degerler));
+    $nokta = [];
+
+    foreach (array_values($degerler) as $i => $d) {
+        $nokta[] = round($i / ($n - 1) * 96 + 2, 1) . ',' . round(26 - (float) $d / $enCok * 22, 1);
+    }
+
+    [$sx, $sy] = explode(',', end($nokta));
+
+    return '<svg class="gs-kivilcim" viewBox="0 0 100 30" aria-hidden="true"><polyline points="' . implode(' ', $nokta)
+         . '"/><circle cx="' . $sx . '" cy="' . $sy . '" r="3"/></svg>';
+};
+
+$gsEtiketler = array_column($gsSeri, 'etiket');
+$gsIpuclari  = array_column($gsSeri, 'ipucu');
+$gsGrafikler = [
+    'kaynak' => [
+        'tur' => 'yigin', 'etiketler' => $gsEtiketler, 'ipuclari' => $gsIpuclari, 'birim' => 'kişi',
+        'seriler' => array_map(static fn (string $k, string $ad): array => [
+            'ad' => $ad, 'renk' => 'var(--gs-' . $k . ')',
+            'degerler' => array_map(static fn (array $g): int => $g['kaynaklar'][$k], $gsSeri),
+        ], array_keys(zr_kaynak_gruplari()), zr_kaynak_gruplari()),
+    ],
+    'google' => [
+        'tur' => 'cizgi', 'etiketler' => $gsEtiketler, 'ipuclari' => $gsIpuclari, 'birim' => 'kişi',
+        'seriler' => [['ad' => 'Google’dan gelen', 'renk' => 'var(--gs-google)', 'degerler' => array_column($gsSeri, 'google')]],
+    ],
+    'ziyaret' => [
+        'tur' => 'cizgi', 'etiketler' => $gsEtiketler, 'ipuclari' => $gsIpuclari, 'birim' => '',
+        'seriler' => [
+            ['ad' => 'Sayfa görüntülenme', 'renk' => 'var(--gs-1)', 'degerler' => array_column($gsSeri, 'goruntulenme')],
+            ['ad' => 'Ziyaretçi', 'renk' => 'var(--gs-2)', 'degerler' => array_column($gsSeri, 'ziyaretci')],
+        ],
+    ],
+    'tiklama' => [
+        'tur' => 'cizgi', 'etiketler' => $gsEtiketler, 'ipuclari' => $gsIpuclari, 'birim' => 'sayfa', 'ondalik' => 1,
+        'seriler' => [['ad' => 'Kişi başı sayfa', 'renk' => 'var(--gs-1)', 'degerler' => array_column($gsSeri, 'sayfa_kisi')]],
+    ],
+    'okunma' => [
+        'tur' => 'sutun', 'etiketler' => $gsEtiketler, 'ipuclari' => $gsIpuclari, 'birim' => 'okunma',
+        'seriler' => [['ad' => 'Haber okunma', 'renk' => 'var(--gs-1)', 'degerler' => array_column($gsSeri, 'haber_okunma')]],
+    ],
+    'adet' => [
+        'tur' => 'sutun', 'etiketler' => $gsEtiketler, 'ipuclari' => $gsIpuclari, 'birim' => 'haber',
+        'seriler' => [['ad' => 'Okunan farklı haber', 'renk' => 'var(--gs-1)', 'degerler' => array_column($gsSeri, 'okunan_haber')]],
+    ],
+];
+
+/** Grafigin tablo gorunumu (renk tek basina anlam tasimasin; deger hep okunabilsin). */
+$gsTablo = static function (array $g) use ($sayi): string {
+    $h = '<details class="gs-tablo"><summary>Tablo olarak göster</summary><div class="tablo-kaydir"><table class="liste-tablo"><thead><tr><th>Gün</th>';
+
+    foreach ($g['seriler'] as $s) {
+        $h .= '<th class="sag">' . e($s['ad']) . '</th>';
+    }
+
+    $h .= '</tr></thead><tbody>';
+
+    foreach ($g['ipuclari'] as $i => $ipucu) {
+        $h .= '<tr><td>' . e($ipucu) . '</td>';
+
+        foreach ($g['seriler'] as $s) {
+            $h .= '<td class="sag">' . $sayi($s['degerler'][$i], (int) ($g['ondalik'] ?? 0)) . '</td>';
+        }
+
+        $h .= '</tr>';
+    }
+
+    return $h . '</tbody></table></div></details>';
+};
+
+$gsAralikNotu = $gsTrend['bas'] === $a['bas'] && $gsTrend['bit'] === $a['bit']
+    ? e($a['ad'])
+    : 'son 7 gün (' . e(date('d.m', strtotime($gsTrend['bas']))) . ' – ' . e(date('d.m', strtotime($gsTrend['bit']))) . ')';
+$gsPayToplam = max(1, array_sum($gsPaylar));
+$gsHaberEnCok = max(1, (int) ($gsHaberler[0]['okuyucu'] ?? 1));
+?>
+
+<section class="gs" aria-label="Gösterge paneli">
+    <div class="gs-kutular">
+        <div class="gs-kutu gs-kutu-simdi">
+            <span class="gs-kutu-ad">Şu an sitede</span>
+            <span class="gs-kutu-deger"><?= $sayi($simdi) ?></span>
+            <span class="gs-kutu-alt">son <?= (int) ZIYARET_ONLINE_DAKIKA ?> dakika</span>
+        </div>
+        <?php foreach ($gsKutular as $k): ?>
+            <div class="gs-kutu">
+                <span class="gs-kutu-ad"><?= e($k['ad']) ?></span>
+                <span class="gs-kutu-deger"><?= $k['deger'] ?></span>
+                <span class="gs-kutu-alt"><?= e($k['alt']) ?></span>
+                <?= $k['degisim'] ?>
+                <?= $kivilcim($k['seri']) ?>
+            </div>
+        <?php endforeach; ?>
+    </div>
+    <p class="ipucu gs-not">Kutulardaki sayılar seçili aralığın (<?= e($a['ad']) ?>) toplamı; küçük çizgiler ve grafikler <?= $gsAralikNotu ?> gün gün.</p>
+
+    <div class="gs-izgara">
+        <div class="kutu gs-kart gs-genis">
+            <div class="rapor-baslik"><h2>Okuyucular nereden geldi</h2><span class="ipucu">gün gün, tekil kişi</span></div>
+            <ul class="gs-lejant">
+                <?php foreach (zr_kaynak_gruplari() as $k => $ad): ?>
+                    <li><span class="gs-anahtar" style="background:var(--gs-<?= e($k) ?>)"></span><?= e($ad) ?></li>
+                <?php endforeach; ?>
+            </ul>
+            <div class="gs-grafik" data-grafik="<?= e((string) json_encode($gsGrafikler['kaynak'], JSON_UNESCAPED_UNICODE)) ?>"></div>
+            <?= $gsTablo($gsGrafikler['kaynak']) ?>
+        </div>
+
+        <div class="kutu gs-kart">
+            <div class="rapor-baslik"><h2>Google’dan gelen okuyucu</h2><span class="ipucu">gün gün</span></div>
+            <div class="gs-grafik" data-grafik="<?= e((string) json_encode($gsGrafikler['google'], JSON_UNESCAPED_UNICODE)) ?>"></div>
+            <?= $gsTablo($gsGrafikler['google']) ?>
+        </div>
+
+        <div class="kutu gs-kart">
+            <div class="rapor-baslik"><h2>Kaynak payları</h2><span class="ipucu"><?= e($a['ad']) ?></span></div>
+            <ul class="gs-cubuklar">
+                <?php foreach (zr_kaynak_gruplari() as $k => $ad): ?>
+                    <li>
+                        <span class="gs-cubuk-ad"><span class="gs-anahtar" style="background:var(--gs-<?= e($k) ?>)"></span><?= e($ad) ?></span>
+                        <span class="gs-cubuk-iz"><span class="gs-cubuk" style="width:<?= round($gsPaylar[$k] / $gsPayToplam * 100, 1) ?>%;background:var(--gs-<?= e($k) ?>)"></span></span>
+                        <span class="gs-cubuk-deger"><?= $sayi($gsPaylar[$k]) ?> <small>%<?= $sayi($gsPaylar[$k] / $gsPayToplam * 100) ?></small></span>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+
+        <div class="kutu gs-kart">
+            <div class="rapor-baslik"><h2>Ziyaretçi ve görüntülenme</h2><a class="ipucu" href="<?= e($adres(['csv' => 'gunluk'])) ?>">CSV</a></div>
+            <ul class="gs-lejant">
+                <li><span class="gs-anahtar gs-anahtar-cizgi" style="background:var(--gs-1)"></span>Sayfa görüntülenme</li>
+                <li><span class="gs-anahtar gs-anahtar-cizgi" style="background:var(--gs-2)"></span>Ziyaretçi</li>
+            </ul>
+            <div class="gs-grafik" data-grafik="<?= e((string) json_encode($gsGrafikler['ziyaret'], JSON_UNESCAPED_UNICODE)) ?>"></div>
+            <?= $gsTablo($gsGrafikler['ziyaret']) ?>
+        </div>
+
+        <div class="kutu gs-kart">
+            <div class="rapor-baslik"><h2>Kişi başı sayfa</h2><span class="ipucu">ortalama tıklama, gün gün</span></div>
+            <div class="gs-grafik" data-grafik="<?= e((string) json_encode($gsGrafikler['tiklama'], JSON_UNESCAPED_UNICODE)) ?>"></div>
+            <?= $gsTablo($gsGrafikler['tiklama']) ?>
+        </div>
+
+        <div class="kutu gs-kart">
+            <div class="rapor-baslik"><h2>Haber okunma sayısı</h2><span class="ipucu">haber sayfası açılışı, gün gün</span></div>
+            <div class="gs-grafik" data-grafik="<?= e((string) json_encode($gsGrafikler['okunma'], JSON_UNESCAPED_UNICODE)) ?>"></div>
+            <?= $gsTablo($gsGrafikler['okunma']) ?>
+        </div>
+
+        <div class="kutu gs-kart">
+            <div class="rapor-baslik"><h2>Okunan haber adedi</h2><span class="ipucu">en az bir kez okunan farklı haber, gün gün</span></div>
+            <div class="gs-grafik" data-grafik="<?= e((string) json_encode($gsGrafikler['adet'], JSON_UNESCAPED_UNICODE)) ?>"></div>
+            <?= $gsTablo($gsGrafikler['adet']) ?>
+        </div>
+
+        <div class="kutu gs-kart gs-genis">
+            <div class="rapor-baslik"><h2>En çok okunan 10 haber</h2><a class="ipucu" href="#haberler">tam liste ve öne çıkarma ↓</a></div>
+            <?php if ($gsHaberler === []): ?>
+                <p class="ipucu">Bu aralıkta okunan haber yok.</p>
+            <?php else: ?>
+                <ol class="gs-cubuklar gs-haberler">
+                    <?php foreach ($gsHaberler as $h): ?>
+                        <li>
+                            <span class="gs-cubuk-ad">
+                                <?php if ($haberAdresi($h['slug']) !== ''): ?>
+                                    <a href="<?= e($haberAdresi($h['slug'])) ?>" target="_blank" rel="noopener"><?= e((string) $h['baslik']) ?></a>
+                                <?php else: ?>
+                                    <?= e((string) $h['baslik']) ?>
+                                <?php endif; ?>
+                            </span>
+                            <span class="gs-cubuk-iz"><span class="gs-cubuk" style="width:<?= round((int) $h['okuyucu'] / $gsHaberEnCok * 100, 1) ?>%"></span></span>
+                            <span class="gs-cubuk-deger"><?= $sayi((int) $h['okuyucu']) ?> <small>kişi · <?= $sayi((int) $h['goruntulenme']) ?> okunma</small></span>
+                        </li>
+                    <?php endforeach; ?>
+                </ol>
+            <?php endif; ?>
+        </div>
+    </div>
+</section>
+<script src="<?= e(varlik('/assets/rapor-grafik.js')) ?>" defer></script>
+
+<!-- Su an -->
+<?php if ($simdiHab !== []): ?>
+    <div class="kutu" style="margin-top:18px;">
+        <h2 style="margin:0 0 8px;font-size:1.05rem;">Şu an en çok okunanlar <span class="ipucu" style="font-weight:400;">(son 60 dakika)</span></h2>
+        <ol class="rapor-simdi">
+            <?php foreach ($simdiHab as $h): ?>
+                <li>
+                    <?php if ($haberAdresi($h['slug']) !== ''): ?>
+                        <a href="<?= e($haberAdresi($h['slug'])) ?>" target="_blank" rel="noopener"><?= e((string) $h['baslik']) ?></a>
+                    <?php else: ?>
+                        <?= e((string) $h['baslik']) ?>
+                    <?php endif; ?>
+                    <span class="ipucu"><?= $sayi((int) $h['okuyucu']) ?> kişi</span>
+                    <?php if ((int) ($h['one_cikan'] ?? 0) === 1): ?><span class="rozet rozet-skor">öne çıkan</span><?php endif; ?>
+                </li>
+            <?php endforeach; ?>
+        </ol>
+    </div>
+<?php endif; ?>
+
+<!-- Ayrintilar: istenince acilir (site sahibi: "diger bilgiler altta kalsin, detaylara istedigimiz zaman ulasalim") -->
+<h2 class="detay-ana-baslik">Ayrıntılı raporlar</h2>
+
+<details class="detay" id="olcumler">
+    <summary>Tüm ölçüler (okuma süresi, sonuna kadar okuma, tek sayfada ayrılan…)</summary>
 <div class="olcum-izgara">
     <div class="olcum olcum-vurgu">
         <span class="olcum-sayi"><?= $sayi($simdi) ?></span>
@@ -239,78 +478,11 @@ require __DIR__ . '/ust.php';
         <span class="olcum-alt">gerisi geri dönen okuyucu</span>
     </div>
 </div>
+</details>
 
-<!-- Su an -->
-<?php if ($simdiHab !== []): ?>
-    <div class="kutu" style="margin-top:18px;">
-        <h2 style="margin:0 0 8px;font-size:1.05rem;">Şu an en çok okunanlar <span class="ipucu" style="font-weight:400;">(son 60 dakika)</span></h2>
-        <ol class="rapor-simdi">
-            <?php foreach ($simdiHab as $h): ?>
-                <li>
-                    <?php if ($haberAdresi($h['slug']) !== ''): ?>
-                        <a href="<?= e($haberAdresi($h['slug'])) ?>" target="_blank" rel="noopener"><?= e((string) $h['baslik']) ?></a>
-                    <?php else: ?>
-                        <?= e((string) $h['baslik']) ?>
-                    <?php endif; ?>
-                    <span class="ipucu"><?= $sayi((int) $h['okuyucu']) ?> kişi</span>
-                    <?php if ((int) ($h['one_cikan'] ?? 0) === 1): ?><span class="rozet rozet-skor">öne çıkan</span><?php endif; ?>
-                </li>
-            <?php endforeach; ?>
-        </ol>
-    </div>
-<?php endif; ?>
-
-<!-- Trend -->
+<details class="detay" id="haberler"<?= isset($_GET['sira']) || $hepsi || isset($_GET['bildirim']) && str_starts_with((string) $_GET['bildirim'], 'one_') ? ' open' : '' ?>>
+    <summary>Haberler — tam liste, sıralama ve öne çıkarma</summary>
 <div class="kutu" style="margin-top:18px;">
-    <div class="rapor-baslik">
-        <h2><?= $a['gun'] === 1 ? 'Saat saat' : 'Gün gün' ?></h2>
-        <a class="ipucu" href="<?= e($adres(['csv' => 'gunluk'])) ?>">CSV indir</a>
-    </div>
-    <?php
-    $enCok = max(1, ...array_map(static fn (array $s): int => $s['goruntulenme'], $seri));
-    $n     = count($seri);
-    $gen   = 1000;
-    $yuk   = 220;
-    $adim  = $gen / max(1, $n);
-    $etiketAraligi = (int) max(1, ceil($n / 15));
-    $nokta = [];
-    ?>
-    <svg class="rapor-grafik" viewBox="0 0 <?= $gen ?> <?= $yuk + 28 ?>" role="img"
-         aria-label="Ziyaretçi ve görüntülenme grafiği">
-        <?php foreach ([0.25, 0.5, 0.75, 1] as $c): ?>
-            <line x1="0" x2="<?= $gen ?>" y1="<?= round($yuk - $yuk * $c, 1) ?>" y2="<?= round($yuk - $yuk * $c, 1) ?>" class="izgara"/>
-        <?php endforeach; ?>
-        <?php foreach ($seri as $i => $s): ?>
-            <?php
-            $x  = $i * $adim;
-            $hg = $s['goruntulenme'] / $enCok * $yuk;
-            $hz = $s['ziyaretci'] / $enCok * $yuk;
-            $nokta[] = round($x + $adim / 2, 1) . ',' . round($yuk - $hz, 1);
-            ?>
-            <g>
-                <title><?= e($s['ipucu']) ?>: <?= (int) $s['ziyaretci'] ?> ziyaretçi, <?= (int) $s['goruntulenme'] ?> görüntülenme</title>
-                <rect x="<?= round($x + $adim * 0.12, 1) ?>" y="<?= round($yuk - $hg, 1) ?>" width="<?= round($adim * 0.76, 1) ?>"
-                      height="<?= round(max(0.5, $hg), 1) ?>" class="cubuk-g"/>
-                <rect x="<?= round($x, 1) ?>" y="0" width="<?= round($adim, 1) ?>" height="<?= $yuk ?>" fill="transparent"/>
-            </g>
-            <?php if ($i % $etiketAraligi === 0): ?>
-                <text x="<?= round($x + $adim / 2, 1) ?>" y="<?= $yuk + 18 ?>" class="eksen" text-anchor="middle"><?= e($s['etiket']) ?></text>
-            <?php endif; ?>
-        <?php endforeach; ?>
-        <polyline points="<?= e(implode(' ', $nokta)) ?>" class="cizgi-z"/>
-        <?php // Eksen yazilari en ustte: cubuklarin altinda kalmasin. ?>
-        <?php foreach ([0.25, 0.5, 0.75, 1] as $c): ?>
-            <text x="4" y="<?= round($yuk - $yuk * $c + 13, 1) ?>" class="eksen"><?= $sayi(round($enCok * $c)) ?></text>
-        <?php endforeach; ?>
-        <?php foreach ($nokta as $p): [$px, $py] = explode(',', $p); ?>
-            <circle cx="<?= $px ?>" cy="<?= $py ?>" r="<?= $n > 40 ? 0 : 3 ?>" class="nokta-z"/>
-        <?php endforeach; ?>
-    </svg>
-    <p class="ipucu rapor-lejant"><span class="lejant-g"></span> görüntülenme <span class="lejant-z"></span> ziyaretçi (tekil)</p>
-</div>
-
-<!-- Haberler -->
-<div class="kutu" style="margin-top:18px;" id="haberler">
     <div class="rapor-baslik">
         <h2>Haberler</h2>
         <a class="ipucu" href="<?= e($adres(['csv' => 'haberler'])) ?>">CSV indir</a>
@@ -393,7 +565,10 @@ require __DIR__ . '/ust.php';
         <?php endif; ?>
     <?php endif; ?>
 </div>
+</details>
 
+<details class="detay">
+    <summary>Başlıklara göre okunma ve kanallar</summary>
 <div class="istatistik-ikili">
     <!-- Kategoriler -->
     <div class="kutu">
@@ -448,7 +623,10 @@ require __DIR__ . '/ust.php';
         <?php endif; ?>
     </div>
 </div>
+</details>
 
+<details class="detay">
+    <summary>Gönderen siteler, kampanyalar ve giriş sayfaları</summary>
 <div class="istatistik-ikili">
     <!-- Yonlendiren siteler -->
     <div class="kutu">
@@ -507,7 +685,10 @@ require __DIR__ . '/ust.php';
         <?php endif; ?>
     </div>
 </div>
+</details>
 
+<details class="detay">
+    <summary>Ne zaman okunuyor ve cihazlar</summary>
 <div class="istatistik-ikili">
     <!-- Saat x gun -->
     <div class="kutu">
@@ -560,7 +741,10 @@ require __DIR__ . '/ust.php';
         <?php endif; ?>
     </div>
 </div>
+</details>
 
+<details class="detay">
+    <summary>Sitede aranan ve en çok görüntülenen sayfalar</summary>
 <div class="istatistik-ikili">
     <!-- Site ici aramalar -->
     <div class="kutu">
@@ -605,9 +789,11 @@ require __DIR__ . '/ust.php';
         <?php endif; ?>
     </div>
 </div>
+</details>
 
-<!-- Ziyaretciler -->
-<div class="kutu" style="margin-top:18px;" id="ziyaretciler">
+<details class="detay" id="ziyaretciler"<?= $kisi !== '' ? ' open' : '' ?>>
+    <summary>Ziyaretçiler tek tek (son 100) ve gezintileri</summary>
+<div class="kutu" style="margin-top:18px;">
     <h2 style="margin-top:0;">Ziyaretçiler <span class="ipucu" style="font-weight:400;">(son 100, en yeni önce)</span></h2>
     <?php if ($kisi !== ''): ?>
         <div class="kutu" style="background:#f7f9fc;margin-bottom:14px;">
@@ -659,9 +845,11 @@ require __DIR__ . '/ust.php';
         </div>
     <?php endif; ?>
 </div>
+</details>
 
-<!-- Dogruluk -->
-<div class="kutu" style="margin-top:18px;" id="dogruluk">
+<details class="detay" id="dogruluk"<?= isset($_GET['bildirim']) && str_starts_with((string) $_GET['bildirim'], 'sayma_') ? ' open' : '' ?>>
+    <summary>Sayım nasıl yapılıyor — sayılar doğru mu? / Bu cihazı sayma</summary>
+<div class="kutu" style="margin-top:18px;">
     <h2 style="margin-top:0;">Sayım nasıl yapılıyor — sayılar doğru mu?</h2>
     <ul class="tani-liste">
         <li>
@@ -714,5 +902,12 @@ require __DIR__ . '/ust.php';
         </form>
     </div>
 </div>
+</details>
+
+<script>
+// Adresteki #bolum (or. #haberler) kapali bir ayrintinin icindeyse ac ve oraya git.
+(function () { function ac() { var h = location.hash.slice(1); var el = h && document.getElementById(h); if (el) { var d = el.closest('details') || (el.tagName === 'DETAILS' ? el : null); if (d) { d.open = true; el.scrollIntoView(); } } } ac(); window.addEventListener('hashchange', ac); })();
+</script>
+
 
 <?php require __DIR__ . '/alt.php'; ?>
