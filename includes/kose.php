@@ -426,7 +426,9 @@ function kose_gorselleri(array $yazilar): array
             $src = haber_gorsel($haberler[$id]);
 
             if ($src !== '') {
-                $sonuc[$yaziId] = ['src' => $src, 'kaynak' => (string) $haberler[$id]['kaynak_adi']];
+                $sonuc[$yaziId] = ['src' => $src, 'kucuk' => haber_gorsel_kucuk($haberler[$id], 480),
+                                   'orta' => haber_gorsel_kucuk($haberler[$id], 960),
+                                   'kaynak' => (string) $haberler[$id]['kaynak_adi']];
                 break;
             }
         }

@@ -83,7 +83,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
                         <a href="<?= e(kose_yolu((string) $yazi['slug'])) ?>"
                            class="<?= isset($koseGorselleri[(int) $yazi['id']]) ? 'gorselli' : '' ?>">
                             <?php if (isset($koseGorselleri[(int) $yazi['id']])): ?>
-                                <img class="kose-kucuk" src="<?= e($koseGorselleri[(int) $yazi['id']]['src']) ?>" alt=""
+                                <img class="kose-kucuk" src="<?= e($koseGorselleri[(int) $yazi['id']]['kucuk']) ?>" alt=""
                                      loading="lazy" referrerpolicy="no-referrer"
                                      onerror="this.parentElement.classList.remove('gorselli');this.remove()">
                             <?php endif; ?>

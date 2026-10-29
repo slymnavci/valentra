@@ -243,3 +243,19 @@
     # Kose yazari sayfasi (23.10.2026): /yazar/ahmet-sami-gumus
     RewriteRule ^yazar/([a-z0-9-]+)/?$ yazar.php?y=$1 [L,QSA]
 </IfModule>
+
+# --- Statik dosyalarin tarayici onbellegi (29.10.2026) ----------------
+#
+# Lighthouse "verimli onbellek politikasi" uyarisi: stil, betik, logo ve
+# simgeler her ziyarette yeniden soruluyordu. CSS/JS varlik() ile ?s=
+# surumlu baglaniyor (degisince adres degisir), bir yil guvenli. Surumsuz
+# baglanan logo ve simgeler bir hafta. Haber gorselleri kendi klasorunde
+# (gorseller/haber/.htaccess). IfModule: modul yoksa site dusmesin.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|woff2?)$">
+        Header set Cache-Control "public, max-age=31536000"
+    </FilesMatch>
+    <FilesMatch "\.(png|jpe?g|webp|gif|avif|svg|ico)$">
+        Header set Cache-Control "public, max-age=604800"
+    </FilesMatch>
+</IfModule>
