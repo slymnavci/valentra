@@ -4,9 +4,8 @@ declare(strict_types=1);
 /**
  * Ust menu.
  *
- *   Ana Sayfa · Gundem · Politika · ValPapel (acilir) · Dunya ·
- *   ValSpor (acilir) · Teknoloji · Saglik · Kose Yazilari ·
- *   ValMagazin (acilir)
+ *   Ana Sayfa · Gundem · Politika · ValPapel · Dunya · ValSpor ·
+ *   Teknoloji · Saglik · Kose Yazilari · ValMagazin
  *
  * Ekim 2026'da site vergi/muhasebe yayinindan genel haber ozetlerine
  * dondu (site sahibinin karari). Eski menu (Vergi ve Mevzuat, Muhasebe
@@ -31,8 +30,8 @@ function site_menusu(): array
      * ValPapel, ValSpor, ValMagazin (29.10.2026, site sahibinin istegi; bkz.
      * includes/gazeteler.php). Ekonomi'nin yerinde ValPapel, Spor'un
      * yerinde ValSpor; Kultur-Sanat, Burclar ve Yemek Tarifleri
-     * ValMagazin'in basliklari, o menunun sonunda. Acilir menude gazetenin
-     * on sayfasi ve basliklari.
+     * ValMagazin'in basliklari, menunun sonunda. Gazeteler dogrudan on
+     * sayfaya gidiyor; basliklari sayfanin icindeki sekmelerde.
      *
      * Onceki acilir menuler (22-29.10.2026): Ekonomi'de piyasa sayfalari,
      * Spor'da puan durumu ve fikstur, Burclar'da 12 burc. Hepsi gazetelerin
@@ -62,7 +61,12 @@ function site_menusu(): array
 }
 
 /**
- * Gazetenin acilir menusu: on sayfa ve basliklari.
+ * Gazetenin menu ogesi: dogrudan gazetenin on sayfasina gidiyor.
+ *
+ * Acilir menu YOK (site sahibinin istegi, 29.10.2026: "ValPapel'e
+ * bastigimizda asagiya acilan menu olmasin; once sayfaya girelim, sayfanin
+ * icinde kendi menuleri olsun"). Basliklar gazetenin sayfasindaki
+ * sekmelerde (gazete_ust_html).
  *
  * @param list<string> $onekler Bu gazeteye sayilan sayfa anahtarlari: haber
  *        sayfasinda kategori ('ekonomi'), piyasa sayfalarinda 'ekonomi-doviz',
@@ -70,23 +74,11 @@ function site_menusu(): array
  */
 function gazete_menu_ogesi(string $gazete, array $onekler): array
 {
-    $g      = gazete_bul($gazete);
-    $altlar = [['ad' => $g['ad'] . ' Ön Sayfa', 'anahtar' => $gazete, 'href' => gazete_yolu($gazete), 'adet' => 0]];
-
-    foreach ($g['bolumler'] as $bolum => $b) {
-        $altlar[] = [
-            'ad'      => $b['ad'],
-            'anahtar' => gazete_bolum_anahtari($gazete, $bolum),
-            'href'    => gazete_bolum_yolu($gazete, $bolum),
-            'adet'    => 0,
-        ];
-    }
-
     return [
-        'ad'      => $g['ad'],
+        'ad'      => gazete_bul($gazete)['ad'],
         'anahtar' => $gazete,
-        'href'    => null,
-        'altlar'  => $altlar,
+        'href'    => gazete_yolu($gazete),
+        'altlar'  => [],
         'onekler' => array_merge([$gazete], $onekler),
     ];
 }
