@@ -155,6 +155,11 @@ $govdeVeri = [
                 while (d.firstChild) { akis.appendChild(d.firstChild); }
                 yuklu++;
                 izle.observe(sonMakale());
+                // Eklenen haber kisaysa son isaret hala gorus alaninda kaliyor ve
+                // gozlemci yeniden haber vermiyordu (akis ikinci haberde duruyordu):
+                // yeniden gozlemek o anki durumu bir kez daha bildiriyor.
+                alt.unobserve(son);
+                alt.observe(son);
             })
             .catch(function () { bekliyor = false; bitti = true; });
     }
@@ -169,6 +174,10 @@ $govdeVeri = [
             }
             if (z && !gorulen[z]) {
                 gorulen[z] = 1;
+                // Tarayici kimligi gonderim aninda okunuyor: ilk ziyarette sayfa
+                // acilirken henuz yoktu (sayfanin kendi sayim betigi yaziyor) ve
+                // ayni okur tekil ziyaretci sayisinda iki kisi sayiliyordu.
+                try { vk = localStorage.getItem('vz_k') || vk; } catch (e) {}
                 var d = new URLSearchParams();
                 d.append('id', z); d.append('t', a.getAttribute('data-zt')); d.append('k', vk);
                 d.append('y', '0'); d.append('s', '0'); d.append('o', '0');
@@ -177,7 +186,8 @@ $govdeVeri = [
         });
     }, { rootMargin: '-40% 0px -55% 0px' });
     izle.observe(sonMakale());
-    new IntersectionObserver(function (g) { if (g[0].isIntersecting) { yukle(); } }, { rootMargin: '900px 0px' }).observe(son);
+    var alt = new IntersectionObserver(function (g) { if (g[0].isIntersecting) { yukle(); } }, { rootMargin: '900px 0px' });
+    alt.observe(son);
 })();
 </script>
 
