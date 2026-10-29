@@ -420,7 +420,7 @@ if ($hamGirdi !== '') {
         }
 
         // XML (EuroLeague gibi veri uclari): ilk 2500 karakter.
-        if (str_starts_with(ltrim($govde), '<?xml')) {
+        if (str_starts_with(ltrim($govde, " \t\n\r\0\x0B\xEF\xBB\xBF"), '<') && stripos($govde, '<html') === false) {
             yaz('  XML: ' . mb_substr(preg_replace('/\s+/u', ' ', $govde) ?? $govde, 0, 2500, 'UTF-8'));
             yaz();
             continue;
