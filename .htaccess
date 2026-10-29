@@ -169,6 +169,11 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^kategori/([^/]+)/?$ kategori.php?k=$1 [L,QSA]
 
+    # Etiket sayfalari (28.10.2026)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^etiket/([^/]+)/?$ etiket.php?e=$1 [L,QSA,B]
+
     # Piyasalar (Ekonomi menusu, 22.10.2026)
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
