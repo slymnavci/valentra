@@ -916,6 +916,51 @@ function haber_yalnizca_gun_mu(int $zaman): bool
     return false;
 }
 
+/*
+ * GORSELSIZ HABERE KATEGORI GORSELI (site sahibinin istegi, 29.10.2026;
+ * Google denetimi: "135 gorselsiz haber"). Google Discover ve Haberler
+ * gorselsiz haberi neredeyse hic gostermiyor. Kaynagin gorseli yoksa
+ * haberin konusuna gore hazir gorsel (assets/kategori/<slug>.jpg; ozgun
+ * veri haberlerindeki gibi sitenin kendi dosyasi, indirilmiyor). Ajan
+ * sonradan gercek gorseli bulursa ustune yaziliyor.
+ */
+const HABER_KATEGORI_GORSELLERI = [
+    'gundem', 'genel', 'politika', 'ekonomi', 'dunya', 'spor',
+    'teknoloji', 'saglik', 'kultur-sanat', 'yemek-tarifleri',
+];
+
+/** Konunun hazır görseli (tam adres); tanınmayan konu Gündem. */
+function haber_kategori_gorseli(?string $slug): string
+{
+    require_once __DIR__ . '/seo.php';
+
+    $slug = in_array((string) $slug, HABER_KATEGORI_GORSELLERI, true) ? (string) $slug : 'gundem';
+
+    return site_adresi() . '/assets/kategori/' . $slug . '.jpg';
+}
+
+/**
+ * Görseli olmayan haberlere konu görselini yazar; kaç haberin dolduğunu döndürür.
+ * Iki saatte bir (api/canli-tazele.php ?bolum=ozgun) calisiyor: hangi yoldan
+ * gelirse gelsin (ajan, derleme, panel) gorselsiz haber kalmasin.
+ */
+function haber_kategori_gorsellerini_doldur(int $limit = 1000): int
+{
+    require_once __DIR__ . '/seo.php';
+
+    $liste = implode(', ', array_map(static fn (string $s): string => db()->quote($s), HABER_KATEGORI_GORSELLERI));
+    $ifade = db()->prepare(
+        "UPDATE haberler h
+           LEFT JOIN kategoriler k ON k.id = h.kategori_id
+            SET h.gorsel_url = CONCAT(:taban, '/assets/kategori/',
+                    CASE WHEN k.slug IN (" . $liste . ") THEN k.slug ELSE 'gundem' END, '.jpg')
+          WHERE COALESCE(h.gorsel_url, '') = ''"
+    );
+    $ifade->execute(['taban' => site_adresi()]);
+
+    return $ifade->rowCount();
+}
+
 /**
  * Ajanin buldugu haberi taslak olarak kaydeder.
  *
@@ -990,7 +1035,7 @@ function haber_taslak_ekle(array $veri): array
         'slug'          => haber_benzersiz_slug($baslik),
         'ozet'          => mb_substr($ozet, 0, 600, 'UTF-8'),
         'icerik'        => $icerik,
-        'gorsel_url'    => guvenli_url((string) ($veri['gorsel_url'] ?? '')) ?: null,
+        'gorsel_url'    => guvenli_url((string) ($veri['gorsel_url'] ?? '')) ?: haber_kategori_gorseli((string) ($veri['kategori'] ?? '')),
         'etiketler'     => mb_substr(trim((string) ($veri['etiketler'] ?? '')), 0, 400, 'UTF-8'),
         'durum'         => HABER_TASLAK,
         'kategori_id'   => kategori_id_cozumle((string) ($veri['kategori'] ?? '')),
