@@ -2068,29 +2068,29 @@ UPDATE kaynaklar SET besleme_url = 'https://www.cnnturk.com/feed/rss/teknoloji/n
        liste_url = 'https://www.cnnturk.com/teknoloji-haberleri/'
  WHERE ad = 'CNN Türk Teknoloji'
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
-UPDATE kaynaklar SET besleme_url = NULL, liste_url = 'https://www.corriere.it/esteri/'
+UPDATE kaynaklar SET besleme_url = NULL, tur = 'web', liste_url = 'https://www.corriere.it/esteri/'
  WHERE ad = 'Corriere della Sera (İtalya)'
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
-UPDATE kaynaklar SET besleme_url = NULL, liste_url = 'https://www.ekathimerini.com/news/'
+UPDATE kaynaklar SET besleme_url = NULL, tur = 'web', liste_url = 'https://www.ekathimerini.com/news/'
  WHERE ad = 'Kathimerini (Yunanistan)'
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
 UPDATE kaynaklar SET besleme_url = 'https://kyivindependent.com/news-archive/rss/'
  WHERE ad = 'Kyiv Independent (Ukrayna)'
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
-UPDATE kaynaklar SET besleme_url = NULL, liste_url = 'https://www.milliyet.com.tr/gundem/'
+UPDATE kaynaklar SET besleme_url = NULL, tur = 'web', liste_url = 'https://www.milliyet.com.tr/gundem/'
  WHERE ad = 'Milliyet Gündem'
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
-UPDATE kaynaklar SET besleme_url = NULL, liste_url = 'https://www.milliyet.com.tr/dunya/'
+UPDATE kaynaklar SET besleme_url = NULL, tur = 'web', liste_url = 'https://www.milliyet.com.tr/dunya/'
  WHERE ad = 'Milliyet Dünya'
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
 UPDATE kaynaklar SET besleme_url = 'https://news.yahoo.com/rss/',
        liste_url = 'https://www.yahoo.com/news/world/'
  WHERE ad = 'Yahoo News'
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
-UPDATE kaynaklar SET besleme_url = NULL, liste_url = 'https://www.aa.com.tr/tr/politika'
+UPDATE kaynaklar SET besleme_url = NULL, tur = 'web', liste_url = 'https://www.aa.com.tr/tr/politika'
  WHERE ad = 'Anadolu Ajansı Politika'
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
-UPDATE kaynaklar SET besleme_url = NULL, liste_url = 'https://www.aa.com.tr/tr/saglik'
+UPDATE kaynaklar SET besleme_url = NULL, tur = 'web', liste_url = 'https://www.aa.com.tr/tr/saglik'
  WHERE ad = 'Anadolu Ajansı Sağlık'
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
 UPDATE kaynaklar SET liste_url = 'https://www.trthaber.com/haber/spor/'
