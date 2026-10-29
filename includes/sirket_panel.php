@@ -87,7 +87,6 @@ function sirket_bist_bolumu_html(): string
             'sifirdan' => false,
             'hane'     => 2,
             'golge'    => true,
-            'yon_renk' => true,
         ]);
     }
 

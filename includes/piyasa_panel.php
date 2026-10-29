@@ -207,7 +207,6 @@ function piyasa_grafikleri_html(string $donem, array $sadece = [], string $bolum
             'sifirdan' => false,
             'hane'     => $arac['hane'],
             'golge'    => true,
-            'yon_renk' => true,
         ]) . ($analiz ? piyasa_donem_analizi_html($seri, $arac, (string) $tanim['ad']) : '') . '</div>';
     }
 

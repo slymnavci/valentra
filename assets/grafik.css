@@ -138,8 +138,18 @@
  * currentColor: svg'nin rengi grafigin rengi). Yon renkleri sitenin artis
  * ve dusus renkleri.
  */
-.grafik.golgeli .grafik-svg { color: var(--grafik-renk); }
-.grafik.golgeli .grafik-cizgi { stroke-width: 2.6; }
+/*
+ * BigPara gorunumu (site sahibinin istegi, 29.10.2026: "big paraya bak,
+ * grafikler oradaki gibi olsun"): koyu gri cizgi, altinda acik gri alan
+ * (renk includes/grafik.php'de dogrudan; Safari currentColor'u siyah
+ * ciziyordu), ince ve sakin izgara.
+ */
+.grafik.golgeli { --grafik-renk: #4b5058; }
+.grafik.golgeli .grafik-cizgi { stroke-width: 1.8; }
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) .grafik.golgeli { --grafik-renk: #c9ced6; }
+}
+:where(:root[data-tema="koyu"]) .grafik.golgeli { --grafik-renk: #c9ced6; }
 .grafik.arti { --grafik-renk: var(--artis, #157a43); }
 .grafik.eksi { --grafik-renk: var(--dusus, #c23a2e); }
 
