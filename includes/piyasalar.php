@@ -380,6 +380,19 @@ function piyasa_kivrim(array $noktalar, ?float $degisim): string
 
     $sinif = $degisim === null ? '' : ($degisim > 0 ? ' arti' : ($degisim < 0 ? ' eksi' : ''));
 
+    /*
+     * Altinda asagi dogru solan dolgu (site sahibinin istegi, 29.10.2026:
+     * "kucuk grafiklerde boyle renkler koyalim", Bloomberg HT seridi
+     * gibi): cizginin rengi yukseliste yesil, dususte kirmizi; dolgu ayni
+     * renk, gradyanla soluyor.
+     */
+    static $no = 0;
+    $id = 'kivrim-' . (++$no);
+
     return '<svg class="kivrim' . $sinif . '" viewBox="0 0 200 50" preserveAspectRatio="none" aria-hidden="true">'
-        . '<path d="' . $yol . '" vector-effect="non-scaling-stroke"/></svg>';
+        . '<defs><linearGradient id="' . $id . '" x1="0" y1="0" x2="0" y2="1">'
+        . '<stop offset="0" stop-color="currentColor" stop-opacity=".35"/>'
+        . '<stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>'
+        . '<path class="kivrim-dolgu" d="' . $yol . ' L200 50 L0 50 Z" fill="url(#' . $id . ')"/>'
+        . '<path class="kivrim-cizgi" d="' . $yol . '" vector-effect="non-scaling-stroke"/></svg>';
 }

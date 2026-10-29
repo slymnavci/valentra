@@ -4484,9 +4484,11 @@ a.rg-madde:hover { color: var(--vurgu); }
     margin-top: 4px;
 }
 
-.kivrim path { fill: none; stroke: var(--vurgu); stroke-width: 1.6; }
-.kivrim.arti path { stroke: var(--artis); }
-.kivrim.eksi path { stroke: var(--dusus); }
+.kivrim { color: var(--vurgu); }
+.kivrim.arti { color: var(--artis); }
+.kivrim.eksi { color: var(--dusus); }
+.kivrim .kivrim-cizgi { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+.kivrim .kivrim-dolgu { stroke: none; }
 
 .piyasa-kart-not { flex-basis: 100%; margin: 0; }
 

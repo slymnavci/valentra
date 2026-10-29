@@ -131,6 +131,18 @@
     stroke-linecap: round;
 }
 
+/*
+ * Golgeli grafik (piyasa; 29.10.2026, site sahibinin istegi: "grafikler
+ * kalin olsun, altlarina hafif golge; borsada yukselise ve dususe gore
+ * renk"). Cizgi kalin, altinda asagi dogru solan gradyan (stop-color
+ * currentColor: svg'nin rengi grafigin rengi). Yon renkleri sitenin artis
+ * ve dusus renkleri.
+ */
+.grafik.golgeli .grafik-svg { color: var(--grafik-renk); }
+.grafik.golgeli .grafik-cizgi { stroke-width: 2.6; }
+.grafik.arti { --grafik-renk: var(--artis, #157a43); }
+.grafik.eksi { --grafik-renk: var(--dusus, #c23a2e); }
+
 /* Isaret: 8px dolu daire + 2px zemin halkasi; cizginin ustunde okunur kalsin. */
 .grafik-nokta {
     position: absolute;
@@ -323,7 +335,7 @@
 @media (forced-colors: active) {
     .grafik-cizgi { stroke: CanvasText; }
     .grafik-nokta { background: CanvasText; }
-    .grafik-dolgu { opacity: 0; }
+    .grafik-dolgu, .grafik-golge { opacity: 0; }
 }
 
 /* --- Ana sayfa bolumu (includes/ana_grafikler.php) ---------------------- */

@@ -206,6 +206,8 @@ function piyasa_grafikleri_html(string $donem, array $sadece = [], string $bolum
             'kaynak'   => 'Yahoo Finance',
             'sifirdan' => false,
             'hane'     => $arac['hane'],
+            'golge'    => true,
+            'yon_renk' => true,
         ]) . ($analiz ? piyasa_donem_analizi_html($seri, $arac, (string) $tanim['ad']) : '') . '</div>';
     }
 
@@ -475,7 +477,7 @@ function piyasa_gostergeleri_html(): string
         $guncellik = grafik_guncellik($g);
 
         $kartlar .= '<article class="ana-grafik-kart"><h3>' . e((string) $g['baslik']) . '</h3>'
-            . grafik_ciz($seri, grafik_ciz_ayari($g))
+            . grafik_ciz($seri, ['golge' => true] + grafik_ciz_ayari($g))
             . (!$guncellik['guncel'] ? '<p class="grafik-bayat" role="note">' . e($guncellik['mesaj']) . '</p>' : '')
             . '</article>';
     }

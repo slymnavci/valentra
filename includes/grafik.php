@@ -40,7 +40,13 @@ const GRAFIK_BOY  = 300;
  * Seriyi çizer; gösterilecek HTML'i döndürür.
  *
  * @param list<array{0:string,1:float}> $seri    tarihe gore sirali ["Y-m-d", deger]
- * @param array{tur?:string,birim?:string,baslik?:string,kaynak?:string,ad?:string,sifirdan?:bool,hane?:int} $ayar
+ * @param array{tur?:string,birim?:string,baslik?:string,kaynak?:string,ad?:string,sifirdan?:bool,hane?:int,golge?:bool,yon_renk?:bool} $ayar
+ *
+ * golge: cizginin altinda asagi dogru solan gradyan golge (piyasa grafikleri;
+ *        site sahibinin istegi, 29.10.2026: "grafikler kalin olsun, altlarina
+ *        hafif golge"). Sifirdan baslamayan eksende de cizilir: buyukluk
+ *        dolgusu degil, yalnizca gorsel vurgu; asagida soluyor.
+ * yon_renk: donem basina gore yukseliste yesil, dususte kirmizi.
  */
 function grafik_ciz(array $seri, array $ayar = []): string
 {
@@ -64,6 +70,8 @@ function grafik_ciz(array $seri, array $ayar = []): string
      * da cizilmiyor — dolgu olmadan dar eksen yaniltici degil.
      */
     $sifirdan = (bool) ($ayar['sifirdan'] ?? true);
+    $golge    = (bool) ($ayar['golge'] ?? false);
+    $yonRenk  = (bool) ($ayar['yon_renk'] ?? false);
     // TCMB kurlari dort haneyle yayimliyor; oranlar iki haneyle. Cagiran
     // degistirebilir (gram altin TL ama iki hane).
     $hane     = (int) ($ayar['hane'] ?? ($birim === 'tl' ? 4 : 2));
@@ -126,6 +134,13 @@ function grafik_ciz(array $seri, array $ayar = []): string
     $dolgu = $sifirdan
         ? $yol . ' L' . grafik_sayi($x($t1)) . ' ' . $taban
           . ' L' . grafik_sayi($x($t0)) . ' ' . $taban . ' Z'
+        : '';
+
+    // Golge: cizgiden grafigin dibine, gradyanla soluyor (bkz. $golge).
+    static $golgeNo = 0;
+    $golgeId   = 'grafik-golge-' . (++$golgeNo);
+    $golgeYolu = $golge
+        ? $yol . ' L' . grafik_sayi($x($t1)) . ' ' . GRAFIK_BOY . ' L' . grafik_sayi($x($t0)) . ' ' . GRAFIK_BOY . ' Z'
         : '';
 
     $izgara = '';
@@ -199,7 +214,16 @@ function grafik_ciz(array $seri, array $ayar = []): string
 
     ob_start();
     ?>
-<figure class="grafik">
+<?php
+    $yonSinif = '';
+
+    if ($yonRenk) {
+        $ilkD = $noktalar[0]['d'];
+        $sonD = $noktalar[count($noktalar) - 1]['d'];
+        $yonSinif = $sonD > $ilkD ? ' arti' : ($sonD < $ilkD ? ' eksi' : '');
+    }
+    ?>
+<figure class="grafik<?= $golge ? ' golgeli' : '' ?><?= $yonSinif ?>">
     <?php if ($baslik !== '' || $kaynak !== ''): ?>
         <figcaption class="grafik-ust">
             <?php if ($baslik !== ''): ?>
@@ -227,8 +251,18 @@ function grafik_ciz(array $seri, array $ayar = []): string
              data-grafik="<?= e((string) json_encode($betikVerisi)) ?>">
             <svg class="grafik-svg" viewBox="0 0 <?= GRAFIK_EN ?> <?= GRAFIK_BOY ?>"
                  preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                <?php if ($golgeYolu !== ''): ?>
+                    <defs>
+                        <linearGradient id="<?= $golgeId ?>" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0" stop-color="currentColor" stop-opacity=".30"/>
+                            <stop offset="1" stop-color="currentColor" stop-opacity="0"/>
+                        </linearGradient>
+                    </defs>
+                <?php endif; ?>
                 <g class="grafik-izgara"><?= $izgara ?></g>
-                <?php if ($dolgu !== ''): ?>
+                <?php if ($golgeYolu !== ''): ?>
+                    <path class="grafik-golge" d="<?= $golgeYolu ?>" fill="url(#<?= $golgeId ?>)"/>
+                <?php elseif ($dolgu !== ''): ?>
                     <path class="grafik-dolgu" d="<?= $dolgu ?>"/>
                 <?php endif; ?>
                 <path class="grafik-cizgi" d="<?= $yol ?>" vector-effect="non-scaling-stroke"/>
