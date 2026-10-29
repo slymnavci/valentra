@@ -11,7 +11,7 @@ declare(strict_types=1);
  * gunun yorumlarini yaziyor.
  *
  * Calistirma:
- *   php ajan/burc.php [--kuru] [--yeniden] [--sure=5]
+ *   php ajan/burc.php [--kuru] [--yeniden] [--sure=8]
  *
  * --yeniden: bugunun yorumlari varsa da yeniden yazar (elle calistirma;
  * yazim kurallari degisince ayni gun yenilensin).
@@ -97,7 +97,7 @@ const BURC_YONERGE = <<<'METIN'
       aracı, hisse, kripto ya da bahis önerme.
     - Siyaset, din ve gündemdeki haberler yok.
     - Türkçe yaz; emoji, madde işareti ve biçimlendirme kullanma.
-    - Sonuçları burçların verilen sırasıyla döndür: sira 1 Koç ... 12 Balık.
+    - Sonuçları istemdeki burç sırasıyla döndür (sira 1'den başlar).
     METIN;
 
 const BURC_SEMA = [
@@ -108,7 +108,7 @@ const BURC_SEMA = [
             'items' => [
                 'type' => 'object',
                 'properties' => [
-                    'sira'        => ['type' => 'integer', 'description' => '1 Koç ... 12 Balık'],
+                    'sira'        => ['type' => 'integer', 'description' => 'istemdeki burç sırası, 1\'den başlar'],
                     'baslik'      => ['type' => 'string'],
                     'genel'       => ['type' => 'string'],
                     'ask'         => ['type' => 'string'],
@@ -265,23 +265,43 @@ $aylar     = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 
 $t         = new DateTimeImmutable($durum['bugun']);
 $tarih     = (int) $t->format('j') . ' ' . $aylar[(int) $t->format('n') - 1] . ' ' . $t->format('Y') . ' ' . $gunAdlari[(int) $t->format('N') - 1];
 
-$istem = 'TARİH: ' . $tarih . "\n\nGÜNÜN GÖKYÜZÜ (hesaplandı, gerçek):\n" . gokyuzu_metni($durum['bugun'])
-    . "\n\nBURÇLAR (bu sırayla):\n"
-    . implode("\n", array_map(static fn (int $i, string $ad): string => ($i + 1) . '. ' . $ad, array_keys(array_values(BURC_ADLARI)), array_values(BURC_ADLARI)));
+$gokyuzu = gokyuzu_metni($durum['bugun']);
 
+/*
+ * Model sirasi ve parcalama (29.10.2026). Uzun yorumlar istenince tek
+ * istekte 12 burc Gemini'de 109 saniyede tek bayt donmeden zaman asimina
+ * dustu ve hicbir yorum yazilmadi. Simdi derleme gibi Claude once (sonra
+ * Luna, en son Gemini) ve alti burcluk iki istek: biri dusse digerinin
+ * yorumlari yine siteye gidiyor.
+ */
 $yazar = new Yazar(ayar('GEMINI_API_KEY'), Yazar::haberModeli(), trim((string) getenv('OPENAI_API_KEY')), trim((string) getenv('ANTHROPIC_API_KEY')));
-$yazar->geminiOnce();
-$yazar->sureSiniri(180, [10, 30], $bitis);
-
-try {
-    $sonuclar = $yazar->semaliIstek(BURC_YONERGE, $istem, BURC_SEMA, 24000, count(BURC_ADLARI), 'genel');
-} catch (Throwable $e) {
-    gunluk('Burç yorumları yazılamadı: ' . $e->getMessage());
-    exit(0);
-}
+$yazar->sureSiniri(150, [10], $bitis);
 
 $anahtarlar = array_keys(BURC_ADLARI);
-$yorumlar   = [];
+$sonuclar   = [];
+
+foreach (array_chunk($anahtarlar, 6, true) as $parca) {
+    $adlar = array_map(static fn (string $k): string => BURC_ADLARI[$k], array_values($parca));
+    $istem = 'TARİH: ' . $tarih . "\n\nGÜNÜN GÖKYÜZÜ (hesaplandı, gerçek):\n" . $gokyuzu
+        . "\n\nBU İSTEKTE YAZILACAK BURÇLAR (bu sırayla; sira 1'den başlar):\n"
+        . implode("\n", array_map(static fn (int $i, string $ad): string => ($i + 1) . '. ' . $ad, array_keys($adlar), $adlar));
+
+    try {
+        $parcaSonuc = $yazar->semaliIstek(BURC_YONERGE, $istem, BURC_SEMA, 16000, count($adlar), 'genel');
+    } catch (Throwable $e) {
+        gunluk('Burç yorumları yazılamadı (' . implode(', ', $adlar) . '): ' . $e->getMessage());
+        continue;
+    }
+
+    foreach (array_values($parca) as $i => $burc) {
+        if (isset($parcaSonuc[$i])) {
+            $sonuclar[array_search($burc, $anahtarlar, true)] = $parcaSonuc[$i];
+        }
+    }
+}
+
+ksort($sonuclar);
+$yorumlar = [];
 
 foreach ($sonuclar as $sira => $s) {
     $burc = $anahtarlar[$sira] ?? null;
