@@ -106,13 +106,24 @@ function haber_bugun_dakika(): int
  * icin dun aksamki mac bugunun haberi. Diger basliklarda gece yarisi.
  * $kategoriBilinir: sorguda "k" (kategoriler) birlesimi var mi.
  */
-function haber_gun_ifadesi(bool $kategoriBilinir = true): string
+function haber_gun_ifadesi(bool $kategoriBilinir = true, bool $anaSayfa = false): string
 {
     // Gece yarisindan beri gecen dakika PHP'den: veritabaninin saat dilimi
     // bilinmiyor (paylasimli sunucu), NOW() ile farki ise dilimden bagimsiz.
     $gunDakika = haber_bugun_dakika();
+
+    /*
+     * Ana sayfada 12 saatlik spor gunu yalnizca dort buyuk kulup ve milli
+     * takimlarin haberinde (30.10.2026, site sahibi: "ana sayfada en cok spor
+     * haberi var"). Gece ve sabah dunku butun spor haberleri "bugun", dunku
+     * gundem haberleri "dun" sayiliyordu; spor ilk sayfayi dolduruyordu.
+     * ValSpor ve spor sayfalarinda butun spor haberleri eskisi gibi.
+     */
+    $spor = $anaSayfa
+        ? "k.slug = 'spor' AND " . haber_baslikta_gecen_kosulu(HABER_ONDE_SPOR)
+        : "k.slug = 'spor'";
     $pencere   = $kategoriBilinir
-        ? "CASE WHEN k.slug = 'spor' THEN " . max($gunDakika, 720) . ' ELSE ' . $gunDakika . ' END'
+        ? 'CASE WHEN ' . $spor . ' THEN ' . max($gunDakika, 720) . ' ELSE ' . $gunDakika . ' END'
         : (string) $gunDakika;
     $yas = haber_yas_dakika_ifadesi();
 
@@ -199,13 +210,38 @@ const HABER_BUYUK_KULUPLER    = ['galatasaray', 'fenerbahçe', 'beşiktaş', 'tr
 
 function haber_buyuk_kulup_ifadesi(): string
 {
-    $kosullar = array_map(
-        static fn (string $k): string => 'h.baslik LIKE ' . db()->quote('%' . $k . '%'),
-        HABER_BUYUK_KULUPLER
-    );
-
-    return "CASE WHEN k.slug = 'spor' AND (" . implode(' OR ', $kosullar) . ') THEN '
+    return "CASE WHEN k.slug = 'spor' AND " . haber_baslikta_gecen_kosulu(HABER_BUYUK_KULUPLER) . ' THEN '
         . HABER_BUYUK_KULUP_PUANI . ' ELSE 0 END';
+}
+
+/** Basliginda kelimelerden biri gecen haber (SQL kosulu). */
+function haber_baslikta_gecen_kosulu(array $kelimeler): string
+{
+    return '(' . implode(' OR ', array_map(
+        static fn (string $k): string => 'h.baslik LIKE ' . db()->quote('%' . $k . '%'),
+        $kelimeler
+    )) . ')';
+}
+
+/*
+ * ANA SAYFADA SPOR ARKADA (site sahibinin istegi, 30.10.2026: "ana sayfada
+ * en cok spor haberi var; buyuk takimlarin maclari yoksa spor haberleri
+ * arka plana alinabilir; ilk sayfalarda gundemdeki onemli haberler olmali").
+ * Dort buyuk kulup ve milli takimlar disindaki spor haberi, gunun onemli
+ * (ANA_SAYFA_ONEM_ESIGI) haberlerinin arkasinda; toplama dalgasindan once
+ * uygulaniyor, yani yeni toplanan bir spor haberi daha once toplanmis
+ * gundem haberini de one gecmiyor. Ana sayfa spor kotasi
+ * (haber_ana_sayfa_ilk_set) yerinde: kaydirakta yine en az 3 spor haberi,
+ * once buyuk kulupler (+15 puan). Spor haberlerinin hepsi ValSpor'da.
+ */
+const HABER_ONDE_SPOR = [
+    'galatasaray', 'fenerbahçe', 'beşiktaş', 'trabzonspor',
+    'milli takım', 'a milli', 'filenin sultanları', 'filenin efeleri', '12 dev adam',
+];
+
+function haber_arkadaki_spor_ifadesi(): string
+{
+    return "(k.slug = 'spor' AND NOT " . haber_baslikta_gecen_kosulu(HABER_ONDE_SPOR) . ')';
 }
 
 /*
@@ -363,7 +399,7 @@ function haber_sirasi(bool $anaSayfa = false): string
 
 function haber_sirasi_temel(bool $anaSayfa): string
 {
-    $gun = haber_gun_ifadesi();
+    $gun = haber_gun_ifadesi(true, $anaSayfa);
 
     /*
      * Ana sayfada puana okunma da giriyor (son 24 saatte haberi acan
@@ -389,6 +425,7 @@ function haber_sirasi_temel(bool $anaSayfa): string
     return '(h.one_cikan = 1 AND ' . $gun . ' = 0) DESC,
         ' . $gun . ' ASC,
         ' . ($anaSayfa ? '(h.onem >= ' . ANA_SAYFA_ONEM_ESIGI . ') DESC,
+        ' . haber_arkadaki_spor_ifadesi() . ' ASC,
         ' . haber_dalga_ifadesi() . ' ASC,
         ' : '') . $puan . ',
         h.olusturuldu DESC,
