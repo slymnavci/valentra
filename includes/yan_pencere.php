@@ -59,7 +59,7 @@ $enCokOkunanlar = haber_en_cok_okunanlar(6);
 
             <div class="etiket-bulutu">
                 <?php foreach ($etiketler as $etiket): ?>
-                    <span class="bulut-etiket">#<?= e($etiket['etiket']) ?></span>
+                    <a class="bulut-etiket" href="<?= e(etiket_yolu((string) $etiket['etiket'])) ?>">#<?= e($etiket['etiket']) ?></a>
                 <?php endforeach; ?>
             </div>
         </section>

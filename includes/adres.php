@@ -70,6 +70,24 @@ function kategori_yolu(string $slug, int $sayfa = 1): string
     return $yol;
 }
 
+/**
+ * Etiket sayfasının adresi (28.10.2026; bkz. includes/etiket.php).
+ * Etiket kucuk harfle ve oldugu gibi (Turkce harfler kodlanarak).
+ */
+function etiket_yolu(string $etiket, int $sayfa = 1): string
+{
+    require_once __DIR__ . '/etiket.php';
+
+    $anahtar = rawurlencode(etiket_normal($etiket));
+    $yol     = temiz_adres_acik() ? '/etiket/' . $anahtar : '/etiket.php?e=' . $anahtar;
+
+    if ($sayfa > 1) {
+        $yol .= (temiz_adres_acik() ? '?' : '&') . 'sayfa=' . $sayfa;
+    }
+
+    return $yol;
+}
+
 /** Kanun metni sayfasının adresi. */
 function kanun_yolu(string $anahtar, bool $tani = false): string
 {
