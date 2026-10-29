@@ -419,6 +419,13 @@ if ($hamGirdi !== '') {
             continue;
         }
 
+        // XML (EuroLeague gibi veri uclari): ilk 2500 karakter.
+        if (str_starts_with(ltrim($govde), '<?xml')) {
+            yaz('  XML: ' . mb_substr(preg_replace('/\s+/u', ' ', $govde) ?? $govde, 0, 2500, 'UTF-8'));
+            yaz();
+            continue;
+        }
+
         /*
          * Cozumleyici tuttuysa tablo dokumu gereksiz kalabalik. Tutmadiysa
          * (gol kralligi, baska lig sayfasi) tablolar ve baglantilar
