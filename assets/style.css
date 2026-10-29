@@ -5443,8 +5443,6 @@ a.bulut-etiket:hover,
     color: var(--metin-soluk);
 }
 
-.gazete-sekmeler { justify-content: center; }
-.gazete-sekmeler a.aktif { background: var(--metin); border-color: var(--metin); color: var(--zemin); }
 
 .gazete-bolum-basligi { margin-top: 0; }
 .bolum-basligi h2 a { color: inherit; text-decoration: none; }
@@ -5477,23 +5475,44 @@ a.bulut-etiket:hover,
 .ana-duzen.gazete-valpapel .bolum-basligi .cizgi,
 .ana-duzen.gazete-valspor .bolum-basligi .cizgi,
 .ana-duzen.gazete-valmagazin .bolum-basligi .cizgi { background: linear-gradient(90deg, var(--gazete-renk), transparent); }
-/* Telefonda sekmeler tek satir, yana kayiyor (alti satir yer kaplamasin). */
-@media (max-width: 640px) {
-    .gazete-sekmeler {
-        flex-wrap: nowrap; justify-content: flex-start;
-        overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
-    }
-    .gazete-sekmeler::-webkit-scrollbar { display: none; }
-    .gazete-sekmeler a { flex: none; }
-}
 /* Menude gazete adlari kunyedeki gibi: ikinci yari gazetenin renginde. */
 .menu-gazete .alt { color: var(--gazete-renk); }
-/* Alt sekmeler (ValSpor'da sporun alt basliklari): daha kucuk, ince. */
-.gazete-alt-sekmeler { margin-top: -10px; }
-.gazete-alt-sekmeler a { padding: 5px 12px; font-size: .82rem; background: transparent; }
-.gazete-alt-sekmeler a.aktif { background: var(--gazete-renk, var(--metin)); border-color: var(--gazete-renk, var(--metin)); color: #fff; }
 .gazete-veri .bolum-basligi:first-child { margin-top: 8px; }
 /* Kunye ve sekmeler sola dayali (site sahibinin istegi, 30.10.2026). */
 .gazete-kunye { text-align: left; }
-.gazete-sekmeler { justify-content: flex-start; }
-.gazete-alt-sekmeler { margin-top: -10px; }
+
+/* Gazete sekmeleri (30.10.2026, site sahibi: "alt menu cok karmasik; daha
+   duzgun bir tasarim olsun"): kutucuk yok, gazete basligi gibi duz bir
+   serit; secili baslik gazetenin renginde, altinda kalin cizgi. Veri
+   sayfalari ince bir ayracla sonda, sonuk. Alt basliklar (ValSpor) altta
+   kucuk yazi. Telefonda tek satir, yana kayiyor. */
+.gazete-kunye { border-bottom: 0; padding-bottom: 6px; margin-bottom: 0; }
+.gazete-sekmeler,
+.gazete-alt-sekmeler {
+    display: flex; align-items: center; gap: 4px 22px;
+    overflow-x: auto; scrollbar-width: none;
+}
+.gazete-sekmeler::-webkit-scrollbar,
+.gazete-alt-sekmeler::-webkit-scrollbar { display: none; }
+.gazete-sekmeler {
+    margin: 0 0 18px;
+    border-top: 1px solid var(--cizgi);
+    border-bottom: 1px solid var(--cizgi);
+}
+.gazete-sekmeler a {
+    flex: none; padding: 12px 0 10px;
+    border-bottom: 3px solid transparent; margin-bottom: -1px;
+    font-size: .95rem; font-weight: 700; color: var(--metin); text-decoration: none; white-space: nowrap;
+}
+.gazete-sekmeler a:hover { color: var(--gazete-renk); }
+.gazete-sekmeler a.aktif { color: var(--gazete-renk); border-bottom-color: var(--gazete-renk); }
+.gazete-sekmeler a.veri { font-size: .86rem; font-weight: 600; color: var(--metin-soluk); }
+.gazete-sekmeler a.veri.aktif, .gazete-sekmeler a.veri:hover { color: var(--gazete-renk); }
+.gazete-ayrac { flex: none; width: 1px; height: 18px; background: var(--cizgi); }
+.gazete-alt-sekmeler { margin: -8px 0 18px; gap: 4px 18px; }
+.gazete-alt-sekmeler a {
+    flex: none; padding: 4px 0;
+    font-size: .86rem; font-weight: 600; color: var(--metin-soluk); text-decoration: none; white-space: nowrap;
+}
+.gazete-alt-sekmeler a:hover { color: var(--metin); }
+.gazete-alt-sekmeler a.aktif { color: var(--gazete-renk); font-weight: 700; }
