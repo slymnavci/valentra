@@ -508,6 +508,7 @@ jobs:
       # Gunluk burc yorumlari (29.10.2026, site sahibinin istegi): bugunun 12
       # yorumu sitede yoksa tek model istegiyle yazilip gonderiliyor; varsa
       # model cagrilmadan cikiyor. Gece yarisindan sonraki ilk calisma yaziyor.
+      # Elle "burc" moduyla calistirilinca (panel dugmesi) varsa da yeniden yaziyor.
       - name: Burc yorumlari
         if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'gunluk' || inputs.mod == 'burc') }}
         timeout-minutes: 6
@@ -521,7 +522,7 @@ jobs:
           OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
-        run: php burc.php --sure=5 || true
+        run: php burc.php --sure=5 ${{ inputs.mod == 'burc' && '--yeniden' || '' }} || true
 
       # Sayfalardaki canli veri (23.10.2026, site sahibi: "haberleri ceken
       # robot borsa grafiklerini, mac sonuclarini da ceksin; eski bilgi
