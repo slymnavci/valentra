@@ -170,9 +170,15 @@ $hedef = min($enFazla, $kalan);
 // Malzeme onem sirasiyla geliyor (bkz. derleme_malzeme): secime en onemlileri.
 $haberler = array_slice($haberler, 0, SECIM_HABER_TAVANI);
 
-// Model: hizli haber modeli once, kose modeli yedek; Gemini yogunsa Claude ya da Luna.
+/*
+ * MODEL SIRASI (29.10.2026): haber toplamadaki gibi Claude -> Luna ->
+ * Gemini. Adim sureleri olculdu: Claude bir derlemeyi 41-42 saniyede
+ * yaziyor; Gemini 221 saniye, Gemini takilip Claude'a gecince 268 saniye,
+ * Gemini'yle olay secimi 115 saniye. Gemini once iken bir calismada
+ * ancak 1-4 derleme cikiyordu ve butce doluyordu. Gemini (haber modeli,
+ * yogunsa kose modeli) artik son yedek.
+ */
 $yazar = new Yazar(ayar('GEMINI_API_KEY'), Yazar::haberModeli(), trim((string) getenv('OPENAI_API_KEY')), trim((string) getenv('ANTHROPIC_API_KEY')));
-$yazar->geminiOnce();
 $yazar->sureSiniri(120, [10], $bitis);
 $yazar->yedekModel(Yazar::koseModeli());
 gunluk('Model: ' . $yazar->model() . '; bu çalışmada en fazla ' . $hedef . ' derleme.');
