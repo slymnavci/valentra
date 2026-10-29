@@ -2034,3 +2034,37 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) V
     ('CBC News (Kanada)',           'https://www.cbc.ca/news',          'https://www.cbc.ca/webfeed/rss/rss-world',                               'rss', 'dunya', 1);
 
 INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_cok_okunan_kaynaklar_2026_10_29', '29.10.2026');
+
+-- ---------------------------------------------------------------------------
+-- ValPapel, ValSpor, ValMagazin (29.10.2026, site sahibinin istegi:
+-- "ekonomi sayfasini ValPapel yapalim: dunyadan ekonomi haberleri, Turkiye
+-- haberleri, doviz, altin, kripto paralar, borsa, dunya borsalari; ValSpor:
+-- futbol, basketbol, voleybol, puan durumu, dunya futbolu, Super Lig;
+-- ValMagazin: burclar, sanat haberleri, sanatcilarin yorumlari, yemek
+-- tarifleri"). Sayfalar gazete.php, tanimlar includes/gazeteler.php.
+--
+-- Magazin basligi OLCULU (site sahibinin karari): sanatcilarin
+-- aciklamalari, roportajlari, yeni albüm/dizi/film/konser ve odulleri;
+-- dedikodu ve ozel hayat yayimlanmaz (ajan/src/Yazar.php). Ana sayfa
+-- akisina girmiyor, yalnizca ValMagazin'de (HABER_AKIS_DISI).
+--
+-- Yeni kaynaklar GitHub Actions'tan aday olarak sinandi (29.10.2026):
+-- hepsi calisti. Sinanip eklenmeyenler: NTV Magazin (404), TRT Spor (404).
+-- Ingilizce kripto ve piyasa yayinlarini ajan Turkce ozetliyor.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kategoriler (ad, slug, aciklama, sira) VALUES
+    ('Magazin', 'magazin', 'Sanatçıların açıklamaları ve röportajları, yeni albüm, şarkı, dizi, film, konser ve ödüller (dedikodu ve özel hayat değil)', 85);
+
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, kategori, aktif) VALUES
+    ('Hürriyet Kelebek',     'https://www.hurriyet.com.tr', 'https://www.hurriyet.com.tr/rss/kelebek',            NULL,                                           'rss', 'magazin', 1),
+    ('Habertürk Magazin',    'https://www.haberturk.com',   'https://www.haberturk.com/rss/magazin.xml',          NULL,                                           'rss', 'magazin', 1),
+    ('CNN Türk Magazin',     'https://www.cnnturk.com',     'https://www.cnnturk.com/feed/rss/magazin/news',      'https://www.cnnturk.com/magazin-haberleri/',   'rss', 'magazin', 1),
+    ('Milliyet Magazin',     'https://www.milliyet.com.tr', NULL,                                                 'https://www.milliyet.com.tr/magazin/',         'web', 'magazin', 1),
+    ('CoinDesk',             'https://www.coindesk.com',    'https://www.coindesk.com/arc/outboundfeeds/rss/',    NULL,                                           'rss', 'ekonomi', 1),
+    ('Cointelegraph',        'https://cointelegraph.com',   'https://cointelegraph.com/rss',                      NULL,                                           'rss', 'ekonomi', 1),
+    ('Habertürk Kripto',     'https://www.haberturk.com',   NULL,                                                 'https://www.haberturk.com/ekonomi/kripto-para', 'web', 'ekonomi', 1),
+    ('Habertürk Borsa',      'https://www.haberturk.com',   NULL,                                                 'https://www.haberturk.com/ekonomi/borsa',      'web', 'ekonomi', 1),
+    ('CNBC Markets',         'https://www.cnbc.com',        'https://www.cnbc.com/id/20910258/device/rss/rss.html', NULL,                                         'rss', 'ekonomi', 1),
+    ('MarketWatch',          'https://www.marketwatch.com', 'https://feeds.marketwatch.com/marketwatch/topstories/', NULL,                                        'rss', 'ekonomi', 1),
+    ('Anadolu Ajansı Basketbol', 'https://www.aa.com.tr',   NULL,                                                 'https://www.aa.com.tr/tr/spor/basketbol',      'web', 'spor',    1),
+    ('Anadolu Ajansı Voleybol',  'https://www.aa.com.tr',   NULL,                                                 'https://www.aa.com.tr/tr/spor/voleybol',       'web', 'spor',    1);

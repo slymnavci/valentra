@@ -88,7 +88,7 @@ function kaynak_saati(array $kaynak, int $saat): int
 {
     return match (HaberAkisi::kova($kaynak)) {
         'yemek-tarifleri'         => max($saat, TARIF_SAATI),
-        'saglik', 'kultur-sanat'  => max($saat, SEYREK_BASLIK_SAATI),
+        'saglik', 'kultur-sanat', 'magazin' => max($saat, SEYREK_BASLIK_SAATI),
         default                   => $saat,
     };
 }

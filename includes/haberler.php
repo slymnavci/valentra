@@ -39,6 +39,10 @@ const HABER_RG_KOSULU = "COALESCE(h.kaynak_url, '') LIKE '%resmigazete.gov.tr%'"
 const HABER_AKIS_KATEGORILERI = [
     'gundem', 'politika', 'ekonomi', 'dunya',
     'spor', 'teknoloji', 'saglik', 'kultur-sanat',
+    // Magazin (29.10.2026, site sahibinin istegi: ValMagazin'de "sanatcilarin
+    // yorumlari"). Olculu: sanatcilarin aciklamalari, roportajlari, yeni
+    // isleri; dedikodu ve ozel hayat yok (bkz. ajan/src/Yazar.php).
+    'magazin',
     // Yemek tarifleri (22.10.2026, site sahibinin istegi): menunun en
     // sonunda. Haber degil; ana sayfanin manset ve haber izgarasina
     // girmiyor (bkz. haber_ana_akis_kosulu), kendi sayfasi ve ana
@@ -46,8 +50,11 @@ const HABER_AKIS_KATEGORILERI = [
     'yemek-tarifleri',
 ];
 
-/** Haber olmayan, ana sayfa akisina girmeyen basliklar. */
-const HABER_AKIS_DISI = ['yemek-tarifleri'];
+/**
+ * Ana sayfa akisina girmeyen basliklar: yemek tarifleri haber degil;
+ * magazin haberleri yalnizca ValMagazin'de (ana sayfa gundemi ciddi kalsin).
+ */
+const HABER_AKIS_DISI = ['yemek-tarifleri', 'magazin'];
 
 /*
  * Haber sirasi: ONCE BUGUN TOPLANANLAR, kendi icinde EN ONEMLIDEN
