@@ -82,7 +82,9 @@ const BURC_YONERGE = <<<'METIN'
       evlerin geleneksel anlamlarını, açının uyumlu ya da gerilimli
       olmasını ve burcun elementini, mizacını kullan.
     - Listede olmayan gezegen geçişi, retro, tutulma, derece ya da tarih
-      UYDURMA (Merkür, Venüs, Mars... yalnızca verilmişse).
+      UYDURMA (Merkür, Venüs, Mars... yalnızca verilmişse). Güneş ile Ay
+      arasındaki açıyı yalnızca verildiği gibi an; "yok" diyorsa Güneş-Ay
+      açısından söz etme. Burçla ilgili açı, Ay'ın o burca açısıdır.
 
     ÜSLUP:
     - Olumlu ve yapıcı ol; zorlukları bile fırsat ve tavsiye olarak anlat.
@@ -194,8 +196,20 @@ function gokyuzu_metni(string $gun): string
         default              => 'küçülen hilal: Ay Güneş\'e yaklaşıyor, yeni ay yakın',
     };
 
+    // Gunes-Ay acisi: model "Gunes Ay'la altigen" gibi acilari uydurmasin.
+    $aci = min($e, 360 - $e);
+    $gunesAy = match (true) {
+        $aci <= 8              => 'kavuşum',
+        abs($aci - 60) <= 6    => 'altıgen (uyumlu)',
+        abs($aci - 90) <= 7    => 'kare (gerilimli)',
+        abs($aci - 120) <= 7   => 'üçgen (uyumlu)',
+        $aci >= 172            => 'karşıt',
+        default                => 'yok (belirgin bir açı kurmuyorlar)',
+    };
+
     $satirlar = [
         'Güneş ' . $adlar[gok_burc($k['gunes'])] . ' burcunda.',
+        'Güneş ile Ay arasındaki açı: ' . $gunesAy . ' (aralarında yaklaşık ' . (int) round($aci) . ' derece).',
         'Ay ' . $adlar[$ayB] . ' burcunda; ' . $evre . ' (aydınlık %' . (int) round((1 - cos(deg2rad($e))) / 2 * 100) . ').',
         ($e < 12 || $e >= 348 ? 'Bugün yeni ay.' : 'Yeni aya yaklaşık ' . max(1, (int) round((360 - $e) / 12.19)) . ' gün var.')
         . ' ' . (abs($e - 180) < 12 ? 'Bugün dolunay.' : 'Dolunaya yaklaşık ' . max(1, (int) round(gok_norm(180 - $e) / 12.19)) . ' gün var.'),
