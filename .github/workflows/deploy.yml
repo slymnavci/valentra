@@ -112,8 +112,16 @@ jobs:
           # butun sure butcesini yiyebiliyor. Bu gerceklesti: deneme
           # bitmedigi icin is 12 dakikada kesildi ve hicbir dosya
           # gitmedi.
-          yukle() {
-            timeout 300 lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER" <<EOF
+          # YUKLEME SIRASI (29.10.2026): sayfalar bir sure acilmadi. mirror
+          # once kok dizindeki dosyalari (haber.php) yukluyordu; yeni
+          # haber.php henuz yuklenmemis includes/haber_govde.php'yi
+          # istedigi icin yukleme bitene kadar her haber sayfasi hata
+          # verdi. Yukleme yavas (dosya zamanlari her checkout'ta yeni,
+          # her sey yeniden gidiyor) ve 300 saniyede kesilince karisik
+          # surum kalabiliyordu. Simdi once alt dizinler (includes, api,
+          # assets ...), en son kokteki sayfalar ve .htaccess; sure 900 sn.
+          lftp_betigi() {
+            cat <<EOF
           set cmd:fail-exit yes
           set net:timeout 20
           set net:max-retries 2
@@ -122,23 +130,25 @@ jobs:
           set ftp:passive-mode yes
 
           cd "$FTP_DIRECTORY"
-
-          mirror --reverse --verbose \
-            --exclude-glob .git/ \
-            --exclude-glob .git/** \
-            --exclude-glob .github/ \
-            --exclude-glob .github/** \
-            --exclude-glob node_modules/ \
-            --exclude-glob node_modules/** \
-            --exclude-glob egitim/content/** \
-            --exclude-glob egitim/materyaller/** \
-            . .
-
-          bye
           EOF
+
+            for d in $(find . -mindepth 1 -maxdepth 1 -type d ! -name .git ! -name .github ! -name node_modules -printf '%f\n' | sort); do
+              if [ "$d" = "egitim" ]; then
+                echo "mirror --reverse --verbose --exclude-glob content/** --exclude-glob materyaller/** $d $d"
+              else
+                echo "mirror --reverse --verbose $d $d"
+              fi
+            done
+
+            echo "mirror --reverse --verbose --no-recursion . ."
+            echo "bye"
           }
 
-          # Uc deneme yeter; dorduncusu sure butcesine sigmiyor.
+          yukle() {
+            lftp_betigi > /tmp/lftp_betigi.txt
+            timeout 900 lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER" < /tmp/lftp_betigi.txt
+          }
+
           BEKLEME="20 45"
           DENEME=1
 
