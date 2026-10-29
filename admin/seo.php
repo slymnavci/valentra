@@ -18,6 +18,8 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/seo.php';
 require_once __DIR__ . '/../includes/http_ortak.php';
+require_once __DIR__ . '/../includes/olcum_reklam.php';
+require_once __DIR__ . '/../includes/kurumsal.php';
 
 giris_zorunlu();
 
@@ -56,6 +58,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $bildirim = $ham === ''
                 ? 'Doğrulama kodu kaldırıldı.'
                 : 'Doğrulama kodu kaydedildi. Search Console\'da "Doğrula" deyin.';
+        }
+    }
+
+    // Google Analytics ve AdSense kimlikleri (29.10.2026; bkz. includes/olcum_reklam.php).
+    if ($islem === 'olcum') {
+        $ga  = strtoupper(trim((string) ($_POST['ga4'] ?? '')));
+        $ad  = trim((string) ($_POST['adsense'] ?? ''));
+        $bir = trim((string) ($_POST['birim'] ?? ''));
+
+        if (preg_match('/(ca-)?pub-\d{10,20}/', $ad, $es) === 1) {
+            $ad = str_starts_with($es[0], 'ca-') ? $es[0] : 'ca-' . $es[0];
+        }
+
+        if ($ga !== '' && preg_match('/^G-[A-Z0-9]{4,15}$/', $ga) !== 1) {
+            $hata = 'Google Analytics ölçüm kimliği "G-" ile başlamalı (ör. G-AB12CD34EF).';
+        } elseif ($ad !== '' && preg_match('/^ca-pub-\d{10,20}$/', $ad) !== 1) {
+            $hata = 'AdSense yayıncı kimliği "ca-pub-" ile başlayan sayı olmalı (ör. ca-pub-1234567890123456).';
+        } elseif ($bir !== '' && preg_match('/^\d{6,12}$/', $bir) !== 1) {
+            $hata = 'Reklam birimi kimliği yalnızca rakam olmalı (AdSense\'teki data-ad-slot değeri).';
+        } else {
+            ayar_yaz('ga4_kimlik', $ga);
+            ayar_yaz('adsense_kimlik', $ad);
+            ayar_yaz('adsense_birim', $bir);
+            $bildirim = 'Ölçüm ve reklam ayarları kaydedildi.';
         }
     }
 
@@ -168,6 +194,36 @@ require __DIR__ . '/ust.php';
             <code>google-site-verification</code> etiketi yayınlanıyor.
         </p>
     <?php endif; ?>
+</div>
+
+<div class="kutu" style="margin-top:22px;">
+    <h2 style="margin-top:0;">Google Analytics ve reklam (AdSense)</h2>
+    <p class="ipucu">
+        Kimlikleri girdiğinizde ölçüm ve reklam kodları bütün sayfalara kendiliğinden eklenir; kaydırınca gelen
+        her haber Google Analytics'te ayrı sayfa görüntülemesi sayılır ve her haberin altında bir reklam alanı olur.
+        Sitede çerez bildirimi ve <a href="<?= e(kurumsal_yolu('gizlilik')) ?>" target="_blank">Gizlilik ve Çerezler</a>
+        sayfası da açılır. Boş bırakırsanız hiçbir kod yüklenmez.
+    </p>
+    <form method="post">
+        <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+        <input type="hidden" name="islem" value="olcum">
+
+        <label for="ga4">Google Analytics ölçüm kimliği</label>
+        <input type="text" id="ga4" name="ga4" value="<?= e(ayar_oku('ga4_kimlik')) ?>" placeholder="G-XXXXXXXXXX" style="width:100%;max-width:360px;">
+        <p class="ipucu">analytics.google.com → Yönetici → Veri akışları → web akışı → "Ölçüm kimliği".</p>
+
+        <label for="adsense">AdSense yayıncı kimliği</label>
+        <input type="text" id="adsense" name="adsense" value="<?= e(ayar_oku('adsense_kimlik')) ?>" placeholder="ca-pub-1234567890123456" style="width:100%;max-width:360px;">
+        <p class="ipucu">adsense.google.com → Hesap → Hesap bilgileri → "Yayıncı kimliği". Kaydedince
+            <code><?= e(site_adresi()) ?>/ads.txt</code> dosyası da kendiliğinden hazırlanır.</p>
+
+        <label for="birim">Haber içi reklam birimi (isteğe bağlı)</label>
+        <input type="text" id="birim" name="birim" value="<?= e(ayar_oku('adsense_birim')) ?>" placeholder="1234567890" style="width:100%;max-width:360px;">
+        <p class="ipucu">AdSense → Reklamlar → Reklam birimine göre → Görüntülü reklam; kodundaki <code>data-ad-slot</code>
+            değeri. Boş bırakılırsa haber altındaki alanı AdSense otomatik doldurur.</p>
+
+        <button class="dugme dugme-ana" type="submit">Kaydet</button>
+    </form>
 </div>
 
 <div class="kutu" style="margin-top:22px;">

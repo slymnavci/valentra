@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Kurumsal sayfalar: Hakkımızda, Künye, İletişim, Yayın İlkeleri.
+ * Kurumsal sayfalar: Hakkımızda, Künye, İletişim, Yayın İlkeleri, Gizlilik ve Çerezler.
  *
  * Site sahibinin istegi (26.10.2026): Google Haberler icin eksikler
  * tamamlansin. Google artik basvuru almiyor, siteleri kendisi buluyor;
@@ -85,6 +85,9 @@ function kurumsal_sayfalar(): array
         'yayin-ilkeleri' => 'Yayın İlkeleri',
         'kunye'          => 'Künye',
         'iletisim'       => 'İletişim',
+        // Gizlilik ve cerezler (29.10.2026): Google Analytics ve AdSense icin
+        // zorunlu (AdSense gizlilik politikasi olmayan siteyi onaylamiyor).
+        'gizlilik'       => 'Gizlilik ve Çerezler',
     ];
 }
 

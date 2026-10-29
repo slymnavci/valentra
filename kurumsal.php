@@ -38,6 +38,7 @@ $aciklamalar = [
     'yayin-ilkeleri' => 'Valentra yayın ilkeleri: kaynak gösterme, doğruluk, tarafsızlık, yapay zekâ kullanımı ve düzeltme politikası.',
     'kunye'          => 'Valentra künyesi: yayın sahibi, sorumlu müdür, yönetim yeri ve iletişim bilgileri.',
     'iletisim'       => 'Valentra ile iletişim: düzeltme, içerik kaldırma ve genel talepler.',
+    'gizlilik'       => 'Valentra gizlilik ve çerez politikası: ziyaret kayıtları, çerezler, Google Analytics ve reklamlar, KVKK kapsamındaki haklarınız.',
 ];
 
 $sayfaBasligi  = $sayfalar[$sayfa] . ' — Valentra';
@@ -158,7 +159,29 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <p>Haberler, kaynaklarına atıf ve bağlantıyla özet olarak yayımlanır. Yayın anlayışımız için
                 <a href="<?= e(kurumsal_yolu('yayin-ilkeleri')) ?>">Yayın İlkeleri</a> sayfasına bakabilirsiniz.</p>
 
-        <?php else: /* iletisim */ ?>
+        <?php elseif ($sayfa === 'gizlilik'): ?>
+            <?php require_once __DIR__ . '/includes/olcum_reklam.php'; ?>
+
+            <p>Bu sayfa, Valentra'yı ziyaret ettiğinizde hangi bilgilerin toplandığını, çerezlerin
+                nasıl kullanıldığını ve 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK)
+                kapsamındaki haklarınızı açıklar.</p>
+
+            <h2 id="ziyaret">Ziyaret kayıtları</h2>
+            <p>Sitenin güvenliği ve hangi haberlerin okunduğunu ölçmek için her sayfa ziyaretinde
+                IP adresi, ziyaret edilen sayfa, tarih ve saat, tarayıcı ve cihaz türü ile siteye
+                hangi adresten gelindiği kaydedilir. Ayrıca tarayıcınızda, aynı okurun tekrar
+                sayılmaması için rastgele bir kimlik saklanır. Bu kayıtlar 180 gün sonra kendiliğinden
+                silinir ve üçüncü kişilerle paylaşılmaz.</p>
+
+            <h2 id="cerezler">Çerezler</h2>
+            <ul>
+                <li><strong>Zorunlu:</strong> tema tercihi (açık/koyu) ve çerez tercihiniz tarayıcınızda
+                    saklanır; sitenin çalışması için gereklidir.</li>
+                <?php if (olcum_ga4() !== ''): ?>
+                    <li><strong>Ölçüm (Google Analytics):</strong> sitenin nasıl kullanıldığını anlamak için
+                        Google Analytics kullanılır. Çerezli ölçüm yalnızca çerez bildiriminde
+                        "Kabul et" demeniz halinde yapılır.</li>
+                <?php else: /* iletisim */ ?>
 
             <?php if ($eposta !== '' || $kunye['kunye_telefon'] !== '' || $kunye['kunye_adres'] !== ''): ?>
                 <dl class="kunye-listesi">
@@ -183,6 +206,24 @@ require __DIR__ . '/includes/sayfa_ust.php';
                 <li><strong>Öneri ve görüş:</strong> haber önerileri ve site hakkındaki görüşleriniz.</li>
             </ul>
             <p>Talepler <a href="<?= e(kurumsal_yolu('yayin-ilkeleri')) ?>#duzeltme">Yayın İlkeleri</a>'ne göre incelenir.</p>
+
+        <?php endif; ?>
+                <?php if (reklam_istemci() !== ''): ?>
+                    <li><strong>Reklam (Google AdSense):</strong> sitede Google ve iş ortaklarının reklamları
+                        gösterilir. Google gibi üçüncü taraf sağlayıcılar, önceki ziyaretlerinize göre reklam
+                        göstermek için çerez kullanabilir. Kişiselleştirilmiş reklam yalnızca "Kabul et"
+                        demeniz halinde gösterilir; aksi halde kişiselleştirilmemiş reklam gösterilir.
+                        Google'ın verileri nasıl kullandığı:
+                        <a href="https://policies.google.com/technologies/partner-sites" rel="noopener" target="_blank">policies.google.com/technologies/partner-sites</a>.
+                        Kişiselleştirilmiş reklamları <a href="https://adssettings.google.com" rel="noopener" target="_blank">Google Reklam Ayarları</a>'ndan kapatabilirsiniz.</li>
+                <?php endif; ?>
+            </ul>
+            <p><button type="button" class="dugme" onclick="try{localStorage.removeItem('vz_cerez')}catch(e){};location.reload()">Çerez tercihimi değiştir</button></p>
+
+            <h2 id="haklar">Haklarınız</h2>
+            <p>KVKK'nın 11. maddesi uyarınca kişisel verilerinizin işlenip işlenmediğini öğrenme,
+                düzeltilmesini ya da silinmesini isteme ve işlemeye itiraz etme haklarına sahipsiniz.
+                Talepleriniz için <?= $epostaBag ?> üzerinden bize yazabilirsiniz.</p>
 
         <?php endif; ?>
 
