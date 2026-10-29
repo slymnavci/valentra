@@ -76,11 +76,30 @@ function gazete_menu_ogesi(string $gazete, array $onekler): array
 {
     return [
         'ad'      => gazete_bul($gazete)['ad'],
+        'gazete'  => $gazete,
         'anahtar' => $gazete,
         'href'    => gazete_yolu($gazete),
         'altlar'  => [],
         'onekler' => array_merge([$gazete], $onekler),
     ];
+}
+
+/**
+ * Menu ogesinin yazisi. Gazeteler sayfadaki kunyeleri gibi iki renkli
+ * (site sahibinin istegi, 29.10.2026: "ana menude ValPapel yazarken Papel
+ * yesil yazilsin; spor ve magazin de oyle"): "Val" menunun renginde,
+ * ikinci yari gazetenin renginde.
+ */
+function site_menu_adi_html(array $oge): string
+{
+    $g = isset($oge['gazete']) ? gazete_bul((string) $oge['gazete']) : null;
+
+    if ($g === null) {
+        return e((string) $oge['ad']);
+    }
+
+    return '<span class="menu-gazete gazete-' . e((string) $oge['gazete']) . '">'
+         . e($g['ust']) . '<span class="alt">' . e($g['alt']) . '</span></span>';
 }
 
 /** Menu basligi ya da alt ogelerinden biri gecerli sayfa mi? */
