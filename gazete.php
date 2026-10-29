@@ -42,7 +42,8 @@ if ($b !== null && isset($b['yol'])) {
 
 $onSayfa = $bolum === '';
 $sayfa   = $onSayfa ? 1 : max(1, (int) ($_GET['sayfa'] ?? 1));
-$bolumAd = $bolum === 'haberler' ? 'Tüm Haberler' : (string) ($b['ad'] ?? '');
+// Sayfa basligi uzun ad ("Turkiye Ekonomisi"); sekmede kisa ad ("Turkiye").
+$bolumAd = $bolum === 'haberler' ? 'Tüm Haberler' : (string) ($b['baslik'] ?? $b['ad'] ?? '');
 
 $aktifKategori = gazete_bolum_anahtari($gazete, $bolum);
 $sayfaBasligi  = $onSayfa
@@ -195,7 +196,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <?php if ($onSayfa): ?>
             <?php foreach ($bloklar as $anahtar => $izgaraHaberleri): ?>
                 <div class="bolum-basligi" id="<?= e($anahtar) ?>">
-                    <h2><a href="<?= e(gazete_yolu($gazete, $anahtar)) ?>"><?= e($g['bolumler'][$anahtar]['ad']) ?></a></h2>
+                    <h2><a href="<?= e(gazete_yolu($gazete, $anahtar)) ?>"><?= e($g['bolumler'][$anahtar]['baslik'] ?? $g['bolumler'][$anahtar]['ad']) ?></a></h2>
                     <span class="cizgi"></span>
                     <a class="gazete-tumu" href="<?= e(gazete_yolu($gazete, $anahtar)) ?>">Tümü &rarr;</a>
                 </div>

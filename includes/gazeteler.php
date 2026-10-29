@@ -96,12 +96,14 @@ function gazeteler(): array
             'aciklama' => 'Türkiye ve dünya ekonomisi, döviz, altın, kripto paralar, Borsa İstanbul ve dünya borsaları: güncel haberler ve canlı piyasa verileri.',
             'bolumler' => [
                 'turkiye' => [
-                    'ad'       => 'Türkiye Ekonomisi',
+                    'ad'       => 'Türkiye',
+                    'baslik'   => 'Türkiye Ekonomisi',
                     'aciklama' => 'Türkiye ekonomisinden haberler: enflasyon, faiz, büyüme, bütçe, şirketler ve sektörler.',
                     'kosullar' => [['kategoriler' => ['ekonomi'], 'haric' => GAZETE_DUNYA_KELIMELERI]],
                 ],
                 'dunya' => [
-                    'ad'       => 'Dünya Ekonomisi',
+                    'ad'       => 'Dünya',
+                    'baslik'   => 'Dünya Ekonomisi',
                     'aciklama' => 'Dünyadan ekonomi haberleri: ABD, Avrupa, Çin; merkez bankaları, ticaret ve emtia.',
                     'kosullar' => [
                         ['kategoriler' => ['ekonomi'], 'kelimeler' => GAZETE_DUNYA_KELIMELERI],
@@ -124,7 +126,8 @@ function gazeteler(): array
                     'piyasa'   => 'altin',
                 ],
                 'kripto' => [
-                    'ad'       => 'Kripto Paralar',
+                    'ad'       => 'Kripto',
+                    'baslik'   => 'Kripto Paralar',
                     'aciklama' => 'Bitcoin, Ethereum ve diğer kripto paralar: haberler ve canlı fiyatlar.',
                     'kosullar' => [['kategoriler' => ['ekonomi', 'teknoloji', 'dunya'], 'kelimeler' => [
                         'kripto', 'bitcoin', 'ethereum', 'btc ', 'blokzincir', 'blok zincir', 'blockchain',
@@ -146,10 +149,11 @@ function gazeteler(): array
                     'kosullar' => [['kategoriler' => ['ekonomi', 'dunya'], 'kelimeler' => GAZETE_DUNYA_BORSA_KELIMELERI]],
                     'piyasa'   => 'dunya',
                 ],
-                'emtia'       => ['ad' => 'Emtia',                'yol' => ['piyasa_bolum_yolu', 'petrol']],
-                'gostergeler' => ['ad' => 'Ekonomik Göstergeler', 'yol' => ['piyasa_bolum_yolu', 'gostergeler']],
-                'sirket'      => ['ad' => 'Şirket Analizi',       'yol' => ['sirket_yolu']],
-                'piyasalar'   => ['ad' => 'Tüm Piyasalar',        'yol' => ['piyasalar_yolu']],
+                // Veri sayfalari: sekme seridinin sonunda, ayri grup ('veri_sayfasi').
+                'emtia'       => ['ad' => 'Emtia',       'yol' => ['piyasa_bolum_yolu', 'petrol'],      'veri_sayfasi' => true],
+                'gostergeler' => ['ad' => 'Göstergeler', 'yol' => ['piyasa_bolum_yolu', 'gostergeler'], 'veri_sayfasi' => true],
+                'sirket'      => ['ad' => 'Şirketler',   'yol' => ['sirket_yolu'],                       'veri_sayfasi' => true],
+                'piyasalar'   => ['ad' => 'Piyasalar',   'yol' => ['piyasalar_yolu'],                    'veri_sayfasi' => true],
             ],
         ],
         'valspor' => [
@@ -169,7 +173,7 @@ function gazeteler(): array
                  */
                 'futbol' => [
                     'ad'       => 'Futbol',
-                    'alt_ad'   => 'Futbol Haberleri',
+                    'alt_ad'   => 'Haberler',
                     'aciklama' => 'Futbol haberleri: maçlar, transferler, milli takım; Süper Lig puan durumu ve gol krallığı.',
                     'veri'     => 'futbol',
                     'kosullar' => [['kategoriler' => ['spor'], 'haric' => $sporDisi]],
@@ -186,7 +190,8 @@ function gazeteler(): array
                     ], 'haric' => $sporDisi]],
                 ],
                 'dunya-futbolu' => [
-                    'ad'       => 'Dünya Futbolu',
+                    'ad'       => 'Dünya',
+                    'baslik'   => 'Dünya Futbolu',
                     'ust'      => 'futbol',
                     'aciklama' => 'Avrupa ligleri ve kupaları, dünya futbolundan haberler.',
                     'kosullar' => [['kategoriler' => ['spor'], 'kelimeler' => [
@@ -210,7 +215,8 @@ function gazeteler(): array
                     'kosullar' => [['kategoriler' => ['spor'], 'kelimeler' => GAZETE_VOLEYBOL_KELIMELERI]],
                 ],
                 'diger-sporlar' => [
-                    'ad'       => 'Diğer Sporlar',
+                    'ad'       => 'Diğer',
+                    'baslik'   => 'Diğer Sporlar',
                     'aciklama' => 'Tenis, Formula 1, atletizm, güreş ve diğer branşlar.',
                     'kosullar' => [['kategoriler' => ['spor'], 'kelimeler' => GAZETE_DIGER_SPOR_KELIMELERI]],
                 ],
@@ -237,12 +243,14 @@ function gazeteler(): array
                     ],
                 ],
                 'sanat' => [
-                    'ad'       => 'Kültür-Sanat',
+                    'ad'       => 'Sanat',
+                    'baslik'   => 'Kültür-Sanat',
                     'aciklama' => 'Sergiler, tiyatro, edebiyat, kültürel miras ve sanat dünyasından haberler.',
                     'kosullar' => [['kategoriler' => ['kultur-sanat']]],
                 ],
                 'sinema-dizi' => [
-                    'ad'       => 'Sinema ve Dizi',
+                    'ad'       => 'Sinema-Dizi',
+                    'baslik'   => 'Sinema ve Dizi',
                     'aciklama' => 'Vizyondaki filmler, diziler, platformlar ve festivaller.',
                     'kosullar' => [['kategoriler' => ['kultur-sanat', 'magazin'], 'kelimeler' => [
                         'film', 'dizi', 'sinema', 'netflix', 'vizyon', 'festival', 'oscar', 'altın portakal',
@@ -258,7 +266,8 @@ function gazeteler(): array
                 ],
                 'burclar'         => ['ad' => 'Burçlar', 'yol' => ['burclar_yolu'], 'anahtar' => 'burclar'],
                 'yemek-tarifleri' => [
-                    'ad'       => 'Yemek Tarifleri',
+                    'ad'       => 'Yemek',
+                    'baslik'   => 'Yemek Tarifleri',
                     'aciklama' => 'Pratik ve geleneksel yemek tarifleri.',
                     'kosullar' => [['kategoriler' => ['yemek-tarifleri']]],
                 ],
@@ -445,17 +454,28 @@ function gazete_ust_html(string $gazete, string $aktif = ''): string
      */
     $ustAktif = $aktif !== '' ? (string) ($g['bolumler'][$aktif]['ust'] ?? $aktif) : '';
 
-    $html .= '<nav class="spor-sekmeler gazete-sekmeler gazete-' . e($gazete) . '" aria-label="' . e($g['ad']) . ' başlıkları">'
+    $html .= '<nav class="gazete-sekmeler gazete-' . e($gazete) . '" aria-label="' . e($g['ad']) . ' başlıkları">'
            . '<a href="' . e(gazete_yolu($gazete)) . '"' . ($aktif === '' ? ' class="aktif" aria-current="page"' : '') . '>Ön Sayfa</a>';
+
+    $ayracKondu = false;
 
     foreach ($g['bolumler'] as $anahtar => $b) {
         if (isset($b['ust'])) {
             continue;
         }
 
-        $secili = $anahtar === $ustAktif;
+        // Veri sayfalari (piyasalar, sirketler) haber basliklarindan ayri, sonda.
+        $veriSayfasi = !empty($b['veri_sayfasi']);
+
+        if ($veriSayfasi && !$ayracKondu) {
+            $html .= '<span class="gazete-ayrac" aria-hidden="true"></span>';
+            $ayracKondu = true;
+        }
+
+        $sinif  = array_filter([$anahtar === $ustAktif ? 'aktif' : '', $veriSayfasi ? 'veri' : '']);
         $html  .= '<a href="' . e(gazete_bolum_yolu($gazete, $anahtar)) . '"'
-                . ($secili ? ' class="aktif"' . ($anahtar === $aktif ? ' aria-current="page"' : '') : '') . '>' . e($b['ad']) . '</a>';
+                . ($sinif !== [] ? ' class="' . implode(' ', $sinif) . '"' : '')
+                . ($anahtar === $aktif ? ' aria-current="page"' : '') . '>' . e($b['ad']) . '</a>';
     }
 
     $html .= '</nav>';
@@ -464,7 +484,7 @@ function gazete_ust_html(string $gazete, string $aktif = ''): string
 
     if ($altlar !== []) {
         $baba  = $g['bolumler'][$ustAktif];
-        $html .= '<nav class="spor-sekmeler gazete-sekmeler gazete-alt-sekmeler gazete-' . e($gazete) . '" aria-label="' . e($baba['ad']) . ' alt başlıkları">'
+        $html .= '<nav class="gazete-alt-sekmeler gazete-' . e($gazete) . '" aria-label="' . e($baba['ad']) . ' alt başlıkları">'
                . '<a href="' . e(gazete_bolum_yolu($gazete, $ustAktif)) . '"' . ($aktif === $ustAktif ? ' class="aktif" aria-current="page"' : '') . '>'
                . e((string) ($baba['alt_ad'] ?? $baba['ad'])) . '</a>';
 
