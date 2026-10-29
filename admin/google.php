@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($islem === 'tam_denetim') {
         @set_time_limit(150);
-        google_denetimi(100);
+        google_denetimi(55);
         $bildirim = 'Google tam denetimi tamamlandı; sonuç aşağıda.';
     } elseif ($islem === 'tazele') {
         @set_time_limit(90);

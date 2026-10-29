@@ -69,15 +69,18 @@ function gd_getir(string $url, bool $takip = true, string $ua = GD_GOOGLEBOT, in
 
 /**
  * Birden cok adresi ayni anda indirir (Googlebot kimligiyla, yonlendirme
- * izlenerek). Sure butcesi dolunca kalanlar atlanir.
+ * izlenerek) ve her yaniti GELDIGI ANDA $isle'ye verir; govdeler
+ * saklanmiyor (binlerce haber sayfasinin govdesi bellege sigmiyordu:
+ * 28.10.2026'da uc HTTP 500 dondu). Sure butcesi dolunca kalanlar
+ * atlanir; islenen adres sayisini dondurur.
  *
  * @param list<string> $adresler
- * @return array<string,array{kod:int,govde:string,basliklar:array<string,string>,sure:float,hata:string}>
+ * @param callable(string, array{kod:int,govde:string,basliklar:array<string,string>,sure:float,hata:string}): void $isle
  */
-function gd_toplu_getir(array $adresler, int $esZaman, int $butceSn): array
+function gd_toplu_getir(array $adresler, int $esZaman, int $butceSn, callable $isle): int
 {
     $bitis  = microtime(true) + $butceSn;
-    $sonuc  = [];
+    $islenen = 0;
     $coklu  = curl_multi_init();
     $kuyruk = $adresler;
     $acik   = [];
@@ -112,13 +115,14 @@ function gd_toplu_getir(array $adresler, int $esZaman, int $butceSn): array
             $ch = $bilgi['handle'];
             $k  = $acik[(int) $ch];
             $govde = curl_multi_getcontent($ch);
-            $sonuc[$k['url']] = [
+            $isle($k['url'], [
                 'kod'       => (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE),
                 'govde'     => is_string($govde) ? $govde : '',
                 'basliklar' => $k['basliklar'],
                 'sure'      => round((float) curl_getinfo($ch, CURLINFO_TOTAL_TIME), 2),
                 'hata'      => $bilgi['result'] === CURLE_OK ? '' : http_hata_acikla((int) $bilgi['result'], curl_error($ch)),
-            ];
+            ]);
+            $islenen++;
             curl_multi_remove_handle($coklu, $ch);
             curl_close($ch);
             unset($acik[(int) $ch]);
@@ -132,16 +136,7 @@ function gd_toplu_getir(array $adresler, int $esZaman, int $butceSn): array
 
     curl_multi_close($coklu);
 
-    // Haritadaki sirayla
-    $sirali = [];
-
-    foreach ($adresler as $a) {
-        if (isset($sonuc[$a])) {
-            $sirali[$a] = $sonuc[$a];
-        }
-    }
-
-    return $sirali;
+    return $islenen;
 }
 
 /** Raporda kisa gosterim: alan adi olmadan yol ve sorgu. */
@@ -378,6 +373,20 @@ function google_denetimi(int $sureButcesi = 80): array
     } else {
         $eksik = array_filter($haritalar, static fn (string $h): bool => stripos($robots['govde'], 'Sitemap: ' . $h) === false);
         $tumuKapali = preg_match('#^\s*Disallow:\s*/\s*$#mi', $robots['govde']) === 1;
+        $bilinmeyen = [];
+
+        foreach (preg_split('/\R/', $robots['govde']) as $satir) {
+            $satir = trim((string) preg_replace('/#.*/', '', $satir));
+
+            if ($satir !== '' && preg_match('/^(user-agent|allow|disallow|sitemap|crawl-delay)\s*:/i', $satir) !== 1) {
+                $bilinmeyen[] = $satir;
+            }
+        }
+
+        if ($bilinmeyen !== []) {
+            $ekle('Tarama', 'robots.txt yönergeleri', 'uyari', 'Tanınmayan satır: ' . implode(' | ', array_slice($bilinmeyen, 0, 5)),
+                'Google bu satırları yok sayar ama denetim araçları robots.txt\'yi geçersiz sayıyor; sunucu ya da CDN ekliyor olabilir.');
+        }
         $ekle('Tarama', 'robots.txt', $tumuKapali ? 'hata' : ($eksik === [] ? 'tamam' : 'uyari'),
             $tumuKapali ? 'Bütün site taramaya kapalı (Disallow: /).' : ($eksik === [] ? 'İki site haritası da bildiriliyor; site taramaya açık.' : 'Bildirilmeyen harita: ' . implode(', ', $eksik)));
     }
@@ -431,73 +440,82 @@ function google_denetimi(int $sureButcesi = 80): array
     }
 
     /* -------------------------------------------------------------- *
-     * 5. Haritadaki BUTUN sayfalar Googlebot gozuyle
+     * 5. Haritadaki sayfalar Googlebot gozuyle: haber DISINDAKI butun
+     *    sayfalar, haberlerden en yeni 40 ve rastgele 40 (binlerce haberin
+     *    hepsi sure butcesine sigmiyor; sablonlari ayni).
      * -------------------------------------------------------------- */
     $tumAdresler = array_values(array_unique($tumAdresler));
-    $indirilen   = gd_toplu_getir($tumAdresler, 4, max(10, $sureButcesi - (time() - $baslangic) - 25));
+    $haberAdresi = static fn (string $a): bool => preg_match('#^/haber(/|\.php)#', substr($a, strlen($taban))) === 1;
+    $haberler    = array_values(array_filter($tumAdresler, $haberAdresi));
+    $digerleri   = array_values(array_filter($tumAdresler, static fn (string $a): bool => !$haberAdresi($a)));
+    $rastgele    = array_slice($haberler, 40);
+    shuffle($rastgele);
+    $secilen     = array_merge($digerleri, array_slice($haberler, 0, 40), array_slice($rastgele, 0, 40));
+
     $haberOrnegi = '';
     $sorunlu     = [];
     $basliklar   = [];
     $sureler     = [];
 
-    foreach ($indirilen as $adres => $s) {
-        $sorunlar = [];
+    $denetlenen = gd_toplu_getir($secilen, 4, max(10, $sureButcesi - (time() - $baslangic) - 20),
+        static function (string $adres, array $s) use (&$haberOrnegi, &$sorunlu, &$basliklar, &$sureler): void {
+            $sorunlar = [];
 
-        if ($s['kod'] !== 200) {
-            $sorunlar[] = 'HTTP ' . $s['kod'] . ($s['hata'] !== '' ? ' (' . $s['hata'] . ')' : '');
-        } else {
-            $b = gd_sayfa_coz($s['govde']);
-            $robotsBaslik = strtolower($s['basliklar']['x-robots-tag'] ?? '');
-            $sureler[] = $s['sure'];
-
-            if (str_contains(strtolower($b['robots']), 'noindex') || str_contains($robotsBaslik, 'noindex')) {
-                $sorunlar[] = 'site haritasında ama "noindex"';
-            }
-
-            if ($b['kanonik'] === '') {
-                $sorunlar[] = 'kanonik etiketi yok';
-            } elseif (rtrim($b['kanonik'], '/') !== rtrim($adres, '/')) {
-                $sorunlar[] = 'kanonik başka adresi gösteriyor: ' . $b['kanonik'];
-            }
-
-            if ($b['baslik'] === '') {
-                $sorunlar[] = 'başlık (title) yok';
+            if ($s['kod'] !== 200) {
+                $sorunlar[] = 'HTTP ' . $s['kod'] . ($s['hata'] !== '' ? ' (' . $s['hata'] . ')' : '');
             } else {
-                $basliklar[$b['baslik']][] = $adres;
-            }
+                $b = gd_sayfa_coz($s['govde']);
+                $robotsBaslik = strtolower($s['basliklar']['x-robots-tag'] ?? '');
+                $sureler[] = $s['sure'];
 
-            if ($b['aciklama'] === '') {
-                $sorunlar[] = 'açıklama (description) yok';
-            }
+                if (str_contains(strtolower($b['robots']), 'noindex') || str_contains($robotsBaslik, 'noindex')) {
+                    $sorunlar[] = 'site haritasında ama "noindex"';
+                }
 
-            foreach ($b['semalar'] as $sema) {
-                if (isset($sema['_bozuk'])) {
-                    $sorunlar[] = 'bozuk JSON-LD';
-                    break;
+                if ($b['kanonik'] === '') {
+                    $sorunlar[] = 'kanonik etiketi yok';
+                } elseif (rtrim($b['kanonik'], '/') !== rtrim($adres, '/')) {
+                    $sorunlar[] = 'kanonik başka adresi gösteriyor: ' . $b['kanonik'];
+                }
+
+                if ($b['baslik'] === '') {
+                    $sorunlar[] = 'başlık (title) yok';
+                } else {
+                    $basliklar[$b['baslik']][] = $adres;
+                }
+
+                if ($b['aciklama'] === '') {
+                    $sorunlar[] = 'açıklama (description) yok';
+                }
+
+                foreach ($b['semalar'] as $sema) {
+                    if (isset($sema['_bozuk'])) {
+                        $sorunlar[] = 'bozuk JSON-LD';
+                        break;
+                    }
+                }
+
+                if ($s['sure'] > 5) {
+                    $sorunlar[] = 'yanıt çok yavaş (' . $s['sure'] . ' sn)';
+                }
+
+                if ($haberOrnegi === '' && in_array('NewsArticle', gd_sema_turleri($b['semalar']), true)) {
+                    $haberOrnegi = $adres;
                 }
             }
 
-            if ($s['sure'] > 5) {
-                $sorunlar[] = 'yanıt çok yavaş (' . $s['sure'] . ' sn)';
+            if ($sorunlar !== []) {
+                $sorunlu[$adres] = $sorunlar;
             }
+        });
 
-            if ($haberOrnegi === '' && in_array('NewsArticle', gd_sema_turleri($b['semalar']), true)) {
-                $haberOrnegi = $adres;
-            }
-        }
-
-        if ($sorunlar !== []) {
-            $sorunlu[$adres] = $sorunlar;
-        }
-    }
-
-    $denetlenen = count($indirilen);
     sort($sureler);
     $ekle('Sayfa denetimi (Googlebot gözüyle)', 'Site haritasındaki sayfalar',
-        $sorunlu === [] && $denetlenen === count($tumAdresler) ? 'tamam' : ($sorunlu === [] ? 'uyari' : 'hata'),
-        $denetlenen . '/' . count($tumAdresler) . ' sayfa indirildi; ' . ($denetlenen - count($sorunlu)) . ' sorunsuz (HTTP 200, dizine açık, kanonik kendisi, başlık ve açıklama var)'
+        $sorunlu === [] && $denetlenen === count($secilen) ? 'tamam' : ($sorunlu === [] ? 'uyari' : 'hata'),
+        count($tumAdresler) . ' adresten ' . count($digerleri) . ' haber dışı sayfanın tamamı ve ' . min(80, count($haberler))
+        . ' haber (en yeni 40 + rastgele 40) seçildi; ' . $denetlenen . '/' . count($secilen) . ' indirildi; ' . ($denetlenen - count($sorunlu)) . ' sorunsuz (HTTP 200, dizine açık, kanonik kendisi, başlık ve açıklama var)'
         . ($sureler !== [] ? '; ortanca yanıt ' . $sureler[intdiv(count($sureler), 2)] . ' sn, en yavaş ' . end($sureler) . ' sn' : ''),
-        $denetlenen < count($tumAdresler) ? 'Süre yetmedi; kalanlar bir sonraki denetimde.' : '');
+        $denetlenen < count($secilen) ? 'Süre yetmedi; kalanlar bir sonraki denetimde.' : '');
 
     $i = 0;
 
