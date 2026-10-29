@@ -59,6 +59,13 @@ jobs:
                    and (.value.scoreDisplayMode == "binary" or .value.scoreDisplayMode == "numeric" or .value.scoreDisplayMode == "metricSavings"))
                    | "  - \(.value.title)\(if .value.displayValue then " (" + .value.displayValue + ")" else "" end)"' "lh-$tur.json"
           done
+          # Gecemeyen erisilebilirlik denetimlerinin hangi ogede takildigi
+          # (or. "dokunma hedefi kucuk": hangi dugme, kac piksel).
+          for tur in mobil masaustu; do
+            [ -f "lh-$tur.json" ] || continue
+            jq -r --arg tur "$tur" '.categories.accessibility.auditRefs[] as $r | .audits[$r.id] | select(.score == 0)
+                   | "== Erisilebilirlik (\($tur)): \(.title)", (.details.items[]? | "  - \(.node.nodeLabel // "") | \(.node.selector // "") | \((.node.explanation // "") | gsub("\n"; " "))")' "lh-$tur.json" | head -60
+          done
           # Lighthouse robots.txt'yi gecersiz bulursa sebebini ve dosyanin canli halini goster.
           for tur in mobil masaustu; do
             [ -f "lh-$tur.json" ] || continue
