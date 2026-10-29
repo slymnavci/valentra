@@ -70,7 +70,9 @@ register_shutdown_function(static function (): void {
 
     $satirlar = $GLOBALS['kaynakDeneGunlugu'];
     $ozet     = array_search('================ ÖZET ================', $satirlar, true);
-    $secilen  = $ozet !== false ? array_slice($satirlar, (int) $ozet + 1) : [];
+    // Ozeti olmayan modlar (--ham, --evds, --metin): ciktinin tamami. Is
+    // gunlugu her ortamdan okunamiyor; yapisi gorulmeden cozumleyici yazilamaz.
+    $secilen  = $ozet !== false ? array_slice($satirlar, (int) $ozet + 1) : $satirlar;
 
     foreach ($satirlar as $s) {
         if (str_contains($s, 'ÖNERİ')) {
