@@ -205,6 +205,7 @@ function gazeteler(): array
                 ],
                 'voleybol' => [
                     'ad'       => 'Voleybol',
+                    'veri'     => 'voleybol',
                     'aciklama' => 'Filenin Sultanları, Sultanlar Ligi, Efeler Ligi ve dünya voleybolu.',
                     'kosullar' => [['kategoriler' => ['spor'], 'kelimeler' => GAZETE_VOLEYBOL_KELIMELERI]],
                 ],
@@ -511,10 +512,30 @@ function gazete_veri_html(string $veri): string
     if ($veri === 'basketbol') {
         require_once __DIR__ . '/basketbol.php';
 
-        $html = '';
+        // Once EuroLeague: Turk takimlari orada (Fenerbahce, Anadolu Efes).
+        $euro = euroleague_puan_html();
+        $html = $euro !== ''
+            ? '<div class="bolum-basligi"><h2>EuroLeague Puan Durumu</h2><span class="cizgi"></span></div>' . $euro
+            : '';
 
         foreach (BASKETBOL_LIGLERI as $lig => $ad) {
             $tablo = basketbol_puan_html($lig);
+
+            if ($tablo !== '') {
+                $html .= '<div class="bolum-basligi"><h2>' . e($ad) . ' Puan Durumu</h2><span class="cizgi"></span></div>' . $tablo;
+            }
+        }
+
+        return $html;
+    }
+
+    if ($veri === 'voleybol') {
+        require_once __DIR__ . '/voleybol.php';
+
+        $html = '';
+
+        foreach (VOLEYBOL_LIGLERI as $lig => $ad) {
+            $tablo = voleybol_puan_html($lig);
 
             if ($tablo !== '') {
                 $html .= '<div class="bolum-basligi"><h2>' . e($ad) . ' Puan Durumu</h2><span class="cizgi"></span></div>' . $tablo;

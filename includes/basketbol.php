@@ -9,11 +9,130 @@ declare(strict_types=1);
  *
  * Kaynak futbolla ayni: ESPN'in acik ucu (includes/futbol.php; istek
  * siniri, onbellek ve panelden kapatma ortak). ESPN Avrupa basketbolunu
- * vermiyor. Sinananlar (30.10.2026, GitHub Actions): TBF (Basketbol Super
- * Ligi) 403 veriyor.
+ * vermiyor; EuroLeague kendi acik ucundan (api-live.euroleague.net, XML).
+ * Sinananlar (30.10.2026, GitHub Actions): TBF (Basketbol Super Ligi) 403
+ * veriyor.
  */
 
 require_once __DIR__ . '/futbol.php';
+require_once __DIR__ . '/canli_onbellek.php';
+require_once __DIR__ . '/http_ortak.php';
+
+/** EuroLeague sezon kodu: 2026-27 sezonu "E2026" (sezon agustosta basliyor). */
+function euroleague_sezonu(): string
+{
+    $simdi = new DateTimeImmutable('now', new DateTimeZone('Europe/Istanbul'));
+    $yil   = (int) $simdi->format('Y');
+
+    return 'E' . ((int) $simdi->format('n') >= 8 ? $yil : $yil - 1);
+}
+
+/**
+ * EuroLeague normal sezon puan durumu.
+ *
+ * @return array{veri:?array,zaman:int}
+ */
+function euroleague_puan_durumu(): array
+{
+    $sezon = euroleague_sezonu();
+
+    return canli_onbellek('euroleague_' . $sezon, 1800, static function () use ($sezon): ?array {
+        $sonuc = http_getir('https://api-live.euroleague.net/v1/standings?seasonCode=' . $sezon, 15);
+
+        if (!$sonuc['tamam']) {
+            error_log('[valentra] euroleague: ' . $sonuc['neden']);
+
+            return null;
+        }
+
+        $satirlar = euroleague_xml_coz((string) $sonuc['govde']);
+
+        return $satirlar !== [] ? $satirlar : null;
+    });
+}
+
+/**
+ * EuroLeague puan durumu XML'i: <standings><group><team><name/><ranking/>
+ * <totalgames/><wins/><losses/>... (ilk grup normal sezon).
+ *
+ * @return list<array{sira:int,takim:string,o:int,g:int,m:int,fark:?int}>
+ */
+function euroleague_xml_coz(string $govde): array
+{
+    $xml = @simplexml_load_string($govde, SimpleXMLElement::class, LIBXML_NONET);
+
+    if ($xml === false) {
+        return [];
+    }
+
+    $satirlar = [];
+
+    // Ilk grup normal sezon; playoff gruplari varsa ayri.
+    foreach ($xml->group[0]->team ?? [] as $t) {
+        $atilan  = isset($t->ptsfavour) ? (int) $t->ptsfavour : null;
+        $yenilen = isset($t->ptsagainst) ? (int) $t->ptsagainst : null;
+
+        $satirlar[] = [
+            'sira'  => (int) $t->ranking,
+            'takim' => (string) $t->name,
+            'o'     => (int) $t->totalgames,
+            'g'     => (int) $t->wins,
+            'm'     => (int) $t->losses,
+            'fark'  => isset($t->difference) ? (int) $t->difference
+                : ($atilan !== null && $yenilen !== null ? $atilan - $yenilen : null),
+        ];
+    }
+
+    usort($satirlar, static fn (array $a, array $b): int => $a['sira'] <=> $b['sira']);
+
+    return $satirlar;
+}
+
+function euroleague_puan_html(): string
+{
+    $kayit = euroleague_puan_durumu();
+
+    if ($kayit['veri'] === null) {
+        return '';
+    }
+
+    $farkVar = array_filter(array_column($kayit['veri'], 'fark'), static fn ($f): bool => $f !== null) !== [];
+
+    ob_start();
+    ?>
+    <div class="spor-kutu spor-puan">
+        <div class="tablo-kaydir">
+            <table class="puan-tablosu">
+                <thead>
+                    <tr>
+                        <th scope="col" class="sira">#</th>
+                        <th scope="col" class="takim">Takım</th>
+                        <th scope="col" title="Oynanan">O</th>
+                        <th scope="col" title="Galibiyet" class="puan">G</th>
+                        <th scope="col" title="Mağlubiyet">M</th>
+                        <?php if ($farkVar): ?><th scope="col" title="Sayı averajı">AV</th><?php endif; ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($kayit['veri'] as $s): ?>
+                        <tr>
+                            <td class="sira"><?= $s['sira'] ?></td>
+                            <td class="takim"><?= e($s['takim']) ?></td>
+                            <td><?= $s['o'] ?></td>
+                            <td class="puan"><?= $s['g'] ?></td>
+                            <td><?= $s['m'] ?></td>
+                            <?php if ($farkVar): ?><td><?= $s['fark'] !== null && $s['fark'] > 0 ? '+' : '' ?><?= $s['fark'] ?? '' ?></td><?php endif; ?>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <p class="canli-not">Kaynak: EuroLeague<?= $kayit['zaman'] > 0 ? ' · güncelleme ' . e(date('H:i', $kayit['zaman'])) : '' ?></p>
+    <?php
+
+    return (string) ob_get_clean();
+}
 
 /** ESPN lig kodu => ad. */
 const BASKETBOL_LIGLERI = [
