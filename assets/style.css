@@ -1398,24 +1398,37 @@ a.menu-oge.aktif::after,
 
 /*
  * Dar ekranda yirmi numarali dugme tek satira okunur sigmiyor (360'lik
- * ekranda dugme basina 13 piksel kalir). Telefonda numaralar gizlenip
- * dugmeler kucuk noktalara donuyor: 20 x 10px + 19 x 5px = 295 piksel,
- * 360'lik ekrana (312 piksel yer) sigiyor; daha dar ekranda sutunlar
- * daraliyor. Ekran okuyucu icin aria-label duruyor; gezinme icin iki
- * yandaki oklar da var.
+ * ekranda dugme basina 13 piksel kalir). Telefonda numarali dugmeler
+ * gizleniyor, yerine kucuk noktalardan bir GOSTERGE geliyor: 20 x 10px +
+ * 19 x 5px = 295 piksel, 360'lik ekrana (312 piksel yer) sigiyor.
+ *
+ * Noktalar dokunulmuyor (29.10.2026, site sahibinin karari): 10 piksellik
+ * dugme parmak icin kucuktu, Google en az 24 piksel istiyor (Lighthouse
+ * "dokunma hedefleri" uyarisi) ve yirmi tanesi o boyutta sigmiyor.
+ * Telefonda haberler arasinda parmakla kaydirarak geciliyor.
  */
+.kaydirak-noktalar { display: none; }
+
 @media (max-width: 480px) {
-    .kaydirak-sayfalar {
+    .kaydirak-sayfalar { display: none; }
+
+    .kaydirak-noktalar:not([hidden]) {
+        display: grid;
         grid-template-columns: repeat(var(--adet, 10), minmax(0, 10px));
-        gap: 5px;
+        justify-content: center;
         align-items: center;
+        gap: 5px;
+        padding: 0 0 26px;
     }
 
-    .kaydirak-sayfalar button {
-        font-size: 0;
-        border-width: 1px;
+    .kaydirak-noktalar span {
+        aspect-ratio: 1;
+        border-radius: 50%;
         background: var(--cizgi);
+        transition: background .12s ease;
     }
+
+    .kaydirak-noktalar span.aktif { background: var(--altin); }
 }
 
 /* --- Ana sayfa vitrini (24.10.2026) --------------------------------------- */
