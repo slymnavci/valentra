@@ -262,12 +262,13 @@ function grafik_ciz(array $seri, array $ayar = []): string
                         $golgeRengi = match (trim($yonSinif)) {
                             'arti'  => '#157a43',
                             'eksi'  => '#c23a2e',
-                            default => '#205698',
+                            // BigPara gorunumu (asagida .grafik.golgeli): gri alan.
+                            default => '#8a9099',
                         };
                         ?>
                         <linearGradient id="<?= $golgeId ?>" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0" stop-color="<?= $golgeRengi ?>" stop-opacity=".22"/>
-                            <stop offset="1" stop-color="<?= $golgeRengi ?>" stop-opacity="0"/>
+                            <stop offset="0" stop-color="<?= $golgeRengi ?>" stop-opacity=".32"/>
+                            <stop offset="1" stop-color="<?= $golgeRengi ?>" stop-opacity=".04"/>
                         </linearGradient>
                     </defs>
                 <?php endif; ?>
