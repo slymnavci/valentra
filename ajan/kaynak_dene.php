@@ -70,7 +70,9 @@ register_shutdown_function(static function (): void {
 
     $satirlar = $GLOBALS['kaynakDeneGunlugu'];
     $ozet     = array_search('================ ÖZET ================', $satirlar, true);
-    $secilen  = $ozet !== false ? array_slice($satirlar, (int) $ozet + 1) : [];
+    // Ozeti olmayan modlar (--ham, --evds, --metin): ciktinin tamami. Is
+    // gunlugu her ortamdan okunamiyor; yapisi gorulmeden cozumleyici yazilamaz.
+    $secilen  = $ozet !== false ? array_slice($satirlar, (int) $ozet + 1) : $satirlar;
 
     foreach ($satirlar as $s) {
         if (str_contains($s, 'ÖNERİ')) {
@@ -413,6 +415,13 @@ if ($hamGirdi !== '') {
             foreach (json_yapisi($json, '    ', 0, $satirSayaci) as $satir) {
                 yaz($satir);
             }
+            yaz();
+            continue;
+        }
+
+        // XML (EuroLeague gibi veri uclari): ilk 2500 karakter.
+        if (str_starts_with(ltrim($govde, " \t\n\r\0\x0B\xEF\xBB\xBF"), '<') && stripos($govde, '<html') === false) {
+            yaz('  XML: ' . mb_substr(preg_replace('/\s+/u', ' ', $govde) ?? $govde, 0, 2500, 'UTF-8'));
             yaz();
             continue;
         }
