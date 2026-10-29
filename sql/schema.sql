@@ -1962,3 +1962,75 @@ CREATE TABLE IF NOT EXISTS burc_yorumlari (
     UNIQUE KEY uq_burc_gun (gun, burc),
     KEY ix_burc_burc (burc, gun)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Cok okunan uluslararasi ve yerli siteler (29.10.2026, site sahibinin
+-- istegi: "kaynak sayisini artiralim; CNN Turk, New York Times, Financial
+-- Times, Economist, BBC, Yahoo News, Mynet, Globo, Times of India, Fox
+-- News, Daily Mail, Bild, People, Livedoor ... dahil edelim").
+--
+-- Yabanci dildeki haberi ajan anlayip Turkce ozetliyor (Yazar yonergesi).
+-- Daha fazla yayin derlemeye de yariyor: ayni olayi veren iki farkli yayin
+-- bulmak kolaylasiyor.
+--
+--   - 22-24.10'da kapatilan Ingilizce kaynaklar yeniden aciliyor: New York
+--     Times (Dunya, Business), Financial Times, The Economist Finans, BBC
+--     Business. NYT o gun site sunucusundan sayfa alinamadigi icin
+--     kapatilmisti; artik sayfa okuma 12 sn ile sinirli (getir.php) ve
+--     besleme GitHub'dan dogrudan okunuyor. FT, Economist ve NYT'nin
+--     metinleri cogunlukla abonelik duvarinin arkasinda: ozet besleme
+--     metninden yaziliyor.
+--   - Eklenmeyenler: Tencent QQ (herkese acik RSS yok, sayfa betikle
+--     doluyor), Substack (tek bir yayin degil, binlerce bulten; belirli
+--     bultenler adlariyla eklenebilir).
+--   - People ve Daily Mail'in magazin haberlerini yayin politikasi zaten
+--     eliyor; geriye kalan genel haberler giriyor.
+-- Tek seferlik (gecis anahtari): panelden kapatilan kaynak yeniden acilmaz.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('CNN Türk Teknoloji',  'https://www.cnnturk.com',             'https://www.cnnturk.com/feed/rss/bilim-teknoloji/news',              'rss', 'teknoloji',    1),
+    ('The Economist',       'https://www.economist.com',           'https://www.economist.com/the-world-this-week/rss.xml',             'rss', 'dunya',        1),
+    ('Yahoo News',          'https://www.yahoo.com/news',          'https://www.yahoo.com/news/rss',                                     'rss', 'dunya',        1),
+    ('Mynet Haber',         'https://www.mynet.com',               'https://www.mynet.com/haber/rss/sondakika',                          'rss', 'gundem',       1),
+    ('Globo G1',            'https://g1.globo.com',                'https://g1.globo.com/rss/g1/',                                       'rss', 'dunya',        1),
+    ('The Times of India',  'https://timesofindia.indiatimes.com', 'https://timesofindia.indiatimes.com/rssfeeds/296589292.cms',         'rss', 'dunya',        1),
+    ('Fox News',            'https://www.foxnews.com',             'https://moxie.foxnews.com/google-publisher/world.xml',               'rss', 'dunya',        1),
+    ('Daily Mail',          'https://www.dailymail.co.uk',         'https://www.dailymail.co.uk/news/worldnews/index.rss',               'rss', 'dunya',        1),
+    ('Bild',                'https://www.bild.de',                 'https://www.bild.de/feed/alles.xml',                                 'rss', 'dunya',        1),
+    ('People',              'https://people.com',                  'https://people.com/feed/',                                           'rss', 'kultur-sanat', 1),
+    ('Livedoor News',       'https://news.livedoor.com',           'https://news.livedoor.com/topics/rss/int.xml',                       'rss', 'dunya',        1);
+
+UPDATE kaynaklar SET aktif = 1
+ WHERE ad IN ('The New York Times', 'The New York Times Business', 'Financial Times', 'The Economist Finans', 'BBC Business', 'CNN Türk Ekonomi')
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_cok_okunan_kaynaklar_2026_10_29');
+-- Financial Times: ana sayfa beslemesi yerine dunya bolumu (genel habere uygun).
+UPDATE kaynaklar SET besleme_url = 'https://www.ft.com/world?format=rss', kategori = COALESCE(kategori, 'dunya')
+ WHERE ad = 'Financial Times' AND besleme_url = 'https://www.ft.com/rss/home'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_cok_okunan_kaynaklar_2026_10_29');
+-- Her ulkenin en cok okunan yayinlari (29.10.2026, site sahibinin istegi:
+-- "her ulkenin en cok okunan gazetelerine bak; onemli haberlerinden haber
+-- derleyelim, dunyada neler oluyor bakmis olalim"). Dunya basligina
+-- dusuyorlar; derleme ajani da her calismada en az iki dunya olayi seciyor.
+-- FM Korea eklenmedi: haber sitesi degil, kullanici forumu (dogrulanmamis
+-- paylasim yayin politikasina aykiri); Kore icin Yonhap.
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('Infobae (Arjantin)',          'https://www.infobae.com',          'https://www.infobae.com/arc/outboundfeeds/rss/',                         'rss', 'dunya', 1),
+    ('Clarín (Arjantin)',           'https://www.clarin.com',           'https://www.clarin.com/rss/lo-ultimo/',                                  'rss', 'dunya', 1),
+    ('UOL (Brezilya)',              'https://noticias.uol.com.br',      'https://rss.uol.com.br/feed/noticias.xml',                               'rss', 'dunya', 1),
+    ('Folha de S.Paulo (Brezilya)', 'https://www.folha.uol.com.br',     'https://feeds.folha.uol.com.br/mundo/rss091.xml',                        'rss', 'dunya', 1),
+    ('Yonhap (Güney Kore)',         'https://en.yna.co.kr',             'https://en.yna.co.kr/RSS/news.xml',                                      'rss', 'dunya', 1),
+    ('The Japan Times (Japonya)',   'https://www.japantimes.co.jp',     'https://www.japantimes.co.jp/feed/',                                     'rss', 'dunya', 1),
+    ('South China Morning Post',    'https://www.scmp.com',             'https://www.scmp.com/rss/91/feed',                                       'rss', 'dunya', 1),
+    ('Hindustan Times (Hindistan)', 'https://www.hindustantimes.com',   'https://www.hindustantimes.com/feeds/rss/world-news/rssfeed.xml',        'rss', 'dunya', 1),
+    ('TASS (Rusya)',                'https://tass.com',                 'https://tass.com/rss/v2.xml',                                            'rss', 'dunya', 1),
+    ('Kyiv Independent (Ukrayna)',  'https://kyivindependent.com',      'https://kyivindependent.com/rss/',                                       'rss', 'dunya', 1),
+    ('Der Spiegel (Almanya)',       'https://www.spiegel.de',           'https://www.spiegel.de/international/index.rss',                         'rss', 'dunya', 1),
+    ('Le Monde (Fransa)',           'https://www.lemonde.fr',           'https://www.lemonde.fr/international/rss_full.xml',                      'rss', 'dunya', 1),
+    ('El País (İspanya)',           'https://elpais.com',               'https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/internacional/portada', 'rss', 'dunya', 1),
+    ('Corriere della Sera (İtalya)','https://www.corriere.it',          'https://xml2.corriereobjects.it/rss/esteri.xml',                         'rss', 'dunya', 1),
+    ('Kathimerini (Yunanistan)',    'https://www.ekathimerini.com',     'https://www.ekathimerini.com/rss',                                       'rss', 'dunya', 1),
+    ('Al Jazeera English',          'https://www.aljazeera.com',        'https://www.aljazeera.com/xml/rss/all.xml',                              'rss', 'dunya', 1),
+    ('ABC News (Avustralya)',       'https://www.abc.net.au/news',      'https://www.abc.net.au/news/feed/51120/rss.xml',                         'rss', 'dunya', 1),
+    ('CBC News (Kanada)',           'https://www.cbc.ca/news',          'https://www.cbc.ca/webfeed/rss/rss-world',                               'rss', 'dunya', 1);
+
+INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_cok_okunan_kaynaklar_2026_10_29', '29.10.2026');

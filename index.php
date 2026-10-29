@@ -126,6 +126,9 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <?php require __DIR__ . '/includes/hava_sehir_seridi.php'; ?>
         </div>
     </section>
+
+    <?php /* Dunyadan son dakika (29.10.2026): vitrinin hemen altinda, tam genislikte. */ ?>
+    <?php require __DIR__ . '/includes/dunya_seridi.php'; ?>
     <?php endif; ?>
 
     <?php /* Ana kolon + yan pencere. Yan pencere mobilde ana kolonun altina duser.
