@@ -2034,3 +2034,75 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) V
     ('CBC News (Kanada)',           'https://www.cbc.ca/news',          'https://www.cbc.ca/webfeed/rss/rss-world',                               'rss', 'dunya', 1);
 
 INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_cok_okunan_kaynaklar_2026_10_29', '29.10.2026');
+
+-- ---------------------------------------------------------------------------
+-- Kaynak testi sonrasi onarim (29.10.2026, site sahibi: "kaynaklarin hepsini
+-- test et; hatali kaynak varsa duzelt, duzelmiyorsa kaldir"). Tum kaynaklar
+-- GitHub Actions'tan sinandi (105 kaynak: 95 calisan, 10 calismayan); yeni
+-- adresler ayni yerden aday olarak sinandi, calisanlar yaziliyor.
+--
+-- Duzeltilenler (RSS bos ya da reddediyorsa ajan liste sayfasini kaziyor):
+--   - CNN Turk Teknoloji: bilim-teknoloji beslemesi bos; teknoloji beslemesi
+--     16 girdi, liste yedegi 7 baglanti.
+--   - Corriere della Sera: esteri beslemesi bos; Esteri sayfasi 40 baglanti.
+--   - Kathimerini: besleme 403; News sayfasi 21 baglanti.
+--   - Kyiv Independent: /rss/ 404; sitenin ilan ettigi besleme 15 girdi.
+--   - Milliyet Gundem / Dunya: beslemeler bos; bolum sayfalari 34 / 38
+--     baglanti (Milliyet Ekonomi de boyle calisiyor).
+--   - Yahoo News: yeni besleme 403; news.yahoo.com/rss 12 girdi, World
+--     sayfasi yedek.
+--   - Anadolu Ajansi Politika / Saglik: beslemelerin en taze girdisi 203 /
+--     186 gun once; bolum sayfalari 25'er baglanti.
+--   - TRT Haber Spor, NTV Saglik: beslemeler 2-3 gundur bos kaliyor; bolum
+--     sayfasi yedek (15 / 11 baglanti).
+--   - Der Spiegel: International beslemesi 2 gundur bos; Ausland beslemesi
+--     20 girdi (Almanca; ajan Turkce ozetliyor).
+-- Kapatilanlar (hicbir yoldan haber alinamadi):
+--   - Fortune Turkiye: sunucu baglanti kabul etmiyor (HTTP 0), RSS de liste de.
+--   - People: her adres 403.
+--   - TUIK: bulten sayfasi betikle doluyor, kazima sonuc vermiyor; enflasyon
+--     zaten TCMB EVDS uzerinden geliyor.
+-- Tek seferlik (gecis anahtari): panelden yapilan sonraki degisiklik ezilmez.
+-- ---------------------------------------------------------------------------
+UPDATE kaynaklar SET besleme_url = 'https://www.cnnturk.com/feed/rss/teknoloji/news',
+       liste_url = 'https://www.cnnturk.com/teknoloji-haberleri/'
+ WHERE ad = 'CNN Türk Teknoloji'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = NULL, liste_url = 'https://www.corriere.it/esteri/'
+ WHERE ad = 'Corriere della Sera (İtalya)'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = NULL, liste_url = 'https://www.ekathimerini.com/news/'
+ WHERE ad = 'Kathimerini (Yunanistan)'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = 'https://kyivindependent.com/news-archive/rss/'
+ WHERE ad = 'Kyiv Independent (Ukrayna)'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = NULL, liste_url = 'https://www.milliyet.com.tr/gundem/'
+ WHERE ad = 'Milliyet Gündem'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = NULL, liste_url = 'https://www.milliyet.com.tr/dunya/'
+ WHERE ad = 'Milliyet Dünya'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = 'https://news.yahoo.com/rss/',
+       liste_url = 'https://www.yahoo.com/news/world/'
+ WHERE ad = 'Yahoo News'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = NULL, liste_url = 'https://www.aa.com.tr/tr/politika'
+ WHERE ad = 'Anadolu Ajansı Politika'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = NULL, liste_url = 'https://www.aa.com.tr/tr/saglik'
+ WHERE ad = 'Anadolu Ajansı Sağlık'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET liste_url = 'https://www.trthaber.com/haber/spor/'
+ WHERE ad = 'TRT Haber Spor'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET liste_url = 'https://www.ntv.com.tr/saglik'
+ WHERE ad = 'NTV Sağlık'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = 'https://www.spiegel.de/ausland/index.rss'
+ WHERE ad = 'Der Spiegel (Almanya)'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET aktif = 0
+ WHERE ad IN ('Fortune Türkiye', 'People', 'TÜİK')
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_kaynak_onarimi_2026_10_29', '29.10.2026');
