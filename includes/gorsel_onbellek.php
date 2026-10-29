@@ -214,3 +214,145 @@ function haber_gorsel_indir(string $url): string
 
     return HABER_GORSEL_YOLU . '/' . $ad . '.' . $uzanti;
 }
+
+/* ------------------------------------------------------------------------
+ * Kucultulmus kopyalar (29.10.2026, site sahibinin istegi: "resimleri
+ * kucult"). Lighthouse mobil hiz puani 51'di; en buyuk sebep kaynaktan
+ * geldigi gibi (cogu 1500-3000 piksel JPEG) gonderilen haber gorselleri:
+ * kartta 300 piksel gorunen resim icin 400-800 KB iniyordu.
+ *
+ * Her gorselin 480 ve 960 piksel genislikte WebP kopyasi (WebP yoksa
+ * JPEG) ilk istendiginde gorsel.php?id=..&g=.. tarafindan uretiliyor ve
+ * <ad>-<genislik>.webp olarak saklaniyor; sonraki gosterimler dogrudan
+ * dosyadan. Asil dosya paylasim gorseli ve yapisal veri icin aynen
+ * duruyor (Google Discover buyuk gorsel istiyor).
+ * --------------------------------------------------------------------- */
+
+/** Uretilen genislikler. */
+const HABER_GORSEL_GENISLIKLER = [480, 960];
+
+/** Bundan cok pikselli asil gorsel kucultulmuyor (GD bellegi). */
+const HABER_GORSEL_EN_COK_PIKSEL = 24_000_000;
+
+/** Kucuk kopyanin dosya yolu (uzantisiz, sunucu klasorunde). */
+function haber_gorsel_kopya_tabani(string $url, int $genislik): string
+{
+    return haber_gorsel_klasoru() . '/' . sha1($url) . '-' . $genislik;
+}
+
+/** Hazir kucuk kopyanin site icindeki yolu; yoksa bos. */
+function haber_gorsel_kopya_yerel(string $url, int $genislik): string
+{
+    foreach (['webp', 'jpg'] as $uzanti) {
+        if (is_file(haber_gorsel_kopya_tabani($url, $genislik) . '.' . $uzanti)) {
+            return HABER_GORSEL_YOLU . '/' . sha1($url) . '-' . $genislik . '.' . $uzanti;
+        }
+    }
+
+    return '';
+}
+
+/**
+ * Sablonlar icin kucuk kopya adresi: hazirsa dosya, degilse onu ureten
+ * gorsel.php. Sitenin kendi gorseli (/assets/) ve kimliksiz haber icin
+ * asil adres.
+ */
+function haber_gorsel_kucuk(array $haber, int $genislik): string
+{
+    $asil = haber_gorsel($haber);
+    $url  = guvenli_url((string) ($haber['gorsel_url'] ?? ''));
+    $id   = (int) ($haber['id'] ?? 0);
+
+    if ($asil === '' || str_starts_with($asil, '/assets/') || $id <= 0
+        || !in_array($genislik, HABER_GORSEL_GENISLIKLER, true)) {
+        return $asil;
+    }
+
+    $kopya = haber_gorsel_kopya_yerel($url, $genislik);
+
+    return $kopya !== '' ? $kopya : '/gorsel.php?id=' . $id . '&g=' . $genislik;
+}
+
+/** srcset degeri (480w, 960w); kucuk kopya uretilemiyorsa bos. */
+function haber_gorsel_srcset(array $haber): string
+{
+    $parcalar = [];
+
+    foreach (HABER_GORSEL_GENISLIKLER as $g) {
+        $adres = haber_gorsel_kucuk($haber, $g);
+
+        if ($adres === haber_gorsel($haber)) {
+            return '';
+        }
+
+        $parcalar[] = $adres . ' ' . $g . 'w';
+    }
+
+    return implode(', ', $parcalar);
+}
+
+/**
+ * Yerel asil dosyadan kucuk kopya uretir; yolunu dondurur. Uretilemezse
+ * (GD yok, tur desteklenmiyor, cok buyuk) bos: cagiran asil dosyaya doner.
+ */
+function haber_gorsel_kopya_uret(string $url, string $asilYol, int $genislik): string
+{
+    $hazir = haber_gorsel_kopya_yerel($url, $genislik);
+
+    if ($hazir !== '') {
+        return $hazir;
+    }
+
+    $dosya = dirname(__DIR__) . $asilYol;
+    $bilgi = @getimagesize($dosya);
+
+    if (!is_array($bilgi) || !function_exists('imagecreatetruecolor')
+        || (int) $bilgi[0] * (int) $bilgi[1] > HABER_GORSEL_EN_COK_PIKSEL) {
+        return '';
+    }
+
+    $okuyucu = match ((string) ($bilgi['mime'] ?? '')) {
+        'image/jpeg' => 'imagecreatefromjpeg',
+        'image/png'  => 'imagecreatefrompng',
+        'image/webp' => 'imagecreatefromwebp',
+        'image/gif'  => 'imagecreatefromgif',
+        'image/avif' => 'imagecreatefromavif',
+        default      => '',
+    };
+
+    if ($okuyucu === '' || !function_exists($okuyucu)) {
+        return '';
+    }
+
+    $kaynak = @$okuyucu($dosya);
+
+    if ($kaynak === false) {
+        return '';
+    }
+
+    $en   = imagesx($kaynak);
+    $boy  = imagesy($kaynak);
+    $yeniEn  = min($genislik, $en);
+    $yeniBoy = max(1, (int) round($boy * $yeniEn / $en));
+
+    $hedef = imagecreatetruecolor($yeniEn, $yeniBoy);
+    // Saydam PNG/GIF beyaz zeminde (JPEG'e dusulurse siyah cikmasin).
+    imagefill($hedef, 0, 0, imagecolorallocate($hedef, 255, 255, 255));
+    imagecopyresampled($hedef, $kaynak, 0, 0, 0, 0, $yeniEn, $yeniBoy, $en, $boy);
+    imagedestroy($kaynak);
+
+    $taban  = haber_gorsel_kopya_tabani($url, $genislik);
+    $webp   = function_exists('imagewebp');
+    $yol    = $taban . ($webp ? '.webp' : '.jpg');
+    $gecici = $yol . '.' . bin2hex(random_bytes(4)) . '.tmp';
+    $tamam  = $webp ? @imagewebp($hedef, $gecici, 72) : @imagejpeg($hedef, $gecici, 78);
+    imagedestroy($hedef);
+
+    if (!$tamam || !@rename($gecici, $yol)) {
+        @unlink($gecici);
+
+        return '';
+    }
+
+    return HABER_GORSEL_YOLU . '/' . basename($yol);
+}

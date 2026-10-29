@@ -13,7 +13,10 @@ if (($izgaraHaberleri ?? []) === []) {
         <article class="kart <?= $kartGorsel === '' ? 'yazili' : '' ?>">
             <a href="<?= e(haber_yolu((string) $haber['slug'])) ?>">
                 <?php if ($kartGorsel !== ''): ?>
-                    <img class="gorsel" src="<?= e($kartGorsel) ?>" alt="" loading="lazy"
+                    <?php $kartSet = haber_gorsel_srcset($haber); ?>
+                    <img class="gorsel" src="<?= e(haber_gorsel_kucuk($haber, 480)) ?>" alt="" loading="lazy"
+                         <?php if ($kartSet !== ''): ?>srcset="<?= e($kartSet) ?>"
+                         sizes="(max-width: 620px) 100vw, (max-width: 1100px) 50vw, (max-width: 1500px) 33vw, 25vw"<?php endif; ?>
                          referrerpolicy="no-referrer"
                          onerror="this.closest('.kart').classList.add('yazili');this.remove()">
                 <?php endif; ?>

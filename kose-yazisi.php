@@ -86,7 +86,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
     <?php if ($gorsel !== null): ?>
         <figure class="kose-gorsel">
-            <img src="<?= e($gorsel['src']) ?>" alt="" referrerpolicy="no-referrer"
+            <img src="<?= e($gorsel['orta']) ?>" alt="" referrerpolicy="no-referrer"
                  onerror="this.closest('figure').remove()">
             <?php if ($gorsel['kaynak'] !== ''): ?>
                 <figcaption>Görsel: <?= e(kaynak_gorunen_ad($gorsel['kaynak'])) ?></figcaption>

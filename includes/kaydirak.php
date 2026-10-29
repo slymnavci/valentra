@@ -26,10 +26,14 @@ if (($mansetler ?? []) === []) {
                 <a href="<?= e(haber_yolu((string) $haber['slug'])) ?>">
                     <?php if ($gorsel !== ''): ?>
                         <?php // Ayni gorselin bulanik kopyasi: tam gorunen gorselin arkasini doldurur. ?>
-                        <img class="arka-gorsel" src="<?= e($gorsel) ?>" alt="" aria-hidden="true"
+                        <?php // Bulanik arka plan: kucuk kopya yeter. ?>
+                        <img class="arka-gorsel" src="<?= e(haber_gorsel_kucuk($haber, 480)) ?>" alt="" aria-hidden="true"
                              referrerpolicy="no-referrer" onerror="this.remove()"
                              loading="<?= $sira === 0 ? 'eager' : 'lazy' ?>">
-                        <img class="ust-gorsel" src="<?= e($gorsel) ?>" alt="" referrerpolicy="no-referrer"
+                        <?php $slaytSet = haber_gorsel_srcset($haber); ?>
+                        <img class="ust-gorsel" src="<?= e(haber_gorsel_kucuk($haber, 960)) ?>" alt="" referrerpolicy="no-referrer"
+                             <?php if ($slaytSet !== ''): ?>srcset="<?= e($slaytSet) ?>" sizes="(max-width: 960px) 100vw, 960px"<?php endif; ?>
+                             <?= $sira === 0 ? 'fetchpriority="high"' : '' ?>
                              onerror="this.closest('.kaydirak-slayt').classList.remove('gorselli');this.remove()"
                              loading="<?= $sira === 0 ? 'eager' : 'lazy' ?>">
                     <?php endif; ?>

@@ -79,7 +79,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
                     <li>
                         <a href="<?= e(kose_yolu((string) $yazi['slug'])) ?>" class="<?= $g !== null ? 'gorselli' : '' ?>">
                             <?php if ($g !== null): ?>
-                                <img class="kose-kucuk" src="<?= e($g['src']) ?>" alt="" loading="lazy"
+                                <img class="kose-kucuk" src="<?= e($g['kucuk']) ?>" alt="" loading="lazy"
                                      referrerpolicy="no-referrer"
                                      onerror="this.parentElement.classList.remove('gorselli');this.remove()">
                             <?php endif; ?>

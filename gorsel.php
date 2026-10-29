@@ -29,6 +29,23 @@ if ($url === '') {
 
 $yerel = haber_gorsel_indir($url);
 
+// Kucuk kopya istendiyse (sablonlarda srcset): uret ve ona yonlen;
+// uretilemezse asil dosya.
+$genislik = (int) ($_GET['g'] ?? 0);
+
+if ($yerel !== '' && in_array($genislik, HABER_GORSEL_GENISLIKLER, true)) {
+    try {
+        $kopya = haber_gorsel_kopya_uret($url, $yerel, $genislik);
+    } catch (Throwable $e) {
+        error_log('[valentra] gorsel kopyasi: ' . $e->getMessage());
+        $kopya = '';
+    }
+
+    if ($kopya !== '') {
+        $yerel = $kopya;
+    }
+}
+
 if ($yerel !== '') {
     header('Cache-Control: public, max-age=86400');
     header('Location: ' . $yerel, true, 302);
