@@ -25,14 +25,11 @@ if (($mansetler ?? []) === []) {
                      aria-label="<?= (int) $sira + 1 ?> / <?= count($mansetler) ?>">
                 <a href="<?= e(haber_yolu((string) $haber['slug'])) ?>">
                     <?php if ($gorsel !== ''): ?>
-                        <?php // Ayni gorselin bulanik kopyasi: tam gorunen gorselin arkasini doldurur. ?>
-                        <?php // Bulanik arka plan: kucuk kopya yeter. ?>
-                        <img class="arka-gorsel" src="<?= e(haber_gorsel_kucuk($haber, 480)) ?>" alt="" aria-hidden="true"
-                             referrerpolicy="no-referrer" onerror="this.remove()"
-                             loading="<?= $sira === 0 ? 'eager' : 'lazy' ?>">
-                        <?php $slaytSet = haber_gorsel_srcset($haber); ?>
+                        <?php /* Gorsel kutuyu dolduruyor (30.10.2026); genis ekranda 1440'lik kopya.
+                                 sizes: 1400 ve ustunde kaydirak hava ve yazarlar kutularinin yaninda. */ ?>
+                        <?php $slaytSet = haber_gorsel_srcset($haber, [480, 960, 1440]); ?>
                         <img class="ust-gorsel" src="<?= e(haber_gorsel_kucuk($haber, 960)) ?>" alt="" referrerpolicy="no-referrer"
-                             <?php if ($slaytSet !== ''): ?>srcset="<?= e($slaytSet) ?>" sizes="(max-width: 960px) 100vw, 960px"<?php endif; ?>
+                             <?php if ($slaytSet !== ''): ?>srcset="<?= e($slaytSet) ?>" sizes="(min-width: 1400px) calc(100vw - 780px), calc(100vw - 48px)"<?php endif; ?>
                              <?= $sira === 0 ? 'fetchpriority="high"' : '' ?>
                              onerror="this.closest('.kaydirak-slayt').classList.remove('gorselli');this.remove()"
                              loading="<?= $sira === 0 ? 'eager' : 'lazy' ?>">
