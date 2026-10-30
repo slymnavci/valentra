@@ -135,62 +135,13 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
      * ve akici yapalim; Milliyet'e benzesin ama tam benzemesin; beyaz ve
      * kirmizi tonlar, agirlikli beyaz; bir yere hava durumunu koyalim").
      *
-     *   1. Bilgi cubugu: tarih, gece/gunduz. (Hava durumu 24.10.2026'da
-     *      yan penceredeki karta tasindi, bkz. includes/hava_kutu.php.)
-     *   2. Logo satiri: menu dugmesi (acilir cekmece), logo, arama; beyaz.
-     *   3. Menu: beyaz zemin, koyu kalin yazi, aktif ogede kirmizi cizgi;
+     *   1. Logo satiri: menu dugmesi (acilir cekmece), logo; sagda arama,
+     *      yaninda tarih ve gece/gunduz (30.10.2026); beyaz.
+     *   2. Menu: beyaz zemin, koyu kalin yazi, aktif ogede kirmizi cizgi;
      *      sayfadaki tek yapiskan serit.
+     *   3. Kayan son dakika seridi (30.10.2026'ya kadar en ustteydi).
      */
     ?>
-    <?php
-    /*
-     * KAYAN SON DAKIKA SERIDI (site sahibinin istegi, 24.10.2026: "en
-     * ustte de kayan son dakika haberleri gecsin"). Kaynakta bugun
-     * yayimlanmis en yeni haberler; liste iki kez basiliyor ki kayma
-     * kesintisiz donsun (ikinci kopya ekran okuyucudan gizli). Uzerine
-     * gelince ya da odaklaninca duruyor; hareket azaltma tercihinde
-     * kaymiyor, yatay kaydirilabiliyor.
-     */
-    $sonDakikaSeridi = haber_son_dakika_seridi();
-    ?>
-    <?php if ($sonDakikaSeridi !== []): ?>
-        <div class="sd-serit" aria-label="Son dakika haberleri">
-            <div class="sinirli sd-satir">
-                <span class="sd-etiket">Son Dakika</span>
-                <div class="sd-pencere">
-                    <div class="sd-akis" style="--sure: <?= max(30, count($sonDakikaSeridi) * 7) ?>s">
-                        <?php foreach ([false, true] as $kopya): ?>
-                            <ul class="sd-liste" <?= $kopya ? 'aria-hidden="true"' : '' ?>>
-                                <?php foreach ($sonDakikaSeridi as $sd): ?>
-                                    <li>
-                                        <span class="sd-saat"><?= e($sd['zaman']) ?></span>
-                                        <a href="<?= e(haber_yolu($sd['slug'])) ?>" <?= $kopya ? 'tabindex="-1"' : '' ?>><?= e($sd['baslik']) ?></a>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ul>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-    <?php endif; ?>
-
-    <div class="bilgi-cubugu">
-        <div class="sinirli bilgi-satir">
-            <span class="bilgi-tarih"><?= e(tarih_bicimle(date('Y-m-d H:i:s'), false)) ?></span>
-
-            <button type="button" class="tema-dugme" id="tema-dugme"
-                    aria-label="Gece / gündüz modu" title="Gece / gündüz modu">
-                <svg class="tema-ay" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                </svg>
-                <svg class="tema-gunes" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/>
-                    <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                </svg>
-            </button>
-        </div>
-    </div>
 
     <header class="ust-bant">
         <div class="sinirli ust-satir">
@@ -243,6 +194,25 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
                     </svg>
                 </button>
             </form>
+
+            <?php /* Tarih ve gece/gunduz dugmesi aramanin yaninda, sagda (30.10.2026,
+                     site sahibi: "tarih ve gece gunduz logonun uzerine saga, arama
+                     cubugunun yanina"). Onceden logonun ustunde ayri bir serit
+                     (bilgi-cubugu) idi. */ ?>
+            <div class="ust-bilgi-grup">
+                <span class="bilgi-tarih"><?= e(tarih_bicimle(date('Y-m-d H:i:s'), false)) ?></span>
+
+                <button type="button" class="tema-dugme" id="tema-dugme"
+                        aria-label="Gece / gündüz modu" title="Gece / gündüz modu">
+                    <svg class="tema-ay" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                    </svg>
+                    <svg class="tema-gunes" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                        <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
         </div>
     </header>
 
@@ -418,6 +388,40 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
             });
         })();
         </script>
+    <?php endif; ?>
+
+    <?php
+    /*
+     * KAYAN SON DAKIKA SERIDI (site sahibinin istegi, 24.10.2026: "en
+     * ustte de kayan son dakika haberleri gecsin"; 30.10.2026: "son
+     * dakikayi asagiya alalim": artik logo ve menunun altinda). Kaynakta bugun
+     * yayimlanmis en yeni haberler; liste iki kez basiliyor ki kayma
+     * kesintisiz donsun (ikinci kopya ekran okuyucudan gizli). Uzerine
+     * gelince ya da odaklaninca duruyor; hareket azaltma tercihinde
+     * kaymiyor, yatay kaydirilabiliyor.
+     */
+    $sonDakikaSeridi = haber_son_dakika_seridi();
+    ?>
+    <?php if ($sonDakikaSeridi !== []): ?>
+        <div class="sd-serit" aria-label="Son dakika haberleri">
+            <div class="sinirli sd-satir">
+                <span class="sd-etiket">Son Dakika</span>
+                <div class="sd-pencere">
+                    <div class="sd-akis" style="--sure: <?= max(30, count($sonDakikaSeridi) * 7) ?>s">
+                        <?php foreach ([false, true] as $kopya): ?>
+                            <ul class="sd-liste" <?= $kopya ? 'aria-hidden="true"' : '' ?>>
+                                <?php foreach ($sonDakikaSeridi as $sd): ?>
+                                    <li>
+                                        <span class="sd-saat"><?= e($sd['zaman']) ?></span>
+                                        <a href="<?= e(haber_yolu($sd['slug'])) ?>" <?= $kopya ? 'tabindex="-1"' : '' ?>><?= e($sd['baslik']) ?></a>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
     <?php endif; ?>
 
     <main class="sinirli">

@@ -299,28 +299,48 @@ body.okuma .sinirli { max-width: 1320px; }
     .sd-liste[aria-hidden="true"] { display: none; }
 }
 
-/* Serit varken bilgi cubugunun ust cizgisi tekrar etmesin. */
-.sd-serit + .bilgi-cubugu { border-top: none; }
+/* Sayfanin ustundeki kirmizi cizgi logo bandinda (eskiden ayri tarih
+   seridindeydi, 30.10.2026). */
+.ust-bant { border-top: 3px solid var(--altin); }
 
-/* --- Bilgi cubugu: tarih, hava durumu, gece/gunduz (24.10.2026) ---------- */
+/* Son dakika seridi menunun altinda (30.10.2026): menunun kirmizi alt
+   cizgisi zaten ayiriyor, ikinci kirmizi cizgi olmasin. */
+.menu-bant + .sd-serit { border-top: none; }
 
-.bilgi-cubugu {
-    background: var(--zemin);
-    border-top: 3px solid var(--altin);
-    border-bottom: 1px solid var(--cizgi);
-    font-size: .86rem;
-    color: var(--metin-soluk);
-}
+/* --- Tarih ve gece/gunduz: aramanin yaninda, sagda (30.10.2026) ---------- */
 
-.bilgi-satir {
+/* Bandin sagindaki resmin ustunde okunsun diye arama kutusu gibi yari
+   saydam zeminli bir hap. */
+.ust-bilgi-grup {
+    flex: none;
     display: flex;
     align-items: center;
-    gap: 18px;
-    min-height: 36px;
+    gap: 10px;
+    padding: 0 4px 0 14px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--kart) 92%, transparent);
+    backdrop-filter: blur(4px);
+    font-size: .86rem;
+    font-weight: 600;
+    color: var(--metin);
 }
 
 .bilgi-tarih { white-space: nowrap; }
-.bilgi-satir .tema-dugme { margin-left: auto; }
+
+/* Tarih logonun yanina gelince tablette arama alt satira kayiyordu: arama
+   gerekirse daralsin (en fazla 340 piksel). 760'in altinda zaten tam
+   genislikte alt satirda. */
+@media (min-width: 761px) {
+    .ust-bant .ust-arama { flex: 1 1 180px; min-width: 0; max-width: 340px; }
+}
+
+/* Telefonda tarihe yer yok: yalnizca dugme, logo satirinin sonunda;
+   arama alt satirda tam genislikte (order ile gruptan sonra). */
+@media (max-width: 640px) {
+    .ust-bilgi-grup { margin-left: auto; padding: 0; }
+    .bilgi-tarih { display: none; }
+    .ust-bant .ust-arama { order: 1; }
+}
 
 /* --- Menu dugmesi ve acilir cekmece (24.10.2026) ------------------------- */
 
@@ -561,10 +581,6 @@ summary.cekmece-oge::after {
 .hava-sehirler .hava-simge { color: var(--altin); }
 .hava-sehirler .simdi { font-weight: 800; }
 .hava-sehirler .aralik { color: var(--metin-soluk); font-size: .84rem; text-align: right; }
-
-@media (max-width: 640px) {
-    .bilgi-satir { gap: 10px; }
-}
 
 /* --- Bolum basligi ------------------------------------------------------- */
 
