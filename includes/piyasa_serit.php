@@ -2,28 +2,27 @@
 declare(strict_types=1);
 
 /**
- * Piyasa şeridi: dolar, euro, gram ve ons altın, BIST 100, ABD borsaları
- * (S&P 500, Nasdaq, Dow Jones) ve Brent petrol.
+ * Piyasa şeridi: dolar, euro, gram ve ons altın, BIST 100, Brent petrol.
  *
  * Ilk deger sunucu tarafinda basiliyor; JavaScript kapali olsa da serit
  * dolu geliyor. Sonrasini 2 dakikada bir tarayici tazeliyor.
  *
- * Kayma CSS animasyonuyla: icerik seride sigmadiginda akiyor (uzerine
- * gelince duruyor), sigdiginda duruyor. Dokuz kalem genis ekranda bile
- * cogu zaman sigmiyor; sigip sigmadigini asagidaki betik olcuyor.
+ * Serit SABIT, kaymiyor (site sahibi, 30.10.2026: "kayar olmasin, sabit
+ * kalsin"). Genis ekranda tek satir; dar ekranda kalemler uc ya da iki
+ * sutunlu izgaraya diziliyor (assets/style.css, .piyasa-grup).
  */
 
 require_once __DIR__ . '/piyasa.php';
 
 $piyasa = piyasa_verisi();
 
-// Hicbir deger yoksa serit hic cizilmesin; bos bir cubuk kotu durur.
 /*
  * Kalemler, sirasiyla: [anahtar, uzun ad, kisa ad, hane, simge].
  *
- * Ons altin geri geldi, ABD borsalari ve Brent eklendi (site sahibi,
- * 30.10.2026: "icinde altin ons fiyati, abd borsa bilgileri de olsun,
- * petrol fiyatini yazalim"). Ons ve ABD endeksleri dolar cinsinden.
+ * Ons altin geri geldi, Brent eklendi (site sahibi, 30.10.2026: "icinde
+ * altin ons fiyati, petrol fiyatini yazalim"); ikisi de dolar cinsinden.
+ * ABD borsalari ayni gun eklenip cikarildi ("abd borsa bilgilerini
+ * cikaralim, sabit kalsin").
  */
 $kalemler = [
     ['usd',    'Dolar',        'USD',     4, 'usd'],
@@ -31,9 +30,6 @@ $kalemler = [
     ['altin',  'Gram Altın',   'Gram',    2, 'altin'],
     ['ons',    'Ons Altın',    'Ons',     2, 'ons'],
     ['bist',   'BIST 100',     'BIST',    2, 'bist'],
-    ['sp500',  'S&P 500',      'S&P',     2, 'abd'],
-    ['nasdaq', 'Nasdaq',       'Nasdaq',  2, 'abd'],
-    ['dow',    'Dow Jones',    'Dow',     2, 'abd'],
     ['brent',  'Brent Petrol', 'Brent',   2, 'petrol'],
 ];
 
@@ -88,35 +84,19 @@ $simgeler = [
     'altin' => $simge('<svg viewBox="0 0 20 20" aria-hidden="true"><rect width="20" height="20" fill="#e2b33c"/><path d="M4.5 13.5h11l-2-5h-7z" fill="#f6d77a" stroke="#a87a12" stroke-width=".9" stroke-linejoin="round"/><path d="M7.3 8.5l.8-2h3.8l.8 2" fill="none" stroke="#a87a12" stroke-width=".9" stroke-linejoin="round"/></svg>'),
     'ons'   => $simge('<svg viewBox="0 0 20 20" aria-hidden="true"><rect width="20" height="20" fill="#a87a12"/><path d="M4.5 13.5h11l-2-5h-7z" fill="#e2b33c" stroke="#5e430a" stroke-width=".9" stroke-linejoin="round"/><path d="M7.3 8.5l.8-2h3.8l.8 2" fill="none" stroke="#5e430a" stroke-width=".9" stroke-linejoin="round"/></svg>'),
     'bist'  => $simge('<svg viewBox="0 0 20 20" aria-hidden="true"><rect width="20" height="20" fill="#1f2a44"/><path d="M4 13.5l3.5-3.5 2.5 2.5 5-5.5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'),
-    // ABD endeksleri: BIST'in grafik simgesi, ABD bayraginin renklerinde.
-    'abd'   => $simge('<svg viewBox="0 0 20 20" aria-hidden="true"><rect width="20" height="20" fill="#3c3b6e"/><path d="M4 13.5l3.5-3.5 2.5 2.5 5-5.5" fill="none" stroke="#ff6b70" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'),
     'petrol'=> $simge('<svg viewBox="0 0 20 20" aria-hidden="true"><rect width="20" height="20" fill="#2b2b30"/><path d="M10 4.2c2.2 3 3.6 5 3.6 6.9a3.6 3.6 0 0 1-7.2 0c0-1.9 1.4-3.9 3.6-6.9z" fill="#f2f2f4"/></svg>'),
 ];
 ?>
 <div class="piyasa-serit" id="piyasaSerit" aria-label="Piyasa özeti">
-    <div class="piyasa-akis">
-        <?php
-        /*
-         * Grup iki kez basiliyor.
-         *
-         * Kesintisiz kayma icin gerekli: birinci kopya soldan cikarken
-         * ikincisi sagdan giriyor, animasyon basa dondugunde goruntu
-         * ayni oluyor ve zipla olmuyor. Ikinci kopya ekran okuyuculara
-         * gizli, yoksa degerler iki kez okunurdu.
-         */
-        for ($kopya = 0; $kopya < 2; $kopya++):
-        ?>
-        <div class="piyasa-grup"<?= $kopya === 1 ? ' aria-hidden="true"' : '' ?>>
-            <?php foreach ($kalemler as [$anahtar, $uzun, $kisa, $hane, $simgeAdi]): ?>
-                <span class="piyasa-oge">
-                    <?= $simgeler[$simgeAdi] ?>
-                    <span class="ad"><span class="uzun"><?= e($uzun) ?></span><span class="kisa"><?= e($kisa) ?></span></span>
-                    <span class="deger" data-piyasa="<?= e($anahtar) ?>" data-hane="<?= $hane ?>"><?= e($bicimle($piyasa[$anahtar], $hane)) ?></span>
-                    <?= $yon($piyasa[$anahtar . '_degisim'] ?? null, $anahtar . '_degisim') ?>
-                </span>
-            <?php endforeach; ?>
-        </div>
-        <?php endfor; ?>
+    <div class="piyasa-grup">
+        <?php foreach ($kalemler as [$anahtar, $uzun, $kisa, $hane, $simgeAdi]): ?>
+            <span class="piyasa-oge">
+                <?= $simgeler[$simgeAdi] ?>
+                <span class="ad"><span class="uzun"><?= e($uzun) ?></span><span class="kisa"><?= e($kisa) ?></span></span>
+                <span class="deger" data-piyasa="<?= e($anahtar) ?>" data-hane="<?= $hane ?>"><?= e($bicimle($piyasa[$anahtar], $hane)) ?></span>
+                <?= $yon($piyasa[$anahtar . '_degisim'] ?? null, $anahtar . '_degisim') ?>
+            </span>
+        <?php endforeach; ?>
     </div>
 </div>
 
@@ -125,9 +105,6 @@ $simgeler = [
     var serit = document.getElementById('piyasaSerit');
 
     if (!serit) { return; }
-
-    var akis = serit.querySelector('.piyasa-akis');
-    var grup = serit.querySelector('.piyasa-grup');
 
     function bicimle(sayi, hane) {
         return sayi === null || sayi === undefined
@@ -144,30 +121,6 @@ $simgeler = [
         });
     }
 
-    /*
-     * Sigmiyorsa kaydir. Hiz sabit (saniyede ~50 piksel): kalem sayisi
-     * ya da ekran genisligi degisse de okuma hizi ayni kaliyor.
-     */
-    function olc() {
-        serit.classList.remove('kayan');
-
-        var sigmiyor = grup.scrollWidth > serit.clientWidth + 1;
-
-        serit.classList.toggle('kayan', sigmiyor);
-
-        if (sigmiyor) {
-            akis.style.animationDuration = Math.max(20, Math.round(grup.scrollWidth / 50)) + 's';
-        }
-    }
-
-    olc();
-
-    if (window.ResizeObserver) {
-        new ResizeObserver(olc).observe(serit);
-    } else {
-        window.addEventListener('resize', olc);
-    }
-
     function tazele() {
         fetch('/api/piyasa.php', { cache: 'no-store' })
             .then(function (y) { return y.ok ? y.json() : null; })
@@ -175,7 +128,7 @@ $simgeler = [
                 if (!v) { return; }
 
                 // Sunucunun bastigi kalemler tazeleniyor; hane sayisi isaretin uzerinde.
-                serit.querySelectorAll('.piyasa-grup:first-child .deger[data-piyasa]').forEach(function (e) {
+                serit.querySelectorAll('.deger[data-piyasa]').forEach(function (e) {
                     var ad = e.getAttribute('data-piyasa');
                     var d  = v[ad + '_degisim'];
 
@@ -195,8 +148,6 @@ $simgeler = [
                         e.className = 'degisim ' + sinif;
                     });
                 });
-
-                olc();
             })
             .catch(function () { /* Gecici hata seridi bozmasin, eski deger kalsin. */ });
     }
