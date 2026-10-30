@@ -258,6 +258,15 @@ function kose_liste_yolu(int $sayfa = 1): string
     return $sayfa > 1 ? $yol . '?sayfa=' . $sayfa : $yol;
 }
 
+/** Video haberler sayfası (30.10.2026); $kategori verilirse o başlık. */
+function video_yolu(string $kategori = '', int $sayfa = 1): string
+{
+    $parametre = array_filter(['k' => $kategori, 'sayfa' => $sayfa > 1 ? (string) $sayfa : '']);
+    $yol       = temiz_adres_acik() ? '/video' : '/video.php';
+
+    return $parametre === [] ? $yol : $yol . '?' . http_build_query($parametre);
+}
+
 /** Hesaplama araçları sayfası. */
 function araclar_yolu(): string
 {

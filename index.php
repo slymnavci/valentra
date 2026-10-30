@@ -170,6 +170,9 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <?php require __DIR__ . '/includes/yan_pencere.php'; ?>
     </div>
 
+    <?php /* Video seridi (30.10.2026): en yeni dort videolu haber, tam genislikte. */ ?>
+    <?php require __DIR__ . '/includes/video_seridi.php'; ?>
+
     <?php /* Alt pencereler tam genislikte: konu konu bloklar. */ ?>
     <?php require __DIR__ . '/includes/alt_pencereler.php'; ?>
 
