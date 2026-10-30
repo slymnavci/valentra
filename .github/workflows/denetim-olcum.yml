@@ -7,14 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: TTFB
+      - name: Ayrinti
         run: |
-          h=$(curl -s -m 30 https://valentra.com.tr/ | grep -oE 'href="/haber/[^"]+"' | head -1 | cut -d'"' -f2)
-          for u in / /valpapel /valspor /video /gundem "$h"; do
-            a=""; for i in 1 2 3 4; do a="$a $(curl -s -o /dev/null -D /tmp/b -m 30 -w '%{http_code}:%{time_starttransfer}' "https://valentra.com.tr$u")$(grep -qi x-valentra-onbellek /tmp/b && echo '(ö)')"; done
-            echo "::notice title=TTFB $u::$a"
+          o=""
+          for u in / /valpapel /robots.txt /assets/logo.svg /sitemap.xml; do
+            a=""; for i in 1 2 3 4 5; do a="$a $(curl -s -o /dev/null -D /tmp/b -m 30 -w 'tcp%{time_connect}/tls%{time_appconnect}/ilk%{time_starttransfer}' "https://valentra.com.tr$u")$(grep -qi x-valentra-onbellek /tmp/b && echo '(ö)')"; done
+            o="$o | $u:$a"
           done
-          g=$(curl -s -m 30 https://valentra.com.tr/ | grep -oE '/gorseller/haber/[0-9a-f]{40}-480\.webp' | head -1)
-          echo "::notice title=Görsel başlık::$g $(curl -sI -m 30 https://valentra.com.tr$g | tr -d '\r' | grep -i cache-control)"
-          echo "::notice title=Önbellek erişimi::$(curl -s -o /dev/null -w '%{http_code}' https://valentra.com.tr/onbellek/sayfa/)"
-          echo "::notice title=Ziyaret betiği::$(curl -s -m 30 https://valentra.com.tr/ | grep -c 'api/gorunum.php') $(curl -s -m 30 https://valentra.com.tr/ | grep -c 'valentra-ziyaret-betigi')"
+          echo "::notice title=Ayrıntı::$o"
