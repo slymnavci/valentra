@@ -300,21 +300,29 @@ body.okuma .sinirli { max-width: 1320px; }
 }
 
 /* Sayfanin ustundeki kirmizi cizgi logo bandinda (eskiden ayri tarih
-   seridindeydi, 30.10.2026). Son dakika seridi varken tekrar etmesin. */
+   seridindeydi, 30.10.2026). */
 .ust-bant { border-top: 3px solid var(--altin); }
-.sd-serit + .ust-bant { border-top: none; }
 
-/* --- Tarih ve gece/gunduz: logonun saginda (30.10.2026) ------------------ */
+/* Son dakika seridi menunun altinda (30.10.2026): menunun kirmizi alt
+   cizgisi zaten ayiriyor, ikinci kirmizi cizgi olmasin. */
+.menu-bant + .sd-serit { border-top: none; }
 
+/* --- Tarih ve gece/gunduz: aramanin yaninda, sagda (30.10.2026) ---------- */
+
+/* Bandin sagindaki resmin ustunde okunsun diye arama kutusu gibi yari
+   saydam zeminli bir hap. */
 .ust-bilgi-grup {
     flex: none;
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding-left: 16px;
-    border-left: 1px solid var(--cizgi);
+    gap: 10px;
+    padding: 0 4px 0 14px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--kart) 92%, transparent);
+    backdrop-filter: blur(4px);
     font-size: .86rem;
-    color: var(--metin-soluk);
+    font-weight: 600;
+    color: var(--metin);
 }
 
 .bilgi-tarih { white-space: nowrap; }
@@ -326,10 +334,12 @@ body.okuma .sinirli { max-width: 1320px; }
     .ust-bant .ust-arama { flex: 1 1 180px; min-width: 0; max-width: 340px; }
 }
 
-/* Telefonda logonun yaninda tarihe yer yok: yalnizca dugme, satirin sonunda. */
+/* Telefonda tarihe yer yok: yalnizca dugme, logo satirinin sonunda;
+   arama alt satirda tam genislikte (order ile gruptan sonra). */
 @media (max-width: 640px) {
-    .ust-bilgi-grup { margin-left: auto; padding-left: 0; border-left: none; }
+    .ust-bilgi-grup { margin-left: auto; padding: 0; }
     .bilgi-tarih { display: none; }
+    .ust-bant .ust-arama { order: 1; }
 }
 
 /* --- Menu dugmesi ve acilir cekmece (24.10.2026) ------------------------- */
