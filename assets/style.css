@@ -299,28 +299,38 @@ body.okuma .sinirli { max-width: 1320px; }
     .sd-liste[aria-hidden="true"] { display: none; }
 }
 
-/* Serit varken bilgi cubugunun ust cizgisi tekrar etmesin. */
-.sd-serit + .bilgi-cubugu { border-top: none; }
+/* Sayfanin ustundeki kirmizi cizgi logo bandinda (eskiden ayri tarih
+   seridindeydi, 30.10.2026). Son dakika seridi varken tekrar etmesin. */
+.ust-bant { border-top: 3px solid var(--altin); }
+.sd-serit + .ust-bant { border-top: none; }
 
-/* --- Bilgi cubugu: tarih, hava durumu, gece/gunduz (24.10.2026) ---------- */
+/* --- Tarih ve gece/gunduz: logonun saginda (30.10.2026) ------------------ */
 
-.bilgi-cubugu {
-    background: var(--zemin);
-    border-top: 3px solid var(--altin);
-    border-bottom: 1px solid var(--cizgi);
+.ust-bilgi-grup {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-left: 16px;
+    border-left: 1px solid var(--cizgi);
     font-size: .86rem;
     color: var(--metin-soluk);
 }
 
-.bilgi-satir {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    min-height: 36px;
+.bilgi-tarih { white-space: nowrap; }
+
+/* Tarih logonun yanina gelince tablette arama alt satira kayiyordu: arama
+   gerekirse daralsin (en fazla 340 piksel). 760'in altinda zaten tam
+   genislikte alt satirda. */
+@media (min-width: 761px) {
+    .ust-bant .ust-arama { flex: 1 1 180px; min-width: 0; max-width: 340px; }
 }
 
-.bilgi-tarih { white-space: nowrap; }
-.bilgi-satir .tema-dugme { margin-left: auto; }
+/* Telefonda logonun yaninda tarihe yer yok: yalnizca dugme, satirin sonunda. */
+@media (max-width: 640px) {
+    .ust-bilgi-grup { margin-left: auto; padding-left: 0; border-left: none; }
+    .bilgi-tarih { display: none; }
+}
 
 /* --- Menu dugmesi ve acilir cekmece (24.10.2026) ------------------------- */
 
@@ -561,10 +571,6 @@ summary.cekmece-oge::after {
 .hava-sehirler .hava-simge { color: var(--altin); }
 .hava-sehirler .simdi { font-weight: 800; }
 .hava-sehirler .aralik { color: var(--metin-soluk); font-size: .84rem; text-align: right; }
-
-@media (max-width: 640px) {
-    .bilgi-satir { gap: 10px; }
-}
 
 /* --- Bolum basligi ------------------------------------------------------- */
 

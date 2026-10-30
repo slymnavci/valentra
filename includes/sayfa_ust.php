@@ -175,23 +175,6 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
         </div>
     <?php endif; ?>
 
-    <div class="bilgi-cubugu">
-        <div class="sinirli bilgi-satir">
-            <span class="bilgi-tarih"><?= e(tarih_bicimle(date('Y-m-d H:i:s'), false)) ?></span>
-
-            <button type="button" class="tema-dugme" id="tema-dugme"
-                    aria-label="Gece / gündüz modu" title="Gece / gündüz modu">
-                <svg class="tema-ay" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                </svg>
-                <svg class="tema-gunes" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/>
-                    <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                </svg>
-            </button>
-        </div>
-    </div>
-
     <header class="ust-bant">
         <div class="sinirli ust-satir">
             <button type="button" class="cekmece-dugme" id="cekmece-dugme"
@@ -230,6 +213,25 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
                     <span class="alt">GÜNCEL HABER ÖZETLERİ</span>
                 </span>
             </a>
+
+            <?php /* Tarih ve gece/gunduz dugmesi logonun saginda (30.10.2026, site
+                     sahibi: "en bastaki tarih ve gece gunduz simgesini Valentra
+                     isminin sagina alalim, orayi biraz daha daraltalim"). Onceden
+                     logonun ustunde ayri bir serit (bilgi-cubugu) idi. */ ?>
+            <div class="ust-bilgi-grup">
+                <span class="bilgi-tarih"><?= e(tarih_bicimle(date('Y-m-d H:i:s'), false)) ?></span>
+
+                <button type="button" class="tema-dugme" id="tema-dugme"
+                        aria-label="Gece / gündüz modu" title="Gece / gündüz modu">
+                    <svg class="tema-ay" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                    </svg>
+                    <svg class="tema-gunes" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                        <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
 
             <form class="ust-arama" action="<?= e(arama_yolu()) ?>" method="get" role="search">
                 <label class="gizli-etiket" for="ust-arama-q">Sitede ara</label>
