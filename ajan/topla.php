@@ -1906,6 +1906,16 @@ foreach ($gruplar as $grupNo => $grup) {
             // Beslemedeki ozgun baslik: site kopya denetiminde bunu da
             // kullaniyor (ayni haber baska sitede ayni baslikla gelirse).
             'kaynak_baslik' => (string) $girdi['baslik'],
+            /*
+             * Haberi yazarken okunan diger kaynaklar (30.10.2026, site
+             * sahibi: "birkac kaynak varsa yapay zeka hepsini okusun ve
+             * kendi ozgun haberini yapsin; tek kaynaksa tek kaynagi
+             * verelim"). Doluysa sayfada "Kaynaklar: A, B, C" yaziyor.
+             */
+            'ek_kaynaklar' => array_map(
+                static fn (array $ek): array => ['ad' => (string) $ek['kaynakAdi'], 'url' => (string) $ek['baglanti']],
+                $modelAdaylari[$sira]['ekKaynaklar'] ?? []
+            ),
             'guven_skoru' => (int) ($sonuc['guven_skoru'] ?? 0),
             'onem'        => (int) ($sonuc['onem'] ?? 50),
             'ajan_notu'   => (string) ($sonuc['ajan_notu'] ?? ''),

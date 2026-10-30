@@ -1250,7 +1250,55 @@ function haber_taslak_ekle(array $veri): array
         'kaynak_gecikme'   => $kaynakVar ? $kaynakGecikme : 0,
     ] + haber_format_alanlari($veri));
 
-    return ['durum' => 'eklendi', 'id' => (int) db()->lastInsertId()];
+    $id = (int) db()->lastInsertId();
+    haber_kaynak_listesi_yaz($id, $veri, $kaynakUrl);
+
+    return ['durum' => 'eklendi', 'id' => $id];
+}
+
+/**
+ * Birden cok kaynaktan yazilan haberin kaynak listesi (30.10.2026, site
+ * sahibi: "birkac kaynak varsa yapay zeka hepsini okusun ve kendi ozgun
+ * haberini yapsin; tek kaynaksa tek kaynagi verelim").
+ *
+ * Ajan ayni olayi veren diger kaynaklari da okuyup haberi hepsinden
+ * yaziyor ve onlari ek_kaynaklar olarak gonderiyor. Ana kaynakla birlikte
+ * derleme_kaynaklari sutununa yaziliyor; sayfada "Kaynaklar: A, B, C".
+ * Tek kaynakli haberde liste yazilmiyor, sayfada o kaynak gorunuyor.
+ * derleme bayragi DEGISMIYOR: derleme tavani ve derleme malzemesi
+ * (includes/derleme.php) yalnizca derleme ajaninin yazilarini sayiyor.
+ */
+function haber_kaynak_listesi_yaz(int $id, array $veri, string $kaynakUrl): void
+{
+    $ekler = $veri['ek_kaynaklar'] ?? [];
+
+    if (!is_array($ekler) || $ekler === [] || !haber_sutun_var('derleme_kaynaklari')) {
+        return;
+    }
+
+    $liste = [['ad' => trim((string) ($veri['kaynak_adi'] ?? '')), 'url' => $kaynakUrl, 'baslik' => '']];
+
+    foreach (array_slice($ekler, 0, 5) as $ek) {
+        if (!is_array($ek)) {
+            continue;
+        }
+
+        $ad  = mb_substr(trim((string) ($ek['ad'] ?? '')), 0, 160, 'UTF-8');
+        $url = mb_substr(guvenli_url((string) ($ek['url'] ?? '')), 0, 500, 'UTF-8');
+
+        if ($ad === '' || in_array($ad, array_column($liste, 'ad'), true)) {
+            continue;
+        }
+
+        $liste[] = ['ad' => $ad, 'url' => $url, 'baslik' => ''];
+    }
+
+    if (count($liste) < 2 || $liste[0]['ad'] === '') {
+        return;
+    }
+
+    db()->prepare('UPDATE haberler SET derleme_kaynaklari = :k WHERE id = :id')
+        ->execute(['k' => json_encode($liste, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'id' => $id]);
 }
 
 /**

@@ -247,12 +247,19 @@ foreach (($govdeVeri ?? []) as $ad => $deger) {
     $kaynakAdi    = $haber['kaynak_adi'] !== '' ? kaynak_gorunen_ad((string) $haber['kaynak_adi']) : 'kaynak';
 
     /*
-     * Derleme haber (28.10.2026): tek kaynak yerine yararlanilan butun
+     * Derleme haber (28.10.2026) ve birden cok kaynaktan yazilan ajan
+     * haberi (30.10.2026): tek kaynak yerine yararlanilan butun
      * kaynaklar, her biri kendi haberine bagli. Hem okuyucu icin acik
      * kaynaklandirma hem telif: derleme kaynaklarin yerine gecmiyor.
      */
     require_once __DIR__ . '/derleme.php';
-    $derlemeKaynaklari = haber_derleme_mi($haber) ? derleme_kaynaklari_coz((string) ($haber['derleme_kaynaklari'] ?? '')) : [];
+    $derlemeKaynaklari = derleme_kaynaklari_coz((string) ($haber['derleme_kaynaklari'] ?? ''));
+
+    // Cok kaynakli ajan haberi (30.10.2026, bkz. haber_kaynak_listesi_yaz):
+    // listede tek kaynak kaldiysa tek kaynak satiri yeterli.
+    if (!haber_derleme_mi($haber) && count($derlemeKaynaklari) < 2) {
+        $derlemeKaynaklari = [];
+    }
 
     // Ozgun haber (28.10.2026): Valentra Veri (includes/ozgun_haber.php,
     // sablonla veriden) ve Valentra Dosya aciklayici yazilari
