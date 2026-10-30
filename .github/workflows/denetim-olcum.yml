@@ -11,7 +11,7 @@ jobs:
         run: |
           o=""
           for u in / /valpapel /robots.txt /assets/logo.svg /sitemap.xml; do
-            a=""; for i in 1 2 3 4 5; do a="$a $(curl -s -o /dev/null -D /tmp/b -m 30 -w 'tcp%{time_connect}/tls%{time_appconnect}/ilk%{time_starttransfer}' "https://valentra.com.tr$u")$(grep -qi x-valentra-onbellek /tmp/b && echo '(ö)')"; done
+            a=""; for i in 1 2 3 4 5; do a="$a $(curl -s -o /dev/null -D /tmp/b -m 30 -w 'tcp%{time_connect}/tls%{time_appconnect}/ilk%{time_starttransfer}' "https://valentra.com.tr$u")$(grep -qi x-valentra-onbellek /tmp/b && echo '(ö)' || true)"; done
             o="$o | $u:$a"
           done
           echo "::notice title=Ayrıntı::$o"
