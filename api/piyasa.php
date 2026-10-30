@@ -34,6 +34,7 @@ echo json_encode([
     'altin_degisim'=> $veri['altin_degisim'] ?? null,
     'ons'          => $veri['ons'] ?? null,
     'ons_degisim'  => $veri['ons_degisim'] ?? null,
+] + piyasa_dunya_alanlari($veri) + [
     'zaman'        => $veri['zaman'],
     // Hangi saglayicinin verdigi gorunsun: kazima kirildiginda
     // "TCMB" yazmasi sorunu tek bakista anlatiyor.

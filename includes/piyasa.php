@@ -2,7 +2,8 @@
 declare(strict_types=1);
 
 /**
- * Piyasa verisi: dolar, euro, gram altin, ons altin ve BIST 100.
+ * Piyasa verisi: dolar, euro, gram altin, ons altin, BIST 100, ABD
+ * borsalari (S&P 500, Nasdaq, Dow Jones) ve Brent petrol.
  *
  * Tasarim notlari:
  *
@@ -37,6 +38,18 @@ const PIYASA_ONBELLEK_ANAHTAR = 'piyasa_onbellek';
  */
 const PIYASA_REFERANS_ANAHTAR = 'piyasa_gun_referansi';
 const PIYASA_ONBELLEK_SURE    = 120;
+
+/*
+ * ABD borsalari ve petrol (site sahibi, 30.10.2026: "abd borsa bilgileri
+ * de olsun, petrol fiyatini yazalim"). Ekonomi sayfasiyla ayni Yahoo
+ * sembolleri; dordu tek istekte (spark ucu) geliyor.
+ */
+const PIYASA_DUNYA = [
+    'sp500'  => '^GSPC',
+    'nasdaq' => '^IXIC',
+    'dow'    => '^DJI',
+    'brent'  => 'BZ=F',
+];
 
 /**
  * Piyasa verisini döndürür (önbellekten ya da kaynaktan).
@@ -178,6 +191,7 @@ function piyasa_onbellekten(bool $sureyiYoksay = false): ?array
         'altin_degisim'=> isset($veri['altin_degisim']) ? (float) $veri['altin_degisim'] : null,
         'ons'          => isset($veri['ons']) ? (float) $veri['ons'] : null,
         'ons_degisim'  => isset($veri['ons_degisim']) ? (float) $veri['ons_degisim'] : null,
+    ] + piyasa_dunya_alanlari($veri) + [
         'zaman'        => (string) $veri['zaman'],
         'kaynak'       => (string) ($veri['kaynak'] ?? ''),
     ];
@@ -233,6 +247,13 @@ function piyasa_cek(): array
         $sonuc['ons']         = $altin['ons'];
         $sonuc['ons_degisim'] = $altin['ons_degisim'];
         $kaynaklar[]          = $altin['kaynak'];
+    }
+
+    $dunya  = piyasa_dunya();
+    $sonuc += piyasa_dunya_alanlari($dunya);
+
+    if ($dunya !== []) {
+        $kaynaklar[] = 'Yahoo Finance';
     }
 
     $sonuc['kaynak'] = implode(' + ', array_unique($kaynaklar));
@@ -543,6 +564,80 @@ function piyasa_bist(): array
     return $fiyat['deger'] === null
         ? ['deger' => null, 'degisim' => null, 'kaynak' => '']
         : ['deger' => $fiyat['deger'], 'degisim' => $fiyat['degisim'], 'kaynak' => 'Yahoo Finance'];
+}
+
+/**
+ * ABD borsalari ve Brent petrol: deger ve onceki kapanisa gore degisim.
+ *
+ * Tek istek (spark ucu; Ekonomi sayfasinin sirket tablosu da bunu
+ * kullaniyor). Sayfa gonderildikten sonra tazelendigi icin ziyaretciyi
+ * bekletmiyor; yine de dort ayri istek yerine bir istek. Spark bir
+ * sembolu vermezse o sembol grafik ucundan tek basina deneniyor.
+ *
+ * @return array<string,float|null> sp500, sp500_degisim, nasdaq, ... (yalnizca bulunanlar)
+ */
+function piyasa_dunya(): array
+{
+    $sonuc = [];
+    $ham   = piyasa_indir(
+        'https://query1.finance.yahoo.com/v8/finance/spark?symbols='
+        . rawurlencode(implode(',', PIYASA_DUNYA)) . '&range=1d&interval=1d'
+    );
+    $veri  = $ham !== null ? json_decode($ham, true) : null;
+
+    foreach (PIYASA_DUNYA as $ad => $sembol) {
+        $s     = is_array($veri) && is_array($veri[$sembol] ?? null) ? $veri[$sembol] : null;
+        $fiyat = null;
+        $degisim = null;
+
+        if ($s !== null) {
+            $kapanis = is_array($s['close'] ?? null) ? array_values(array_filter($s['close'], 'is_numeric')) : [];
+            // Alanlar yahoo_spark_coz ile ayni (includes/piyasalar.php).
+            $fiyat   = $s['fulldayPrice'] ?? ($kapanis !== [] ? end($kapanis) : null);
+            $onceki  = (float) ($s['chartPreviousClose'] ?? $s['previousClose'] ?? 0);
+
+            if (is_numeric($fiyat) && (float) $fiyat > 0) {
+                $fiyat   = (float) $fiyat;
+                $degisim = is_numeric($s['fulldayChangePercent'] ?? null)
+                    ? round((float) $s['fulldayChangePercent'], 2)
+                    : ($onceki > 0 ? round(($fiyat - $onceki) / $onceki * 100, 2) : null);
+            } else {
+                $fiyat = null;
+            }
+        }
+
+        if ($fiyat === null) {
+            $tek     = piyasa_yahoo_fiyat($sembol);
+            $fiyat   = $tek['deger'];
+            $degisim = $tek['degisim'];
+        }
+
+        if ($fiyat !== null) {
+            $sonuc[$ad]              = round($fiyat, 2);
+            $sonuc[$ad . '_degisim'] = $degisim;
+        }
+    }
+
+    return $sonuc;
+}
+
+/**
+ * ABD borsalari ve petrol alanlari, eksikler null (onbellek ve uc ayni sekli verir).
+ *
+ * @param array<string,mixed> $veri
+ * @return array<string,?float>
+ */
+function piyasa_dunya_alanlari(array $veri): array
+{
+    $alanlar = [];
+
+    foreach (array_keys(PIYASA_DUNYA) as $ad) {
+        foreach ([$ad, $ad . '_degisim'] as $anahtar) {
+            $alanlar[$anahtar] = isset($veri[$anahtar]) && is_numeric($veri[$anahtar]) ? (float) $veri[$anahtar] : null;
+        }
+    }
+
+    return $alanlar;
 }
 
 /**
