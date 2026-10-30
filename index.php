@@ -98,7 +98,8 @@ require __DIR__ . '/includes/sayfa_ust.php';
      * olmali" ve "hava durumunda seride paralel buyuk sehir havasi").
      *
      *   1. sira, ayni yukseklikte: kaydirak | hava durumu | Yazarlarimiz
-     *   2. sira, ayni yukseklikte: piyasa seridi | buyuk sehirler seridi
+     *   2. sira: piyasa seridi, tam genislikte (buyuk sehirler hava seridi
+     *      kaldirildi; site sahibi, 30.10.2026)
      *   Altinda haberler (ana kolon) ve yan pencerenin geri kalani.
      *
      * Dar ekranda kaydirak tam genislikte, hava ve Yazarlarimiz yan
@@ -124,10 +125,6 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
         <div class="vitrin-piyasa">
             <?php require __DIR__ . '/includes/piyasa_serit.php'; ?>
-        </div>
-
-        <div class="vitrin-sehirler">
-            <?php require __DIR__ . '/includes/hava_sehir_seridi.php'; ?>
         </div>
     </section>
 
