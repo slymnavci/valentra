@@ -48,7 +48,12 @@ const FUTBOL_VARSAYILAN_LIG = 'tur.1';
  * için ESPN kodunu buraya yazmak yeterli (espn.com/soccer/league/_/name/KOD).
  */
 const FUTBOL_LIGLER = [
-    'Türkiye'         => ['tur.1' => 'Süper Lig', 'tur.2' => '1. Lig'],
+    /*
+     * 1. Lig (tur.2) kaldirildi (23.10.2026, site sahibinin karari):
+     * ESPN bu lig icin veri vermiyor, sayfa bos aciliyordu. 30.10.2026'da
+     * yeniden sinandi: puan durumu {"seasons":[]}, fikstur bos.
+     */
+    'Türkiye'         => ['tur.1' => 'Süper Lig'],
     'Avrupa Kupaları' => ['uefa.champions' => 'Şampiyonlar Ligi', 'uefa.europa' => 'Avrupa Ligi', 'uefa.europa.conf' => 'Konferans Ligi', 'uefa.nations' => 'Uluslar Ligi'],
     'İngiltere'       => ['eng.1' => 'Premier League', 'eng.2' => 'Championship', 'eng.fa' => 'FA Cup', 'eng.league_cup' => 'Lig Kupası'],
     'İspanya'         => ['esp.1' => 'La Liga', 'esp.2' => 'La Liga 2', 'esp.copa_del_rey' => 'Kral Kupası'],
@@ -79,7 +84,6 @@ const FUTBOL_LIGLER = [
 /** Seçicinin üstündeki hızlı seçimler. */
 const FUTBOL_ONE_CIKAN_LIGLER = [
     'tur.1'          => 'Süper Lig',
-    'tur.2'          => '1. Lig',
     'eng.1'          => 'Premier League',
     'esp.1'          => 'La Liga',
     'ita.1'          => 'Serie A',

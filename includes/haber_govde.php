@@ -179,16 +179,46 @@ foreach (($govdeVeri ?? []) as $ad => $deger) {
         </div>
     <?php endif; ?>
 
+    <?php
+    if (haber_derleme_mi($haber) || str_starts_with((string) ($haber['ajan_modeli'] ?? ''), 'valentra-')) {
+        // Derleme ve ozgun haber (Valentra Veri / Dosya): ara basliklar ("## ") ve madde listeleri.
+        $metinHtml = bicimli_metin_html((string) $haber['icerik']);
+    } else {
+        $metinHtml = '';
+
+        foreach (preg_split('/\n\s*\n/u', trim($haber['icerik'])) ?: [] as $paragraf) {
+            $metinHtml .= '<p>' . nl2br(e(trim($paragraf))) . "</p>\n";
+        }
+    }
+
+    /*
+     * "BUNU DA OKUYUN" (site sahibinin istegi, 29.10.2026: "tiklanma sayisi
+     * artmasi lazim"): metnin ortasinda, ikinci paragraftan sonra ilgili
+     * bir haber (ortak etiket ya da ayni baslik). Okur haberi bitirmeden
+     * bir sonrakine gecebiliyor. Metin iki paragraftan kisaysa sonunda.
+     */
+    $okuyunHtml = '';
+
+    foreach (haber_ilgililer($haber, 1) as $okuyun) {
+        $okuyunHtml = '<aside class="bunu-da-okuyun"><span>Bunu da okuyun</span><a href="'
+            . e(haber_yolu((string) $okuyun['slug'])) . '">' . e((string) $okuyun['baslik']) . '</a></aside>' . "\n";
+    }
+
+    if ($okuyunHtml !== '') {
+        preg_match_all('#</p>#', $metinHtml, $paragrafSonlari, PREG_OFFSET_CAPTURE);
+        $kesim = isset($paragrafSonlari[0][1]) ? $paragrafSonlari[0][1][1] + 4 : strlen($metinHtml);
+        $metinHtml = substr($metinHtml, 0, $kesim) . "\n" . $okuyunHtml . substr($metinHtml, $kesim);
+    }
+    ?>
     <div class="icerik">
-        <?php if (haber_derleme_mi($haber) || str_starts_with((string) ($haber['ajan_modeli'] ?? ''), 'valentra-')): ?>
-            <?php /* Derleme ve ozgun haber (Valentra Veri / Dosya): ara basliklar ("## ") ve madde listeleri. */ ?>
-            <?= bicimli_metin_html((string) $haber['icerik']) ?>
-        <?php else: ?>
-            <?php foreach (preg_split('/\n\s*\n/u', trim($haber['icerik'])) ?: [] as $paragraf): ?>
-                <p><?= nl2br(e(trim($paragraf))) ?></p>
-            <?php endforeach; ?>
-        <?php endif; ?>
+        <?= $metinHtml ?>
     </div>
+
+    <?php
+    // Reklam alani (AdSense panelden tanimliysa; bkz. includes/olcum_reklam.php).
+    require_once __DIR__ . '/olcum_reklam.php';
+    echo reklam_alani_html(empty($sonrakiIstek));
+    ?>
 
     <?php if ($iframeUrl !== '' && !$videoMu): ?>
         <div class="gomulu-icerik">

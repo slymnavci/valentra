@@ -35,8 +35,30 @@ if ($haber === null) {
     exit;
 }
 
-$sayfaBasligi  = $haber['baslik'] . ' — Valentra';
-$sayfaAciklama = $haber['ozet'];
+/*
+ * ARAMA SONUCU (site sahibinin istegi, 29.10.2026: "tiklanma sayisi
+ * artsin"; Search Console: 3.744 gosterim, 100 tiklama). Google basligi
+ * ~60 karakterden sonra kesiyor: uzun baslikta " — Valentra" eki yer
+ * kaplamasin, haberin kendisi tam gorunsun. Aciklama 120-155 karakter:
+ * ozet kisaysa metnin ilk cumleleriyle tamamlaniyor, uzunsa kelime
+ * sinirinda kisaltiliyor.
+ */
+$sayfaBasligi = mb_strlen((string) $haber['baslik'], 'UTF-8') <= 52
+    ? $haber['baslik'] . ' — Valentra'
+    : (string) $haber['baslik'];
+
+$sayfaAciklama = trim((string) $haber['ozet']);
+
+if (mb_strlen($sayfaAciklama, 'UTF-8') < 110) {
+    $ek = trim(preg_replace('/\s+/u', ' ', strip_tags((string) $haber['icerik'])) ?? '');
+
+    // Metin ozetle ayni cumleyle basliyorsa tekrar etme.
+    if ($ek !== '' && !str_starts_with($ek, mb_substr($sayfaAciklama, 0, 40, 'UTF-8'))) {
+        $sayfaAciklama = trim($sayfaAciklama . ' ' . $ek);
+    }
+}
+
+$sayfaAciklama = kisalt($sayfaAciklama, 155);
 $aktifKategori = (string) ($haber['kategori_slug'] ?? '');
 
 // Panelde "hangi haberler okundu" listesini besler; sayfa_ust.php
@@ -138,6 +160,7 @@ $govdeVeri = [
     if (!akis || !son || !('IntersectionObserver' in window) || !window.fetch) { return; }
     var TAVAN = <?= (int) HABER_AKIS_TAVANI ?>, yuklu = 1, bekliyor = false, bitti = false, gorulen = {}, vk = '';
     try { vk = localStorage.getItem('vz_k') || ''; } catch (e) {}
+    var ilkMakale = akis.querySelector('article[data-adres]'), gaSayilan = {};
     function makaleler() { return akis.querySelectorAll('article[data-adres]'); }
     function sonMakale() { var l = makaleler(); return l[l.length - 1]; }
     function yukle() {
@@ -154,6 +177,12 @@ $govdeVeri = [
                 d.innerHTML = html;
                 while (d.firstChild) { akis.appendChild(d.firstChild); }
                 yuklu++;
+                // Gelen haberin reklam alani: innerHTML ile eklenen betik calismadigi
+                // icin burada dolduruluyor (bkz. includes/olcum_reklam.php).
+                [].forEach.call(akis.querySelectorAll('ins.adsbygoogle:not([data-vz-dolu])'), function (r) {
+                    r.setAttribute('data-vz-dolu', '1');
+                    try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {}
+                });
                 izle.observe(sonMakale());
                 // Eklenen haber kisaysa son isaret hala gorus alaninda kaliyor ve
                 // gozlemci yeniden haber vermiyordu (akis ikinci haberde duruyordu):
@@ -171,6 +200,12 @@ $govdeVeri = [
             if (location.pathname + location.search !== adres) {
                 try { history.replaceState(null, '', adres); } catch (e) {}
                 document.title = a.getAttribute('data-baslik');
+                // Google Analytics: kaydirmayla gelen her haber ayri sayfa goruntulemesi
+                // (site sahibinin istegi, 29.10.2026). Ilk haber sayfa acilisinda sayildi.
+                if (window.gtag && a !== ilkMakale && !gaSayilan[adres]) {
+                    gaSayilan[adres] = 1;
+                    gtag('event', 'page_view', { page_location: location.origin + adres, page_path: adres, page_title: a.getAttribute('data-baslik') });
+                }
             }
             if (z && !gorulen[z]) {
                 gorulen[z] = 1;

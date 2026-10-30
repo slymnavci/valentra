@@ -1068,6 +1068,24 @@ a.menu-oge.aktif::after,
 :where(:root[data-tema="koyu"]) .menu-acilir a:hover { background: rgba(255, 255, 255, .07); color: var(--altin); }
 :where(:root[data-tema="koyu"]) .menu-acilir a.aktif { color: var(--altin); }
 
+/*
+ * Orta genislikte (dizustu, tablet) menu tek satira sigsin. "Burclar"
+ * eklenince (29.10.2026) 1280 pikselde alt satira dusuyordu; ValPapel,
+ * ValSpor, ValMagazin menusunde de (30.10.2026 olcumu) bu ayar olmadan
+ * 1024 pikselde iki satir.
+ */
+@media (min-width: 721px) and (max-width: 1439px) {
+    .menu-oge { padding: 0 11px; font-size: .95rem; }
+}
+
+@media (min-width: 721px) and (max-width: 1180px) {
+    .menu-oge { padding: 0 8px; font-size: .9rem; }
+}
+
+@media (min-width: 721px) and (max-width: 1080px) {
+    .menu-oge { padding: 0 6px; font-size: .84rem; gap: 4px; }
+}
+
 /* Dar ekranda acilir liste yatay kaydirmayi bozmasin: akisa gecer. */
 @media (max-width: 720px) {
     /* Dar ekranda menu yatay kayiyor. */
@@ -5520,6 +5538,28 @@ a.bulut-etiket:hover,
 }
 .gazete-alt-sekmeler a:hover { color: var(--metin); }
 .gazete-alt-sekmeler a.aktif { color: var(--gazete-renk); font-weight: 700; }
+
+/* "Bunu da okuyun" (metnin ortasinda ilgili haber) ve reklam alani; cerez bildirimi (29.10.2026). */
+.bunu-da-okuyun {
+    margin: 22px 0; padding: 14px 16px; border-left: 4px solid var(--altin);
+    background: color-mix(in srgb, var(--altin) 6%, var(--kart)); border-radius: 0 10px 10px 0;
+}
+.bunu-da-okuyun span { display: block; font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--altin); margin-bottom: 4px; }
+.bunu-da-okuyun a { font-weight: 800; font-size: 1.05rem; line-height: 1.35; color: var(--metin); text-decoration: none; }
+.bunu-da-okuyun a:hover { color: var(--vurgu); text-decoration: underline; }
+.reklam-alani { margin: 22px 0; min-height: 120px; text-align: center; }
+.reklam-etiket { display: block; font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; color: var(--metin-soluk); margin-bottom: 4px; }
+.cerez-bildirimi {
+    position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 1000; max-width: 560px;
+    padding: 16px 18px; background: var(--kart); color: var(--metin); border: 1px solid var(--cizgi);
+    border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, .18); font-size: .88rem;
+}
+.cerez-bildirimi[hidden] { display: none; }
+.cerez-bildirimi p { margin: 0 0 12px; line-height: 1.5; }
+.cerez-bildirimi a { color: var(--vurgu); }
+.cerez-dugmeler { display: flex; gap: 10px; justify-content: flex-end; }
+.cerez-dugmeler button { font: inherit; font-weight: 700; padding: 8px 16px; border-radius: 8px; border: 1px solid var(--cizgi); background: var(--kart); color: var(--metin); cursor: pointer; }
+.cerez-dugmeler button.ana { background: var(--altin); border-color: var(--altin); color: #fff; }
 
 /* --- Video haberler (30.10.2026) ----------------------------------------- */
 .video-sekmeler { --gazete-renk: var(--altin); }

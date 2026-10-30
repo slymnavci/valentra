@@ -70,4 +70,5 @@ $govdeVeri = [
 header('Content-Type: text/html; charset=utf-8');
 ?>
 <div class="sonraki-ayrac" role="separator"><span>Sıradaki haber</span></div>
+<?php $sonrakiIstek = true; // reklam alanini akis betigi dolduruyor (bkz. haber.php) ?>
 <?php require __DIR__ . '/haber_govde.php'; ?>
