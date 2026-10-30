@@ -50,7 +50,8 @@ const FUTBOL_VARSAYILAN_LIG = 'tur.1';
 const FUTBOL_LIGLER = [
     /*
      * 1. Lig (tur.2) kaldirildi (23.10.2026, site sahibinin karari):
-     * ESPN bu lig icin veri vermiyor, sayfa bos aciliyordu.
+     * ESPN bu lig icin veri vermiyor, sayfa bos aciliyordu. 30.10.2026'da
+     * yeniden sinandi: puan durumu {"seasons":[]}, fikstur bos.
      */
     'Türkiye'         => ['tur.1' => 'Süper Lig'],
     'Avrupa Kupaları' => ['uefa.champions' => 'Şampiyonlar Ligi', 'uefa.europa' => 'Avrupa Ligi', 'uefa.europa.conf' => 'Konferans Ligi', 'uefa.nations' => 'Uluslar Ligi'],
