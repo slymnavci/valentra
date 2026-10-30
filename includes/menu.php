@@ -43,7 +43,7 @@ function site_menusu(): array
         $slug = (string) $k['slug'];
 
         if ($slug === 'ekonomi') {
-            $menu[] = gazete_menu_ogesi('valpapel', ['ekonomi', 'piyasalar']);
+            $menu[] = gazete_menu_ogesi('valpapel', ['ekonomi', 'piyasalar', 'resmi-gazete']);
         } elseif ($slug === 'spor') {
             $menu[] = gazete_menu_ogesi('valspor', ['spor']);
         } elseif (!isset(KATEGORI_GAZETESI[$slug])) {

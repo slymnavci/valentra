@@ -103,6 +103,7 @@ if ($kategori['slug'] === 'spor') {
             'puan-durumu'  => 'spor-puan',
             'fikstur'      => 'spor-fikstur',
             'gol-kralligi' => 'spor-gol',
+            'asist-kralligi' => 'spor-asist',
             default        => 'spor',
         };
 
@@ -126,6 +127,7 @@ if ($kategori['slug'] === 'spor') {
             'puan-durumu'  => $ligAdi . ' güncel puan durumu.',
             'fikstur'      => $ligAdi . ' fikstürü, maç sonuçları ve canlı skorlar.',
             'gol-kralligi' => $ligAdi . ' gol krallığı.',
+            'asist-kralligi' => $ligAdi . ' asist krallığı.',
             'kulup'        => 'Kulübün sezon analizi, son maçları ve golleri.',
             default        => 'Maçın golleri, kartları, istatistikleri ve kadroları.',
         };
