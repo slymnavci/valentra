@@ -154,6 +154,9 @@ function gazeteler(): array
                 'gostergeler' => ['ad' => 'Göstergeler', 'yol' => ['piyasa_bolum_yolu', 'gostergeler'], 'veri_sayfasi' => true],
                 'sirket'      => ['ad' => 'Şirketler',   'yol' => ['sirket_yolu'],                       'veri_sayfasi' => true],
                 'piyasalar'   => ['ad' => 'Piyasalar',   'yol' => ['piyasalar_yolu'],                    'veri_sayfasi' => true],
+                // Resmi Gazete ozetleri (30.10.2026, site sahibi: "ValPapel altina
+                // Resmi Gazete haberlerini de koyalim; bir link ile baglanabilsin").
+                'resmi-gazete' => ['ad' => 'Resmî Gazete', 'yol' => ['rg_yolu'], 'anahtar' => 'resmi-gazete', 'veri_sayfasi' => true],
             ],
         ],
         'valspor' => [
@@ -174,8 +177,9 @@ function gazeteler(): array
                 'futbol' => [
                     'ad'       => 'Futbol',
                     'alt_ad'   => 'Haberler',
-                    'aciklama' => 'Futbol haberleri: maçlar, transferler, milli takım; Süper Lig puan durumu ve gol krallığı.',
-                    'veri'     => 'futbol',
+                    // Once haberler (30.10.2026, site sahibi: "futbola girdigimizde once
+                    // haberler; puan durumu, fikstur, gol ve asist kralligina menuden gidelim").
+                    'aciklama' => 'Futbol haberleri: maçlar, transferler, milli takım.',
                     'kosullar' => [['kategoriler' => ['spor'], 'haric' => $sporDisi]],
                 ],
                 'super-lig' => [
@@ -223,6 +227,7 @@ function gazeteler(): array
                 'puan-durumu'  => ['ad' => 'Puan Durumu',  'ust' => 'futbol', 'yol' => ['spor_bolum_yolu', 'puan-durumu'],  'anahtar' => 'spor-puan'],
                 'fikstur'      => ['ad' => 'Fikstür',      'ust' => 'futbol', 'yol' => ['spor_bolum_yolu', 'fikstur'],      'anahtar' => 'spor-fikstur'],
                 'gol-kralligi' => ['ad' => 'Gol Krallığı', 'ust' => 'futbol', 'yol' => ['spor_bolum_yolu', 'gol-kralligi'], 'anahtar' => 'spor-gol'],
+                'asist-kralligi' => ['ad' => 'Asist Krallığı', 'ust' => 'futbol', 'yol' => ['spor_bolum_yolu', 'asist-kralligi'], 'anahtar' => 'spor-asist'],
             ],
         ],
         'valmagazin' => [
@@ -279,7 +284,7 @@ function gazeteler(): array
     require_once __DIR__ . '/futbol.php';
 
     if (!futbol_api_acik()) {
-        unset($liste['valspor']['bolumler']['gol-kralligi']);
+        unset($liste['valspor']['bolumler']['gol-kralligi'], $liste['valspor']['bolumler']['asist-kralligi']);
     }
 
     return $liste;
@@ -500,35 +505,11 @@ function gazete_ust_html(string $gazete, string $aktif = ''): string
 }
 
 /**
- * Basligin istatistikleri ('veri'): sayfada haberlerin ustunde. Veri
+ * Basligin istatistikleri ('veri'; Basketbol ve Voleybol): sayfada haberlerin ustunde. Veri
  * alinamazsa bos; haberler yine gorunuyor.
  */
 function gazete_veri_html(string $veri): string
 {
-    if ($veri === 'futbol') {
-        require_once __DIR__ . '/spor_panel.php';
-
-        $p    = spor_parametreleri([]);
-        $html = '';
-        $puan = spor_paneli_html('puan-durumu', $p);
-
-        if ($puan !== '') {
-            $html .= '<div class="bolum-basligi"><h2><a href="' . e(spor_bolum_yolu('puan-durumu')) . '">Süper Lig Puan Durumu</a></h2>'
-                   . '<span class="cizgi"></span><a class="gazete-tumu" href="' . e(spor_bolum_yolu('puan-durumu')) . '">Tüm ligler &rarr;</a></div>'
-                   . $puan;
-        }
-
-        $gol = futbol_api_acik() ? spor_paneli_html('gol-kralligi', $p) : '';
-
-        if ($gol !== '') {
-            $html .= '<div class="bolum-basligi"><h2><a href="' . e(spor_bolum_yolu('gol-kralligi')) . '">Gol Krallığı</a></h2>'
-                   . '<span class="cizgi"></span><a class="gazete-tumu" href="' . e(spor_bolum_yolu('fikstur')) . '">Fikstür &rarr;</a></div>'
-                   . $gol;
-        }
-
-        return $html;
-    }
-
     if ($veri === 'basketbol') {
         require_once __DIR__ . '/basketbol.php';
 

@@ -8,6 +8,7 @@ declare(strict_types=1);
  *   puan-durumu    secilen ligin puan durumu
  *   fikstur        secilen ligin maç gunleri, canli skorlar
  *   gol-kralligi   secilen ligin gol kralligi
+ *   asist-kralligi secilen ligin asist kralligi (30.10.2026)
  *   kulup          kulubun analizi, son maclari ve golleri
  *   mac            macin golleri, kartlari ve istatistigi
  *
@@ -31,6 +32,7 @@ const SPOR_BOLUMLERI = [
     'puan-durumu'  => 'Puan Durumu',
     'fikstur'      => 'Fikstür',
     'gol-kralligi' => 'Gol Krallığı',
+    'asist-kralligi' => 'Asist Krallığı',
 ];
 
 /** Sekmesi olmayan, bağlantıyla açılan bölümler. */
@@ -106,7 +108,7 @@ function spor_sekmeleri_html(string $aktif, string $lig): string
     $sekmeler = ['' => 'Güncel Spor Haberleri'] + SPOR_BOLUMLERI;
 
     if (!futbol_api_acik()) {
-        unset($sekmeler['gol-kralligi']);
+        unset($sekmeler['gol-kralligi'], $sekmeler['asist-kralligi']);
     }
 
     ob_start();
@@ -236,6 +238,7 @@ function spor_paneli_html(string $bolum, array $p): string
     [$govde, $zaman, $yenile] = match ($bolum) {
         'puan-durumu'  => spor_api_puan_html($lig),
         'fikstur'      => spor_api_fikstur_html($lig, $p['tur']),
+        'asist-kralligi' => spor_api_gol_html($lig, 'asist'),
         default        => spor_api_gol_html($lig),
     };
 
@@ -451,9 +454,10 @@ function spor_mac_satiri_html(array $m, string $lig, string $ust = ''): string
 }
 
 /** @return array{0:string,1:int,2:bool} */
-function spor_api_gol_html(array $lig): array
+/** Gol ya da asist kralligi; siralanan sutun vurgulu. */
+function spor_api_gol_html(array $lig, string $tur = 'gol'): array
 {
-    $kayit = futbol_gol_kralligi($lig['id']);
+    $kayit = $tur === 'asist' ? futbol_asist_kralligi($lig['id']) : futbol_gol_kralligi($lig['id']);
 
     if ($kayit['veri'] === null) {
         return ['', 0, false];
@@ -470,8 +474,8 @@ function spor_api_gol_html(array $lig): array
                         <th scope="col" class="takim">Oyuncu</th>
                         <th scope="col" class="takim genis">Takım</th>
                         <th scope="col" title="Maç">M</th>
-                        <th scope="col" title="Gol" class="puan">Gol</th>
-                        <th scope="col" title="Asist">Asist</th>
+                        <th scope="col" title="Gol"<?= $tur === 'gol' ? ' class="puan"' : '' ?>>Gol</th>
+                        <th scope="col" title="Asist"<?= $tur === 'asist' ? ' class="puan"' : '' ?>>Asist</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -486,8 +490,8 @@ function spor_api_gol_html(array $lig): array
                                 </a>
                             </td>
                             <td><?= $o['mac'] ?></td>
-                            <td class="puan"><?= $o['gol'] ?></td>
-                            <td><?= $o['asist'] ?></td>
+                            <td<?= $tur === 'gol' ? ' class="puan"' : '' ?>><?= $o['gol'] ?></td>
+                            <td<?= $tur === 'asist' ? ' class="puan"' : '' ?>><?= $o['asist'] ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
