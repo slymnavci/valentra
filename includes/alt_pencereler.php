@@ -8,7 +8,10 @@ declare(strict_types=1);
  * duruyor; boylece konu basligi bir gazete sayfasi gibi taraniyor.
  */
 
-$altBloklar = kategori_bloklari(4, 6);
+// Dort blok, tek satir (site sahibinin istegi, 30.10.2026: "buraya 4 tane
+// koysak yeterli; alt taraf bos kaldi, iyi durmuyor"). Ilk dort konu
+// basligi: Gundem, Politika, Ekonomi, Dunya.
+$altBloklar = kategori_bloklari(4, 4);
 
 if ($altBloklar === []) {
     return;
