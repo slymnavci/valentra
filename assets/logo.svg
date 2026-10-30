@@ -1,22 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 104" role="img" aria-label="Valentra">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 262" role="img" aria-label="Valentra">
   <defs>
-    <linearGradient id="vLacivert" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%"   stop-color="#17304f"/>
-      <stop offset="100%" stop-color="#2b4a73"/>
-    </linearGradient>
-    <linearGradient id="vAltin" x1="0" y1="0" x2="0.3" y2="1">
-      <stop offset="0%"   stop-color="#e2c894"/>
-      <stop offset="45%"  stop-color="#c9a86a"/>
-      <stop offset="100%" stop-color="#a8854a"/>
-    </linearGradient>
+    <linearGradient id="vl" x1="0" y1="0" x2="1" y2="1"><stop class="vl1" offset="0" stop-color="#121a2c"/><stop class="vl2" offset=".55" stop-color="#26324d"/><stop class="vl3" offset="1" stop-color="#2e3b58"/></linearGradient>
+    <linearGradient id="vk" x1="0" y1="0" x2=".4" y2="1"><stop offset="0" stop-color="#ff1f2a"/><stop offset="1" stop-color="#b30d16"/></linearGradient>
   </defs>
-
-  <path fill="url(#vLacivert)"
-        d="M4 6 L29 6 L60 79 L91 6 L116 6 L73 98 L47 98 Z"/>
-
-  <path fill="#ffffff"
-        d="M57.5 20 C45 48 42.5 73 56 100 L63 100 C50 73 52 48 62 20 Z"/>
-
-  <path fill="url(#vAltin)"
-        d="M60 22 C49 49 47 72 58.5 96 C70 72 69 48 60 22 Z"/>
+  <path class="vl" d="M8 12 H88 L232 254 H152 Z" fill="url(#vl)" stroke="url(#vl)" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M8 12 H88 L120 66 C90 50 40 46 14 22 Z" fill="#0a0f1a" opacity=".5"/>
+  <path d="M218 6 H334 L226 190 L174 98 Z" fill="url(#vk)" stroke="url(#vk)" stroke-width="6" stroke-linejoin="round"/>
 </svg>

@@ -5609,3 +5609,68 @@ a.bulut-etiket:hover,
 .video-seridi .kart-izgara { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 1200px) { .video-seridi .kart-izgara { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px)  { .video-seridi .kart-izgara { grid-template-columns: 1fr; } }
+
+/* --- Yeni logo ve ust bant gorseli (30.10.2026) ---------------------------
+   Site sahibinin yeni logosu: lacivert-kirmizi V ve "Λ" harfli VALENTRA,
+   SVG olarak sayfada (includes/sayfa_ust.php). Ust bantta Istanbul ve dunya
+   gorseli; logonun oldugu sol taraf zemin rengine soluyor, logo okunakli. */
+.ust-bant {
+    --ust-ortu-uc: 8%;
+    background:
+        linear-gradient(90deg,
+            var(--kart) 0,
+            var(--kart) 30%,
+            color-mix(in srgb, var(--kart) 72%, transparent) 50%,
+            color-mix(in srgb, var(--kart) var(--ust-ortu-uc), transparent) 78%),
+        url("/assets/ust-arka.webp") right 42% / cover no-repeat,
+        var(--kart);
+}
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) .ust-bant { --ust-ortu-uc: 45%; }
+}
+:where(:root[data-tema="koyu"]) .ust-bant { --ust-ortu-uc: 45%; }
+
+.ust-satir { min-height: 78px; }
+.ust-arama { background: color-mix(in srgb, var(--kart) 92%, transparent); backdrop-filter: blur(4px); }
+
+.logo .marka { width: 62px; height: 48px; }
+.logo .ad {
+    display: block;
+    width: auto;
+    height: 31px;
+    color: #141c2e;
+    text-indent: 0;
+    letter-spacing: 0;
+}
+.logo .alt {
+    margin-top: 8px;
+    font-size: .74rem;
+    letter-spacing: .36em;
+    text-indent: 0;
+    color: #3a3f4a;
+}
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) .logo .ad { color: #e8edf5; }
+    :where(:root:not([data-tema="acik"])) .logo .alt { color: var(--metin-soluk); }
+    :where(:root:not([data-tema="acik"])) .logo .vl1 { stop-color: #4b5d84; }
+    :where(:root:not([data-tema="acik"])) .logo .vl2 { stop-color: #6c80a8; }
+    :where(:root:not([data-tema="acik"])) .logo .vl3 { stop-color: #8193b8; }
+}
+:where(:root[data-tema="koyu"]) .logo .ad { color: #e8edf5; }
+:where(:root[data-tema="koyu"]) .logo .alt { color: var(--metin-soluk); }
+:where(:root[data-tema="koyu"]) .logo .vl1 { stop-color: #4b5d84; }
+:where(:root[data-tema="koyu"]) .logo .vl2 { stop-color: #6c80a8; }
+:where(:root[data-tema="koyu"]) .logo .vl3 { stop-color: #8193b8; }
+
+@media (max-width: 640px) {
+    .ust-satir { min-height: 64px; }
+    .logo .marka { width: 44px; height: 34px; }
+    .logo .ad { height: 22px; }
+    /* Telefonda gorsel logonun arkasina dusmesin: ortu daha genis. */
+    .ust-bant {
+        background:
+            linear-gradient(90deg, var(--kart) 0, var(--kart) 55%, color-mix(in srgb, var(--kart) 55%, transparent) 100%),
+            url("/assets/ust-arka.webp") right 42% / cover no-repeat,
+            var(--kart);
+    }
+}

@@ -39,7 +39,7 @@ $menu = site_menusu();
  */
 $seoAdres  = $seoAdres  ?? gecerli_adres();
 // Varsayilan paylasim gorseli PNG: SVG'yi Facebook, WhatsApp ve X gostermiyor.
-$seoGorsel = $seoGorsel ?? (site_adresi() . '/assets/paylasim.png');
+$seoGorsel = $seoGorsel ?? (site_adresi() . '/assets/paylasim.jpg');
 $seoTur    = $seoTur    ?? 'website';
 $seoSema   = $seoSema   ?? seo_site_semasi();
 
@@ -194,10 +194,34 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
                 <span></span><span></span><span></span>
             </button>
 
-            <a class="logo" href="/">
-                <img class="marka" src="/assets/logo.svg" alt="" width="40" height="35">
+            <?php /* Logo (30.10.2026, site sahibinin yeni logosu): lacivert-kirmizi V ve
+                     "Λ" harfli VALENTRA yazisi SVG olarak sayfada; koyu temada renkleri
+                     CSS'ten degisiyor. */ ?>
+            <a class="logo" href="/" aria-label="Valentra — Ana sayfa">
+                <svg class="marka" viewBox="0 0 340 262" aria-hidden="true" focusable="false">
+                    <defs>
+                        <linearGradient id="ust-vl" x1="0" y1="0" x2="1" y2="1"><stop class="vl1" offset="0" stop-color="#121a2c"/><stop class="vl2" offset=".55" stop-color="#26324d"/><stop class="vl3" offset="1" stop-color="#2e3b58"/></linearGradient>
+    <linearGradient id="ust-vk" x1="0" y1="0" x2=".4" y2="1"><stop offset="0" stop-color="#ff1f2a"/><stop offset="1" stop-color="#b30d16"/></linearGradient>
+                    </defs>
+                    <path class="vl" d="M8 12 H88 L232 254 H152 Z" fill="url(#ust-vl)" stroke="url(#ust-vl)" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M8 12 H88 L120 66 C90 50 40 46 14 22 Z" fill="#0a0f1a" opacity=".5"/>
+  <path d="M218 6 H334 L226 190 L174 98 Z" fill="url(#ust-vk)" stroke="url(#ust-vk)" stroke-width="6" stroke-linejoin="round"/>
+                </svg>
                 <span class="yazi">
-                    <span class="ad">VALENTRA</span>
+                    <svg class="ad" viewBox="0 0 806 100" fill="currentColor" aria-hidden="true" focusable="false">
+                        <defs><clipPath id="ust-kes"><rect width="806" height="100"/></clipPath></defs>
+                        <g clip-path="url(#ust-kes)">
+    <path d="M-5 -12 L46 100 L97 -12" fill="none" stroke="currentColor" stroke-width="21"/>
+    <path d="M107 112 L158 0 L209 112" fill="none" stroke="currentColor" stroke-width="21" stroke-miterlimit="10"/>
+    <rect x="224" width="21" height="100"/><rect x="224" y="79" width="68" height="21"/>
+    <rect x="312" width="21" height="100"/><rect x="312" width="70" height="21"/><rect x="312" y="39.5" width="64" height="21"/><rect x="312" y="79" width="70" height="21"/>
+    <rect x="402" width="21" height="100"/><rect x="469" width="21" height="100"/><path d="M402 0 H423 L490 100 H469 Z"/>
+    <rect x="510" width="80" height="21"/><rect x="539.5" width="21" height="100"/>
+    <rect x="610" width="21" height="100"/><path d="M620.5 10.5 H650 A25.0 25.0 0 0 1 650 49.5 H620.5" fill="none" stroke="currentColor" stroke-width="21"/><path d="M639 52 H662 L695 100 H671 Z"/>
+    <path d="M709 112 L760 0 L811 112" fill="none" stroke="currentColor" stroke-width="21" stroke-miterlimit="10"/>
+  </g>
+                    </svg>
+                    <span class="gizli-etiket">Valentra</span>
                     <span class="alt">GÜNCEL HABER ÖZETLERİ</span>
                 </span>
             </a>
