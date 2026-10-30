@@ -5666,11 +5666,12 @@ a.bulut-etiket:hover,
     .ust-satir { min-height: 64px; }
     .logo .marka { width: 44px; height: 34px; }
     .logo .ad { height: 22px; }
-    /* Telefonda gorsel logonun arkasina dusmesin: ortu daha genis. */
+    /* Telefonda gorsel logonun arkasina dusmesin: ortu daha genis.
+       960 piksellik kopya (40 KB; asil 1600 piksel, 100 KB). */
     .ust-bant {
         background:
             linear-gradient(90deg, var(--kart) 0, var(--kart) 55%, color-mix(in srgb, var(--kart) 55%, transparent) 100%),
-            url("/assets/ust-arka.webp") right 42% / cover no-repeat,
+            url("/assets/ust-arka-960.webp") right 42% / cover no-repeat,
             var(--kart);
     }
 }

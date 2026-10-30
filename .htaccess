@@ -275,4 +275,11 @@
     <FilesMatch "\.(png|jpe?g|webp|gif|avif|svg|ico)$">
         Header set Cache-Control "public, max-age=604800"
     </FilesMatch>
+    # Haber ve yazar gorselleri (gorseller/*): dosya adi kaynak adresin
+    # ozeti, icerik degismiyor; bir yil. Klasordeki .htaccess'in ayni
+    # yonergesi sunucuda (LiteSpeed) uygulanmiyordu, 30.10.2026 olcumunde
+    # bu gorseller bir haftalik geliyordu (Lighthouse "uzun onbellek").
+    <FilesMatch "^[0-9a-f]{40}(-\d+)?\.(webp|jpe?g|png|gif|avif)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
 </IfModule>

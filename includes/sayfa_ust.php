@@ -26,6 +26,11 @@ ziyaret_kaydet(
     $sayfaBasligi
 );
 
+// Onbellekten sunulan kopyada da ayni kayit yazilsin (bkz. includes/sayfa_onbellek.php).
+if (function_exists('sayfa_onbellek_bilgi')) {
+    sayfa_onbellek_bilgi(isset($ziyaretHaberId) ? (int) $ziyaretHaberId : null, $sayfaBasligi);
+}
+
 require_once __DIR__ . '/menu.php';
 
 $menu = site_menusu();
