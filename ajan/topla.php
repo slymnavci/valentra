@@ -1776,6 +1776,9 @@ foreach ($gruplar as $grupNo => $grup) {
             'kaynakAdi'  => (string) $aday['kaynak']['ad'],
             'kaynakTuru' => (string) ($aday['kaynak']['tur'] ?? 'rss'),
             'kapsam'     => (int) ($aday['kapsam'] ?? 1),
+            // Adayin kendisi bir video (YouTube kanal beslemesi): model
+            // kisa video haberi yazar (Yazar::YONERGE, VIDEO HABERLERI).
+            'video'      => $baglantiVideo !== '',
         ];
     }
 
