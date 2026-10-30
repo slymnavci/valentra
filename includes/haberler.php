@@ -113,14 +113,15 @@ function haber_gun_ifadesi(bool $kategoriBilinir = true, bool $anaSayfa = false)
     $gunDakika = haber_bugun_dakika();
 
     /*
-     * Ana sayfada 12 saatlik spor gunu yalnizca dort buyuk kulup ve milli
-     * takimlarin haberinde (30.10.2026, site sahibi: "ana sayfada en cok spor
-     * haberi var"). Gece ve sabah dunku butun spor haberleri "bugun", dunku
-     * gundem haberleri "dun" sayiliyordu; spor ilk sayfayi dolduruyordu.
-     * ValSpor ve spor sayfalarinda butun spor haberleri eskisi gibi.
+     * Ana sayfada 12 saatlik spor gunu yalnizca Turkiye'nin buyuk basarisi
+     * olan spor haberinde (haber_onde_spor_kosulu; 30.10.2026, site sahibi:
+     * "ana sayfada en cok spor haberi var"). Gece ve sabah dunku butun spor
+     * haberleri "bugun", dunku gundem haberleri "dun" sayiliyordu; spor ilk
+     * sayfayi dolduruyordu. ValSpor ve spor sayfalarinda butun spor
+     * haberleri eskisi gibi.
      */
     $spor = $anaSayfa
-        ? "k.slug = 'spor' AND " . haber_baslikta_gecen_kosulu(HABER_ONDE_SPOR)
+        ? haber_onde_spor_kosulu()
         : "k.slug = 'spor'";
     $pencere   = $kategoriBilinir
         ? 'CASE WHEN ' . $spor . ' THEN ' . max($gunDakika, 720) . ' ELSE ' . $gunDakika . ' END'
@@ -227,21 +228,31 @@ function haber_baslikta_gecen_kosulu(array $kelimeler): string
  * ANA SAYFADA SPOR ARKADA (site sahibinin istegi, 30.10.2026: "ana sayfada
  * en cok spor haberi var; buyuk takimlarin maclari yoksa spor haberleri
  * arka plana alinabilir; ilk sayfalarda gundemdeki onemli haberler olmali").
- * Dort buyuk kulup ve milli takimlar disindaki spor haberi, gunun onemli
- * (ANA_SAYFA_ONEM_ESIGI) haberlerinin arkasinda; toplama dalgasindan once
- * uygulaniyor, yani yeni toplanan bir spor haberi daha once toplanmis
- * gundem haberini de one gecmiyor. Ana sayfa spor kotasi
- * (haber_ana_sayfa_ilk_set) yerinde: kaydirakta yine en az 3 spor haberi,
- * once buyuk kulupler (+15 puan). Spor haberlerinin hepsi ValSpor'da.
+ *
+ * Ayni gun daraltildi (site sahibi, 30.10.2026: "Turkiye'de ilgi odagina
+ * baktigimizda en onemli haberler politika, gundem, kazalar, olum,
+ * yaralanma, teror haberleri; futbol, basketbol ve voleybol cok arkada;
+ * mesela Turkiye bir kupa kazandiysa ana haberde olabilir"). Onceden dort
+ * buyuk kulup ve milli takimlar onde sayiliyordu; artik butun spor haberleri
+ * gunun onemli (ANA_SAYFA_ONEM_ESIGI) haberlerinin arkasinda. Tek istisna
+ * Turkiye'nin buyuk basarisi: ajan kupa, sampiyonluk ve madalyaya 88-100
+ * veriyor (ajan/src/Yazar.php, ONEM PUANI); onemi ANA_SAYFA_SPOR_ONDE_ESIGI
+ * ve ustu spor haberi gundem haberleriyle ayni sirada yarisiyor. Eski
+ * yonergede buyuk kulup maclari en fazla 85 aliyordu, yani onceden toplanmis
+ * haberler de arkada. Toplama dalgasindan once uygulaniyor: yeni toplanan
+ * spor haberi daha once toplanmis gundem haberini de one gecmiyor. Spor
+ * haberlerinin hepsi ValSpor'da.
  */
-const HABER_ONDE_SPOR = [
-    'galatasaray', 'fenerbahçe', 'beşiktaş', 'trabzonspor',
-    'milli takım', 'a milli', 'filenin sultanları', 'filenin efeleri', '12 dev adam',
-];
+const ANA_SAYFA_SPOR_ONDE_ESIGI = 88;
+
+function haber_onde_spor_kosulu(): string
+{
+    return "(k.slug = 'spor' AND h.onem >= " . ANA_SAYFA_SPOR_ONDE_ESIGI . ')';
+}
 
 function haber_arkadaki_spor_ifadesi(): string
 {
-    return "(k.slug = 'spor' AND NOT " . haber_baslikta_gecen_kosulu(HABER_ONDE_SPOR) . ')';
+    return "(k.slug = 'spor' AND h.onem < " . ANA_SAYFA_SPOR_ONDE_ESIGI . ')';
 }
 
 /*
@@ -537,7 +548,7 @@ function haber_dalga_ifadesi(): string
 }
 
 /*
- * ANA SAYFA SPOR KOTASI — kaydiragin 20 haberinde en az 3 spor haberi
+ * ANA SAYFA SPOR KOTASI — kaydiragin 20 haberinde en az 1 spor haberi
  * (site sahibinin istegi, 23.10.2026: "ana sayfada spor haberi hic yok,
  * onlari da 20 haber arasina sokalim"): bugunun ya da dunun en
  * onemlileri.
@@ -551,7 +562,11 @@ function haber_dalga_ifadesi(): string
  * bilinmiyor.
  */
 const ANA_SAYFA_MANSET_ADEDI = 20;
-const ANA_SAYFA_SPOR_KOTASI  = 3;
+
+// 3'ten 1'e (site sahibi, 30.10.2026: "futbol, basketbol ve voleybol cok
+// arkada"): kaydirakta en altta tek spor haberi; Turkiye'nin buyuk basarisi
+// zaten gundem haberleriyle yarisiyor (bkz. ANA_SAYFA_SPOR_ONDE_ESIGI).
+const ANA_SAYFA_SPOR_KOTASI  = 1;
 
 /**
  * Ana sayfanin ilk 20'si (kotalar uygulanmis); kotalar zaten doluysa bos
