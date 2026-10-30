@@ -142,7 +142,8 @@ function sayfa_onbellek_yaz(string $html): string
         // Ara sira eski dosyalari temizle (klasor sismesin).
         if (random_int(1, 200) === 1) {
             foreach (glob(SAYFA_ONBELLEK_DIZIN . '/*') ?: [] as $eski) {
-                if (str_ends_with($eski, '.html') || str_ends_with($eski, '.tmp')) {
+                // index.html klasorun bos sayfasi, onbellek degil.
+                if ((str_ends_with($eski, '.html') || str_ends_with($eski, '.tmp')) && basename($eski) !== 'index.html') {
                     if (time() - (int) @filemtime($eski) > 3600) {
                         @unlink($eski);
                     }
