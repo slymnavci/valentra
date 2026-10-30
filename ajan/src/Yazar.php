@@ -68,6 +68,11 @@ final class Yazar implements SemaliIstemci
      * teknoloji, saglik, kultur-sanat. Her haber kendi cumlelerimizle
      * ozetleniyor; sayfada kaynak adi ve haberin tamamina baglanti var.
      *
+     * 30.10.2026, site sahibi: "haberleri yaparken her zaman tum
+     * detaylari alalim; haberin asli kaynakta kalsin ama kendi ozgun
+     * cumlelerinle yeniden yorumla". ÖZGÜN YAZIM ve TÜM AYRINTILAR
+     * kurallari bunun karsiligi; uzunluk tavani 8'den 10 paragrafa.
+     *
      * YAYIN POLITIKASI site sahibinin talimati: fanatik ve dogrulanmamis
      * haberden uzak durulacak; Valentra'yi devlete karsi yalanci konuma
      * dusurecek, davaya acik haber yayimlanmayacak; yorum yok, tarafsiz
@@ -180,10 +185,20 @@ final class Yazar implements SemaliIstemci
            olay" diye ele.
 
         2) YAYIMLANABİLİRSE ÖZETİ YAZ. Kurallar:
-           - Kaynak metni yalnızca anlamak için okursun. ASLA cümle
-             kopyalamazsın; kendi cümlelerinle özgün bir özet yazarsın.
-             Özet, haberin yerine geçmez; okuru ayrıntı için kaynağa
-             yönlendirir.
+           - ÖZGÜN YAZIM: Kaynak metni yalnızca anlamak için okursun.
+             ASLA cümle kopyalamazsın ve cümle cümle eş anlamlı
+             kelimelerle değiştirerek de yazmazsın: haberi anla, sonra
+             kendi kurgunla, kendi cümlelerinle baştan yaz (sıralamayı,
+             cümle yapısını ve girişi kendin kur). Haberin aslı kaynakta
+             kalır; sayfada kaynağa bağlantı verilir.
+           - TÜM AYRINTILAR: Okur haberi bizden eksiksiz öğrenmeli.
+             Kaynaktaki bütün somut bilgileri al: kim, ne, nerede, ne
+             zaman, nasıl, neden; bütün rakamlar, oranlar, tarihler,
+             yer ve kişi adları, kurumlar, açıklamalarda söylenenler
+             (kendi cümlenle, kime ait olduğunu belirterek), olayın
+             arka planı, gerekçesi ve sonraki adımlar. Haberle ilgili
+             hiçbir olguyu atlama. Doğrudan alıntı gerekiyorsa tırnak
+             içinde, kısa ve kimin söylediğiyle ver; uzun alıntı yapma.
            - TARAFSIZ DİL. Yorum, değerlendirme, tahmin ve tavsiye yok.
              Duygu yüklü sıfat ve zarf kullanma ("skandal", "şok",
              "tarihî", "büyük tepki", "acı", "müjde"). Olanı aktar.
@@ -206,7 +221,7 @@ final class Yazar implements SemaliIstemci
              adları özgün biçimini korur.
            - Para birimlerini kaynaktaki birimiyle ver, TL'ye çevirme.
            - UZUNLUK KAYNAĞA GÖRE: kaynak metin(ler) zengin ve
-             ayrıntılıysa 5-8 paragraf yaz; ayrıntıyı (rakam, tarih, kim
+             ayrıntılıysa 5-10 paragraf yaz; ayrıntıyı (rakam, tarih, kim
              ne dedi, arka plan, sonraki adım) atma. Kaynak kısaysa 3
              paragrafta kal. Uzunluk için ASLA boş cümle, tekrar ya da
              kaynakta olmayan bilgi ekleme. İlk paragraf haberin özünü
@@ -361,7 +376,7 @@ final class Yazar implements SemaliIstemci
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
             'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı, en fazla 90 karakter'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
-            'icerik'      => ['type' => 'string',  'description' => 'Tarafsız haber metni: kaynak zenginse 5-8, kısaysa 3 paragraf; paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
+            'icerik'      => ['type' => 'string',  'description' => 'Tarafsız, özgün cümlelerle yeniden yazılmış haber metni: kaynaktaki bütün ayrıntılar (rakam, tarih, isim, açıklama, arka plan); kaynak zenginse 5-10, kısaysa 3 paragraf; paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
             'etiketler'   => [
                 'type'  => 'array',
                 'items' => ['type' => 'string'],
@@ -404,7 +419,7 @@ final class Yazar implements SemaliIstemci
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
             'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı, en fazla 90 karakter'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
-            'icerik'      => ['type' => 'string',  'description' => 'Tarafsız haber metni: kaynak zenginse 5-8, kısaysa 3 paragraf; paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
+            'icerik'      => ['type' => 'string',  'description' => 'Tarafsız, özgün cümlelerle yeniden yazılmış haber metni: kaynaktaki bütün ayrıntılar (rakam, tarih, isim, açıklama, arka plan); kaynak zenginse 5-10, kısaysa 3 paragraf; paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
             'etiketler'   => [
                 'type'  => 'array',
                 'items' => ['type' => 'string'],
