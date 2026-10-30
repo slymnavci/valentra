@@ -46,8 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $bolum = (string) ($_GET['bolum'] ?? '');
 
-if (!in_array($bolum, ['piyasa', 'spor', 'gostergeler', 'resmi-gazete', 'ozgun'], true)) {
-    ajan_json(400, ['hata' => 'bolum: piyasa, spor, gostergeler, resmi-gazete ya da ozgun olmalı.']);
+if (!in_array($bolum, ['piyasa', 'spor', 'gostergeler', 'resmi-gazete', 'ozgun', 'sirket'], true)) {
+    ajan_json(400, ['hata' => 'bolum: piyasa, spor, gostergeler, resmi-gazete, ozgun ya da sirket olmalı.']);
 }
 
 @set_time_limit(110);
@@ -124,6 +124,64 @@ try {
                 $ozet['ligler'][$kod] = 'tamam';
             }
         }
+    }
+
+    /*
+     * SIRKET SAYFALARI (30.10.2026, Google denetimi: /sirket/TKFEN 6.48 sn,
+     * TTRAK 5.74 sn, TSKB 6.39 sn, "yanit cok yavas"). Sayfa, onbellekte
+     * hic verisi olmayan sirkette Yahoo'dan dort seri ve Is Yatirim'dan
+     * sirket kartini O ANDA cekiyordu; Googlebot da az okunan sirketlere
+     * geliyor. Bayat veri aninda gosterilip yanittan sonra tazelendigi icin
+     * (canli_onbellek) yalnizca HIC verisi olmayan sirket yavas: burada once
+     * onlar, sonra verisi en eski olanlar, sure butcesi icinde dolduruluyor.
+     * Sayfanin ilk acilista istedigi seriler: 1d, 1y, 10y ve BIST 100 10y.
+     */
+    if ($bolum === 'sirket') {
+        require_once __DIR__ . '/../includes/piyasalar.php';
+        require_once __DIR__ . '/../includes/sirket.php';
+        require_once __DIR__ . '/../includes/sirket_temel.php';
+
+        // Zorla kip acik kaliyor: yalnizca asagida secilen (eksik ya da bir
+        // gunden eski) sirketlere dokunuluyor, onlarin verisi hemen cekilsin.
+        $yas = static function (string $kod): int {
+            $seri  = canli_onbellek_oku('sirket_' . $kod . '_10y');
+            $kart  = canli_onbellek_oku('isy2_' . $kod);
+
+            // Eksik olan en basa (yas sonsuz), sonra en eski.
+            return $seri === null || $kart === null
+                ? PHP_INT_MAX
+                : time() - min((int) $seri['zaman'], (int) $kart['zaman']);
+        };
+
+        $kodlar = array_keys(piyasa_sirketleri());
+        $yaslar = array_combine($kodlar, array_map($yas, $kodlar));
+        arsort($yaslar);
+
+        sirket_serileri_hazirla([['XU100', '10y']]);
+
+        $hazirlanan = [];
+        $eksik      = count(array_filter($yaslar, static fn (int $y): bool => $y === PHP_INT_MAX));
+
+        foreach ($yaslar as $kod => $y) {
+            if (microtime(true) - $baslangic > 75) {
+                break;
+            }
+
+            // Bir gunden taze olan dokunulmuyor: sayfa zaten aninda aciliyor.
+            if ($y < 86400) {
+                break;
+            }
+
+            sirket_serileri_hazirla([[$kod, '1d'], [$kod, '1y'], [$kod, '10y']]);
+            sirket_temel($kod);
+            $hazirlanan[] = $kod;
+        }
+
+        $ozet += [
+            'eksikti'    => $eksik,
+            'hazirlanan' => count($hazirlanan),
+            'kalan'      => count(array_filter(array_map($yas, $kodlar), static fn (int $y): bool => $y === PHP_INT_MAX)),
+        ];
     }
 
     if ($bolum === 'gostergeler') {
