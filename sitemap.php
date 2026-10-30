@@ -195,6 +195,13 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         </url>
     <?php endforeach; ?>
 
+    <?php // Video haberler (30.10.2026). ?>
+    <url>
+        <loc><?= e($taban . video_yolu()) ?></loc>
+        <changefreq>daily</changefreq>
+        <priority>0.6</priority>
+    </url>
+
     <?php // ValPapel, ValSpor, ValMagazin ve haber basliklari (29.10.2026). ?>
     <?php require_once __DIR__ . '/includes/gazeteler.php'; ?>
     <?php foreach (gazeteler() as $gazeteAnahtari => $gazete): ?>

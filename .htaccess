@@ -172,6 +172,11 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^kategori/([^/]+)/?$ kategori.php?k=$1 [L,QSA]
 
+    # Video haberler (30.10.2026)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^video/?$ video.php [L,QSA]
+
     # ValPapel, ValSpor, ValMagazin (29.10.2026): /valpapel, /valpapel/doviz
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

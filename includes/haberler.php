@@ -939,6 +939,77 @@ function haber_video_adresi(string $adres): string
     return $izinli ? $adres : '';
 }
 
+/*
+ * VIDEOLU HABERLER (30.10.2026, site sahibinin istegi; 22.10'daki ilk
+ * surum menu ve ana sayfa degistigi icin yeniden yazildi): /video sayfasi
+ * ve ana sayfadaki video seridi. Videolu haber = iframe_url'si
+ * haber_video_adresi'nin kabul ettigi resmi gomme adresi; panelden
+ * girilen video olmayan iframe sayilmiyor.
+ */
+const HABER_VIDEO_KOSULU = "(h.iframe_url LIKE 'https://www.youtube-nocookie.com/embed/%'
+     OR h.iframe_url LIKE 'https://player.vimeo.com/video/%'
+     OR h.iframe_url LIKE 'https://www.dailymotion.com/embed/video/%')";
+
+/**
+ * Yayindaki videolu haberler, en yeni once; $kategori verilirse o baslik.
+ *
+ * @return list<array<string,mixed>>
+ */
+function haber_videolular(int $limit, int $atla = 0, string $kategori = ''): array
+{
+    try {
+        $ifade = db()->prepare(
+            'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
+               FROM haberler h
+               LEFT JOIN kategoriler k ON k.id = h.kategori_id
+              WHERE h.durum = :d AND ' . HABER_VIDEO_KOSULU
+                . ($kategori !== '' ? ' AND k.slug = :k' : '') . '
+              ORDER BY COALESCE(h.yayin_tarihi, h.olusturuldu) DESC, h.id DESC
+              LIMIT ' . max(1, $limit) . ' OFFSET ' . max(0, $atla)
+        );
+        $ifade->execute(['d' => HABER_YAYINDA] + ($kategori !== '' ? ['k' => $kategori] : []));
+
+        // Adres kalibi SQL'de kaba; iframe'e girecek adres burada kesinlesiyor.
+        return array_values(array_filter(
+            $ifade->fetchAll(),
+            static fn (array $h): bool => haber_video_adresi((string) $h['iframe_url']) !== ''
+        ));
+    } catch (Throwable $e) {
+        error_log('[valentra] videolu haberler: ' . $e->getMessage());
+
+        return [];
+    }
+}
+
+/**
+ * Videolu haber sayilari, basliga gore (sekmeler icin); '' toplam.
+ *
+ * @return array<string,int>
+ */
+function haber_videolu_sayilari(): array
+{
+    try {
+        $satirlar = db()->query(
+            'SELECT k.slug, COUNT(*) AS adet
+               FROM haberler h
+               LEFT JOIN kategoriler k ON k.id = h.kategori_id
+              WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . HABER_VIDEO_KOSULU . '
+              GROUP BY k.slug'
+        )->fetchAll();
+    } catch (Throwable $e) {
+        return ['' => 0];
+    }
+
+    $sayilar = ['' => 0];
+
+    foreach ($satirlar as $s) {
+        $sayilar[(string) $s['slug']] = (int) $s['adet'];
+        $sayilar[''] += (int) $s['adet'];
+    }
+
+    return $sayilar;
+}
+
 /**
  * Kaynak zamani tam gece yarisi mi (Istanbul ya da GMT 00:00:00)?
  *

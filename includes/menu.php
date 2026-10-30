@@ -55,6 +55,9 @@ function site_menusu(): array
     // yaziliyor, onaydan geciyor). Haber basliklarinin sonunda.
     $menu[] = ['ad' => 'Köşe Yazıları', 'anahtar' => 'kose', 'href' => kose_liste_yolu(), 'altlar' => []];
 
+    // Video haberler (30.10.2026): videosu olan haberler bir arada.
+    $menu[] = ['ad' => 'Video', 'anahtar' => 'video', 'href' => video_yolu(), 'altlar' => []];
+
     $menu[] = gazete_menu_ogesi('valmagazin', ['kultur-sanat', 'magazin', 'yemek-tarifleri', 'burc', 'burclar']);
 
     return $menu;
