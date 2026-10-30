@@ -7,40 +7,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Sunucu yanit sureleri
+      - name: Basliklar
         run: |
-          for u in / /valpapel /valspor /valmagazin /video /gundem /piyasalar /sirket /resmi-gazete /sitemap.xml /robots.txt; do
-            for i in 1 2; do
-              r=$(curl -s -o /tmp/s -m 30 -A 'Mozilla/5.0 denetim' -w "%{http_code} ttfb=%{time_starttransfer}s toplam=%{time_total}s %{size_download}B" "https://valentra.com.tr$u")
-              echo "::notice title=TTFB $u #$i::$r"
-            done
+          o=""
+          for u in / /assets/style.css /assets/ust-arka.webp /gorseller/haber/9a3c4a1107edc94d68b19526ac755108675da175-480.webp /assets/yazarlar/tekin-alp-sagduyulu.jpg; do
+            h=$(curl -s -o /dev/null -D - -m 30 -H 'Accept-Encoding: gzip, br' "https://valentra.com.tr$u" | tr -d '\r' | grep -iE '^(cache-control|content-encoding|expires|content-type|server|x-powered-by|vary)' | tr '\n' ';')
+            echo "::notice title=Başlık $u::$h"
           done
-          # Bir haber sayfasi
+      - name: TTFB 2
+        run: |
           h=$(curl -s -m 30 https://valentra.com.tr/ | grep -oE 'href="/haber/[^"]+"' | head -1 | cut -d'"' -f2)
-          echo "HABER=$h" >> $GITHUB_ENV
-          r=$(curl -s -o /dev/null -m 30 -w "%{http_code} ttfb=%{time_starttransfer}s %{size_download}B" "https://valentra.com.tr$h")
-          echo "::notice title=TTFB haber::$h $r"
-          curl -sI -m 30 https://valentra.com.tr/assets/style.css | tr -d '\r' | grep -iE '^(cache-control|content-encoding|expires|content-length)' | sed 's/^/::notice title=style.css başlık::/'
-          curl -sI -m 30 -H 'Accept-Encoding: gzip, br' https://valentra.com.tr/ | tr -d '\r' | grep -iE '^(cache-control|content-encoding|content-type|x-)' | sed 's/^/::notice title=ana sayfa başlık::/'
-      - name: Lighthouse (mobil)
-        run: |
-          npm i -g lighthouse@12 >/dev/null 2>&1
-          for u in / /valspor "$HABER"; do
-            ad=$(echo "$u" | tr '/' '_')
-            lighthouse "https://valentra.com.tr$u" --quiet --chrome-flags="--headless=new --no-sandbox" --only-categories=performance,seo,accessibility,best-practices --output=json --output-path=/tmp/lh$ad.json || continue
-            node -e '
-              const r=require(process.argv[1]); const c=r.categories; const a=r.audits;
-              const p=k=>a[k]?.displayValue||"";
-              console.log(`::notice title=LH ${process.argv[2]}::perf=${Math.round(c.performance.score*100)} seo=${Math.round(c.seo.score*100)} a11y=${Math.round(c.accessibility.score*100)} bp=${Math.round(c["best-practices"].score*100)} LCP=${p("largest-contentful-paint")} FCP=${p("first-contentful-paint")} TBT=${p("total-blocking-time")} CLS=${p("cumulative-layout-shift")} TTFB=${p("server-response-time")} agirlik=${p("total-byte-weight")}`);
-              const kotu=Object.values(a).filter(x=>x.score!==null&&x.score<0.9&&["numeric","binary","metricSavings"].includes(x.scoreDisplayMode)||(x.score!==null&&x.score<0.9&&x.details&&x.details.type==="opportunity")).map(x=>`${x.id}: ${x.displayValue||x.score}`);
-              console.log(`::notice title=LH sorunlar ${process.argv[2]}::`+kotu.join(" | ").slice(0,3800));
-              const lcp=a["largest-contentful-paint-element"]?.details?.items?.[0]?.items?.[0]?.node?.snippet||"";
-              console.log(`::notice title=LH LCP ögesi ${process.argv[2]}::`+lcp.slice(0,500));
-              const rb=(a["render-blocking-resources"]?.details?.items||a["render-blocking-insight"]?.details?.items||[]).map(i=>i.url+" "+Math.round(i.wastedMs||0)+"ms");
-              console.log(`::notice title=LH engelleyen ${process.argv[2]}::`+rb.join(" | ").slice(0,1500));
-              const big=(a["total-byte-weight"]?.details?.items||[]).slice(0,8).map(i=>i.url.replace("https://valentra.com.tr","")+" "+Math.round(i.totalBytes/1024)+"KB");
-              console.log(`::notice title=LH büyük dosyalar ${process.argv[2]}::`+big.join(" | ").slice(0,1500));
-              const seo=["document-title","meta-description","link-text","crawlable-anchors","is-crawlable","robots-txt","hreflang","canonical","image-alt","structured-data"].filter(k=>a[k]&&a[k].score===0).map(k=>k+": "+JSON.stringify((a[k].details?.items||[]).slice(0,3)).slice(0,300));
-              console.log(`::notice title=LH SEO/a11y ${process.argv[2]}::`+seo.join(" | ").slice(0,3000));
-            ' /tmp/lh$ad.json "$u"
+          for u in "$h" /gundem /piyasalar /sirket /resmi-gazete /sitemap.xml; do
+            a=""; for i in 1 2 3; do a="$a $(curl -s -o /dev/null -m 30 -w '%{time_starttransfer}' "https://valentra.com.tr$u")"; done
+            echo "::notice title=TTFB $u::$a"
           done
+          curl -s -o /dev/null -m 30 -w '%{size_download} sıkıştırmasız / ' https://valentra.com.tr/ > /tmp/a; curl -s --compressed -o /dev/null -m 30 -w '%{size_download} sıkıştırılmış(?)' -H 'Accept-Encoding: gzip' https://valentra.com.tr/ >> /tmp/a
+          echo "::notice title=Ana sayfa boyut::$(cat /tmp/a)"
