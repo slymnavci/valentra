@@ -1617,6 +1617,104 @@ a.menu-oge.aktif::after,
 .ana-duzen.anasayfa > .yan-pencere { margin-top: 32px; }
 .vitrin > .kose-kutu .kose-kutu-tumu { margin-top: auto; padding-top: 10px; }
 
+/*
+ * TELEFON VE IPAD: HAVA VE YAZARLAR KISA (site sahibi, 30.10.2026: "ipad ve
+ * telefonda ilk sayfada hava durumu ve yazarlar cok yer tutuyor; bunlar
+ * kisa bilgiler, asil onemli olan haberler; hava durumu ve yazarlar cok
+ * kisa gorunebilir, yan kutu gibi"). Telefonda ilk haber karti 5 ekran
+ * asagidaydi: hava 363 px, yazarlar (12 yazar alt alta) 1389 px.
+ *
+ * Genis ekranin vitrini (1400 ve ustu: kaydirak | hava | yazarlar ayni
+ * boyda) degismedi. Altinda:
+ *   - hava: uc sehir yan yana tek satir (simge, derece, ad); durum ve
+ *     en yuksek/en dusuk satirlari gizli, sehir secimi yerinde,
+ *   - yazarlar: yana kayan ince serit (portre, ad, iki satir baslik);
+ *     "Tum yazilar" baslik satirinin saginda,
+ *   - 981-1399 arasi (iPad yatay) ikisi ayni sirada, yazarlara genis yer.
+ */
+@media (max-width: 1399px) {
+    .vitrin > .hava-kart,
+    .vitrin > .kose-kutu { padding: 12px 14px; position: relative; }
+
+    .vitrin > .hava-kart .pencere-baslik,
+    .vitrin > .kose-kutu .pencere-baslik { margin-bottom: 8px; padding-bottom: 8px; }
+
+    .vitrin > .hava-kart .hava-sec { top: 8px; right: 14px; }
+
+    .vitrin .hava-kart-sehirler { flex-direction: row; gap: 6px; }
+
+    .vitrin .hava-kart-sehirler li {
+        flex: 1 1 0;
+        min-width: 0;
+        grid-template-columns: auto auto;
+        grid-template-areas: "ikon derece" "ad ad";
+        justify-content: center;
+        justify-items: center;
+        gap: 0 6px;
+        padding: 2px 0;
+        border-top: none;
+    }
+
+    .vitrin .hava-kart-sehirler .hava-ikon { grid-area: ikon; }
+    .vitrin .hava-kart-sehirler .hava-ikon .hava-simge { width: 28px; height: 28px; }
+    .vitrin .hava-kart-sehirler .hava-derece { grid-area: derece; font-size: 1.35rem; }
+    .vitrin .hava-kart-sehirler .hava-bilgi { grid-area: ad; min-width: 0; max-width: 100%; }
+    .vitrin .hava-kart-sehirler .hava-ad {
+        font-size: .84rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .vitrin .hava-kart-sehirler .hava-durum,
+    .vitrin .hava-kart-sehirler .hava-aralik { display: none; }
+
+    .vitrin > .kose-kutu .yazar-listesi {
+        display: flex;
+        flex-direction: row;
+        gap: 14px;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x proximity;
+        scrollbar-width: thin;
+        padding-bottom: 4px;
+    }
+
+    .vitrin > .kose-kutu .yazar-listesi li {
+        flex: 0 0 210px;
+        align-items: center;
+        gap: 10px;
+        padding: 2px 0;
+        border-top: none;
+        scroll-snap-align: start;
+    }
+
+    .vitrin > .kose-kutu .yazar-portre-bag { flex: none; }
+    .vitrin > .kose-kutu .yazar-portre-bag > * { width: 40px; height: 40px; }
+    .vitrin > .kose-kutu .yazar-metin { min-width: 0; }
+    .vitrin > .kose-kutu .yazar-listesi .yazar-ad { font-size: .72rem; }
+    .vitrin > .kose-kutu .yazar-listesi .yazar-yazi {
+        font-size: .88rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .vitrin > .kose-kutu .yazar-tarih { display: none; }
+
+    .vitrin > .kose-kutu .kose-kutu-tumu {
+        position: absolute;
+        top: 10px;
+        right: 14px;
+        margin: 0;
+        padding: 0;
+        font-size: .82rem;
+    }
+}
+
+@media (min-width: 981px) and (max-width: 1399px) {
+    .vitrin { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+}
+
 /* --- Buyuk sehirler hava seridi (piyasa seridine paralel) ----------------- */
 
 .sehir-serit {
