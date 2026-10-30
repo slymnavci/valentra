@@ -1093,6 +1093,18 @@ a.menu-oge.aktif::after,
         flex-wrap: nowrap;
         overflow-x: auto;
         scrollbar-width: none;
+
+        /* Telefonda bazen dokunma hicbir sey yapmiyordu. touch-action
+           belirtilmedigi icin tarayici her dokunusta "bu bir kaydirma mi
+           yoksa tiklama mi" diye bir an bekliyor (gesture disambiguation);
+           bu bekleme WebKit'te (iPhone/Safari) bazen tiklamayi hic
+           tetiklemeden kapanabiliyor — ayni seritte WebKit'e ozgu baska
+           bir kirpilma sorunu daha yasanmisti (#62, asagidaki .menu-acilir
+           notuna bkz.). touch-action: manipulation ile cift dokunma
+           yakinlastirmasi beklenmiyor, duz bir dokunus gecikmeden tiklamaya
+           donusuyor. pan-x DEGIL: o deger dikey kaydirmayi da kapatiyordu,
+           parmak menu seridindeyken sayfa yukari asagi kaymazdi. */
+        touch-action: manipulation;
     }
 
     .menu-satir::-webkit-scrollbar { display: none; }
