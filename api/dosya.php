@@ -25,7 +25,24 @@ if ($anahtarId === null) {
 $yontem = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if ($yontem === 'GET') {
-    ajan_json(200, dosya_malzeme());
+    try {
+        ajan_json(200, dosya_malzeme());
+    } catch (Throwable $e) {
+        // GET /api/dosya.php birkaç gündür HTTP 500 dönüyor (ajan günlüğü:
+        // "Malzeme alınamadı"); genel hata sayfası ayrıntıyı sunucu
+        // günlüğüne yazıp tarayıcıya hiçbir şey vermiyordu, kök neden hiç
+        // görünmedi. Önce genel yakalayıcıdaki gibi eksik tablo/sütunu
+        // onarmayı dene (basarili olursa 302 ile aynı adrese döner);
+        // onarılamıyorsa bu uç zaten diğer dallarda ajan_json ile JSON
+        // döndürüyor, GET'i de aynı şekilde gerçek istisna mesajıyla
+        // döndürmek köprüyü ajan günlüğünde görünür kılıyor.
+        if (hata_semayi_onar($e)) {
+            exit;
+        }
+
+        error_log('[valentra] dosya_malzeme: ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+        ajan_json(500, ['hata' => 'Malzeme hazırlanamadı: ' . $e->getMessage()]);
+    }
 }
 
 if ($yontem !== 'POST') {
