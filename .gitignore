@@ -35,3 +35,7 @@ gorseller/haber/*
 gorseller/yazar/*
 !gorseller/yazar/.htaccess
 !gorseller/yazar/index.html
+
+# Sayfa onbellegi (includes/sayfa_onbellek.php); sunucuda uretilir.
+onbellek/sayfa/*
+!onbellek/sayfa/index.html

@@ -13,7 +13,7 @@
         </div>
     </footer>
 <?php /* Ziyaretin tarayicida dogrulanmasi; bkz. includes/ziyaret.php */ ?>
-<?= function_exists('ziyaret_betigi') ? ziyaret_betigi() : '' ?>
+<?= function_exists('sayfa_onbellek_ziyaret_betigi') ? sayfa_onbellek_ziyaret_betigi() : (function_exists('ziyaret_betigi') ? ziyaret_betigi() : '') ?>
 <?php require_once __DIR__ . '/olcum_reklam.php'; ?>
 <?= cerez_bildirimi_html() ?>
 </body>

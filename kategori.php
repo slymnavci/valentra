@@ -4,6 +4,10 @@ declare(strict_types=1);
 /** Konu grubu sayfasi. */
 
 require_once __DIR__ . '/includes/bootstrap.php';
+require_once __DIR__ . '/includes/sayfa_onbellek.php';
+
+// Ziyaretciye bir dakikalik kopya (bkz. includes/sayfa_onbellek.php).
+sayfa_onbellek(['k', 'bolum', 'sayfa']);
 
 $slug     = trim((string) ($_GET['k'] ?? ''));
 $kategori = $slug !== '' ? kategori_slug_bul($slug) : null;
