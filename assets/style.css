@@ -1069,8 +1069,10 @@ a.menu-oge.aktif::after,
 :where(:root[data-tema="koyu"]) .menu-acilir a.aktif { color: var(--altin); }
 
 /*
- * Orta genislikte (dizustu) menu tek satira sigsin: "Burclar" eklenince
- * (29.10.2026) 1280 pikselde "Yemek Tarifleri" alt satira dusuyordu.
+ * Orta genislikte (dizustu, tablet) menu tek satira sigsin. "Burclar"
+ * eklenince (29.10.2026) 1280 pikselde alt satira dusuyordu; ValPapel,
+ * ValSpor, ValMagazin menusunde de (30.10.2026 olcumu) bu ayar olmadan
+ * 1024 pikselde iki satir.
  */
 @media (min-width: 721px) and (max-width: 1439px) {
     .menu-oge { padding: 0 11px; font-size: .95rem; }
