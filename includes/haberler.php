@@ -75,8 +75,8 @@ const HABER_AKIS_DISI = ['yemek-tarifleri', 'magazin'];
  *   4. Esitlerde yeni olan once.
  *
  * Ana sayfada ayrica 1. yerde son dakika (haber_son_dakika_id) ve
- * kaydirakta spor kotasi var (son dakika yalnizca kaynakta bugun
- * yayimlanmis haberlerden).
+ * kaydirakta buyuk mac yuvasi var (haber_ana_sayfa_mac_yuvasi; son dakika
+ * yalnizca kaynakta bugun yayimlanmis haberlerden).
  *
  * Onceki "son 24 saat" penceresi sabah 08'de dun 08'den sonraki her
  * haberi yeni sayiyordu; dunun gun boyu okunma toplamis haberleri bu
@@ -398,21 +398,29 @@ function haber_sirasi(bool $anaSayfa = false): string
     $onu = $sonDakika !== null ? '(h.id = ' . $sonDakika . ') DESC, ' : '';
 
     /*
-     * Sonra spor kotasi (bkz. haber_ana_sayfa_ilk_set), sonra puan sirasi.
-     * "En yeni 5 haber 4-8. slaytta" ve "gunun en onemli 3 haberi" kurallari
-     * kaldirildi (site sahibi, 23.10.2026: "once puanlamayi yap, ondan
-     * sonra sirayla ana sayfaya gelsin"): tazelik artik puanin icinde.
+     * Sonra puan sirasi. "En yeni 5 haber 4-8. slaytta" ve "gunun en onemli
+     * 3 haberi" kurallari kaldirildi (site sahibi, 23.10.2026: "once
+     * puanlamayi yap, ondan sonra sirayla ana sayfaya gelsin"): tazelik
+     * artik puanin icinde.
      */
-    $ilk    = haber_ana_sayfa_ilk_set();
-    $ilkSet = $ilk !== [] ? '(h.id IN (' . implode(', ', $ilk) . ')) DESC, ' : '';
 
     // Ilk haber spor olmasin (canli mac yoksa); bkz. haber_ana_sayfa_basi_id.
-    $basi = $sonDakika === null ? haber_ana_sayfa_basi_id($ilkSet . $temel) : null;
+    $basi = $sonDakika === null ? haber_ana_sayfa_basi_id($temel) : null;
+    $sira = $onu . ($basi !== null ? '(h.id = ' . $basi . ') DESC, ' : '') . $temel;
 
-    return $onu
-        . ($basi !== null ? '(h.id = ' . $basi . ') DESC, ' : '')
-        . $ilkSet
-        . $temel;
+    // Buyuk kulubun maci kaydirakta ANA_SAYFA_MAC_YERI. sirada; bkz.
+    // haber_ana_sayfa_mac_yuvasi.
+    $mac = haber_ana_sayfa_mac_yuvasi($sira);
+
+    if ($mac === null) {
+        return $sira;
+    }
+
+    [$macId, $onundekiler] = $mac;
+
+    return ($onundekiler !== [] ? '(h.id IN (' . implode(', ', $onundekiler) . ')) DESC, ' : '')
+        . '(h.id = ' . $macId . ') DESC, '
+        . $sira;
 }
 
 /*
@@ -536,9 +544,9 @@ const ANA_SAYFA_DALGA_DAKIKA = 120;
  * toplamalarinkiler 20'nin disina, izgaraya kayiyor.
  *
  * Ayni esik ana sayfanin butun kurallarinda ("hepsini bu sekilde
- * yapalim"): son dakika yuvasi (haber_son_dakika_id) ve kaydirakta en az 3
- * spor kotasi (haber_ana_sayfa_ilk_set) yalnizca onemi 60 ve ustu
- * haberlerden. Esigi gecen spor haberi yoksa kota bos kalir.
+ * yapalim"): son dakika yuvasi (haber_son_dakika_id) yalnizca onemi 60 ve
+ * ustu haberlerden. Buyuk mac yuvasinda esik yok (30.10.2026; bkz.
+ * haber_ana_sayfa_mac_yuvasi).
  */
 const ANA_SAYFA_ONEM_ESIGI = 60;
 
@@ -548,90 +556,83 @@ function haber_dalga_ifadesi(): string
 }
 
 /*
- * ANA SAYFA SPOR KOTASI — kaydiragin 20 haberinde en az 1 spor haberi
- * (site sahibinin istegi, 23.10.2026: "ana sayfada spor haberi hic yok,
- * onlari da 20 haber arasina sokalim"): bugunun ya da dunun en
- * onemlileri.
+ * BUYUK MAC YUVASI (site sahibi, 30.10.2026: "guncel haberler gelmiyor;
+ * mesela Galatasaray-Konyaspor maci neden yok; onu vermek onemli; 3. veya
+ * 4. sirada olabilir, ana sayfada kayar blokta").
  *
- * Yer, 20'nin en altindaki spor olmayan haberlerden aciliyor; cikanlar
- * kaybolmuyor, izgaranin basina iniyor. Sira SQL'de (h.id IN (...)) ile
- * kuruluyor, PHP'de karistirilmiyor: manset ve izgara ayni ORDER BY'i
- * kullaniyor ve izgara mansetin tukettigi kadar haberi atliyor; ikisi
- * farkli sira gorurse haber ya iki kez cikar ya hic cikmaz. Pencere
- * islevi (ROW_NUMBER) kullanilmadi: paylasimli sunucunun MySQL surumu
- * bilinmiyor.
+ * Ayni gun spor gundemin arkasina alinmisti (bkz. ANA_SAYFA_SPOR_ONDE_ESIGI)
+ * ve kaydiraktaki spor kotasi yalnizca onemi 60 ve ustu haberi aliyordu; ajan
+ * ise artik buyuk kulup maclarina 45-60 veriyor. Galatasaray'in maci boylece
+ * ne kotaya ne kaydiraga girdi. Kota (20'nin en altinda bir spor haberi)
+ * kaldirildi; yerine:
+ *
+ * Dort buyuk kulubun ya da milli takimlarin bugunku (spor icin dun aksamki
+ * mac da bugun, bkz. haber_gun_ifadesi) en iyi haberi kaydirakta
+ * ANA_SAYFA_MAC_YERI. sirada. Onem esigi yok: buyuk kulubun maci okurun
+ * bekledigi haber. Haber zaten o siranin onundeyse (canli mac, Turkiye'nin
+ * kupasi) dokunulmuyor. Diger spor haberleri gundemin arkasinda kaliyor.
+ *
+ * Sira SQL'de kuruluyor (onundeki haberler, sonra mac, sonra asil sira):
+ * manset ve izgara ayni ORDER BY'i kullaniyor ve izgara mansetin
+ * tukettigi kadar haberi atliyor; ikisi farkli sira gorurse haber ya iki
+ * kez cikar ya hic cikmaz.
  */
 const ANA_SAYFA_MANSET_ADEDI = 20;
+const ANA_SAYFA_MAC_YERI     = 3;
 
-// 3'ten 1'e (site sahibi, 30.10.2026: "futbol, basketbol ve voleybol cok
-// arkada"): kaydirakta en altta tek spor haberi; Turkiye'nin buyuk basarisi
-// zaten gundem haberleriyle yarisiyor (bkz. ANA_SAYFA_SPOR_ONDE_ESIGI).
-const ANA_SAYFA_SPOR_KOTASI  = 1;
+const HABER_MAC_KELIMELERI = [
+    'galatasaray', 'fenerbahçe', 'beşiktaş', 'trabzonspor',
+    'milli takım', 'a milli', 'filenin sultanları', 'filenin efeleri', '12 dev adam',
+];
 
 /**
- * Ana sayfanin ilk 20'si (kotalar uygulanmis); kotalar zaten doluysa bos
- * (sira degismiyor).
+ * Maç yuvası: [maç haberinin id'si, önünde kalacak haberlerin id'leri];
+ * yerleştirilecek haber yoksa ya da zaten öndeyse null.
  *
- * @return list<int>
+ * @return array{0:int,1:list<int>}|null
  */
-function haber_ana_sayfa_ilk_set(): array
+function haber_ana_sayfa_mac_yuvasi(string $sira): ?array
 {
-    static $onbellek = null;
+    static $onbellek = [];
 
-    if ($onbellek !== null) {
-        return $onbellek;
+    if (array_key_exists($sira, $onbellek)) {
+        return $onbellek[$sira];
     }
 
-    $temel = haber_sirasi_temel(true);
-    $kosul = 'h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . haber_ana_akis_kosulu();
+    $onbellek[$sira] = null;
+
     $kaynak = 'FROM haberler h
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
-           ' . haber_okunma_birlesimi();
+           ' . haber_okunma_birlesimi() . '
+          WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . haber_ana_akis_kosulu();
 
-    $ilk = db()->query(
-        'SELECT h.id, k.slug ' . $kaynak . ' WHERE ' . $kosul
-        . ' ORDER BY ' . $temel . ' LIMIT ' . ANA_SAYFA_MANSET_ADEDI
-    )->fetchAll();
+    try {
+        $mac = db()->query(
+            'SELECT h.id ' . $kaynak
+            . " AND k.slug = 'spor'"
+            . ' AND ' . haber_baslikta_gecen_kosulu(HABER_MAC_KELIMELERI)
+            . ' AND ' . haber_gun_ifadesi() . ' = 0'
+            . ' ORDER BY ' . haber_sirasi_temel(true) . ' LIMIT 1'
+        )->fetchColumn();
 
-    if (count($ilk) < ANA_SAYFA_MANSET_ADEDI) {
-        return $onbellek = [];
-    }
-
-    $ilkIdler = array_map(static fn (array $s): int => (int) $s['id'], $ilk);
-
-    // Spor kotasi: 20'de kac spor var?
-    $sporSayisi = count(array_filter($ilk, static fn (array $s): bool => $s['slug'] === 'spor'));
-    $eksikSpor  = ANA_SAYFA_SPOR_KOTASI - $sporSayisi;
-
-    if ($eksikSpor <= 0) {
-        return $onbellek = [];
-    }
-
-    $yeniSpor = array_map('intval', db()->query(
-        'SELECT h.id ' . $kaynak . ' WHERE ' . $kosul
-        . " AND k.slug = 'spor'"
-        // Kotaya da yalnizca onemli spor haberi (ANA_SAYFA_ONEM_ESIGI).
-        . ' AND h.onem >= ' . ANA_SAYFA_ONEM_ESIGI
-        . ' AND ' . haber_gun_ifadesi() . ' <= 1'
-        . ' AND h.id NOT IN (' . implode(', ', $ilkIdler) . ')'
-        . ' ORDER BY ' . $temel . ' LIMIT ' . $eksikSpor
-    )->fetchAll(PDO::FETCH_COLUMN));
-
-    if ($yeniSpor === []) {
-        return $onbellek = [];
-    }
-
-    // En alttan, spor olmayan haberlerden yer ac.
-    $cikacak = count($yeniSpor);
-
-    for ($i = count($ilk) - 1; $i >= 0 && $cikacak > 0; $i--) {
-        if ($ilk[$i]['slug'] !== 'spor') {
-            unset($ilkIdler[$i]);
-            $cikacak--;
+        if ($mac === false) {
+            return null;
         }
+
+        $ilk = array_map('intval', db()->query(
+            'SELECT h.id ' . $kaynak . ' ORDER BY ' . $sira . ' LIMIT ' . (ANA_SAYFA_MAC_YERI - 1)
+        )->fetchAll(PDO::FETCH_COLUMN));
+    } catch (Throwable $e) {
+        error_log('[valentra] ana sayfa mac yuvasi: ' . $e->getMessage());
+
+        return null;
     }
 
-    return $onbellek = array_values(array_merge($ilkIdler, $yeniSpor));
+    if (in_array((int) $mac, $ilk, true)) {
+        return null;
+    }
+
+    return $onbellek[$sira] = [(int) $mac, $ilk];
 }
 
 /**
