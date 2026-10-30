@@ -2235,39 +2235,6 @@ function kategori_bloklari(int $grupBasiHaber = 4, int $enFazlaGrup = 6): array
 }
 
 /**
- * Dünyadan son dakika: son 24 saatin Dünya haberleri, en yeni önce.
- *
- * Ana sayfanin "Dunyadan Son Dakika" bandi (site sahibinin istegi,
- * 29.10.2026: "dunyadan haberler de burada olsun; neler yapiliyor, son
- * dakika neler oldu insanlara sunalim"). Kaynaklar her ulkenin en cok
- * okunan yayinlari (bkz. sql/schema.sql, 29.10.2026).
- *
- * @return list<array<string,mixed>>
- */
-function haber_dunya_son_dakika(int $adet = 8): array
-{
-    try {
-        $ifade = db()->prepare(
-            'SELECT h.baslik, h.slug,
-                    DATE_FORMAT(LEAST(h.olusturuldu, COALESCE(h.kaynak_tarihi, h.olusturuldu)), \'%H:%i\') AS zaman
-               FROM haberler h
-               JOIN kategoriler k ON k.id = h.kategori_id
-              WHERE h.durum = :d AND k.slug = :k
-                AND h.olusturuldu >= NOW() - INTERVAL 24 HOUR
-              ORDER BY LEAST(h.olusturuldu, COALESCE(h.kaynak_tarihi, h.olusturuldu)) DESC, h.id DESC
-              LIMIT ' . max(1, min(20, $adet))
-        );
-        $ifade->execute(['d' => HABER_YAYINDA, 'k' => 'dunya']);
-
-        return $ifade->fetchAll();
-    } catch (Throwable $e) {
-        error_log('[valentra] dunya son dakika: ' . $e->getMessage());
-
-        return [];
-    }
-}
-
-/**
  * En cok kullanilan etiketler (yan kolon icin).
  *
  * @return list<array{etiket:string,adet:int}>
