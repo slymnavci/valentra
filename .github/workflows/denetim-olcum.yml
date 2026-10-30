@@ -7,19 +7,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Basliklar
-        run: |
-          o=""
-          for u in / /assets/style.css /assets/ust-arka.webp /gorseller/haber/9a3c4a1107edc94d68b19526ac755108675da175-480.webp /assets/yazarlar/tekin-alp-sagduyulu.jpg; do
-            h=$(curl -s -o /dev/null -D - -m 30 -H 'Accept-Encoding: gzip, br' "https://valentra.com.tr$u" | tr -d '\r' | grep -iE '^(cache-control|content-encoding|expires|content-type|server|x-powered-by|vary)' | tr '\n' ';')
-            echo "::notice title=Başlık $u::$h"
-          done
-      - name: TTFB 2
+      - name: TTFB
         run: |
           h=$(curl -s -m 30 https://valentra.com.tr/ | grep -oE 'href="/haber/[^"]+"' | head -1 | cut -d'"' -f2)
-          for u in "$h" /gundem /piyasalar /sirket /resmi-gazete /sitemap.xml; do
-            a=""; for i in 1 2 3; do a="$a $(curl -s -o /dev/null -m 30 -w '%{time_starttransfer}' "https://valentra.com.tr$u")"; done
+          for u in / /valpapel /valspor /video /gundem "$h"; do
+            a=""; for i in 1 2 3 4; do a="$a $(curl -s -o /dev/null -D /tmp/b -m 30 -w '%{http_code}:%{time_starttransfer}' "https://valentra.com.tr$u")$(grep -qi x-valentra-onbellek /tmp/b && echo '(ö)')"; done
             echo "::notice title=TTFB $u::$a"
           done
-          curl -s -o /dev/null -m 30 -w '%{size_download} sıkıştırmasız / ' https://valentra.com.tr/ > /tmp/a; curl -s --compressed -o /dev/null -m 30 -w '%{size_download} sıkıştırılmış(?)' -H 'Accept-Encoding: gzip' https://valentra.com.tr/ >> /tmp/a
-          echo "::notice title=Ana sayfa boyut::$(cat /tmp/a)"
+          g=$(curl -s -m 30 https://valentra.com.tr/ | grep -oE '/gorseller/haber/[0-9a-f]{40}-480\.webp' | head -1)
+          echo "::notice title=Görsel başlık::$g $(curl -sI -m 30 https://valentra.com.tr$g | tr -d '\r' | grep -i cache-control)"
+          echo "::notice title=Önbellek erişimi::$(curl -s -o /dev/null -w '%{http_code}' https://valentra.com.tr/onbellek/sayfa/)"
+          echo "::notice title=Ziyaret betiği::$(curl -s -m 30 https://valentra.com.tr/ | grep -c 'api/gorunum.php') $(curl -s -m 30 https://valentra.com.tr/ | grep -c 'valentra-ziyaret-betigi')"
