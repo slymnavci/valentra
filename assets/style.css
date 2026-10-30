@@ -1470,10 +1470,10 @@ a.menu-oge.aktif::after,
  * araliklar esit:
  *
  *   genis (>=1400):  kaydirak | hava | Yazarlarimiz    (460px)
- *                    piyasa seridi | sehirler seridi    (tek satir)
+ *                    piyasa seridi (tam genislik)
  *   orta (981-1399): kaydirak (tam genislik)
  *                    hava | Yazarlarimiz (ayni yukseklik)
- *                    piyasa seridi / sehirler seridi
+ *                    piyasa seridi (tam genislik)
  *   dar (<=980):     hepsi alt alta
  */
 .vitrin {
@@ -1495,8 +1495,7 @@ a.menu-oge.aktif::after,
     }
 
     .vitrin-manset,
-    .vitrin-piyasa,
-    .vitrin-sehirler { grid-column: 1 / -1; }
+    .vitrin-piyasa { grid-column: 1 / -1; }
 
     .vitrin > .hava-kart,
     .vitrin > .kose-kutu { display: flex; flex-direction: column; }
@@ -1512,8 +1511,8 @@ a.menu-oge.aktif::after,
     .vitrin-manset   { grid-column: 1; grid-row: 1; }
     .vitrin > .hava-kart { grid-column: 2; grid-row: 1; }
     .vitrin > .kose-kutu { grid-column: 3; grid-row: 1; }
-    .vitrin-piyasa   { grid-column: 1; grid-row: 2; }
-    .vitrin-sehirler { grid-column: 2 / 4; grid-row: 2; }
+    /* Sehirler hava seridi kalkti, piyasa seridi tum sirayi aliyor (30.10.2026). */
+    .vitrin-piyasa   { grid-column: 1 / -1; grid-row: 2; }
 
     /*
      * Numarali dugmeler resmin ALTINDA, kutunun icinde (26.10.2026, site
@@ -1713,57 +1712,6 @@ a.menu-oge.aktif::after,
 
 @media (min-width: 981px) and (max-width: 1399px) {
     .vitrin { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
-}
-
-/* --- Buyuk sehirler hava seridi (piyasa seridine paralel) ----------------- */
-
-.sehir-serit {
-    height: 100%;
-    display: flex;
-    align-items: center;
-    background: var(--kart);
-    border: 1px solid var(--cizgi);
-    border-left: 3px solid var(--altin);
-    border-radius: var(--yuvarlak);
-    overflow: hidden;
-    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 20px), transparent 100%);
-}
-
-.sehir-akis {
-    display: flex;
-    width: max-content;
-    animation: sd-kay 40s linear infinite;
-}
-
-.sehir-serit:hover .sehir-akis,
-.sehir-serit:focus-within .sehir-akis { animation-play-state: paused; }
-
-.sehir-liste {
-    display: flex;
-    gap: 6px;
-    margin: 0;
-    padding: 0 6px 0 10px;
-    list-style: none;
-}
-
-.sehir-liste li {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 10px;
-    color: var(--metin);
-    font-size: .92rem;
-    white-space: nowrap;
-}
-.sehir-liste .hava-simge { color: var(--altin); width: 18px; height: 18px; }
-.sehir-liste .ad { font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-.sehir-liste .simdi { font-weight: 800; }
-.sehir-liste .aralik { color: var(--metin-soluk); font-size: .8rem; }
-
-@media (prefers-reduced-motion: reduce) {
-    .sehir-akis { animation: none; }
-    .sehir-serit { overflow-x: auto; mask-image: none; }
-    .sehir-liste[aria-hidden="true"] { display: none; }
 }
 
 /* --- Kategori basligi ---------------------------------------------------- */
@@ -2097,11 +2045,32 @@ a.menu-oge.aktif::after,
 
 /* --- Piyasa seridi -------------------------------------------------------- */
 
-/* Beyaz serit, kirmizi etiketler (24.10.2026; bkz. :root renk notu). */
+/*
+ * Hafif koyu zemin, daha yuksek ve iri (site sahibi, 30.10.2026:
+ * "ekonomi seridini uzatalim, rengini hafif koyulastiralim, belirgin
+ * olsun"). Onceden beyaz kart zemininde yan kutulardan ayirt edilmiyordu.
+ */
+:root {
+    --piyasa-zemin: #eceef3;
+    --piyasa-cizgi: #d6dae3;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:where(:not([data-tema="acik"])) {
+        --piyasa-zemin: #26262d;
+        --piyasa-cizgi: #383840;
+    }
+}
+
+:root:where([data-tema="koyu"]) {
+    --piyasa-zemin: #26262d;
+    --piyasa-cizgi: #383840;
+}
+
 .piyasa-serit {
-    background: var(--kart);
-    border: 1px solid var(--cizgi);
-    border-left: 3px solid var(--altin);
+    background: var(--piyasa-zemin);
+    border: 1px solid var(--piyasa-cizgi);
+    border-left: 4px solid var(--altin);
     border-radius: var(--yuvarlak);
     margin: 0 0 8px;
     overflow: hidden;
@@ -2116,12 +2085,12 @@ a.menu-oge.aktif::after,
 .piyasa-grup {
     display: flex;
     align-items: center;
-    gap: 26px;
-    padding: 11px 18px;
+    gap: 30px;
+    padding: 14px 22px;
     white-space: nowrap;
     flex: 0 0 auto;
     min-width: 100%;
-    justify-content: space-around;
+    justify-content: space-between;
 }
 
 .piyasa-oge {
@@ -2132,33 +2101,35 @@ a.menu-oge.aktif::after,
 
 /* Ad notr renkte; yukselis/dusus yalnizca degisimin renginde (30.10.2026). */
 .piyasa-oge .ad {
-    font-size: .86rem;
+    font-size: .9rem;
     font-weight: 700;
     color: var(--metin);
 }
+
+.piyasa-oge .ad .kisa { display: none; }
 
 /* Yuvarlak bayrak / simge (BigPara gibi). */
 .piyasa-simge {
     flex: none;
     display: inline-flex;
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     overflow: hidden;
-    box-shadow: 0 0 0 1px var(--cizgi);
+    box-shadow: 0 0 0 1px var(--piyasa-cizgi);
 }
 .piyasa-simge svg { width: 100%; height: 100%; display: block; }
 .piyasa-simge svg[viewBox="0 0 26 20"] { width: 130%; max-width: none; margin-left: -15%; }
 
 .piyasa-oge .deger {
-    font-size: 1.04rem;
-    font-weight: 700;
+    font-size: 1.1rem;
+    font-weight: 800;
     color: var(--metin);
     font-variant-numeric: tabular-nums;
 }
 
 .piyasa-oge .degisim {
-    font-size: .86rem;
+    font-size: .88rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
 }
@@ -2176,12 +2147,6 @@ a.menu-oge.aktif::after,
  */
 .piyasa-oge .degisim.bos { display: none; }
 
-.piyasa-zaman .deger {
-    font-size: .90rem;
-    font-weight: 600;
-    color: var(--metin-soluk);
-}
-
 @media (prefers-color-scheme: dark) {
     :where(:root:not([data-tema="acik"])) .piyasa-oge .degisim.arti { color: #4ade80; }
     :where(:root:not([data-tema="acik"])) .piyasa-oge .degisim.eksi { color: #ff6b70; }
@@ -2190,79 +2155,63 @@ a.menu-oge.aktif::after,
 :where(:root[data-tema="koyu"]) .piyasa-oge .degisim.arti { color: #4ade80; }
 :where(:root[data-tema="koyu"]) .piyasa-oge .degisim.eksi { color: #ff6b70; }
 
-/*
- * Tek satir (site sahibi, 24.10.2026: "kurlar ve BIST 100 tek satir
- * olacak"). Genis ekranda ana kolon iki sutunlu yan pencere yuzunden
- * daraldi; dort deger degisimleriyle birlikte sigsin diye aralik ve
- * puntolar biraz kucuk.
- */
-/* Serit kendi genisligine gore daraliyor (container query): ekran degil
-   kolon genisligi belirleyici. */
-.piyasa-serit { container-type: inline-size; }
-.piyasa-oge .ad .kisa { display: none; }
-
-/*
- * Telefonda serit zaten kayiyor (asagida); kisaltma yalnizca genis ekranda.
- * Yer daralinca once AD gizleniyor, cunku bayrak/simge neyin ne oldugunu
- * zaten soyluyor (30.10.2026); degisim yuzdesi en son: yukselis ve dususu
- * gosteren o. Ad ekran okuyucu icin sayfada kaliyor.
- */
-@media (min-width: 721px) {
-    @container (max-width: 980px) {
-        .piyasa-oge .ad {
-            position: absolute; width: 1px; height: 1px; overflow: hidden;
-            clip: rect(0 0 0 0); white-space: nowrap;
-        }
-    }
-
-    @container (max-width: 980px) {
-        .piyasa-grup { gap: 12px; padding: 11px 12px; }
-        .piyasa-oge { gap: 5px; }
-    }
-
-    @container (max-width: 740px) {
-        .piyasa-oge .degisim { display: none; }
-    }
-}
-
-@media (min-width: 721px) {
-    .piyasa-grup { gap: 18px; padding: 11px 16px; justify-content: space-between; }
-    .piyasa-oge { gap: 6px; }
-    .piyasa-oge .ad { font-size: .82rem; }
-    .piyasa-oge .deger { font-size: 1rem; }
-    .piyasa-oge .degisim { font-size: .8rem; }
-}
-
-/*
- * Dar ekranda kaydir.
- *
- * Genis ekranda degerler zaten sigiyor ve surekli kayan bir cubuk
- * okumayi zorlastiriyor; kayma yalnizca sigmadigi yerde aciliyor.
- * Ikinci grup kopyasi kesintisiz donguyu saglar.
- */
+/* Telefonda kisa adlar ve biraz daha siki aralik. */
 @media (max-width: 720px) {
-    .piyasa-grup {
+    .piyasa-grup { gap: 22px; padding: 12px 22px 12px 14px; }
+    .piyasa-oge .ad .uzun { display: none; }
+    .piyasa-oge .ad .kisa { display: inline; }
+    .piyasa-oge .deger { font-size: 1.02rem; }
+}
+
+/*
+ * Sigmiyorsa kaydir.
+ *
+ * Dokuz kalem cogu ekranda tek satira sigmiyor; sigip sigmadigini
+ * piyasa_serit.php'deki betik olcup .kayan sinifini koyuyor. Sigdiginda
+ * serit duruyor: surekli kayan bir cubuk okumayi zorlastiriyor. Betik
+ * calismazsa telefonda yine kayiyor (asagidaki medya sorgusu); genis
+ * ekranda sigmayan kalemler gizli kalir. Ikinci grup kopyasi kesintisiz
+ * donguyu saglar.
+ */
+.piyasa-serit.kayan .piyasa-grup {
+    min-width: auto;
+    justify-content: flex-start;
+    padding-right: 0;
+    margin-right: 30px;
+}
+
+.piyasa-serit.kayan .piyasa-akis {
+    width: max-content;
+    animation: piyasa-kay 40s linear infinite;
+}
+
+.piyasa-serit.kayan:hover .piyasa-akis,
+.piyasa-serit.kayan:focus-within .piyasa-akis {
+    animation-play-state: paused;
+}
+
+.piyasa-serit:not(.kayan) .piyasa-grup[aria-hidden="true"] { display: none; }
+
+@media (max-width: 720px) {
+    .piyasa-serit .piyasa-grup {
         min-width: auto;
         justify-content: flex-start;
-        gap: 22px;
-        padding-right: 22px;
+        padding-right: 0;
+        margin-right: 22px;
     }
 
     /* Iki kopya yan yana; -%50 tam bir kopya demek, dongu ziplamadan doner. */
-    .piyasa-akis {
+    .piyasa-serit .piyasa-akis {
         width: max-content;
-        animation: piyasa-kay 26s linear infinite;
+        animation: piyasa-kay 40s linear infinite;
     }
+
+    .piyasa-serit .piyasa-grup[aria-hidden="true"] { display: flex; }
 
     .piyasa-serit:hover .piyasa-akis,
     .piyasa-serit:focus-within .piyasa-akis {
         animation-play-state: paused;
     }
-}
-
-/* Genis ekranda ikinci kopya gereksiz; deger zaten sigiyor. */
-@media (min-width: 721px) {
-    .piyasa-grup[aria-hidden="true"] { display: none; }
 }
 
 @keyframes piyasa-kay {
@@ -2271,8 +2220,11 @@ a.menu-oge.aktif::after,
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .piyasa-akis { animation: none; }
-    .piyasa-grup[aria-hidden="true"] { display: none; }
+    .piyasa-serit .piyasa-akis,
+    .piyasa-serit.kayan .piyasa-akis { animation: none; }
+    .piyasa-serit .piyasa-grup[aria-hidden="true"],
+    .piyasa-serit.kayan .piyasa-grup[aria-hidden="true"] { display: none; }
+    .piyasa-serit { overflow-x: auto; }
 }
 
 /* --- Kanun listesi -------------------------------------------------------- */
