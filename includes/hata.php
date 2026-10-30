@@ -136,6 +136,32 @@ function hata_sayfasi_bas(string $baslik, string $mesaj, string $baglantiMetni =
 }
 
 /**
+ * Istek, gecerli ajan anahtariyla gelen bir /api/ istegi mi?
+ *
+ * Ajan uclarindaki hata (ornek: GET /api/dosya.php, 29.10.2026'dan beri
+ * her calismada 500) ajana yalnizca genel HTML sayfasi olarak donuyordu;
+ * gercek istisna sunucu gunlugunde kaliyor, kok neden hic gorunmuyordu.
+ * Anahtar dogrulanamazsa (ya da dogrulama kendisi hata verirse) eski
+ * davranis: disariya ayrinti verilmez.
+ */
+function hata_ajan_istegi_mi(): bool
+{
+    $yol = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+
+    if (!str_starts_with($yol, '/api/')) {
+        return false;
+    }
+
+    try {
+        require_once __DIR__ . '/ajan_yetki.php';
+
+        return ajan_anahtar_dogrula() !== null;
+    } catch (Throwable $dogrulamaHatasi) {
+        return false;
+    }
+}
+
+/**
  * Yakalanmayan istisnaları karşılar.
  */
 function hata_yakala(Throwable $e): void
@@ -150,6 +176,17 @@ function hata_yakala(Throwable $e): void
 
     // Once kendini onarmayi dene: eksik sutun/tablo ise semayi uygula.
     if (!headers_sent() && hata_semayi_onar($e)) {
+        return;
+    }
+
+    if (!headers_sent() && hata_ajan_istegi_mi()) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'hata'  => 'Sunucu hatası',
+            'detay' => get_class($e) . ': ' . $e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine(),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+
         return;
     }
 
