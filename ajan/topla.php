@@ -1378,9 +1378,15 @@ if ($cokKaynakli !== []) {
 // Buyuk toplu toplamada (22.10.2026, site sahibi: "100 tane yemek tarifi
 // al") 10 da yetmiyor: 7 kaynakla en fazla 70 aday. Tek baslikta tavan
 // istenen aday sayisiyla olceklenir: kaynak basina ortalamanin iki kati.
-$kaynakBasinaTavan = max(1, (int) ($secenekler['kaynakbasina'] ?? ($konular !== []
-    ? max(10, 2 * (int) ceil($enFazlaAday / max(1, count($kaynaklar))))
-    : 6)));
+//
+// Video modunda kanal basina 3 (30.10.2026, site sahibi: "videolu haberler
+// neden hep Haberturk'ten geliyor"): en cok yukleyen kanal listeyi
+// doldurmasin, her kanaldan birkac video gelsin.
+$kaynakBasinaTavan = max(1, (int) ($secenekler['kaynakbasina'] ?? ($videoModu
+    ? 3
+    : ($konular !== []
+        ? max(10, 2 * (int) ceil($enFazlaAday / max(1, count($kaynaklar))))
+        : 6))));
 $kaynakSayaci      = [];
 $secilen           = [];
 $tarifDegil        = 0;
