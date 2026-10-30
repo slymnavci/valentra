@@ -53,7 +53,9 @@ if ($kod === null) {
     $sirketler     = piyasa_sirketler_html();
 
     require __DIR__ . '/includes/sayfa_ust.php';
+    require_once __DIR__ . '/includes/gazeteler.php';
     ?>
+    <?= gazete_ust_html('valpapel', 'sirket') ?>
     <div class="kategori-basligi">
         <h1>Borsa İstanbul Şirketleri</h1>
         <p>Bir şirket seçin: 10 yıllık fiyat geçmişi, getiriler, risk ölçüleri, çarpanlar,
@@ -167,7 +169,10 @@ $seoAdres      = site_adresi() . sirket_yolu($kod);
 $csv = static fn (string $d): string => '/api/sirket-veri.php?kod=' . rawurlencode($kod) . '&donem=' . rawurlencode($d);
 
 require __DIR__ . '/includes/sayfa_ust.php';
+require_once __DIR__ . '/includes/gazeteler.php';
 ?>
+
+<?= gazete_ust_html('valpapel', 'sirket') ?>
 
 <div class="kategori-basligi sirket-baslik">
     <p class="sirket-yol"><a href="<?= e(piyasalar_yolu()) ?>">Piyasalar</a> &rsaquo;

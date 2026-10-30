@@ -23,7 +23,10 @@ $sayfaAciklama = 'Koç, Boğa, İkizler, Yengeç, Aslan, Başak, Terazi, Akrep, 
 $seoAdres      = site_adresi() . burclar_yolu();
 
 require __DIR__ . '/includes/sayfa_ust.php';
+require_once __DIR__ . '/includes/gazeteler.php';
 ?>
+
+<?= gazete_ust_html('valmagazin', 'burclar') ?>
 
 <div class="kategori-basligi">
     <h1>Günlük Burç Yorumları</h1>

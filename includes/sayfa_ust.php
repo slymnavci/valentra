@@ -239,7 +239,7 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
             <?php foreach ($menu as $oge): ?>
                 <?php if ($oge['href'] !== null): ?>
                     <a class="cekmece-oge <?= site_menu_aktif($oge, $aktifKategori) ? 'aktif' : '' ?>"
-                       href="<?= e($oge['href']) ?>"><?= e($oge['ad']) ?></a>
+                       href="<?= e($oge['href']) ?>"><?= site_menu_adi_html($oge) ?></a>
                 <?php else: ?>
                     <details class="cekmece-grup" <?= site_menu_aktif($oge, $aktifKategori) ? 'open' : '' ?>>
                         <summary class="cekmece-oge"><?= e($oge['ad']) ?></summary>
@@ -329,7 +329,7 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
                 <?php foreach ($menu as $oge): ?>
                     <?php if ($oge['href'] !== null): ?>
                         <a class="menu-oge <?= site_menu_aktif($oge, $aktifKategori) ? 'aktif' : '' ?>"
-                           href="<?= e($oge['href']) ?>"><?= e($oge['ad']) ?></a>
+                           href="<?= e($oge['href']) ?>"><?= site_menu_adi_html($oge) ?></a>
                     <?php else: ?>
                         <div class="menu-grup <?= site_menu_aktif($oge, $aktifKategori) ? 'aktif' : '' ?>">
                             <button type="button" class="menu-oge" aria-expanded="false"

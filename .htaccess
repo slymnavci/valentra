@@ -172,6 +172,11 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^kategori/([^/]+)/?$ kategori.php?k=$1 [L,QSA]
 
+    # ValPapel, ValSpor, ValMagazin (29.10.2026): /valpapel, /valpapel/doviz
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(valpapel|valspor|valmagazin)(?:/([a-z0-9-]+))?/?$ gazete.php?g=$1&b=$2 [L,QSA]
+
     # Etiket sayfalari (28.10.2026)
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

@@ -338,41 +338,90 @@ function futbol_puan_durumu(string $lig): array
 /** @return array{veri:?array,zaman:int} */
 function futbol_gol_kralligi(string $lig): array
 {
-    return futbol_onbellekli('/site/v2/sports/soccer/' . $lig . '/statistics', [], 3600, static function (array $c): ?array {
-        $liderler = [];
+    $kayit = futbol_krallik_verisi($lig);
+
+    return ['veri' => $kayit['veri']['gol'] ?? null, 'zaman' => $kayit['zaman']];
+}
+
+/**
+ * Asist kralligi (30.10.2026, site sahibinin istegi: "gol ve asist
+ * kralligina menuden gidelim"). Gol kralligiyla ayni ESPN cevabindan.
+ *
+ * @return array{veri:?array,zaman:int}
+ */
+function futbol_asist_kralligi(string $lig): array
+{
+    $kayit = futbol_krallik_verisi($lig);
+
+    return ['veri' => $kayit['veri']['asist'] ?? null, 'zaman' => $kayit['zaman']];
+}
+
+/**
+ * Ligin gol ve asist liderleri, tek istekle (ESPN statistics: goalsLeaders,
+ * assistsLeaders). Onbellek anahtari istek adresinden; iki liste ayni
+ * cevaptan cikiyor.
+ *
+ * @return array{veri:?array{gol:?array,asist:?array},zaman:int}
+ */
+function futbol_krallik_verisi(string $lig): array
+{
+    $kayit = futbol_onbellekli('/site/v2/sports/soccer/' . $lig . '/statistics', [], 3600, static function (array $c): ?array {
+        $listeler = ['goalsLeaders' => [], 'assistsLeaders' => []];
 
         foreach ($c['stats'] ?? [] as $s) {
-            if (($s['name'] ?? '') === 'goalsLeaders') {
-                $liderler = $s['leaders'] ?? [];
+            $ad = (string) ($s['name'] ?? '');
+
+            if (isset($listeler[$ad])) {
+                $listeler[$ad] = $s['leaders'] ?? [];
             }
         }
 
-        $liste = [];
+        $gol   = futbol_lider_satirlari($listeler['goalsLeaders'], 'gol');
+        $asist = futbol_lider_satirlari($listeler['assistsLeaders'], 'asist');
 
-        foreach (array_slice($liderler, 0, 30) as $o) {
-            $ist = [];
-
-            foreach ($o['athlete']['statistics'] ?? [] as $d) {
-                $ist[(string) ($d['name'] ?? '')] = (int) ($d['value'] ?? 0);
-            }
-
-            // "M: 8, G: 8: A: 3": istatistik adlari eksikse buradan.
-            preg_match('/M:\s*(\d+).*?G:\s*(\d+)(?:.*?A:\s*(\d+))?/', (string) ($o['shortDisplayValue'] ?? ''), $e);
-
-            $liste[] = [
-                'oyuncu'   => (string) ($o['athlete']['displayName'] ?? ''),
-                'uyruk'    => '',
-                'takim_id' => (int) ($o['athlete']['team']['id'] ?? 0),
-                'takim'    => (string) ($o['athlete']['team']['displayName'] ?? ''),
-                'logo'     => (string) ($o['athlete']['team']['logos'][0]['href'] ?? ''),
-                'mac'      => $ist['appearances'] ?? (int) ($e[1] ?? 0),
-                'gol'      => (int) ($o['value'] ?? ($e[2] ?? 0)),
-                'asist'    => $ist['goalAssists'] ?? (int) ($e[3] ?? 0),
-            ];
-        }
-
-        return $liste !== [] ? $liste : null;
+        return $gol === [] && $asist === [] ? null : ['gol' => $gol ?: null, 'asist' => $asist ?: null];
     });
+
+    // Yayindan once onbellege giren eski bicim: yalnizca gol listesi.
+    if (is_array($kayit['veri']) && array_is_list($kayit['veri'])) {
+        $kayit['veri'] = ['gol' => $kayit['veri'], 'asist' => null];
+    }
+
+    return $kayit;
+}
+
+/**
+ * @param list<array<string,mixed>> $liderler
+ * @param 'gol'|'asist' $tur Liderin 'value' alani hangisi
+ * @return list<array<string,mixed>>
+ */
+function futbol_lider_satirlari(array $liderler, string $tur): array
+{
+    $liste = [];
+
+    foreach (array_slice($liderler, 0, 30) as $o) {
+        $ist = [];
+
+        foreach ($o['athlete']['statistics'] ?? [] as $d) {
+            $ist[(string) ($d['name'] ?? '')] = (int) ($d['value'] ?? 0);
+        }
+
+        // "M: 8, G: 8: A: 3": istatistik adlari eksikse buradan.
+        preg_match('/M:\s*(\d+).*?G:\s*(\d+)(?:.*?A:\s*(\d+))?/', (string) ($o['shortDisplayValue'] ?? ''), $e);
+
+        $liste[] = [
+            'oyuncu'   => (string) ($o['athlete']['displayName'] ?? ''),
+            'uyruk'    => '',
+            'takim_id' => (int) ($o['athlete']['team']['id'] ?? 0),
+            'takim'    => (string) ($o['athlete']['team']['displayName'] ?? ''),
+            'logo'     => (string) ($o['athlete']['team']['logos'][0]['href'] ?? ''),
+            'mac'      => $ist['appearances'] ?? (int) ($e[1] ?? 0),
+            'gol'      => $tur === 'gol' ? (int) ($o['value'] ?? ($e[2] ?? 0)) : ($ist['totalGoals'] ?? (int) ($e[2] ?? 0)),
+            'asist'    => $tur === 'asist' ? (int) ($o['value'] ?? 0) : ($ist['goalAssists'] ?? (int) ($e[3] ?? 0)),
+        ];
+    }
+
+    return $liste;
 }
 
 // --- Fikstür: maç günleri turlara ayrılıyor --------------------------------

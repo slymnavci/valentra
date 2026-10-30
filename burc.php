@@ -40,7 +40,10 @@ if ($istenen !== '') {
 }
 
 require __DIR__ . '/includes/sayfa_ust.php';
+require_once __DIR__ . '/includes/gazeteler.php';
 ?>
+
+<?= gazete_ust_html('valmagazin', 'burclar') ?>
 
 <div class="ana-duzen">
     <div class="ana-kolon">

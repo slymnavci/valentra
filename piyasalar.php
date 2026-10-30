@@ -55,22 +55,21 @@ if ($b === null) {
 }
 
 require __DIR__ . '/includes/sayfa_ust.php';
+require_once __DIR__ . '/includes/gazeteler.php';
+
+// ValPapel'in kunyesi ve basliklari (29.10.2026): piyasa sayfalari ValPapel'in.
+$gazeteBolumu = ['bist' => 'borsa', 'dunya' => 'dunya-borsalari', 'petrol' => 'emtia'][$bolum] ?? ($bolum !== '' ? $bolum : 'piyasalar');
 ?>
+
+<?= gazete_ust_html('valpapel', $gazeteBolumu) ?>
 
 <div class="kategori-basligi">
     <h1><?= e($b !== null ? $b['baslik'] : 'Piyasalar') ?></h1>
     <p><?= $b !== null ? e($b['aciklama']) : 'Döviz, altın, borsa, emtia, kripto ve dünya borsaları; grafikler ve ekonomik göstergeler.' ?>
-        Günün ekonomi haberleri <a href="<?= e(kategori_yolu('ekonomi')) ?>">Ekonomi</a> sayfasında.</p>
+        Günün ekonomi haberleri <a href="<?= e(gazete_yolu('valpapel')) ?>">ValPapel</a>'de.</p>
 </div>
 
-<?php /* Bolumler arasi gecis; spor sekmeleriyle ayni gorunum. */ ?>
-<nav class="spor-sekmeler" aria-label="Piyasa bölümleri">
-    <a href="<?= e(piyasalar_yolu()) ?>"<?= $bolum === '' ? ' class="aktif" aria-current="page"' : '' ?>>Genel Bakış</a>
-    <?php foreach ($bolumler as $anahtar => $bb): ?>
-        <a href="<?= e(piyasa_bolum_yolu($anahtar)) ?>"<?= $anahtar === $bolum ? ' class="aktif" aria-current="page"' : '' ?>><?= e($bb['ad']) ?></a>
-    <?php endforeach; ?>
-    <a href="<?= e(sirket_yolu()) ?>">Şirket Analizi</a>
-</nav>
+<?php /* Bolumler arasi gecis ValPapel'in sekmelerinde (gazete_ust_html); ayri piyasa menusu 30.10.2026'da kaldirildi. */ ?>
 
 <div class="ana-duzen tam">
     <div class="ana-kolon">

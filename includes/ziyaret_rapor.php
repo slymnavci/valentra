@@ -711,6 +711,166 @@ function zr_dogruluk(): array
 }
 
 /* ------------------------------------------------------------------ *
+ * Gosterge paneli (29.10.2026)
+ *
+ * Site sahibinin istegi: "ziyaretci sayfasini daha detayli bir
+ * raporlama alanina cevir; grafikler koyalim: kullanici nereden geldi,
+ * son bir haftalik trendler, Google'dan gelen okuyucu, ortalama tiklama,
+ * haberlerin okunma sayisi ve adedi; diger bilgiler altta kalsin".
+ * ------------------------------------------------------------------ */
+
+/** Gösterge grafiklerindeki kaynak grupları, renk sırasıyla. */
+function zr_kaynak_gruplari(): array
+{
+    return [
+        'google'   => 'Google',
+        'arama'    => 'Diğer arama motorları',
+        'sosyal'   => 'Sosyal medya',
+        'dogrudan' => 'Doğrudan',
+        'diger'    => 'Diğer (site, e-posta, yapay zekâ)',
+    ];
+}
+
+/** Google'dan gelen satır mı (SQL; kanal ifadesi "arama" iken). */
+function zr_google_kosulu(string $t = 'z'): string
+{
+    return $t . '.yonlendiren REGEXP ' . db()->quote('^([a-z0-9-]+\\.)*google\\.[a-z.]+$');
+}
+
+/** Satırın gösterge kaynak grubu (SQL CASE). */
+function zr_kaynak_grubu_ifadesi(string $t = 'z'): string
+{
+    $kanal = zr_kanal_ifadesi($t);
+
+    return "(CASE WHEN " . $kanal . " = 'arama' AND " . zr_google_kosulu($t) . " THEN 'google'"
+        . " WHEN " . $kanal . " IN ('arama', 'sosyal', 'dogrudan') THEN " . $kanal
+        . " ELSE 'diger' END)";
+}
+
+/**
+ * Trend grafiklerinin aralığı: seçili aralık, kısaysa (bugün, dün) son
+ * 7 gün; site sahibi "son bir haftalik trendler" istedi.
+ *
+ * @return array{bas:string,bit:string,gun:int}
+ */
+function zr_trend_araligi(array $a): array
+{
+    if ($a['gun'] >= 7) {
+        return ['bas' => $a['bas'], 'bit' => $a['bit'], 'gun' => $a['gun']];
+    }
+
+    return [
+        'bas' => (new DateTimeImmutable($a['bit']))->modify('-6 days')->format('Y-m-d'),
+        'bit' => $a['bit'],
+        'gun' => 7,
+    ];
+}
+
+/**
+ * Gün gün gösterge serisi: ziyaretçi, görüntülenme, haber okunma, okunan
+ * haber adedi, Google'dan gelen okuyucu ve kaynak gruplarına göre gelen
+ * ziyaretçi. Kaydı olmayan gün sıfır.
+ *
+ * @param array{bas:string,bit:string} $t
+ * @return list<array<string,mixed>>
+ */
+function zr_gosterge_serisi(array $t, bool $ham): array
+{
+    $k  = zr_kosul($t['bas'], $t['bit'], $ham);
+    $id = zr_kimlik();
+
+    $temel = [];
+
+    foreach (zr_sorgu('SELECT DATE(z.zaman) AS d, COUNT(*) AS g, COUNT(DISTINCT ' . $id . ') AS z,
+                              SUM(z.haber_id IS NOT NULL) AS ho, COUNT(DISTINCT z.haber_id) AS oh
+                         FROM ziyaretler z WHERE ' . $k . ' GROUP BY d') as $r) {
+        $temel[(string) $r['d']] = $r;
+    }
+
+    // Gelis: site ici gecisler disarida (her kaynak kisinin o gunku girisi).
+    $kaynak = [];
+
+    foreach (zr_sorgu('SELECT DATE(z.zaman) AS d, ' . zr_kaynak_grubu_ifadesi('z') . ' AS grup,
+                              COUNT(DISTINCT ' . $id . ') AS n
+                         FROM ziyaretler z
+                        WHERE ' . $k . ' AND z.yonlendiren <> ' . db()->quote(ZIYARET_IC_GECIS) . '
+                        GROUP BY d, grup') as $r) {
+        $kaynak[(string) $r['d']][(string) $r['grup']] = (int) $r['n'];
+    }
+
+    $gunAdi = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+    $seri   = [];
+    $gun    = new DateTimeImmutable($t['bas']);
+    $son    = new DateTimeImmutable($t['bit']);
+
+    while ($gun <= $son) {
+        $d  = $gun->format('Y-m-d');
+        $tm = $temel[$d] ?? [];
+        $z  = (int) ($tm['z'] ?? 0);
+        $g  = (int) ($tm['g'] ?? 0);
+        $gruplar = [];
+
+        foreach (array_keys(zr_kaynak_gruplari()) as $grup) {
+            $gruplar[$grup] = (int) ($kaynak[$d][$grup] ?? 0);
+        }
+
+        $seri[] = [
+            'gun'          => $d,
+            'etiket'       => $gun->format('d.m'),
+            'ipucu'        => $gun->format('d.m.Y') . ' ' . $gunAdi[(int) $gun->format('w')],
+            'ziyaretci'    => $z,
+            'goruntulenme' => $g,
+            'sayfa_kisi'   => $z > 0 ? round($g / $z, 2) : 0.0,
+            'haber_okunma' => (int) ($tm['ho'] ?? 0),
+            'okunan_haber' => (int) ($tm['oh'] ?? 0),
+            'google'       => $gruplar['google'],
+            'kaynaklar'    => $gruplar,
+        ];
+        $gun = $gun->modify('+1 day');
+    }
+
+    return $seri;
+}
+
+/**
+ * Bir aralıkta Google'dan gelen tekil okuyucu ve okunan farklı haber
+ * sayısı (gösterge kutuları ve önceki dönemle karşılaştırma için).
+ *
+ * @return array{google:int,okunan_haber:int}
+ */
+function zr_gosterge_ozet(string $bas, string $bit, bool $ham): array
+{
+    $k = zr_kosul($bas, $bit, $ham);
+    $s = zr_sorgu(
+        'SELECT COUNT(DISTINCT CASE WHEN ' . zr_kaynak_grubu_ifadesi('z') . " = 'google' THEN " . zr_kimlik() . ' END) AS google,
+                COUNT(DISTINCT z.haber_id) AS okunan_haber
+           FROM ziyaretler z WHERE ' . $k
+    )[0] ?? [];
+
+    return ['google' => (int) ($s['google'] ?? 0), 'okunan_haber' => (int) ($s['okunan_haber'] ?? 0)];
+}
+
+/**
+ * Kaynak gruplarına göre tekil ziyaretçi (aralığın toplamı).
+ *
+ * @return array<string,int>
+ */
+function zr_kaynak_paylari(array $a, bool $ham): array
+{
+    $sonuc = array_fill_keys(array_keys(zr_kaynak_gruplari()), 0);
+
+    foreach (zr_sorgu('SELECT ' . zr_kaynak_grubu_ifadesi('z') . ' AS grup, COUNT(DISTINCT ' . zr_kimlik() . ') AS n
+                         FROM ziyaretler z
+                        WHERE ' . zr_kosul($a['bas'], $a['bit'], $ham) . '
+                          AND z.yonlendiren <> ' . db()->quote(ZIYARET_IC_GECIS) . '
+                        GROUP BY grup') as $r) {
+        $sonuc[(string) $r['grup']] = (int) $r['n'];
+    }
+
+    return $sonuc;
+}
+
+/* ------------------------------------------------------------------ *
  * Bicimleme
  * ------------------------------------------------------------------ */
 

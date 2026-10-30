@@ -82,6 +82,11 @@ final class Derleyici
           doğrudan etkileyen düzenlemeler değerlidir.
         - Konular çeşitli olsun: listede varsa gündem, ekonomi, dünya,
           spor ve diğer başlıklardan olaylar.
+        - DÜNYA GÜNDEMİ: seçtiğin olayların EN AZ İKİSİ dünyadan olsun
+          (konusu "dunya" olan haberler; dünyanın dört bir yanındaki
+          yayınlardan geliyor). Türkiye'yi ilgilendiren dünya olayları
+          önce; sonra dünyada en çok konuşulan gelişmeler. Listede dünya
+          olayı varsa bu kural zorunludur.
         - "ÖNCEKİ DERLEMELER" listesindeki olayları, üzerine yeni ve somut
           bir gelişme yoksa yeniden seçme.
         - Yayın politikasına takılacak olayları (yargı süreci süren

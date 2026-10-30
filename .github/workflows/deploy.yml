@@ -23,16 +23,19 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Yukleme adimi kendi icinde uc kez deneniyor ve her deneme en
-    # fazla bes dakika suruyor; beklemelerle birlikte en kotu durum
-    # ~17 dakika. 12 dakika yetmiyordu: bir deploy tam bu yuzden
-    # "cancelled" ile kesildi ve sertifika duzeltmesi sunucuya hic
-    # gitmedi.
-    timeout-minutes: 22
+    # Yukleme adimi kendi icinde yeniden deniyor (bkz. .github/yukle.sh):
+    # degisen dosyalar en kotu ~16 dakika, tam yukleme iki kez 15 dakika.
+    # 12 dakika yetmiyordu: bir deploy tam bu yuzden "cancelled" ile
+    # kesildi ve sertifika duzeltmesi sunucuya hic gitmedi.
+    timeout-minutes: 35
 
     steps:
       - name: Repository kodlarini al
         uses: actions/checkout@v5
+        with:
+          # Tum gecmis: yalnizca son yuklemeden bu yana degisen dosyalar
+          # gonderiliyor (bkz. .github/yukle.sh).
+          fetch-depth: 0
 
       - name: FTP aracini kur
         run: |
@@ -94,78 +97,7 @@ jobs:
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           FTP_DIRECTORY: ${{ secrets.FTP_DIRECTORY }}
-        run: |
-          # IHS'in FTP sunucusu zaman zaman baglantiyi hic kabul etmiyor
-          # ("cd: max-retries exceeded — Connection timed out") ve deploy
-          # tamamen dusuyor. Bu uc kez yasandi; her seferinde kod dogru
-          # oldugu halde degisiklikler sunucuya hic gitmedi ve sorun
-          # ancak siteye bakilinca fark edildi.
-          #
-          # Sunucu genelde birkac dakika sonra aciliyor, o yuzden
-          # basarisiz yukleme artan beklemeyle tekrar deneniyor.
-          # Yukleme "mirror" oldugu icin tekrar denemek zararsiz:
-          # ayni dosyalar yeniden yazilir, yarim kalan yukleme tamamlanir.
-          # Her deneme "timeout" ile sinirlaniyor.
-          #
-          # lftp'nin kendi net:timeout ayari baglantiyi kesiyor ama yavas
-          # ilerleyen bir aktarimi durdurmuyor; takilan tek bir deneme
-          # butun sure butcesini yiyebiliyor. Bu gerceklesti: deneme
-          # bitmedigi icin is 12 dakikada kesildi ve hicbir dosya
-          # gitmedi.
-          # YUKLEME SIRASI (29.10.2026): sayfalar bir sure acilmadi. mirror
-          # once kok dizindeki dosyalari (haber.php) yukluyordu; yeni
-          # haber.php henuz yuklenmemis includes/haber_govde.php'yi
-          # istedigi icin yukleme bitene kadar her haber sayfasi hata
-          # verdi. Yukleme yavas (dosya zamanlari her checkout'ta yeni,
-          # her sey yeniden gidiyor) ve 300 saniyede kesilince karisik
-          # surum kalabiliyordu. Simdi once alt dizinler (includes, api,
-          # assets ...), en son kokteki sayfalar ve .htaccess; sure 900 sn.
-          lftp_betigi() {
-            cat <<EOF
-          set cmd:fail-exit yes
-          set net:timeout 20
-          set net:max-retries 2
-          set net:reconnect-interval-base 5
-          set ftp:ssl-allow no
-          set ftp:passive-mode yes
-
-          cd "$FTP_DIRECTORY"
-          EOF
-
-            for d in $(find . -mindepth 1 -maxdepth 1 -type d ! -name .git ! -name .github ! -name node_modules -printf '%f\n' | sort); do
-              if [ "$d" = "egitim" ]; then
-                echo "mirror --reverse --verbose --exclude-glob content/** --exclude-glob materyaller/** $d $d"
-              else
-                echo "mirror --reverse --verbose $d $d"
-              fi
-            done
-
-            echo "mirror --reverse --verbose --no-recursion . ."
-            echo "bye"
-          }
-
-          yukle() {
-            lftp_betigi > /tmp/lftp_betigi.txt
-            timeout 900 lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER" < /tmp/lftp_betigi.txt
-          }
-
-          BEKLEME="20 45"
-          DENEME=1
-
-          for bekle in $BEKLEME ""; do
-            echo "--- Yukleme denemesi $DENEME ---"
-
-            if yukle; then
-              echo "Yukleme basarili (deneme $DENEME)."
-              exit 0
-            fi
-
-            if [ -z "$bekle" ]; then
-              echo "Yukleme $DENEME denemede de basarisiz oldu."
-              exit 1
-            fi
-
-            echo "Yukleme basarisiz. $bekle saniye sonra tekrar denenecek."
-            sleep "$bekle"
-            DENEME=$((DENEME + 1))
-          done
+        # Yarim dosya gorunmuyor (gecici adla yukleyip yeniden adlandirma) ve
+        # yalnizca son yuklemeden bu yana degisen dosyalar gidiyor; ayrinti,
+        # siralama ve yeniden deneme .github/yukle.sh icinde.
+        run: bash .github/yukle.sh
