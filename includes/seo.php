@@ -150,7 +150,7 @@ function seo_haber_semasi(array $haber): string
 
     // Gorselsiz haberde marka gorseli: "image" alani bos kalmasin.
     $sema['image'] = [$gorsel !== '' ? (str_starts_with($gorsel, '/') ? site_adresi() . $gorsel : $gorsel)
-                                     : site_adresi() . '/assets/paylasim.png'];
+                                     : site_adresi() . '/assets/paylasim.jpg'];
 
     if (!empty($haber['kategori_adi'])) {
         $sema['articleSection'] = (string) $haber['kategori_adi'];
