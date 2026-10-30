@@ -2,8 +2,8 @@
 declare(strict_types=1);
 
 /**
- * Piyasa verisi: dolar, euro, gram altin, ons altin, BIST 100, ABD
- * borsalari (S&P 500, Nasdaq, Dow Jones) ve Brent petrol.
+ * Piyasa verisi: dolar, euro, gram altin, ons altin, BIST 100 ve Brent
+ * petrol.
  *
  * Tasarim notlari:
  *
@@ -40,15 +40,13 @@ const PIYASA_REFERANS_ANAHTAR = 'piyasa_gun_referansi';
 const PIYASA_ONBELLEK_SURE    = 120;
 
 /*
- * ABD borsalari ve petrol (site sahibi, 30.10.2026: "abd borsa bilgileri
- * de olsun, petrol fiyatini yazalim"). Ekonomi sayfasiyla ayni Yahoo
- * sembolleri; dordu tek istekte (spark ucu) geliyor.
+ * Doviz ve altin disindaki dunya fiyatlari (site sahibi, 30.10.2026:
+ * "petrol fiyatini yazalim"). ABD borsalari (^GSPC, ^IXIC, ^DJI) ayni gun
+ * eklenip cikarildi: "abd borsa bilgilerini cikaralim, serit sabit
+ * kalsin". Yeni sembol eklenirse spark ucu hepsini tek istekte veriyor.
  */
 const PIYASA_DUNYA = [
-    'sp500'  => '^GSPC',
-    'nasdaq' => '^IXIC',
-    'dow'    => '^DJI',
-    'brent'  => 'BZ=F',
+    'brent' => 'BZ=F',
 ];
 
 /**
@@ -567,14 +565,13 @@ function piyasa_bist(): array
 }
 
 /**
- * ABD borsalari ve Brent petrol: deger ve onceki kapanisa gore degisim.
+ * Brent petrol (PIYASA_DUNYA): deger ve onceki kapanisa gore degisim.
  *
  * Tek istek (spark ucu; Ekonomi sayfasinin sirket tablosu da bunu
- * kullaniyor). Sayfa gonderildikten sonra tazelendigi icin ziyaretciyi
- * bekletmiyor; yine de dort ayri istek yerine bir istek. Spark bir
- * sembolu vermezse o sembol grafik ucundan tek basina deneniyor.
+ * kullaniyor); sembol eklenirse yine tek istek. Spark bir sembolu
+ * vermezse o sembol grafik ucundan tek basina deneniyor.
  *
- * @return array<string,float|null> sp500, sp500_degisim, nasdaq, ... (yalnizca bulunanlar)
+ * @return array<string,float|null> brent, brent_degisim (yalnizca bulunanlar)
  */
 function piyasa_dunya(): array
 {
@@ -622,7 +619,7 @@ function piyasa_dunya(): array
 }
 
 /**
- * ABD borsalari ve petrol alanlari, eksikler null (onbellek ve uc ayni sekli verir).
+ * PIYASA_DUNYA alanlari, eksikler null (onbellek ve uc ayni sekli verir).
  *
  * @param array<string,mixed> $veri
  * @return array<string,?float>

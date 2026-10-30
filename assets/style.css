@@ -2073,23 +2073,22 @@ a.menu-oge.aktif::after,
     border-left: 4px solid var(--altin);
     border-radius: var(--yuvarlak);
     margin: 0 0 8px;
-    overflow: hidden;
-    /* Icerik sigmadiginda kaysin diye tasma gizleniyor. */
+    /* Serit kendi genisligine gore diziliyor (container query, asagida). */
+    container-type: inline-size;
 }
 
-.piyasa-akis {
-    display: flex;
-    width: 100%;
-}
-
+/*
+ * SABIT (site sahibi, 30.10.2026: "kayar olmasin, sabit kalsin").
+ * Genis seritte alti kalem tek satirda, aralari esit; dar seritte once
+ * kisa adlar, sonra uc ve iki sutunlu izgara. Hicbir genislikte kaymiyor
+ * ve tasmiyor.
+ */
 .piyasa-grup {
     display: flex;
     align-items: center;
-    gap: 30px;
+    gap: 24px;
     padding: 14px 22px;
     white-space: nowrap;
-    flex: 0 0 auto;
-    min-width: 100%;
     justify-content: space-between;
 }
 
@@ -2155,76 +2154,44 @@ a.menu-oge.aktif::after,
 :where(:root[data-tema="koyu"]) .piyasa-oge .degisim.arti { color: #4ade80; }
 :where(:root[data-tema="koyu"]) .piyasa-oge .degisim.eksi { color: #ff6b70; }
 
-/* Telefonda kisa adlar ve biraz daha siki aralik. */
-@media (max-width: 720px) {
-    .piyasa-grup { gap: 22px; padding: 12px 22px 12px 14px; }
+/* ~1600 pikselden dar seritte (1366'lik dizustu): kisa adlar, siki aralik. */
+@container (max-width: 1600px) {
     .piyasa-oge .ad .uzun { display: none; }
     .piyasa-oge .ad .kisa { display: inline; }
-    .piyasa-oge .deger { font-size: 1.02rem; }
+    .piyasa-grup { gap: 14px; padding: 13px 16px; }
+    .piyasa-oge { gap: 5px; }
+    .piyasa-oge .deger { font-size: 1rem; }
+    .piyasa-oge .degisim { font-size: .8rem; }
+}
+
+/* Tek satira sigmiyor: uc sutun, iki satir (tablet). */
+@container (max-width: 1240px) {
+    .piyasa-grup {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px 18px;
+        padding: 12px 16px;
+    }
 }
 
 /*
- * Sigmiyorsa kaydir.
- *
- * Dokuz kalem cogu ekranda tek satira sigmiyor; sigip sigmadigini
- * piyasa_serit.php'deki betik olcup .kayan sinifini koyuyor. Sigdiginda
- * serit duruyor: surekli kayan bir cubuk okumayi zorlastiriyor. Betik
- * calismazsa telefonda yine kayiyor (asagidaki medya sorgusu); genis
- * ekranda sigmayan kalemler gizli kalir. Ikinci grup kopyasi kesintisiz
- * donguyu saglar.
+ * Telefon: yine uc sutun, iki satir; her kalem iki satirli kucuk bir
+ * hucre (ustte simge ve deger, altta ad ve degisim). Yan yana tek satir
+ * 90 piksellik hucreye sigmiyor.
  */
-.piyasa-serit.kayan .piyasa-grup {
-    min-width: auto;
-    justify-content: flex-start;
-    padding-right: 0;
-    margin-right: 30px;
+@container (max-width: 660px) {
+    .piyasa-grup { gap: 10px 8px; padding: 10px 10px 10px 12px; }
+    .piyasa-oge { flex-wrap: wrap; column-gap: 5px; row-gap: 1px; min-width: 0; }
+    .piyasa-simge { order: 1; width: 18px; height: 18px; }
+    .piyasa-oge .deger { order: 2; flex: 1 1 calc(100% - 23px); font-size: .95rem; }
+    .piyasa-oge .ad { order: 3; font-size: .72rem; color: var(--metin-soluk); }
+    .piyasa-oge .degisim { order: 4; font-size: .72rem; }
 }
 
-.piyasa-serit.kayan .piyasa-akis {
-    width: max-content;
-    animation: piyasa-kay 40s linear infinite;
-}
-
-.piyasa-serit.kayan:hover .piyasa-akis,
-.piyasa-serit.kayan:focus-within .piyasa-akis {
-    animation-play-state: paused;
-}
-
-.piyasa-serit:not(.kayan) .piyasa-grup[aria-hidden="true"] { display: none; }
-
-@media (max-width: 720px) {
-    .piyasa-serit .piyasa-grup {
-        min-width: auto;
-        justify-content: flex-start;
-        padding-right: 0;
-        margin-right: 22px;
-    }
-
-    /* Iki kopya yan yana; -%50 tam bir kopya demek, dongu ziplamadan doner. */
-    .piyasa-serit .piyasa-akis {
-        width: max-content;
-        animation: piyasa-kay 40s linear infinite;
-    }
-
-    .piyasa-serit .piyasa-grup[aria-hidden="true"] { display: flex; }
-
-    .piyasa-serit:hover .piyasa-akis,
-    .piyasa-serit:focus-within .piyasa-akis {
-        animation-play-state: paused;
-    }
-}
-
-@keyframes piyasa-kay {
-    from { transform: translateX(0); }
-    to   { transform: translateX(-50%); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .piyasa-serit .piyasa-akis,
-    .piyasa-serit.kayan .piyasa-akis { animation: none; }
-    .piyasa-serit .piyasa-grup[aria-hidden="true"],
-    .piyasa-serit.kayan .piyasa-grup[aria-hidden="true"] { display: none; }
-    .piyasa-serit { overflow-x: auto; }
+/* 360 piksellik telefon: deger simgenin yaninda kalsin diye biraz kucuk. */
+@container (max-width: 330px) {
+    .piyasa-grup { gap: 10px 6px; padding: 10px 8px 10px 10px; }
+    .piyasa-oge .deger { font-size: .86rem; }
 }
 
 /* --- Kanun listesi -------------------------------------------------------- */
