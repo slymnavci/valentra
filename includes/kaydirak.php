@@ -19,19 +19,34 @@ if (($mansetler ?? []) === []) {
 
     <div class="kaydirak-pencere" id="kaydirakPencere">
         <?php foreach ($mansetler as $sira => $haber): ?>
-            <?php $gorsel = guvenli_url($haber['gorsel_url'] ?? ''); ?>
+            <?php $gorsel = haber_gorsel($haber); ?>
             <article class="kaydirak-slayt <?= $gorsel !== '' ? 'gorselli' : '' ?>"
                      aria-roledescription="slide"
                      aria-label="<?= (int) $sira + 1 ?> / <?= count($mansetler) ?>">
                 <a href="<?= e(haber_yolu((string) $haber['slug'])) ?>">
                     <?php if ($gorsel !== ''): ?>
-                        <img class="ust-gorsel" src="<?= e($gorsel) ?>" alt=""
+                        <?php // Ayni gorselin bulanik kopyasi: tam gorunen gorselin arkasini doldurur. ?>
+                        <?php // Bulanik arka plan: kucuk kopya yeter. ?>
+                        <img class="arka-gorsel" src="<?= e(haber_gorsel_kucuk($haber, 480)) ?>" alt="" aria-hidden="true"
+                             referrerpolicy="no-referrer" onerror="this.remove()"
+                             loading="<?= $sira === 0 ? 'eager' : 'lazy' ?>">
+                        <?php $slaytSet = haber_gorsel_srcset($haber); ?>
+                        <img class="ust-gorsel" src="<?= e(haber_gorsel_kucuk($haber, 960)) ?>" alt="" referrerpolicy="no-referrer"
+                             <?php if ($slaytSet !== ''): ?>srcset="<?= e($slaytSet) ?>" sizes="(max-width: 960px) 100vw, 960px"<?php endif; ?>
+                             <?= $sira === 0 ? 'fetchpriority="high"' : '' ?>
+                             onerror="this.closest('.kaydirak-slayt').classList.remove('gorselli');this.remove()"
                              loading="<?= $sira === 0 ? 'eager' : 'lazy' ?>">
                     <?php endif; ?>
 
                     <div class="kaydirak-govde">
+                        <?php if ((int) $haber['id'] === haber_son_dakika_id()): ?>
+                            <span class="son-dakika-rozet">Son Dakika</span>
+                        <?php endif; ?>
                         <?php if (!empty($haber['kategori_adi'])): ?>
                             <span class="grup"><?= e($haber['kategori_adi']) ?></span>
+                        <?php endif; ?>
+                        <?php if (haber_video_adresi((string) ($haber['iframe_url'] ?? '')) !== ''): ?>
+                            <span class="video-rozet" title="Videolu haber">&#9654; Video</span>
                         <?php endif; ?>
 
                         <h2><?= e($haber['baslik']) ?></h2>
@@ -42,9 +57,6 @@ if (($mansetler ?? []) === []) {
 
                         <div class="kunye">
                             <?= e(tarih_bicimle($haber['yayin_tarihi'])) ?>
-                            <?php if ($haber['kaynak_adi'] !== ''): ?>
-                                &middot; <?= e(kaynak_gorunen_ad((string) $haber['kaynak_adi'])) ?>
-                            <?php endif; ?>
                         </div>
                     </div>
                 </a>
@@ -53,12 +65,22 @@ if (($mansetler ?? []) === []) {
     </div>
 </section>
 
-<div class="kaydirak-sayfalar" id="kaydirakSayfalar" role="tablist" aria-label="Haber seç">
+<div class="kaydirak-sayfalar" id="kaydirakSayfalar" role="tablist" aria-label="Haber seç"
+     style="--adet: <?= count($mansetler) ?>">
     <?php foreach ($mansetler as $sira => $haber): ?>
         <button type="button" role="tab"
                 data-sira="<?= (int) $sira ?>"
                 aria-current="<?= $sira === 0 ? 'true' : 'false' ?>"
                 aria-label="<?= (int) $sira + 1 ?>. haber"><?= (int) $sira + 1 ?></button>
+    <?php endforeach; ?>
+</div>
+
+<?php /* Telefonda dugmeler yerine yalnizca gosterge (dokunulmuyor; gecis
+         parmakla kaydirarak). Bkz. style.css .kaydirak-noktalar. */ ?>
+<div class="kaydirak-noktalar" id="kaydirakNoktalar" aria-hidden="true"
+     style="--adet: <?= count($mansetler) ?>">
+    <?php foreach ($mansetler as $sira => $haber): ?>
+        <span<?= $sira === 0 ? ' class="aktif"' : '' ?>></span>
     <?php endforeach; ?>
 </div>
 
@@ -69,15 +91,20 @@ if (($mansetler ?? []) === []) {
     if (!pencere || !sayfalar) { return; }
 
     var dugmeler = Array.prototype.slice.call(sayfalar.querySelectorAll('button'));
+    var noktaKutu = document.getElementById('kaydirakNoktalar');
+    var noktalar = noktaKutu ? Array.prototype.slice.call(noktaKutu.children) : [];
     var slaytlar = Array.prototype.slice.call(pencere.children);
-    if (slaytlar.length < 2) { sayfalar.hidden = true; return; }
+    if (slaytlar.length < 2) { sayfalar.hidden = true; if (noktaKutu) { noktaKutu.hidden = true; } return; }
 
     var aktif = 0;
     var kullaniciMudahalesi = false;
+    var uzerinde = false;   // fare manset ya da numaralarin uzerindeyken otomatik ilerleme durur
 
-    function git(sira) {
+    // aninda: fareyle numara uzerine gelindiginde kaydirma animasyonu yok,
+    // haber hemen degisiyor (site sahibinin istegi, 26.10.2026).
+    function git(sira, aninda) {
         aktif = (sira + slaytlar.length) % slaytlar.length;
-        pencere.scrollTo({ left: slaytlar[aktif].offsetLeft - pencere.offsetLeft, behavior: 'smooth' });
+        pencere.scrollTo({ left: slaytlar[aktif].offsetLeft - pencere.offsetLeft, behavior: aninda ? 'instant' : 'smooth' });
         isaretle();
     }
 
@@ -85,13 +112,29 @@ if (($mansetler ?? []) === []) {
         dugmeler.forEach(function (d, i) {
             d.setAttribute('aria-current', i === aktif ? 'true' : 'false');
         });
+        noktalar.forEach(function (n, i) { n.classList.toggle('aktif', i === aktif); });
     }
 
     dugmeler.forEach(function (dugme) {
         dugme.addEventListener('click', function () {
             kullaniciMudahalesi = true;
-            git(parseInt(dugme.dataset.sira, 10));
+            git(parseInt(dugme.dataset.sira, 10), true);
         });
+
+        // Fare numaranin uzerine gelir gelmez o haber. Dokunmatik ekranda
+        // "uzerine gelme" yok; orada dokunma (click) calisiyor.
+        dugme.addEventListener('pointerenter', function (olay) {
+            if (olay.pointerType !== 'mouse') { return; }
+            var sira = parseInt(dugme.dataset.sira, 10);
+            if (sira !== aktif) { git(sira, true); }
+        });
+    });
+
+    // Fare manset ya da numaralar uzerindeyken otomatik ilerleme beklesin:
+    // okunan haber elden kaymasin.
+    [pencere.parentNode, sayfalar].forEach(function (alan) {
+        alan.addEventListener('mouseenter', function () { uzerinde = true; });
+        alan.addEventListener('mouseleave', function () { uzerinde = false; });
     });
 
     document.querySelectorAll('.kaydirak-ok').forEach(function (ok) {
@@ -117,7 +160,7 @@ if (($mansetler ?? []) === []) {
 
     // Kendiliğinden ilerler; kullanıcı dokununca durur.
     var otomatik = setInterval(function () {
-        if (kullaniciMudahalesi || document.hidden) { return; }
+        if (kullaniciMudahalesi || uzerinde || document.hidden) { return; }
         git(aktif + 1);
     }, 6000);
 

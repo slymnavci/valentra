@@ -39,6 +39,12 @@ final class Besleme
      */
     public function oku(string $url, int $saat = 36): array
     {
+        $url = $this->youtubeBeslemesi($url);
+
+        if ($url === '') {
+            return [];
+        }
+
         $ham = $this->http->indir($url);
 
         if ($ham === null) {
@@ -239,11 +245,24 @@ final class Besleme
                     $ozet = $this->metin($oge->content);
                 }
 
+                // YouTube: aciklama media:group/media:description icinde.
+                if ($ozet === '') {
+                    $grup = $oge->children('http://search.yahoo.com/mrss/')->group ?? null;
+                    $ozet = $grup !== null ? $this->metin($grup->description) : '';
+                }
+
                 $ogeler[] = [
                     'baslik'   => $this->metin($oge->title),
                     'baglanti' => $baglanti,
                     'ozet'     => $ozet,
-                    'zaman'    => $this->zaman($this->metin($oge->updated) ?: $this->metin($oge->published)),
+                    /*
+                     * Once YAYIN zamani (published), yoksa guncelleme.
+                     * YouTube "updated"i eski videolarda da yeniliyor
+                     * (izlenme, aciklama); sali oynanan macin videosu
+                     * persembe "bugun" sayilip son dakika olmustu
+                     * (site sahibi, 23.10.2026).
+                     */
+                    'zaman'    => $this->zaman($this->metin($oge->published) ?: $this->metin($oge->updated)),
                     'gorsel'   => $this->gorsel($oge),
                 ];
             }
@@ -312,13 +331,31 @@ final class Besleme
                 continue;
             }
 
-            foreach (['content', 'thumbnail'] as $etiket) {
-                foreach ($media->{$etiket} ?? [] as $dugum) {
-                    $nitelikler = $dugum->attributes();
-                    $adres = trim((string) ($nitelikler['url'] ?? ''));
+            // YouTube gibi beslemeler ogeleri media:group icine koyuyor.
+            $katmanlar = [$media];
 
-                    if ($this->gorselMi($adres)) {
-                        return $adres;
+            if (isset($media->group)) {
+                $katmanlar[] = $media->group;
+            }
+
+            foreach ($katmanlar as $katman) {
+                foreach (['content', 'thumbnail'] as $etiket) {
+                    foreach ($katman->{$etiket} ?? [] as $dugum) {
+                        $nitelikler = $dugum->attributes();
+                        $adres = trim((string) ($nitelikler['url'] ?? ''));
+                        $tur   = strtolower((string) ($nitelikler['type'] ?? ''));
+                        $cesit = strtolower((string) ($nitelikler['medium'] ?? ''));
+
+                        // media:content video ya da oynatici da olabilir (YouTube:
+                        // application/x-shockwave-flash); yalnizca resim.
+                        if ($etiket === 'content' && ($tur !== '' && !str_starts_with($tur, 'image/'))
+                            && $cesit !== 'image') {
+                            continue;
+                        }
+
+                        if ($this->gorselMi($adres)) {
+                            return $adres;
+                        }
                     }
                 }
             }
@@ -355,6 +392,45 @@ final class Besleme
         }
 
         return '';
+    }
+
+    /**
+     * YouTube kanal adresi -> kanalin RSS (Atom) beslemesi.
+     *
+     * Videolu haber icin (site sahibinin istegi, 23.10.2026: "videolu
+     * haber hala hic gelmiyor"): haber kaynaklarimiz videolarini kendi
+     * oynaticilariyla yayimliyor, o oynaticilar baska sitede gosterilemez.
+     * Haber kuruluslarinin YouTube kanallari ise resmi gomulebilir
+     * oynatici veriyor. Kaynak panelde kanal adresiyle girilebiliyor
+     * (youtube.com/@trthaber ya da youtube.com/channel/UC...); besleme
+     * adresi kanal kimligiyle kuruluyor, kimlik @adli sayfadan okunuyor.
+     * YouTube adresi degilse adres aynen doner; kimlik bulunamazsa bos.
+     */
+    private function youtubeBeslemesi(string $url): string
+    {
+        static $cozulen = [];
+
+        if (!preg_match('#^https?://(?:www\.|m\.)?youtube\.com/(?:channel/(UC[\w-]{22})|(@[\w.\-]+))/?(?:videos/?)?$#i', trim($url), $e)) {
+            return $url;
+        }
+
+        $kimlik = $e[1] ?? '';
+
+        if ($kimlik === '') {
+            $tutamac = strtolower($e[2]);
+
+            if (!isset($cozulen[$tutamac])) {
+                $sayfa = $this->http->indir('https://www.youtube.com/' . $e[2]) ?? '';
+                $cozulen[$tutamac] = preg_match('#"(?:externalId|channelId)":"(UC[\w-]{22})"#', $sayfa, $k)
+                    || preg_match('#youtube\.com/channel/(UC[\w-]{22})#', $sayfa, $k)
+                    ? $k[1]
+                    : '';
+            }
+
+            $kimlik = $cozulen[$tutamac];
+        }
+
+        return $kimlik !== '' ? 'https://www.youtube.com/feeds/videos.xml?channel_id=' . $kimlik : '';
     }
 
     /** Adres http/https ile baslayan makul bir gorsel adresi mi? */

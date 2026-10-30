@@ -25,18 +25,16 @@ require_once __DIR__ . '/ziyaret.php';
 
 $etiketler = haber_etiket_bulutu(12);
 $enCokOkunanlar = haber_en_cok_okunanlar(6);
-
-$koseYazilari = [];
-
-try {
-    $koseYazilari = kose_son_gun();
-} catch (PDOException $e) {
-    error_log('[valentra] kose yazilari okunamadi: ' . $e->getMessage());
-}
 ?>
 <aside class="yan-pencere">
 
-    <?php require __DIR__ . '/kose_kutu.php'; ?>
+    <?php
+    /*
+     * Yazarlarimiz ve hava durumu YALNIZCA ana sayfanin vitrininde
+     * (index.php). Site sahibinin istegi (24.10.2026): "diger sayfalarda
+     * olmasina gerek yok, orada kendi haberlerimiz olsun yeter".
+     */
+    ?>
 
     <?php if (count($enCokOkunanlar) >= 3): ?>
         <section class="pencere" aria-labelledby="cok-okunan-baslik">
@@ -61,7 +59,7 @@ try {
 
             <div class="etiket-bulutu">
                 <?php foreach ($etiketler as $etiket): ?>
-                    <span class="bulut-etiket">#<?= e($etiket['etiket']) ?></span>
+                    <a class="bulut-etiket" href="<?= e(etiket_yolu((string) $etiket['etiket'])) ?>">#<?= e($etiket['etiket']) ?></a>
                 <?php endforeach; ?>
             </div>
         </section>

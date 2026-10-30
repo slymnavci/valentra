@@ -9,8 +9,10 @@ onayladıktan sonra** ana sayfada yayımlanır.
 Ajan  ──POST /api/ingest.php──▶  taslak  ──yönetici onayı──▶  yayında (ana sayfa)
 ```
 
-Ingest ucu haberleri **her zaman taslak** olarak yazar. Bu uç hiçbir koşulda
-haberi yayına alamaz; yayına alma yetkisi yalnızca yönetim panelindedir.
+**Otomatik yayın** açıkken (varsayılan) ajanın gönderdiği haber hemen yayına
+girer; bugün toplanıp taslakta kalanlar da ana sayfa açıldığında yayına alınır.
+Panelde **Ajan** sayfasından kapatılabilir; kapalıyken ingest ucu haberleri
+taslak olarak yazar ve yayına alma yetkisi yalnızca yönetim panelindedir.
 
 ## Dizinler
 

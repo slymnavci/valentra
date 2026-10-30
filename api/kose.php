@@ -33,6 +33,8 @@ if ($yontem === 'GET') {
         'gunluk_tavan' => KOSE_GUNLUK_TAVAN,
         'haberler'     => kose_malzeme($saat),
         'onceki'       => kose_onceki(10),
+        // Yazarlar (23.10.2026): her biri kendi alanindan gunde bir yazi.
+        'yazarlar'     => kose_yazarlar_ajan_icin(),
     ]);
 }
 
@@ -71,8 +73,17 @@ foreach ($veri['yazilar'] as $sira => $yazi) {
         }
     } catch (InvalidArgumentException $e) {
         $hatalar[] = ['sira' => $sira, 'mesaj' => $e->getMessage()];
-    } catch (PDOException $e) {
-        $hatalar[] = ['sira' => $sira, 'mesaj' => 'Kaydedilemedi.'];
+    } catch (Throwable $e) {
+        /*
+         * 26.10.2026: dort yazi "HTTP 500" ile geri dondu; hata yerelde
+         * cikmiyor, ayrintisi yalnizca sunucu gunlugundeydi. Artik bir
+         * yazinin hatasi digerlerini dusurmuyor ve sebebi ajana (anahtarla
+         * korunan uc) donuyor; ajan gunlugune yaziyor.
+         */
+        error_log('[valentra] kose yazisi kaydedilemedi: ' . get_class($e) . ': ' . $e->getMessage()
+            . ' @ ' . $e->getFile() . ':' . $e->getLine());
+        $hatalar[] = ['sira' => $sira, 'mesaj' => 'Kaydedilemedi: ' . get_class($e) . ': '
+            . mb_substr($e->getMessage(), 0, 300, 'UTF-8') . ' (' . basename($e->getFile()) . ':' . $e->getLine() . ')'];
     }
 }
 
@@ -81,5 +92,7 @@ ajan_json(200, [
     'eklenen'   => $eklenen,
     'yinelenen' => $yinelenen,
     'hatalar'   => $hatalar,
-    'not'       => 'Yazılar taslak olarak kaydedildi, yönetici onayı bekliyor.',
+    'not'       => haber_otomatik_yayin_acik()
+        ? 'Yazılar yayına alındı (otomatik yayın açık).'
+        : 'Yazılar taslak olarak kaydedildi, yönetici onayı bekliyor.',
 ]);

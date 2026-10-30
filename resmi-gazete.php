@@ -77,7 +77,11 @@ $sayfaAciklama = 'Günün Resmî Gazete sayısındaki yönetmelik, tebliğ ve ka
                . 'listesi; asıl metinlerin bağlantıları ve Valentra haberleri.';
 
 require __DIR__ . '/includes/sayfa_ust.php';
+require_once __DIR__ . '/includes/gazeteler.php';
 ?>
+
+<?php // ValPapel'in basligi (30.10.2026): Resmi Gazete ozetleri ValPapel'in sekmelerinde. ?>
+<?= gazete_ust_html('valpapel', 'resmi-gazete') ?>
 
 <div class="kategori-basligi">
     <h1>Resmî Gazete</h1>

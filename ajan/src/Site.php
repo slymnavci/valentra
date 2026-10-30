@@ -326,6 +326,85 @@ final class Site
      *
      * @return array{bugun:string,bugun_sayisi:int,gunluk_tavan:int,haberler:list<array<string,mixed>>,onceki:list<array<string,mixed>>}
      */
+    /**
+     * Açıklayıcı yazı malzemesi: fırsat sorguları ve ilgili haberler (bkz. api/dosya.php).
+     *
+     * @return array<string,mixed>
+     */
+    public function dosyaMalzeme(): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/dosya.php');
+
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Açıklayıcı yazı malzemesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return [
+            'sayilar'   => (array) ($veri['sayilar'] ?? []),
+            'tavan'     => (array) ($veri['tavan'] ?? []),
+            'onceki'    => array_values((array) ($veri['onceki'] ?? [])),
+            'firsatlar' => array_values((array) ($veri['firsatlar'] ?? [])),
+        ];
+    }
+
+    /**
+     * Açıklayıcı yazıları TASLAK olarak gönderir.
+     *
+     * @param list<array<string,mixed>> $haberler
+     * @return array<string,mixed>
+     */
+    public function dosyaGonder(array $haberler): array
+    {
+        [$kod, $govde] = $this->istek('POST', '/api/dosya.php', json_encode(['haberler' => $haberler], JSON_UNESCAPED_UNICODE), true);
+
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Açıklayıcı yazı gönderimi başarısız (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return $veri;
+    }
+
+    /**
+     * Bugünün burç yorumları sitede var mı? (bkz. api/burc.php)
+     *
+     * @return array{bugun:string,var:bool}
+     */
+    public function burcDurum(): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/burc.php');
+
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Burç durumu alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return ['bugun' => (string) ($veri['bugun'] ?? date('Y-m-d')), 'var' => !empty($veri['var'])];
+    }
+
+    /**
+     * Bir günün burç yorumlarını gönderir.
+     *
+     * @param list<array<string,mixed>> $yorumlar
+     * @return array<string,mixed>
+     */
+    public function burcGonder(string $gun, array $yorumlar): array
+    {
+        [$kod, $govde] = $this->istek('POST', '/api/burc.php', json_encode(['gun' => $gun, 'yorumlar' => $yorumlar], JSON_UNESCAPED_UNICODE), true);
+
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Burç yorumları gönderilemedi (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return $veri;
+    }
+
     public function koseMalzeme(int $saat = 36): array
     {
         [$kod, $govde] = $this->istek('GET', '/api/kose.php?saat=' . max(6, $saat));
@@ -344,6 +423,8 @@ final class Site
             'gunluk_tavan' => (int) ($veri['gunluk_tavan'] ?? 4),
             'haberler'     => array_values((array) ($veri['haberler'] ?? [])),
             'onceki'       => array_values((array) ($veri['onceki'] ?? [])),
+            // Kose yazarlari (23.10.2026); eski site surumunde yok.
+            'yazarlar'     => array_values((array) ($veri['yazarlar'] ?? [])),
         ];
     }
 
@@ -363,6 +444,63 @@ final class Site
             'POST',
             '/api/kose.php',
             json_encode(['yazilar' => $yazilar], JSON_UNESCAPED_UNICODE)
+        );
+
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException(
+                'Gönderim başarısız (HTTP ' . $kod . '): ' . $this->hatayiOku($govde)
+            );
+        }
+
+        return $veri;
+    }
+
+    /**
+     * Derleme malzemesi (api/derleme.php): son saatlerin haberleri, son
+     * günlerin derlemeleri, bugün kaç derleme olduğu, konu listesi.
+     *
+     * @return array{bugun:string,bugun_sayisi:int,gunluk_tavan:int,haberler:list<array<string,mixed>>,onceki:list<array<string,mixed>>,kategoriler:list<string>}
+     */
+    public function derlemeMalzeme(int $saat = 24): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/derleme.php?saat=' . max(6, $saat));
+
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException(
+                'Derleme malzemesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde)
+            );
+        }
+
+        return [
+            'bugun'        => (string) ($veri['bugun'] ?? date('Y-m-d')),
+            'bugun_sayisi' => (int) ($veri['bugun_sayisi'] ?? 0),
+            'gunluk_tavan' => (int) ($veri['gunluk_tavan'] ?? 20),
+            'haberler'     => array_values((array) ($veri['haberler'] ?? [])),
+            'onceki'       => array_values((array) ($veri['onceki'] ?? [])),
+            'kategoriler'  => array_values(array_map('strval', (array) ($veri['kategoriler'] ?? []))),
+        ];
+    }
+
+    /**
+     * Derleme haberleri TASLAK olarak gönderir; yayına alma panelde.
+     *
+     * @param list<array<string,mixed>> $derlemeler
+     * @return array<string,mixed>
+     */
+    public function derlemeGonder(array $derlemeler): array
+    {
+        if ($derlemeler === []) {
+            return ['eklenen' => 0, 'yinelenen' => 0, 'hatalar' => []];
+        }
+
+        [$kod, $govde] = $this->istek(
+            'POST',
+            '/api/derleme.php',
+            json_encode(['derlemeler' => $derlemeler], JSON_UNESCAPED_UNICODE)
         );
 
         $veri = json_decode($govde, true);
@@ -397,6 +535,122 @@ final class Site
         }
 
         return $mesaj;
+    }
+
+    /**
+     * Fotoğrafı olmayan köşe yazarları (api/yazar-portre.php).
+     *
+     * @return list<array{anahtar:string,ad:string,gorunum:string}>
+     */
+    public function portreEksikleri(): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/yazar-portre.php');
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Yazar listesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return array_values((array) ($veri['eksik'] ?? []));
+    }
+
+    /**
+     * Yayin tarihi bilinmeyen videolu haberler (api/video-tarih.php).
+     *
+     * @return list<array{id:int,url:string}>
+     */
+    public function videoTarihEksikleri(): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/video-tarih.php');
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Video listesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return array_values((array) ($veri['eksik'] ?? []));
+    }
+
+    /**
+     * Videolarin gercek yayin zamanlarini yazar; guncellenen sayisini dondurur.
+     *
+     * @param list<array{id:int,zaman:int}> $tarihler
+     */
+    public function videoTarihGonder(array $tarihler): int
+    {
+        [$kod, $govde] = $this->istek('POST', '/api/video-tarih.php', (string) json_encode(['tarihler' => $tarihler]));
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Video tarihleri yazılamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return (int) ($veri['guncellenen'] ?? 0);
+    }
+
+    /**
+     * Tarihi denetlenecek haberler (api/tarih-denetim.php).
+     *
+     * @return list<array{id:int,url:string}>
+     */
+    public function tarihDenetimListesi(): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/tarih-denetim.php');
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Denetim listesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return array_values((array) ($veri['haberler'] ?? []));
+    }
+
+    /**
+     * Sayfalardan okunan yayın zamanlarını yazar; düzeltilen sayısını döndürür.
+     *
+     * @param list<array{id:int,zaman:?int}> $tarihler zaman null: sayfada tarih yok
+     */
+    public function tarihDenetimGonder(array $tarihler): int
+    {
+        [$kod, $govde] = $this->istek('POST', '/api/tarih-denetim.php', (string) json_encode(['tarihler' => $tarihler]));
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Denetim sonucu yazılamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return (int) ($veri['duzeltilen'] ?? 0);
+    }
+
+    /** Yazar fotoğrafını yükler. */
+    public function portreGonder(string $anahtar, string $ikili): void
+    {
+        [$kod, $govde] = $this->istek(
+            'POST',
+            '/api/yazar-portre.php',
+            (string) json_encode(['anahtar' => $anahtar, 'veri' => base64_encode($ikili)])
+        );
+
+        if ($kod !== 200) {
+            throw new \RuntimeException('Fotoğraf yüklenemedi (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+    }
+
+    /**
+     * OpenAI durumunu panele bildirir (api/ajan-durum.php): kredi bitince
+     * panelde uyari cikiyor, kredi yuklenip istek cevaplaninca kalkiyor.
+     *
+     * @param array{model:string,durum:string,mesaj:string} $openAi
+     */
+    public function ajanDurumu(array $openAi): void
+    {
+        $json = json_encode(['openai' => $openAi], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        [$kod, $govde] = $this->istek('POST', '/api/ajan-durum.php', is_string($json) ? $json : '{}');
+
+        if ($kod !== 200) {
+            throw new \RuntimeException('Ajan durumu bildirilemedi (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
     }
 
     /**

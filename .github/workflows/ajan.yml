@@ -2,8 +2,9 @@ name: Haber ajani
 
 on:
   schedule:
-    # Gunde 5 kez, Turkiye saatiyle 05:20 / 09:20 / 13:20 / 17:20 /
-    # 21:20. Cron UTC calisir, Turkiye UTC+3: 02:20 UTC = 05:20 TR.
+    # Gunde 12 kez, iki saatte bir, Turkiye saatiyle 01:20, 03:20, ...
+    # 23:20 (Cron UTC calisir, Turkiye UTC+3). Asagidaki not, bir ara
+    # gunde 5'e indirilmesinin gerekcesi:
     #
     # ONCEDEN GUNDE 10'DU. Iki sebeple yariya indirildi:
     #
@@ -24,7 +25,13 @@ on:
     #
     # Dakika 20: saat basi GitHub'da yogun ve zamanlanmis isler
     # gecikebiliyor.
-    - cron: '20 2,6,10,14,18 * * *'
+    #
+    # IKI SAATTE BIR (23.10.2026, site sahibinin karari: "artik bu haber
+    # sitesi; gun icinde en son haber, saat ve dakika onemli; her 2 saatte
+    # bir haberler yenilensin"). Gece de calisiyor: dunya haberleri gece
+    # geliyor. Kopya denetimi sayesinde ayni haber ikinci kez modele
+    # gitmiyor; maliyeti yeni haber sayisi belirliyor.
+    - cron: '20 */2 * * *'
     # Pratik bilgilerin haftalik calismasi kaldirildi (22.10.2026, site
     # sahibinin karari: ajan yalnizca haber ve kose yazisi uretiyor).
     # Panelden "pratik-bilgiler" moduyla elle calistirilabiliyor.
@@ -39,18 +46,22 @@ on:
           - gunluk
           - pratik-bilgiler
           - kose-yazisi
+          - derleme
+          - burc
           - kaynak-testi
           - kanun-testi
           - ag-tanisi
+          - canli
+          - yazar-portre
       kuru:
         description: 'Kuru calisma (siteye gonderme, sadece ciktiyi goster)'
         type: boolean
         default: false
       saat:
         description: 'Kac saat geriye bakilsin'
-        default: '36'
+        default: '2'
       enfazla:
-        description: 'En fazla kac aday islensin (bos: basliklarin paylarinin toplami, 60)'
+        description: 'En fazla kac aday islensin (bos: basliklarin paylarinin toplami, 72)'
         default: ''
       aday:
         description: 'kaynak-testi: DB disi aday adresler  (Ad=https://..., Ad=https://...|yol:/bolum/)'
@@ -89,9 +100,14 @@ env:
 jobs:
   topla:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
+      # Isin baslangici: kose adimi 45 dakikalik sinirdan kalan sureyi
+      # buna gore hesapliyor (bkz. "Kose yazilarini yaz").
+      - name: Baslangic zamani
+        run: echo "IS_BASLANGIC=$(date +%s)" >> "$GITHUB_ENV"
+
       - name: Repository kodlarini al
         uses: actions/checkout@v5
 
@@ -145,7 +161,7 @@ jobs:
       # Kurulum basarisiz olursa is DURMUYOR: ajan araci bulamazsa o
       # adaylari eskisi gibi baslik ve ozetle degerlendiriyor.
       - name: PDF araci kur
-        if: inputs.mod != 'ag-tanisi' && inputs.mod != 'kanun-testi'
+        if: inputs.mod != 'ag-tanisi' && inputs.mod != 'kanun-testi' && inputs.mod != 'canli'
         run: |
           sudo apt-get install -y -q poppler-utils \
             || (sudo apt-get update -q && sudo apt-get install -y -q poppler-utils) \
@@ -247,6 +263,14 @@ jobs:
           # Model adi degisirse kod duzenlemeye gerek yok: bu secret'i
           # ekleyip istedigin model adini yazman yeterli.
           GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          # Haberler once OpenAI ile (varsayilan GPT-6 Luna), basarisizsa
+          # Gemini ile. OPENAI_API_KEY yoksa yalnizca Gemini (23.10.2026).
+          # Haberler once Claude Haiku 5.5 ile (ANTHROPIC_API_KEY), sonra Luna,
+          # en son Gemini (23.10.2026). Anahtar yoksa Claude atlanir.
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
           # Ortam degiskeniyle: betige dogrudan yazilmasin.
@@ -274,9 +298,13 @@ jobs:
           # demekti; simdi degil.
           #
           # 22.10.2026: aday sayisi verilmezse ajan basliklarin paylarinin
-          # toplamini kullaniyor (HaberAkisi::PAYLAR, 60); haberler baslik
+          # toplamini kullaniyor (HaberAkisi::PAYLAR, 72); haberler baslik
           # baslik isleniyor.
-          BAYRAKLAR="--saat=${{ inputs.saat || '30' }}"
+          # 23.10.2026: 30 saatten 2 saate (site sahibinin karari: "her
+          # aramada bir iki saat once yayinlanan haberleri alsin; eski
+          # haberleri toplamiyoruz"). Ajan iki saatte bir calisiyor. Tarif
+          # beslemeleri ajanda en az 36 saat (TARIF_SAATI).
+          BAYRAKLAR="--saat=${{ inputs.saat || '2' }}"
 
           if [ -n "${{ inputs.enfazla }}" ]; then
             BAYRAKLAR="$BAYRAKLAR --enfazla=${{ inputs.enfazla }}"
@@ -293,6 +321,19 @@ jobs:
           fi
 
           php topla.php $BAYRAKLAR
+
+      # Son iki gunde toplanan haberlerin yayin tarihi kaynak sayfadan
+      # denetleniyor (23.10.2026, site sahibi: "haberlerin tarihleri cok
+      # onemli, mutlaka kontrol edelim"). Sayfadaki tarih kayitlidan
+      # eskiyse site onu yaziyor; eski haber ana sayfadan duser. Her haber
+      # bir kez; en fazla 3 dakika.
+      - name: Haber tarihlerini denetle
+        if: ${{ !cancelled() && inputs.kuru != true && (inputs.mod == 'topla' || inputs.mod == 'gunluk' || inputs.mod == '') }}
+        working-directory: ajan
+        env:
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: php tarih_denetle.php || true
 
       # Siteye gonderilemeyen haberler: site bu eseri GitHub API'den
       # kendisi indiriyor (includes/ajan_teslim.php). GitHub'dan siteye
@@ -322,12 +363,42 @@ jobs:
       # Kose yazilari 22.10.2026'da genel habere uyarlandi: gunun en
       # onemli haberlerinden (onem puani) ve en az biri dunyadan olmak
       # uzere yorum yazilari. Hepsi onaya duser.
-      - name: Kose yazilarini yaz
-        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'kose-yazisi' || inputs.mod == 'gunluk') }}
+      #
+      # Kose yazisi haberden ayri modelle (23.10.2026): varsayilan Gemini
+      # 3.8 Flash; GEMINI_KOSE_MODEL gizli degeriyle degistirilebilir.
+      # Haber toplama once GPT-6 Luna (OPENAI_API_KEY), yedek Gemini 3.8
+      # Flash (GEMINI_MODEL).
+      # Kose yazarlarinin fotograflari (23.10.2026, site sahibinin karari):
+      # fotografi olmayan yazar icin bir kez uretilip siteye yukleniyor;
+      # hepsi varsa hemen biter (bkz. ajan/portre.php).
+      - name: Yazar fotograflari
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'yazar-portre' || inputs.mod == 'kose-yazisi') }}
         working-directory: ajan
         env:
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_GORSEL_MODEL: ${{ secrets.GEMINI_GORSEL_MODEL }}
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: php portre.php
+
+      # Sure (26.10.2026): adim bir kez 44 dakika surup butun isi 45
+      # dakikalik sinira takip iptal ettirdi. kose.php 18 dakikalik butceyle
+      # calisiyor (--sure) ve yazilari yazdikca gonderiyor; buradaki sinir
+      # yalnizca son emniyet. Asilirsa adim kirmizi biter, sonraki adimlar
+      # (canli veri, ajan deposu) yine calisir.
+      - name: Kose yazilarini yaz
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'kose-yazisi' || inputs.mod == 'gunluk') }}
+        timeout-minutes: 22
+        working-directory: ajan
+        env:
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_KOSE_MODEL:   ${{ secrets.GEMINI_KOSE_MODEL }}
           GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          # Gemini yogunken yedek (26.10.2026): Claude, sonra Luna.
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
         run: |
@@ -341,11 +412,132 @@ jobs:
             BAYRAKLAR="$BAYRAKLAR --kuru"
           fi
 
-          php kose.php $BAYRAKLAR
+          # Asamali yazim (26.10.2026): haber toplama uzadiginda kose adimi
+          # isin 45 dakikalik sinirina takilip yazilar kesiliyordu. Butce
+          # isin kalan suresinden (5 dk pay birakilarak, en fazla 18 dk);
+          # bir calismada en fazla 4 yazar, kalanlar sonraki calismalarda.
+          KALAN=$(( (45 * 60 - ($(date +%s) - ${IS_BASLANGIC:-$(date +%s)})) / 60 - 5 ))
 
-      # Grafik tazeleme ve Resmi Gazete fihristi adimlari kaldirildi
-      # (22.10.2026): ana sayfada grafik yok, ajan yalnizca haber ve kose
-      # yazisi uretiyor. Kurlar ve BIST serit verisini site kendisi cekiyor.
+          if [ "$KALAN" -lt 6 ]; then
+            echo "::notice title=Valentra köşe yazıları::İşin süresi azaldı (${KALAN} dk); köşe yazıları sonraki çalışmada."
+            exit 0
+          fi
+
+          if [ "$KALAN" -gt 18 ]; then
+            KALAN=18
+          fi
+
+          php kose.php $BAYRAKLAR --sure=$KALAN --en-fazla=4
+
+      # Derleme haberler (28.10.2026, site sahibinin karari): ayni olayi
+      # veren birden cok yayinin haberlerinden ozgun haber; Google'a
+      # yalnizca bunlar sunuluyor (bkz. includes/derleme.php). Gunde en
+      # fazla 20, bir calismada en fazla 5; saat 07'den itibaren. Kose
+      # yazilarindan SONRA ve isin kalan suresiyle (5 dk pay, en fazla 15).
+      # Hepsi onaya duser.
+      - name: Derleme haberleri yaz
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'derleme' || inputs.mod == 'gunluk') }}
+        timeout-minutes: 20
+        working-directory: ajan
+        env:
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_KOSE_MODEL:   ${{ secrets.GEMINI_KOSE_MODEL }}
+          GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: |
+          BAYRAKLAR=""
+
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            BAYRAKLAR="--zamanli"
+          fi
+
+          if [ "${{ inputs.kuru }}" = "true" ]; then
+            BAYRAKLAR="$BAYRAKLAR --kuru"
+          fi
+
+          KALAN=$(( (45 * 60 - ($(date +%s) - ${IS_BASLANGIC:-$(date +%s)})) / 60 - 5 ))
+
+          if [ "$KALAN" -lt 6 ]; then
+            echo "::notice title=Valentra derleme haberler::İşin süresi azaldı (${KALAN} dk); derlemeler sonraki çalışmada."
+            exit 0
+          fi
+
+          if [ "$KALAN" -gt 15 ]; then
+            KALAN=15
+          fi
+
+          php derle.php $BAYRAKLAR --sure=$KALAN --en-fazla=5
+
+      # Aciklayici yazi (28.10.2026, site sahibinin istegi: ozgun haber):
+      # Search Console firsat sorgusuna, sitede en az iki ilgili haber varsa
+      # yalnizca o haberlerden "nedir, nasil" yazisi. Gunde bir; doluysa
+      # model cagrilmiyor. Yazi onay bekliyor. Isin kalan suresine gore.
+      - name: Aciklayici yazi
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'gunluk') }}
+        timeout-minutes: 8
+        working-directory: ajan
+        env:
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_KOSE_MODEL:   ${{ secrets.GEMINI_KOSE_MODEL }}
+          GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: |
+          KALAN=$(( (45 * 60 - ($(date +%s) - ${IS_BASLANGIC:-$(date +%s)})) / 60 - 4 ))
+
+          if [ "$KALAN" -lt 4 ]; then
+            echo "::notice title=Valentra açıklayıcı yazı::İşin süresi azaldı (${KALAN} dk); sonraki çalışmada."
+            exit 0
+          fi
+
+          if [ "$KALAN" -gt 6 ]; then
+            KALAN=6
+          fi
+
+          php aciklayici.php --sure=$KALAN || true
+
+      # Gunluk burc yorumlari (29.10.2026, site sahibinin istegi): bugunun 12
+      # yorumu sitede yoksa tek model istegiyle yazilip gonderiliyor; varsa
+      # model cagrilmadan cikiyor. Gece yarisindan sonraki ilk calisma yaziyor.
+      # Elle "burc" moduyla calistirilinca (panel dugmesi) varsa da yeniden yaziyor.
+      - name: Burc yorumlari
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'gunluk' || inputs.mod == 'burc') }}
+        timeout-minutes: 10
+        working-directory: ajan
+        env:
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: php burc.php --sure=8 ${{ inputs.mod == 'burc' && '--yeniden' || '' }} || true
+
+      # Sayfalardaki canli veri (23.10.2026, site sahibi: "haberleri ceken
+      # robot borsa grafiklerini, mac sonuclarini da ceksin; eski bilgi
+      # kalmasin"): piyasa seridi ve Piyasalar sayfasi (gosterge
+      # grafikleri dahil), spor sayfalari (puan durumu, fikstur, sonuclar,
+      # gol kralligi), Resmi Gazete fihristi. Eski "Grafikleri tazele"
+      # adiminin yerini aliyor. Veriyi SITE cekiyor (api/canli-tazele.php); ajan her
+      # calismada durtuyor, ayrica "Canli veri" is akisi gun icinde iki
+      # saatte bir. Istek basarisizsa sitedeki son iyi veri kalir.
+      - name: Canli verileri tazele
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'topla' || inputs.mod == 'gunluk' || inputs.mod == 'canli') }}
+        env:
+          VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: bash ajan/canli_tazele.sh
 
       # Google Search Console verisi. Veriyi SITE cekiyor (servis hesabi
       # anahtari panelde kayitli); site 20 saatten yeniyse hicbir sey yapmiyor,
@@ -361,8 +553,7 @@ jobs:
             -H "X-Valentra-Key: $VALENTRA_AGENT_KEY" \
             -H "Authorization: Bearer $VALENTRA_AGENT_KEY" \
             "${VALENTRA_SITE_URL%/}/api/gsc-tazele.php" \
-            || { echo "::warning::Search Console tazeleme istegi basarisiz; panel acildiginda kendini tazeler."; \
-                 echo "Search Console verisi tazelenemedi: siteye ulaşılamadı." >> "$AJAN_SORUN_DOSYASI"; }
+            || echo "::warning::Search Console tazeleme istegi basarisiz; panel acildiginda kendini tazeler." 
           echo
 
       - name: Ajan deposunu kaydet

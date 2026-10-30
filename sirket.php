@@ -53,14 +53,16 @@ if ($kod === null) {
     $sirketler     = piyasa_sirketler_html();
 
     require __DIR__ . '/includes/sayfa_ust.php';
+    require_once __DIR__ . '/includes/gazeteler.php';
     ?>
+    <?= gazete_ust_html('valpapel', 'sirket') ?>
     <div class="kategori-basligi">
         <h1>Borsa İstanbul Şirketleri</h1>
         <p>Bir şirket seçin: 10 yıllık fiyat geçmişi, getiriler, risk ölçüleri, çarpanlar,
             analist önerisi ve temettüler.</p>
     </div>
 
-    <div class="ana-duzen">
+    <div class="ana-duzen tam">
         <div class="ana-kolon">
             <?php if ($ham !== ''): ?>
                 <p class="bos-durum"><strong>"<?= e($ham) ?>" geçerli bir borsa kodu değil.</strong>
@@ -69,10 +71,10 @@ if ($kod === null) {
             <?= sirket_secici_html() ?>
             <?= $sirketler ?>
             <?= $sirketler !== '' ? canli_betik() : '' ?>
-            <p class="piyasa-bag"><a href="<?= e(piyasalar_yolu()) ?>">Piyasalar: BIST 100, döviz, altın &rarr;</a></p>
+            <?= ekonomi_haberleri_html() ?>
         </div>
 
-        <?php require __DIR__ . '/includes/yan_pencere.php'; ?>
+        <?php /* Yan pencere yok: grafik ve tablolar tam genislikte (23.10.2026). */ ?>
     </div>
     <?php
     require __DIR__ . '/includes/sayfa_alt.php';
@@ -86,6 +88,11 @@ if ($kod === null) {
 // ya da kotayi asan kod icin kaynaga gidilmiyor, onbellek satiri acilmiyor.
 $izinli  = sirket_kod_izinli($kod);
 $bos     = ['veri' => null, 'zaman' => 0];
+
+// Gerekenleri once ayni anda cek (bkz. sirket_serileri_hazirla).
+if ($izinli) {
+    sirket_serileri_hazirla([[$kod, '1d'], [$kod, '1y'], [$kod, '10y'], [$kod, $donem], ['XU100', '10y']]);
+}
 
 $anlikKayit = $izinli ? sirket_seri($kod, '1d') : $bos;
 $yilKayit   = $izinli ? sirket_seri($kod, '1y') : $bos;
@@ -150,6 +157,7 @@ if ($secili !== null && count($secili['noktalar']) >= 2) {
         'kaynak'   => 'Yahoo Finance',
         'sifirdan' => false,
         'hane'     => 2,
+        'golge'    => true,
     ]);
 }
 
@@ -161,7 +169,10 @@ $seoAdres      = site_adresi() . sirket_yolu($kod);
 $csv = static fn (string $d): string => '/api/sirket-veri.php?kod=' . rawurlencode($kod) . '&donem=' . rawurlencode($d);
 
 require __DIR__ . '/includes/sayfa_ust.php';
+require_once __DIR__ . '/includes/gazeteler.php';
 ?>
+
+<?= gazete_ust_html('valpapel', 'sirket') ?>
 
 <div class="kategori-basligi sirket-baslik">
     <p class="sirket-yol"><a href="<?= e(piyasalar_yolu()) ?>">Piyasalar</a> &rsaquo;
@@ -176,7 +187,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
     <?php endif; ?>
 </div>
 
-<div class="ana-duzen">
+<div class="ana-duzen tam">
     <div class="ana-kolon sirket-sayfa">
         <?= sirket_secici_html($kod) ?>
 
@@ -208,6 +219,8 @@ require __DIR__ . '/includes/sayfa_ust.php';
         </section>
 
         <?php if ($analiz !== null): ?>
+            <?php // Getiriler ve yillara gore getiri genis ekranda yan yana: tam genislikte sutunlar arasi bos kaliyordu. ?>
+            <div class="sirket-ikili">
             <section class="sirket-bolum" id="getiriler">
                 <div class="bolum-basligi"><h2>Getiriler</h2><span class="cizgi"></span></div>
                 <div class="tablo-kaydir">
@@ -263,6 +276,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
                     </div>
                 </section>
             <?php endif; ?>
+            </div>
 
             <section class="sirket-bolum" id="risk">
                 <div class="bolum-basligi"><h2>Risk ve İşlem Ölçüleri</h2><span class="cizgi"></span></div>
@@ -430,9 +444,12 @@ require __DIR__ . '/includes/sayfa_ust.php';
             yatırım kararı vermeden önce resmi kaynaklardan (KAP, Borsa İstanbul) doğrulayın.
             <a href="https://www.kap.org.tr/tr/bildirim-sorgu" target="_blank" rel="noopener">KAP bildirimleri &rarr;</a>
         </p>
+
+        <?php require_once __DIR__ . '/includes/piyasa_panel.php'; ?>
+        <?= ekonomi_haberleri_html() ?>
     </div>
 
-    <?php require __DIR__ . '/includes/yan_pencere.php'; ?>
+    <?php /* Yan pencere yok: grafik ve tablolar tam genislikte (23.10.2026). */ ?>
 </div>
 
 <?php require __DIR__ . '/includes/sayfa_alt.php'; ?>

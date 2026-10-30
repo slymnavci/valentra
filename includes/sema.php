@@ -217,6 +217,20 @@ function sema_yukselt(array &$hatalar = []): array
 
     $sutunEkle('haberler', 'kategori_id', 'INT UNSIGNED NULL AFTER one_cikan');
     $sutunEkle('haberler', 'iframe_url', 'VARCHAR(1000) NULL AFTER gorsel_url');
+    // Kose yazisinin yazari (23.10.2026; bkz. includes/yazarlar.php).
+    $sutunEkle('kose_yazilari', 'yazar', "VARCHAR(60) NOT NULL DEFAULT 'valentra' AFTER gundem");
+
+    // Kaynagin yayin zamani (23.10.2026; bkz. haber_gun_ifadesi).
+    $sutunEkle('haberler', 'kaynak_tarihi', 'DATETIME NULL AFTER yayin_tarihi');
+    // Tarih denetimi (23.10.2026; bkz. api/tarih-denetim.php).
+    $sutunEkle('haberler', 'tarih_denetlendi', 'DATETIME NULL AFTER kaynak_tarihi');
+    // Haberi yazan model; otomatik yayin esigi buna gore (23.10.2026).
+    $sutunEkle('haberler', 'ajan_modeli', "VARCHAR(80) NOT NULL DEFAULT '' AFTER ajan_notu");
+    // "Neden onemli?" — haberin ozgun katkisi (26.10.2026; bkz. haber.php).
+    $sutunEkle('haberler', 'neden_onemli', "VARCHAR(800) NOT NULL DEFAULT ''");
+    // Derleme haber (28.10.2026; bkz. includes/derleme.php).
+    $sutunEkle('haberler', 'derleme', 'TINYINT(1) NOT NULL DEFAULT 0');
+    $sutunEkle('haberler', 'derleme_kaynaklari', 'TEXT NULL');
 
     /*
      * Kopya denetimi alanlari.
@@ -325,6 +339,59 @@ function sema_yukselt(array &$hatalar = []): array
     // Ziyaret kaydina ham adres sutunu. Tablo zaten kurulu oldugu icin
     // CREATE TABLE onu eklemez; mevcut kurulumlara boyle iniyor.
     $sutunEkle('ziyaretler', 'ip', "VARCHAR(45) NOT NULL DEFAULT '' AFTER ziyaretci");
+
+    /*
+     * Ziyaret dogrulamasi ve okuma olcumu (23.10.2026; bkz.
+     * includes/ziyaret.php basi). Sira onemli degil; hepsi varsayilanli.
+     */
+    $sutunEkle('ziyaretler', 'insan', 'TINYINT UNSIGNED NOT NULL DEFAULT 0');
+    $sutunEkle('ziyaretler', 'tarayici_id', "CHAR(16) NOT NULL DEFAULT ''");
+    $sutunEkle('ziyaretler', 'yeni', 'TINYINT UNSIGNED NOT NULL DEFAULT 0');
+    $sutunEkle('ziyaretler', 'sure', 'SMALLINT UNSIGNED NOT NULL DEFAULT 0');
+    $sutunEkle('ziyaretler', 'kaydirma', 'TINYINT UNSIGNED NOT NULL DEFAULT 0');
+    $sutunEkle('ziyaretler', 'cihaz', "VARCHAR(10) NOT NULL DEFAULT ''");
+    $sutunEkle('ziyaretler', 'tarayici', "VARCHAR(20) NOT NULL DEFAULT ''");
+    $sutunEkle('ziyaretler', 'isletim', "VARCHAR(20) NOT NULL DEFAULT ''");
+    $sutunEkle('ziyaretler', 'kampanya', "VARCHAR(100) NOT NULL DEFAULT ''");
+
+    /*
+     * Veritabani saat dilimi (23.10.2026 denetimi).
+     *
+     * Ziyaret zamani SQL'deki NOW() ile yaziliyor, "bugun" sinirini da
+     * CURDATE() cizdi; ikisi de veritabani sunucusunun saat dilimini
+     * kullaniyor. Baglantinin saat dilimi hic ayarlanmamisti: sunucu UTC
+     * ise "bugun" gece 03:00'te basliyor, saatlik dagilim uc saat kayik
+     * gorunuyordu. Artik bootstrap her baglantida +03:00 ayarliyor.
+     *
+     * Bu adim bir kez calisip sunucunun kendi farkini olcuyor ve
+     * kaydediyor (panel "saat dogru mu" sorusunu bununla cevapliyor).
+     * Fark 3 saat degilse eski ziyaret kayitlari Turkiye saatine
+     * kaydiriliyor ki eski ve yeni kayitlar ayni gunlere dussun.
+     */
+    $adim('ziyaret saat dilimi', static function (): bool {
+        if (ayar_oku('db_saat_farki') !== '') {
+            return false;
+        }
+
+        $pdo = db();
+        $pdo->exec('SET time_zone = @@global.time_zone');
+        $fark = (int) $pdo->query('SELECT TIMESTAMPDIFF(MINUTE, UTC_TIMESTAMP(), NOW())')->fetchColumn();
+        $pdo->exec("SET time_zone = '+03:00'");
+
+        // Ceyrek saate yuvarla: iki fonksiyon ayni anda olculuyor ama
+        // saniye sinirina denk gelirse 179 cikabilir.
+        $fark      = (int) (round($fark / 15) * 15);
+        $duzeltme  = 180 - $fark;
+
+        if ($duzeltme !== 0) {
+            $son = (int) $pdo->query('SELECT COALESCE(MAX(id), 0) FROM ziyaretler')->fetchColumn();
+            $pdo->exec('UPDATE ziyaretler SET zaman = zaman + INTERVAL ' . $duzeltme . ' MINUTE WHERE id <= ' . $son);
+        }
+
+        ayar_yaz('db_saat_farki', (string) $fark);
+
+        return true;
+    });
 
     // Ekonomik gostergelerin grafik serisi. Yayindaki ve aday ayri:
     // seri de deger gibi onaydan geciyor.
@@ -526,9 +593,19 @@ function sema_guncel_mi(): bool
             ['haberler', 'isletme_etkisi'],
             ['haberler', 'uygulama_ornegi'],
             ['haberler', 'resmi_dayanak'],
+            // haber_taslak_ekle() yaziyor, otomatik yayin esigi okuyor.
+            ['haberler', 'ajan_modeli'],
             ['gsc_gunluk', 'gosterim'],
             ['gsc_denetim', 'kapsam'],
             ['rehberler', 'kontrol_eden'],
+            // Ziyaret dogrulamasi (api/gorunum.php bunlara yaziyor).
+            ['ziyaretler', 'insan'],
+            // haber_taslak_ekle() ve haber_guncelle() yaziyor.
+            ['haberler', 'neden_onemli'],
+            // derleme_taslak_ekle() yaziyor, site haritalari okuyor.
+            ['haberler', 'derleme'],
+            ['haberler', 'derleme_kaynaklari'],
+            ['ziyaretler', 'kampanya'],
         ];
 
         foreach ($beklenenSutunlar as [$tablo, $sutun]) {

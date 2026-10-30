@@ -14,11 +14,14 @@ declare(strict_types=1);
  *    tutmanin anlami yok; yuz ziyaretci ayni anda baksa bile kaynak
  *    siteye 2 dakikada bir tek istek gider.
  *
- * 3) Saglayicilar SIRAYLA denenir. Kazima kirilgan bir yontem: sayfa
- *    duzeni degisince desen tutmaz. Tek saglayiciya baglanirsak kutu
- *    sessizce boş kalir. Zincirin sonunda TCMB'nin kendi XML servisi
- *    duruyor; resmi, ucretsiz ve duzeni yillardir ayni. Gun ici
- *    degismez ama kutuyu asla bos birakmaz.
+ * 3) Dolar ve euro Yahoo Finance'ten (USDTRY=X, EURTRY=X), BIST ve ons
+ *    altinla ayni kaynak; Piyasalar sayfasi da ayni sembolleri kullaniyor,
+ *    iki sayfa ayni kuru gosteriyor. Yahoo dusmusse TCMB'nin resmi XML
+ *    servisi: gun ici degismez ama kutuyu bos birakmaz. Onceden BigPara ve
+ *    Doviz.com sayfalari kaziniyordu ("dolar" kelimesinden sonraki ilk
+ *    makul sayi); alis, satis ya da onceki kapanis hangisi denk gelirse o
+ *    aliniyor, Milliyet'teki kurdan farkli cikiyordu (site sahibi,
+ *    24.10.2026).
  */
 
 require_once __DIR__ . '/ayarlar.php';
@@ -51,6 +54,23 @@ function piyasa_verisi(bool $zorla = false): array
         if ($onbellek !== null) {
             return $onbellek + ['tazelendi' => false];
         }
+
+        /*
+         * Bayat ama gecerli veri varsa onu goster, yenisini SAYFA
+         * GONDERILDIKTEN SONRA cek (site sahibi, 25.10.2026: "site
+         * acilinca once ust, biraz sonra alt aciliyor"). Onceden serit
+         * 2 dakikadan eski veride ziyaretciyi bekletip dolar, euro, BIST
+         * ve altini sirayla kaynaktan cekiyordu; ana sayfanin alt yarisi
+         * bu sure boyunca gelmiyordu (yerel olcum: 1,4 sn). Ziyaretci
+         * artik hic beklemiyor; bir sonraki ziyaretci taze veriyi goruyor.
+         */
+        $eski = piyasa_onbellekten(true);
+
+        if ($eski !== null && piyasa_kur_makul($eski['usd'], $eski['eur'])) {
+            piyasa_sonra_tazele();
+
+            return $eski + ['tazelendi' => false];
+        }
     }
 
     $veri = piyasa_cek();
@@ -72,6 +92,54 @@ function piyasa_verisi(bool $zorla = false): array
     ayar_yaz(PIYASA_ONBELLEK_ANAHTAR, json_encode($veri, JSON_UNESCAPED_UNICODE));
 
     return $veri + ['tazelendi' => true];
+}
+
+/**
+ * Piyasa verisini yanıt gönderildikten sonra tazeler (istek başına bir kez).
+ *
+ * Ayni dakikada ikinci bir ziyaretci yeniden cekmesin diye deneme zamani
+ * ayarlarda: kaynaklar yavas ya da kapaliyken her ziyaretci denemesin.
+ */
+function piyasa_sonra_tazele(): void
+{
+    static $kuruldu = false;
+
+    if ($kuruldu) {
+        return;
+    }
+
+    $kuruldu = true;
+
+    if (time() - (int) ayar_oku('piyasa_son_deneme', '0') < 60) {
+        return;
+    }
+
+    ayar_yaz('piyasa_son_deneme', (string) time());
+
+    register_shutdown_function(static function (): void {
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        } elseif (function_exists('litespeed_finish_request')) {
+            litespeed_finish_request();
+        } else {
+            // Sayfayi en azindan tarayiciya gonder; baglanti acik kalsa da
+            // ziyaretci sayfanin tamamini goruyor.
+            while (ob_get_level() > 0) {
+                ob_end_flush();
+            }
+
+            flush();
+        }
+
+        ignore_user_abort(true);
+        @set_time_limit(60);
+
+        try {
+            piyasa_verisi(true);
+        } catch (Throwable $e) {
+            error_log('[valentra] piyasa tazeleme: ' . $e->getMessage());
+        }
+    });
 }
 
 /**
@@ -142,6 +210,9 @@ function piyasa_cek(): array
         if ($kur['usd'] !== null) {
             $sonuc['usd'] = $kur['usd'];
             $sonuc['eur'] = $kur['eur'];
+            // Yahoo onceki kapanisi veriyor; TCMB vermiyor (bkz. piyasa_degisimi_ekle).
+            $sonuc['usd_degisim'] = $kur['usd_degisim'] ?? null;
+            $sonuc['eur_degisim'] = $kur['eur_degisim'] ?? null;
             $kaynaklar[]  = $ad;
             break;
         }
@@ -192,8 +263,9 @@ function piyasa_cek(): array
  */
 function piyasa_degisimi_ekle(array $sonuc): array
 {
-    $sonuc['usd_degisim']   = null;
-    $sonuc['eur_degisim']   = null;
+    // Saglayici degisimi verdiyse (Yahoo: onceki kapanisa gore) o kaliyor.
+    $sonuc['usd_degisim']   = $sonuc['usd_degisim'] ?? null;
+    $sonuc['eur_degisim']   = $sonuc['eur_degisim'] ?? null;
     $sonuc['altin_degisim'] = null;
 
     $bugun   = date('Y-m-d');
@@ -225,7 +297,7 @@ function piyasa_degisimi_ekle(array $sonuc): array
         $temel = $referans[$ad] ?? null;
 
         // Sifir bolme ve anlamsiz taban korumasi.
-        if ($simdi === null || $temel === null || $temel <= 0.0) {
+        if ($sonuc[$ad . '_degisim'] !== null || $simdi === null || $temel === null || $temel <= 0.0) {
             continue;
         }
 
@@ -267,60 +339,70 @@ function piyasa_referans_yaz(array $referans): void
 function piyasa_kur_saglayicilari(): array
 {
     return [
-        'BigPara'  => static fn (): array => piyasa_kur_kazi(
-            'https://bigpara.hurriyet.com.tr/doviz/',
-            'bigpara'
-        ),
-        'Döviz.com' => static fn (): array => piyasa_kur_kazi(
-            'https://www.doviz.com/',
-            'doviz'
-        ),
-        'TCMB'     => 'piyasa_kur_tcmb',
+        'Yahoo Finance' => 'piyasa_kur_yahoo',
+        'TCMB'          => 'piyasa_kur_tcmb',
     ];
 }
 
 /**
- * Haber/piyasa sayfasından kur kazır.
+ * Dolar ve euro Yahoo Finance'ten; değişim önceki kapanışa göre.
  *
- * Sayfa duzenine bagli olmayan bir yontem seciliyor: sayfadaki tum
- * "1.234,56" bicimli sayilar toplanip makul araliktaki ilk degerler
- * aliniyor. Tek bir CSS secicisine baglanmak sayfa her degistiginde
- * kirilirdi; bu yontem duzen degisse de ayakta kaliyor.
- *
- * @return array{usd:?float,eur:?float}
+ * @return array{usd:?float,eur:?float,usd_degisim:?float,eur_degisim:?float}
  */
-function piyasa_kur_kazi(string $url, string $bicim): array
+function piyasa_kur_yahoo(): array
 {
-    $html = piyasa_indir($url);
+    $usd = piyasa_yahoo_fiyat('USDTRY=X');
+    $eur = piyasa_yahoo_fiyat('EURTRY=X');
 
-    if ($html === null) {
-        return ['usd' => null, 'eur' => null];
+    if (!piyasa_kur_makul($usd['deger'], $eur['deger'])) {
+        return ['usd' => null, 'eur' => null, 'usd_degisim' => null, 'eur_degisim' => null];
     }
 
-    // Once TL'yi acikca soyleyen etiketler denenir. Duz "dolar" ya da
-    // "euro" araması sayfadaki EUR/USD paritesini yakalayabiliyor;
-    // ilk surumde ikisi de 1,1540 cikmisti (parite, TL kuru degil).
-    $usd = piyasa_etiketli_sayi($html, [
-        'usd/try', 'usdtry', 'dolar/tl', 'dolar kuru', 'amerikan dolari',
-        'dolar', 'usd',
-    ]);
-    $eur = piyasa_etiketli_sayi($html, [
-        'eur/try', 'eurtry', 'euro/tl', 'euro kuru', 'euro', 'eur',
-    ]);
+    return [
+        'usd'         => $usd['deger'],
+        'eur'         => $eur['deger'],
+        'usd_degisim' => $usd['degisim'],
+        'eur_degisim' => $eur['degisim'],
+    ];
+}
 
-    if (!piyasa_kur_makul($usd, $eur)) {
-        return ['usd' => null, 'eur' => null];
+/**
+ * Yahoo Finance'ten son fiyat ve önceki kapanışa göre yüzde değişim.
+ *
+ * @return array{deger:?float,degisim:?float}
+ */
+function piyasa_yahoo_fiyat(string $sembol): array
+{
+    $bos = ['deger' => null, 'degisim' => null];
+    $ham = piyasa_indir(
+        'https://query1.finance.yahoo.com/v8/finance/chart/' . rawurlencode($sembol) . '?interval=1d&range=1d'
+    );
+
+    if ($ham === null) {
+        return $bos;
     }
 
-    return ['usd' => $usd, 'eur' => $eur];
+    $ozet = json_decode($ham, true)['chart']['result'][0]['meta'] ?? null;
+
+    if (!is_array($ozet) || !isset($ozet['regularMarketPrice'])) {
+        return $bos;
+    }
+
+    $deger  = (float) $ozet['regularMarketPrice'];
+    $onceki = isset($ozet['chartPreviousClose']) ? (float) $ozet['chartPreviousClose'] : null;
+
+    return [
+        'deger'   => $deger,
+        'degisim' => ($onceki !== null && $onceki > 0) ? round((($deger - $onceki) / $onceki) * 100, 2) : null,
+    ];
 }
 
 /**
  * Çekilen kur çifti mantıklı mı?
  *
- * Kazima kor bir yontem; yanlis sayiyi sessizce gostermektense hic
- * gostermemek dogru. Uc denetim var ve ucu de gercek bir hatayi
- * yakaliyor:
+ * Yanlis sayiyi sessizce gostermektense hic gostermemek dogru (kur
+ * kazinirken yasanan hatalardan; kaynak Yahoo da olsa denetim duruyor).
+ * Uc denetim var ve ucu de gercek bir hatayi yakaliyor:
  *
  * - Ikisi birebir ayni olamaz. Ilk surumde ikisi de 1,1540 cikti:
  *   sayfadan EUR/USD paritesi alinmisti.
@@ -456,30 +538,11 @@ function piyasa_kur_tcmb(): array
  */
 function piyasa_bist(): array
 {
-    $bos = ['deger' => null, 'degisim' => null, 'kaynak' => ''];
+    $fiyat = piyasa_yahoo_fiyat('XU100.IS');
 
-    $ham = piyasa_indir(
-        'https://query1.finance.yahoo.com/v8/finance/chart/XU100.IS?interval=1d&range=1d'
-    );
-
-    if ($ham === null) {
-        return $bos;
-    }
-
-    $veri = json_decode($ham, true);
-    $ozet = $veri['chart']['result'][0]['meta'] ?? null;
-
-    if (!is_array($ozet) || !isset($ozet['regularMarketPrice'])) {
-        return $bos;
-    }
-
-    $deger   = (float) $ozet['regularMarketPrice'];
-    $onceki  = isset($ozet['chartPreviousClose']) ? (float) $ozet['chartPreviousClose'] : null;
-    $degisim = ($onceki !== null && $onceki > 0)
-        ? round((($deger - $onceki) / $onceki) * 100, 2)
-        : null;
-
-    return ['deger' => $deger, 'degisim' => $degisim, 'kaynak' => 'Yahoo Finance'];
+    return $fiyat['deger'] === null
+        ? ['deger' => null, 'degisim' => null, 'kaynak' => '']
+        : ['deger' => $fiyat['deger'], 'degisim' => $fiyat['degisim'], 'kaynak' => 'Yahoo Finance'];
 }
 
 /**
@@ -490,7 +553,7 @@ function piyasa_bist(): array
  * ONS: BIST ile ayni uctan (Yahoo Finance, altin vadeli GC=F); onceki
  * kapanis da geldigi icin gunluk degisim kaynaktan hesaplaniyor.
  *
- * GRAM: once Turk piyasa sayfalari (BigPara, Doviz.com) kaziniyor; Turk
+ * GRAM: once Turk piyasa sayfasi (Doviz.com) kaziniyor; Turk
  * okurun bildigi gram altin fiyati bu. Kazima kor bir yontem oldugu
  * icin okunan deger ons x dolar / 31,1035 ile sinaniyor: yuzde 6'dan
  * fazla sapiyorsa yanlis sayi alinmis demektir ve hesaplanan deger
@@ -526,8 +589,9 @@ function piyasa_altin(?float $usd): array
     $hesap = ($ons !== null && $usd !== null) ? round($ons * $usd / 31.1035, 2) : null;
     $gram  = null;
 
+    // BigPara cikarildi (24.10.2026): sunucudan gelen istekleri yanitsiz
+    // birakiyor (IHS kayitlari); site sahibi "o kaynaklari aramayalim".
     foreach ([
-        'BigPara'   => 'https://bigpara.hurriyet.com.tr/altin/',
         'Döviz.com' => 'https://altin.doviz.com/',
     ] as $ad => $url) {
         $html = piyasa_indir($url);

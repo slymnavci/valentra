@@ -42,6 +42,24 @@ function canli_onbellek(string $anahtar, int $sure, callable $uret): array
     $kayit = canli_onbellek_oku($anahtar);
     $simdi = time();
 
+    /*
+     * Zorla tazeleme (api/canli-tazele.php): sure ve butceye bakmadan
+     * hemen cek. Ziyaretci gelmeyen saatlerde veri eskimesin diye ajan
+     * duzenli olarak durtuyor. Cekim basarisizsa son iyi veri kalir.
+     */
+    if (canli_zorla()) {
+        static $tazelenen = [];
+
+        // Ayni istekte ikinci kez cekme (altin, ons ve doları yeniden istiyor).
+        if (isset($tazelenen[$anahtar])) {
+            return $kayit ?? ['veri' => null, 'zaman' => 0];
+        }
+
+        $tazelenen[$anahtar] = true;
+
+        return canli_onbellek_uret($anahtar, $uret) ?? $kayit ?? ['veri' => null, 'zaman' => 0];
+    }
+
     if ($kayit !== null && $simdi - $kayit['zaman'] < $sure) {
         return $kayit;
     }
@@ -57,6 +75,38 @@ function canli_onbellek(string $anahtar, int $sure, callable $uret): array
     canli_sonra_tazele($anahtar, $uret);
 
     return $kayit ?? ['veri' => null, 'zaman' => 0];
+}
+
+/**
+ * Zorla tazeleme kipi: argumanla acilir/kapanir, argumansiz okunur.
+ *
+ * Yalnizca api/canli-tazele.php aciyor; sayfa isteklerinde hep kapali.
+ */
+function canli_zorla(?bool $ac = null): bool
+{
+    static $acik = false;
+
+    if ($ac !== null) {
+        $acik = $ac;
+    }
+
+    return $acik;
+}
+
+/**
+ * Tazeleme sayaci: zorla kipte kac kayit alindi / alinamadi.
+ *
+ * @return array{tamam:int,hata:int}
+ */
+function canli_sayac(?string $sonuc = null): array
+{
+    static $sayac = ['tamam' => 0, 'hata' => 0];
+
+    if ($sonuc !== null) {
+        $sayac[$sonuc]++;
+    }
+
+    return $sayac;
 }
 
 /** @return array{veri:array,zaman:int}|null */
@@ -88,7 +138,15 @@ function canli_onbellek_uret(string $anahtar, callable $uret): ?array
     }
 
     if (!is_array($veri) || $veri === []) {
+        if (canli_zorla()) {
+            canli_sayac('hata');
+        }
+
         return null;
+    }
+
+    if (canli_zorla()) {
+        canli_sayac('tamam');
     }
 
     $kayit = ['veri' => $veri, 'zaman' => time()];
@@ -177,6 +235,50 @@ function canli_indir(string $url, int $zamanAsimi = 8): ?string
     $sonuc = http_getir($url, $zamanAsimi);
 
     return $sonuc['tamam'] ? (string) $sonuc['govde'] : null;
+}
+
+/**
+ * Birden çok adresi AYNI ANDA indirir (curl_multi); sıra korunur.
+ * Ayarlar canli_indir ile ayni (http_ortak_secenekler).
+ *
+ * @param array<string,string> $adresler anahtar => adres
+ * @return array<string,?string> anahtar => govde (basarisizsa null)
+ */
+function canli_coklu_indir(array $adresler, int $zamanAsimi = 8): array
+{
+    require_once __DIR__ . '/http_ortak.php';
+
+    $coklu   = curl_multi_init();
+    $tutamac = [];
+
+    foreach ($adresler as $anahtar => $adres) {
+        $ch = curl_init($adres);
+        curl_setopt_array($ch, http_ortak_secenekler($zamanAsimi));
+        curl_multi_add_handle($coklu, $ch);
+        $tutamac[$anahtar] = $ch;
+    }
+
+    do {
+        $durum = curl_multi_exec($coklu, $suren);
+
+        if ($suren > 0) {
+            curl_multi_select($coklu, 1.0);
+        }
+    } while ($suren > 0 && $durum === CURLM_OK);
+
+    $sonuc = [];
+
+    foreach ($tutamac as $anahtar => $ch) {
+        $govde = curl_multi_getcontent($ch);
+        $kod   = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        $sonuc[$anahtar] = is_string($govde) && $govde !== '' && $kod >= 200 && $kod < 300 ? $govde : null;
+        curl_multi_remove_handle($coklu, $ch);
+        curl_close($ch);
+    }
+
+    curl_multi_close($coklu);
+
+    return $sonuc;
 }
 
 /** "13:05" ya da "22 Eki 13:05": verinin ne zaman çekildiği. */

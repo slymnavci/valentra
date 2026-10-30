@@ -59,9 +59,73 @@ function haber_yolu(string $slug): string
  */
 function kategori_yolu(string $slug, int $sayfa = 1): string
 {
+    /*
+     * Ekonomi, spor, kultur-sanat, magazin ve yemek tarifleri ValPapel,
+     * ValSpor ve ValMagazin'in sayfalarinda (29.10.2026; bkz.
+     * includes/gazeteler.php). Eski /kategori/... adresi kalici olarak
+     * oraya yonleniyor (kategori.php).
+     */
+    if (isset(KATEGORI_GAZETESI[$slug])) {
+        [$gazete, $bolum] = KATEGORI_GAZETESI[$slug];
+
+        // On sayfa bir liste degil; 2. sayfa ve sonrasi "tum haberler".
+        if ($bolum === '' && $sayfa > 1) {
+            $bolum = 'haberler';
+        }
+
+        return gazete_yolu($gazete, $bolum, $sayfa);
+    }
+
+    return kategori_ham_yolu($slug, $sayfa);
+}
+
+/** Kategori sayfasinin kendi adresi (gazeteye eslenmeden; spor bolumleri). */
+function kategori_ham_yolu(string $slug, int $sayfa = 1): string
+{
     $yol = temiz_adres_acik()
         ? '/kategori/' . rawurlencode($slug)
         : '/kategori.php?k=' . rawurlencode($slug);
+
+    if ($sayfa > 1) {
+        $yol .= (temiz_adres_acik() ? '?' : '&') . 'sayfa=' . $sayfa;
+    }
+
+    return $yol;
+}
+
+/** Gazetesi olan kategoriler: slug => [gazete, bolum]. */
+const KATEGORI_GAZETESI = [
+    'ekonomi'         => ['valpapel', ''],
+    'spor'            => ['valspor', ''],
+    'kultur-sanat'    => ['valmagazin', 'sanat'],
+    'magazin'         => ['valmagazin', 'sanatcilar'],
+    'yemek-tarifleri' => ['valmagazin', 'yemek-tarifleri'],
+];
+
+/** ValPapel, ValSpor, ValMagazin: on sayfa ya da bir bolumu (bkz. includes/gazeteler.php). */
+function gazete_yolu(string $gazete, string $bolum = '', int $sayfa = 1): string
+{
+    if (temiz_adres_acik()) {
+        $yol = '/' . rawurlencode($gazete) . ($bolum !== '' ? '/' . rawurlencode($bolum) : '');
+
+        return $sayfa > 1 ? $yol . '?sayfa=' . $sayfa : $yol;
+    }
+
+    $parametre = array_filter(['g' => $gazete, 'b' => $bolum, 'sayfa' => $sayfa > 1 ? (string) $sayfa : '']);
+
+    return '/gazete.php?' . http_build_query($parametre);
+}
+
+/**
+ * Etiket sayfasının adresi (28.10.2026; bkz. includes/etiket.php).
+ * Etiket kucuk harfle ve oldugu gibi (Turkce harfler kodlanarak).
+ */
+function etiket_yolu(string $etiket, int $sayfa = 1): string
+{
+    require_once __DIR__ . '/etiket.php';
+
+    $anahtar = rawurlencode(etiket_normal($etiket));
+    $yol     = temiz_adres_acik() ? '/etiket/' . $anahtar : '/etiket.php?e=' . $anahtar;
 
     if ($sayfa > 1) {
         $yol .= (temiz_adres_acik() ? '?' : '&') . 'sayfa=' . $sayfa;

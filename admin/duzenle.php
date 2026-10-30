@@ -47,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'isletme_etkisi'   => $_POST['isletme_etkisi'] ?? '',
             'uygulama_ornegi'  => $_POST['uygulama_ornegi'] ?? '',
             'resmi_dayanak'    => $_POST['resmi_dayanak'] ?? '',
+            'neden_onemli'     => $_POST['neden_onemli'] ?? '',
         ]);
 
         // "Kaydet ve onayla" dugmesi
@@ -138,6 +139,14 @@ require __DIR__ . '/ust.php';
         <label for="icerik">Haber metni</label>
         <textarea id="icerik" name="icerik" required><?= e($haber['icerik']) ?></textarea>
         <div class="ipucu">Paragrafları boş satırla ayırın.</div>
+    </div>
+
+    <?php /* Neden onemli? — haberin kaynakta olmayan acisi (26.10.2026). */ ?>
+    <div class="alan">
+        <label for="neden_onemli">Neden önemli? <span class="ipucu">(2-3 cümle; haberin okur için anlamı. Kaynakta olmayan rakam, isim ya da tahmin olmamalı.)</span></label>
+        <textarea id="neden_onemli" name="neden_onemli" rows="3"
+                  maxlength="800"><?= e($haber['neden_onemli'] ?? '') ?></textarea>
+        <div class="ipucu">Boş bırakılırsa sayfada görünmez. Haberi Google'da özetten ayıran en önemli kısım budur.</div>
     </div>
 
     <?php /*

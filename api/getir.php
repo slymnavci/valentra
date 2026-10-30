@@ -162,7 +162,14 @@ if ($sunucu === 'evds3.tcmb.gov.tr') {
     }
 }
 
-$indirme = http_getir($url, 25, '', $basliklar);
+/*
+ * Dis siteye en fazla 12 saniye (IHS'in onerisi, 24.10.2026: amerikaninsesi,
+ * bigpara, nytimes, france24 sunuculardan gelen istekleri zaman zaman
+ * yanitsiz birakiyor; 25 saniyelik bekleme sunucuda islem tutuyordu).
+ * Gelmeyen kaynak bir sonraki calismada yeniden denenir.
+ */
+@set_time_limit(30);
+$indirme = http_getir($url, 12, '', $basliklar);
 
 if (!$indirme['tamam']) {
     ajan_json(502, [

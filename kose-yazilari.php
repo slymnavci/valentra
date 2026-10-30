@@ -31,16 +31,34 @@ $sayfaAciklama = 'Valentra\'nın her gün gündemin ve dünyanın en önemli kon
                . 'değerlendirdiği köşe yazıları.';
 $seoAdres      = site_adresi() . kose_liste_yolu($sayfa);
 
+// Liste sayfalarinin 2., 3. ... sayfalari Google'a sunulmuyor (26.10.2026):
+// icerikleri haberlerin kendisinde; 'follow' ile baglantilar yine taraniyor.
+if ($sayfa > 1) {
+    $seoRobots = 'noindex, follow';
+}
+
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
 
 <div class="kategori-basligi">
     <h1>Valentra Diyor ki…</h1>
     <p>
-        Her gün Türkiye'nin ve dünyanın en önemli 3-4 konusu, ayrı ayrı
-        yazılarla değerlendiriliyor.
+        Yazarlarımız her gün kendi alanlarında gündemin en önemli
+        konularını değerlendiriyor.
     </p>
 </div>
+
+<?php // Yazarlar seridi: her yazarin sayfasina (gecmis yazilari). ?>
+<nav class="yazar-seridi" aria-label="Yazarlar">
+    <?php foreach (array_keys(KOSE_YAZARLARI) as $anahtar): ?>
+        <?php $y = yazar_bul($anahtar); ?>
+        <a href="<?= e(yazar_yolu($anahtar)) ?>">
+            <?= yazar_portre_svg($anahtar, 64) ?>
+            <span class="yazar-ad"><?= e($y['ad']) ?></span>
+            <span class="yazar-alan"><?= e($y['alan']) ?></span>
+        </a>
+    <?php endforeach; ?>
+</nav>
 
 <div class="ana-duzen">
     <div class="ana-kolon">
@@ -51,6 +69,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
             </div>
         <?php endif; ?>
 
+        <?php $koseGorselleri = kose_gorselleri(array_merge([], ...array_values($gunler))); ?>
         <?php foreach ($gunler as $gun => $yazilar): ?>
             <?php $zaman = strtotime($gun); ?>
             <div class="bolum-basligi">
@@ -61,10 +80,15 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <ul class="kose-liste">
                 <?php foreach ($yazilar as $yazi): ?>
                     <li>
-                        <a href="<?= e(kose_yolu((string) $yazi['slug'])) ?>">
-                            <?php if ((string) $yazi['gundem'] !== ''): ?>
-                                <span class="kose-gundem"><?= e((string) $yazi['gundem']) ?></span>
+                        <a href="<?= e(kose_yolu((string) $yazi['slug'])) ?>"
+                           class="<?= isset($koseGorselleri[(int) $yazi['id']]) ? 'gorselli' : '' ?>">
+                            <?php if (isset($koseGorselleri[(int) $yazi['id']])): ?>
+                                <img class="kose-kucuk" src="<?= e($koseGorselleri[(int) $yazi['id']]['kucuk']) ?>" alt=""
+                                     loading="lazy" referrerpolicy="no-referrer"
+                                     onerror="this.parentElement.classList.remove('gorselli');this.remove()">
                             <?php endif; ?>
+                            <span class="kose-gundem"><?= e(yazar_yazinin($yazi)['ad']) ?><?=
+                                (string) $yazi['gundem'] !== '' ? ' · ' . e((string) $yazi['gundem']) : '' ?></span>
                             <span class="kose-baslik"><?= e((string) $yazi['baslik']) ?></span>
                             <?php if ((string) $yazi['ozet'] !== ''): ?>
                                 <span class="kose-ozet"><?= e((string) $yazi['ozet']) ?></span>

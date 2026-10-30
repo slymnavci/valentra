@@ -40,13 +40,22 @@ function sirket_grafik_serisi(array $noktalar): array
  */
 function sirket_secici_html(string $secili = ''): string
 {
+    // Liste 60 sirket: ada gore, Turkce alfabeyle (intl yoksa duz sira).
+    $sirketler = piyasa_sirketleri();
+
+    if (class_exists('Collator')) {
+        (new Collator('tr_TR'))->asort($sirketler);
+    } else {
+        asort($sirketler);
+    }
+
     ob_start();
     ?>
     <form class="sirket-secici" action="/sirket.php" method="get" role="search" aria-label="Şirket seç">
         <label for="sirket-sec">Şirket</label>
         <select id="sirket-sec" name="kod" onchange="if (this.value) this.form.submit()">
             <option value="">Seçin…</option>
-            <?php foreach (piyasa_sirketleri() as $kod => $ad): ?>
+            <?php foreach ($sirketler as $kod => $ad): ?>
                 <option value="<?= e($kod) ?>"<?= $kod === $secili ? ' selected' : '' ?>><?= e($ad) ?> (<?= e($kod) ?>)</option>
             <?php endforeach; ?>
         </select>
@@ -77,6 +86,7 @@ function sirket_bist_bolumu_html(): string
             'kaynak'   => 'Yahoo Finance',
             'sifirdan' => false,
             'hane'     => 2,
+            'golge'    => true,
         ]);
     }
 

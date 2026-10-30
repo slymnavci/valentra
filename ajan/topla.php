@@ -51,9 +51,47 @@ date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
 /** Komut satırı seçenekleri */
-$secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::', 'sitetavani::', 'sitearaligi::', 'kaynakbasina::', 'konu::']);
+$secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::', 'sitetavani::', 'sitearaligi::', 'kaynakbasina::', 'konu::', 'video']);
 $kuruCalisma = isset($secenekler['kuru']);
-$saat        = max(1, (int) ($secenekler['saat'] ?? 36));
+/*
+ * --video: yalnizca YouTube kanal kaynaklari (Video haber ajani,
+ * .github/workflows/video.yml). Site sahibinin istegi (23.10.2026):
+ * "videolu hic haber gelmedi; videolu haberler icin ayri bir ajan
+ * kuralim, takip edebileyim". Her videonun akibeti (sitede var,
+ * model eledi, yazildi...) calisma ozetine tablo olarak yaziliyor.
+ */
+$videoModu = isset($secenekler['video']);
+/*
+ * Geriye bakis 2 saat, videolar dahil (site sahibinin karari, 23.10.2026:
+ * "haber tarama her aramada bir iki saat once yayinlanan haberleri
+ * alsin; eski haberleri toplamiyoruz"). Ajan iki saatte bir calisiyor.
+ * Pencere yayin zamanina gore: beslemedeki tarih, kazinan haberde
+ * sayfanin kendi tarihi; tarihi bulunamayan haber alinmiyor (bkz.
+ * TARIH DENETIMI). Tarifler eskimiyor: tarif beslemeleri en az 36 saat.
+ */
+$saat        = max(1, (int) ($secenekler['saat'] ?? 2));
+
+/** Tarif beslemelerinin geriye bakisi: tarifin yeni olmasi gerekmiyor. */
+const TARIF_SAATI = 36;
+
+/*
+ * Saglik ve kultur-sanat her toplamada alinsin (site sahibi, 23.10.2026:
+ * "saglik, kultur, yemek tarifi de her seferinde toplansin"). Bu
+ * basliklarin kaynaklari seyrek yayin yapiyor; 2 saatlik pencerede cogu
+ * zaman hic haber cikmiyordu. Geriye bakis bu basliklarda 8 saat; kopya
+ * engeli ayni haberi ikinci kez almiyor.
+ */
+const SEYREK_BASLIK_SAATI = 8;
+
+/** Kaynagin basligina gore geriye bakis (saat). */
+function kaynak_saati(array $kaynak, int $saat): int
+{
+    return match (HaberAkisi::kova($kaynak)) {
+        'yemek-tarifleri'         => max($saat, TARIF_SAATI),
+        'saglik', 'kultur-sanat', 'magazin' => max($saat, SEYREK_BASLIK_SAATI),
+        default                   => $saat,
+    };
+}
 /*
  * --konu=spor[,politika]: yalnizca bu basliklarin kaynaklari taranir ve
  * kontenjanin tamami onlara gider (site sahibinin istegi, 22.10.2026:
@@ -68,7 +106,92 @@ $konular = array_values(array_intersect(
 // Varsayilan: basliklarin paylarinin toplami (bkz. HaberAkisi::PAYLAR);
 // tek baslik secildiyse baslik basina 20 aday.
 $enFazlaAday = max(1, (int) ($secenekler['enfazla']
-    ?? ($konular !== [] ? 20 * count($konular) : array_sum(HaberAkisi::PAYLAR))));
+    ?? ($videoModu ? 24 : ($konular !== [] ? 20 * count($konular) : array_sum(HaberAkisi::PAYLAR)))));
+
+/** @var array<string,array{kanal:string,baslik:string,adres:string,durum:string}> Video modunda her videonun akibeti */
+$videoRaporu = [];
+/** @var array<string,string> Video modunda kanal basina tarama sonucu */
+$kanalRaporu = [];
+/** Video modunda ozete eklenecek gonderim sonucu. */
+$videoSonuc = '';
+
+/** Video modunda bir videonun akibetini kaydeder (son yazilan kalir). */
+function video_kaydet(array $girdi, array $kaynak, string $durum): void
+{
+    global $videoModu, $videoRaporu;
+
+    if (!$videoModu) {
+        return;
+    }
+
+    $adres = (string) ($girdi['baglanti'] ?? '');
+    $videoRaporu[$adres] = [
+        'kanal'  => (string) ($kaynak['ad'] ?? ''),
+        'baslik' => (string) ($girdi['baslik'] ?? ''),
+        'adres'  => $adres,
+        'durum'  => $durum,
+    ];
+}
+
+/** Video kaynagi mi: beslemesi YouTube kanali. */
+function video_kaynagi_mi(array $kaynak): bool
+{
+    return (bool) preg_match('#^https?://(?:www\.|m\.)?youtube\.com/#i', (string) ($kaynak['besleme_url'] ?? ''));
+}
+
+if ($videoModu) {
+    /*
+     * Rapor her cikista yaziliyor ("aday yok" erken cikisi dahil):
+     * GitHub calisma ozetinde tablo, ustte tek satirlik bildirim.
+     */
+    register_shutdown_function(static function (): void {
+        global $videoRaporu, $kanalRaporu, $videoSonuc;
+
+        $sayac = [];
+
+        foreach ($videoRaporu as $v) {
+            $tur = (string) preg_replace('/\s*[—(].*$/u', '', $v['durum']);
+            $sayac[$tur] = ($sayac[$tur] ?? 0) + 1;
+        }
+
+        $ozet = count($kanalRaporu) . ' kanal tarandı, ' . count($videoRaporu) . ' video incelendi';
+        $ozet .= $sayac !== [] ? ' (' . implode(', ', array_map(
+            static fn (string $k, int $n): string => $k . ': ' . $n,
+            array_keys($sayac),
+            $sayac
+        )) . ').' : '.';
+        $ozet .= $videoSonuc !== '' ? ' ' . $videoSonuc : '';
+
+        $hucre = static fn (string $m): string => str_replace(['|', "\n"], ['/', ' '], $m);
+        $md    = "## Video haber ajanı\n\n" . $ozet . "\n\n### Kanallar\n\n| Kanal | Sonuç |\n|---|---|\n";
+
+        foreach ($kanalRaporu as $kanal => $sonuc) {
+            $md .= '| ' . $hucre($kanal) . ' | ' . $hucre($sonuc) . " |\n";
+        }
+
+        if ($videoRaporu !== []) {
+            $md .= "\n### Videolar\n\n| Kanal | Video | Durum |\n|---|---|---|\n";
+
+            foreach ($videoRaporu as $v) {
+                $md .= '| ' . $hucre($v['kanal'])
+                    . ' | [' . $hucre(str_replace(['[', ']'], ['(', ')'], mb_substr($v['baslik'], 0, 90, 'UTF-8'))) . '](' . $v['adres'] . ')'
+                    . ' | ' . $hucre($v['durum']) . " |\n";
+            }
+        }
+
+        echo PHP_EOL, $md, PHP_EOL;
+
+        $dosya = getenv('GITHUB_STEP_SUMMARY');
+
+        if (is_string($dosya) && $dosya !== '') {
+            @file_put_contents($dosya, $md, FILE_APPEND);
+        }
+
+        if (getenv('GITHUB_ACTIONS') === 'true') {
+            echo '::notice title=Video haber ajanı::' . str_replace(['%', "\r", "\n"], ['%25', '%0D', '%0A'], $ozet) . PHP_EOL;
+        }
+    });
+}
 
 function gunluk(string $mesaj): void
 {
@@ -110,7 +233,10 @@ gunluk('Valentra ajanı başlıyor' . ($kuruCalisma ? ' (KURU ÇALIŞMA — gön
 $site    = new Site($siteUrl, $ajanKey);
 $http    = new Http();
 
-$yazar   = new Yazar($apiKey);
+// OpenAI anahtari varsa haberler once onunla (GPT-6 Luna), basarisizsa
+// Gemini ile (bkz. Yazar, BIRINCIL MODEL). Yoksa yalnizca Gemini.
+$yazar   = new Yazar($apiKey, '', trim((string) getenv('OPENAI_API_KEY')), trim((string) getenv('ANTHROPIC_API_KEY')));
+gunluk('Model: ' . $yazar->model() . ' (haber; CLAUDE_MODEL / OPENAI_MODEL / GEMINI_MODEL ile değiştirilebilir).');
 
 // --- 1. Yapılandırma -------------------------------------------------------
 
@@ -197,8 +323,11 @@ if ($yapilandirmaKaynagi !== 'site') {
      * haber yok) site sorunu yine de sessiz kalmasin.
      */
     register_shutdown_function(static function () use (&$siteSorunuBildirildi, $siteHatasi, $kuruCalisma): void {
+        // Uyari: gonderilecek haber yoksa kaybolan bir sey yok. Uzun
+        // kesinti panelde ayrica gorunuyor ("ajandan N saattir haber
+        // ulasmadi", bkz. includes/ajan_tetikle.php).
         if (!$siteSorunuBildirildi && !$kuruCalisma) {
-            Bildirim::sorun(site_ulasilamadi_mesaji($siteHatasi, null));
+            Bildirim::uyari(site_ulasilamadi_mesaji($siteHatasi, null));
         }
     });
 
@@ -290,6 +419,17 @@ if (!$siteyeUlasilir) {
 }
 
 $kaynaklar   = $yapilandirma['kaynaklar'];
+
+if ($videoModu) {
+    $kaynaklar = array_values(array_filter($kaynaklar, 'video_kaynagi_mi'));
+    gunluk('Video modu: yalnızca ' . count($kaynaklar) . ' YouTube kanalı taranıyor ('
+        . implode(', ', array_column($kaynaklar, 'ad')) . '), son ' . $saat . ' saat, en fazla ' . $enFazlaAday . ' video.');
+
+    if ($kaynaklar === []) {
+        gunluk('Sitede etkin YouTube kanalı kaynağı yok (panel → Kaynaklar).');
+        exit(0);
+    }
+}
 
 if ($konular !== []) {
     $kaynaklar = array_values(array_filter(
@@ -741,6 +881,22 @@ function konu_kontenjani(array $adaylar, array $paylar, int $enFazla): array
         $kovalar[$konu][] = $aday;
     }
 
+    /*
+     * Sinir paylarin toplamindan kucukse paylar ORANTILANIYOR, her baslik
+     * en az 1. Once ilk tur sirayla tam pay veriyordu: panelin "Haberleri
+     * topla" dugmesi 25 aday isterken politika 10, gundem 8, ekonomi 7
+     * hepsini aldi ve yemek tarifleri dahil alti baslik 0 aday aldi
+     * (22.10.2026). Kalan yer sonraki turlarda yine sirayla dagiliyor.
+     */
+    $toplamPay = array_sum($paylar);
+
+    if ($toplamPay > 0 && $enFazla < $toplamPay) {
+        $paylar = array_map(
+            static fn (int $pay): int => max(1, (int) floor($pay * $enFazla / $toplamPay)),
+            $paylar
+        );
+    }
+
     $secilen = [];
 
     while (count($secilen) < $enFazla) {
@@ -808,6 +964,33 @@ function kaynak_yayincisi(array $kaynak): string
  * @param list<array<string,mixed>> $adaylar Puana gore sirali
  * @return array{0:list<array<string,mixed>>,1:int} Kalanlar ve elenen sayisi
  */
+/*
+ * EK KAYNAKLAR (site sahibinin karari, 23.10.2026: haberler daha uzun ve
+ * dolu olsun). Ayni olayi baska yayincilar da verdiyse adayin yanina en
+ * fazla iki tanesinin adresi ekleniyor; model haberi bu metinlerin
+ * hepsinden birlikte yaziyor. Bir sitede olmayan ayrinti digerinden
+ * geliyor, haber tek bir kaynagin yeniden yazimi olmaktan cikiyor.
+ */
+const EK_KAYNAK_TAVANI = 2;
+
+/** Adaya ayni olayi veren baska bir yayincinin girdisini ekler. */
+function ek_kaynak_ekle(array &$aday, array $girdi, array $kaynak): void
+{
+    $yayinci = kaynak_yayincisi($kaynak);
+
+    if ($yayinci === kaynak_yayincisi($aday['kaynak']) || count($aday['ekler'] ?? []) >= EK_KAYNAK_TAVANI) {
+        return;
+    }
+
+    foreach ($aday['ekler'] ?? [] as $ek) {
+        if (kaynak_yayincisi($ek['kaynak']) === $yayinci) {
+            return;
+        }
+    }
+
+    $aday['ekler'][] = ['girdi' => $girdi, 'kaynak' => $kaynak];
+}
+
 function ayni_olayi_ele(array $adaylar): array
 {
     /** @var list<array{kume:array<string,bool>,kaynak:string,sira:int}> */
@@ -835,6 +1018,7 @@ function ayni_olayi_ele(array $adaylar): array
             // Elenen kopyanin yayincilari tutulan adaya ekleniyor (bkz. KAPSAM).
             $tekil[$ayni]['kaynaklar'] = ($tekil[$ayni]['kaynaklar'] ?? []) + ($aday['kaynaklar'] ?? []);
             $tekil[$ayni]['kapsam']    = max(1, count($tekil[$ayni]['kaynaklar']));
+            ek_kaynak_ekle($tekil[$ayni], $aday['girdi'], $aday['kaynak']);
             $elenen++;
             continue;
         }
@@ -955,7 +1139,10 @@ foreach ($kaynaklar as $kaynak) {
 
         // Once RSS: varsa ve haber veriyorsa en guvenilir yol.
         if ($girdiler === [] && $beslemeUrl !== '') {
-            $girdiler = $besleme->oku($beslemeUrl, $saat);
+            $girdiler = $besleme->oku(
+                $beslemeUrl,
+                kaynak_saati($kaynak, $saat)
+            );
             $yontem   = 'besleme';
         }
 
@@ -1001,6 +1188,7 @@ foreach ($kaynaklar as $kaynak) {
         }
 
         gunluk("  {$kaynak['ad']}: {$neden}");
+        $kanalRaporu[(string) $kaynak['ad']] = $neden;
         continue;
     }
 
@@ -1051,8 +1239,10 @@ foreach ($kaynaklar as $kaynak) {
         if ($esSira !== null) {
             $adaylar[$esSira]['kaynaklar'][kaynak_yayincisi($kaynak)] = true;
             $adaylar[$esSira]['kapsam'] = count($adaylar[$esSira]['kaynaklar']);
+            ek_kaynak_ekle($adaylar[$esSira], $girdi, $kaynak);
 
             $zatenVar++;
+            video_kaydet($girdi, $kaynak, 'kopya — bu çalışmada başka kanalda aynı başlık');
             continue;
         }
 
@@ -1061,12 +1251,14 @@ foreach ($kaynaklar as $kaynak) {
             || isset($bilinenUrl[url_parmak($girdi['baglanti'])])
             || isset($bilinenBaslik[baslik_parmak($girdi['baslik'])])) {
             $zatenVar++;
+            video_kaydet($girdi, $kaynak, 'sitede var — daha önce alınmış');
             continue;
         }
 
         // Model bunu yakin zamanda okuyup eledi; yeniden sormak bosa kontenjan.
         if (isset($elenenler[url_parmak($girdi['baglanti'])])) {
             $oncedenElenen++;
+            video_kaydet($girdi, $kaynak, 'önceden elendi — yakın zamanda reddedilmiş');
             continue;
         }
 
@@ -1074,7 +1266,14 @@ foreach ($kaynaklar as $kaynak) {
         $kume = baslik_kumesi($girdi['baslik']);
         $benzerVar = false;
 
-        foreach ($bilinenKumeler as $eskiKume) {
+        /*
+         * Video modunda yok: ayni olayin yazili haberi sitede olsa da
+         * videosu ayri bir haber (site sahibi: videolu haber hic
+         * gelmiyor). Benzer baslik elemesi videolarin cogunu
+         * "zaten var" diye dusuruyordu. Site kopya denetimi birebir
+         * adres/baslik uzerinden; ayni video iki kez gelmez.
+         */
+        foreach ($videoModu ? [] : $bilinenKumeler as $eskiKume) {
             if (baslik_benzer($kume, $eskiKume)) {
                 $benzerVar = true;
                 break;
@@ -1119,10 +1318,12 @@ foreach ($kaynaklar as $kaynak) {
             'puan'   => ($girdi['tarih'] ?? null) !== null ? (int) strtotime((string) $girdi['tarih']) : 0,
         ];
         $gecen++;
+        video_kaydet($girdi, $kaynak, 'aday — modele gönderilmedi (kontenjan ya da kota)');
     }
 
     $zatenNotu = $zatenVar > 0 ? ", {$zatenVar} zaten var" : '';
     gunluk("  {$kaynak['ad']} ({$yontem}): " . count($girdiler) . " girdi, {$gecen} aday{$zatenNotu}");
+    $kanalRaporu[(string) $kaynak['ad']] = count($girdiler) . " video (son {$saat} saat), {$gecen} yeni aday" . ($zatenVar > 0 ? ", {$zatenVar} sitede/kopya" : '');
 }
 
 if ($atlanan > 0) {
@@ -1173,7 +1374,13 @@ if ($cokKaynakli !== []) {
 // Tek baslik secilince (--konu) 10: o basligin kaynagi az (yemek
 // tarifleri 4 kaynak) ve 6'lik tavan 31 tarifi olan Yemek.com'u 6'ya
 // indirip kontenjani bos birakiyordu (22.10.2026: 20 aday yerine 7).
-$kaynakBasinaTavan = max(1, (int) ($secenekler['kaynakbasina'] ?? ($konular !== [] ? 10 : 6)));
+//
+// Buyuk toplu toplamada (22.10.2026, site sahibi: "100 tane yemek tarifi
+// al") 10 da yetmiyor: 7 kaynakla en fazla 70 aday. Tek baslikta tavan
+// istenen aday sayisiyla olceklenir: kaynak basina ortalamanin iki kati.
+$kaynakBasinaTavan = max(1, (int) ($secenekler['kaynakbasina'] ?? ($konular !== []
+    ? max(10, 2 * (int) ceil($enFazlaAday / max(1, count($kaynaklar))))
+    : 6)));
 $kaynakSayaci      = [];
 $secilen           = [];
 $tarifDegil        = 0;
@@ -1255,7 +1462,10 @@ $konuPaylari = $konular !== []
     : HaberAkisi::PAYLAR;
 $adaylar     = array_merge(
     $rgTekil,
-    konu_kontenjani($digerTekil, $konuPaylari, max(0, $enFazlaAday - count($rgTekil)))
+    // Video modunda baslik paylari yok: en yeni videolar (puan = yayim zamani).
+    $videoModu
+        ? array_slice($digerTekil, 0, $enFazlaAday)
+        : konu_kontenjani($digerTekil, $konuPaylari, max(0, $enFazlaAday - count($rgTekil)))
 );
 
 if ($rgTekil !== []) {
@@ -1350,6 +1560,9 @@ gunluk(count($gruplar) . ' grup halinde, başlık başlık işlenecek (grup baş
 
 $islenenAday = 0;
 $gorselsiz   = 0;
+$ekKaynakliAday = 0;
+$eskiElenen  = 0;
+$tarihsizElenen = 0;
 
 foreach ($gruplar as $grupNo => $grup) {
     if ($grupNo > 0) {
@@ -1428,7 +1641,74 @@ foreach ($gruplar as $grupNo => $grup) {
                 mb_substr($aday['girdi']['baslik'], 0, 60),
                 $e->getMessage()
             ));
-            $okunan = ['metin' => '', 'gorsel' => '', 'video' => ''];
+            $okunan = ['metin' => '', 'gorsel' => '', 'video' => '', 'zaman' => null];
+        }
+
+        /*
+         * Haberin kendisi bir video (YouTube kanal beslemesi): oynatici
+         * dogrudan baglantidan; modele sayfa metni yerine videonun
+         * aciklamasi gidiyor (YouTube sayfasinin metni betik artigi).
+         */
+        $baglantiVideo = Sayfa::oynaticiAdresi((string) $aday['girdi']['baglanti']);
+
+        if ($baglantiVideo !== '') {
+            $okunan['video'] = $baglantiVideo;
+            $okunan['metin'] = trim((string) ($aday['girdi']['ozet'] ?? ''));
+        }
+
+        /*
+         * TARIHSIZ ADAY: sayfanin kendi yayin zamani (23.10.2026).
+         *
+         * Kazinan kaynaklarin (IHA, DHA ana sayfasi) girdilerinde tarih
+         * yok; sitede haberin yasi toplandigi andan sayiliyor ve dunku
+         * haber "yeni" gorunuyordu (IHA'nin dunku Sergen Yalcin haberi
+         * ertesi gun ana sayfada 1. oldu). Sayfadan okunan zaman
+         * girdiye yaziliyor; site onu kaynak_tarihi olarak sakliyor.
+         *
+         * Taranan pencereden ($saat) eski haber modele hic gitmiyor:
+         * beslemeler bu suzgecten zaten geciyor, kazima gecmiyordu.
+         * Tarifler eskimiyor (bkz. tarif kaynaklari), onlarda suzgec yok.
+         */
+        /*
+         * TARIH DENETIMI (site sahibi, 23.10.2026: "haberlerin tarihleri
+         * cok onemli, onlari mutlaka kontrol edelim").
+         *
+         *   - Beslemenin tarihi ile sayfanin kendi tarihinden ERKEN olani
+         *     geciyor: bazi beslemeler eski haberi yeni tarihle yeniden
+         *     yayimliyor; sayfa haberin ilk yayin anini veriyor.
+         *   - Gelecekteki tarih (15 dakikadan fazla ileri; yanlis saat
+         *     dilimi) gecersiz sayiliyor.
+         *   - Tarihi hicbir yerden bulunamayan haber ALINMIYOR: ne zaman
+         *     yayimlandigi bilinmeyen haber ana sayfada "bugunun haberi"
+         *     diye gorunebiliyordu.
+         * Tarifler bu denetimden muaf (tarihleri onemli degil).
+         */
+        $tarif         = HaberAkisi::kova($aday['kaynak']) === 'yemek-tarifleri';
+        $beslemeZamani = ($aday['girdi']['tarih'] ?? null) !== null ? (int) strtotime((string) $aday['girdi']['tarih']) : 0;
+        $sayfaZamani   = (int) ($okunan['zaman'] ?? 0);
+        $gecerli       = array_filter(
+            [$beslemeZamani, $sayfaZamani],
+            static fn (int $z): bool => $z > 0 && $z <= time() + 900
+        );
+        $adayZamani    = $gecerli !== [] ? min($gecerli) : 0;
+
+        if ($adayZamani > 0) {
+            $aday['girdi']['tarih'] = date('Y-m-d H:i:s', $adayZamani);
+        } elseif (!$tarif) {
+            $tarihsizElenen++;
+            $elenenler[url_parmak($aday['girdi']['baglanti'])] = time();
+            video_kaydet($aday['girdi'], $aday['kaynak'], 'tarihsiz — yayın tarihi bulunamadı');
+            gunluk('  tarihsiz haber, atlandı — ' . mb_substr($aday['girdi']['baslik'], 0, 60, 'UTF-8'));
+            continue;
+        }
+
+        if ($adayZamani > 0 && $adayZamani < time() - kaynak_saati($aday['kaynak'], $saat) * 3600 && !$tarif) {
+            $eskiElenen++;
+            $elenenler[url_parmak($aday['girdi']['baglanti'])] = time();
+            video_kaydet($aday['girdi'], $aday['kaynak'], 'eski — yayın ' . date('d.m H:i', $adayZamani));
+            gunluk('  eski haber, atlandı — ' . mb_substr($aday['girdi']['baslik'], 0, 60, 'UTF-8')
+                . ' (yayın: ' . date('d.m H:i', $adayZamani) . ')');
+            continue;
         }
 
         // Gorsel once beslemeden, yoksa haber sayfasinin og:image'inden.
@@ -1440,6 +1720,7 @@ foreach ($gruplar as $grupNo => $grup) {
 
         if ($gorsel === '') {
             $gorselsiz++;
+            video_kaydet($aday['girdi'], $aday['kaynak'], 'görsel yok — kapak resmi bulunamadı');
 
             // Sayfa okunduysa ve gorsel yine yoksa bir sonraki calismada
             // da olmayacak: eleme hafizasina yaziliyor ki kontenjani her
@@ -1456,8 +1737,35 @@ foreach ($gruplar as $grupNo => $grup) {
         $gorseller[] = $gorsel;
         $videolar[]  = (string) ($okunan['video'] ?? '');
 
+        /*
+         * Ek kaynaklarin metni (bkz. EK_KAYNAK_TAVANI). Okunamayan ya da
+         * cok kisa olan atlaniyor; ana haber yine tek kaynaktan yazilir.
+         */
+        $ekKaynaklar = [];
+
+        foreach ($aday['ekler'] ?? [] as $ek) {
+            try {
+                $ekMetin = trim((string) ($sayfa->oku((string) $ek['girdi']['baglanti'], 12000)['metin'] ?? ''));
+            } catch (Throwable $e) {
+                $ekMetin = '';
+            }
+
+            if (mb_strlen($ekMetin, 'UTF-8') >= 300) {
+                $ekKaynaklar[] = [
+                    'kaynakAdi' => (string) $ek['kaynak']['ad'],
+                    'baglanti'  => (string) $ek['girdi']['baglanti'],
+                    'metin'     => $ekMetin,
+                ];
+            }
+        }
+
+        if ($ekKaynaklar !== []) {
+            $ekKaynakliAday++;
+        }
+
         $modelAdaylari[] = [
             'girdi'      => $aday['girdi'],
+            'ekKaynaklar' => $ekKaynaklar,
             'sayfaMetni' => $okunan['metin'],
             'kaynakAdi'  => (string) $aday['kaynak']['ad'],
             'kaynakTuru' => (string) ($aday['kaynak']['tur'] ?? 'rss'),
@@ -1474,6 +1782,7 @@ foreach ($gruplar as $grupNo => $grup) {
 
     try {
         $sonuclar = $yazar->topluIsle($modelAdaylari, $kategoriler, $modeleGosterilecek);
+        $yanitlayanModel = $yazar->sonYanitlayan();
     } catch (ModelErisimYokException $e) {
         gunluk("  [grup {$no}] model kullanılamıyor — çalışma erken bitiyor.");
         gunluk('  ' . $e->getMessage());
@@ -1488,12 +1797,20 @@ foreach ($gruplar as $grupNo => $grup) {
     } catch (Throwable $e) {
         $hatali += count($grup);
         gunluk("  [grup {$no}] HATA: " . $e->getMessage());
+
+        foreach ($grup as $a) {
+            video_kaydet($a['girdi'], $a['kaynak'], 'model hatası — ' . mb_substr($e->getMessage(), 0, 120, 'UTF-8'));
+        }
         continue;
     }
 
     if ($sonuclar === []) {
         $hatali += count($grup);
         gunluk("  [grup {$no}] yanıt çözümlenemedi.");
+
+        foreach ($grup as $a) {
+            video_kaydet($a['girdi'], $a['kaynak'], 'model hatası — yanıt çözümlenemedi');
+        }
         continue;
     }
 
@@ -1506,6 +1823,7 @@ foreach ($gruplar as $grupNo => $grup) {
 
         if ($sonuc === null) {
             $hatali++;
+            video_kaydet($girdi, $kaynak, 'model hatası — yanıtta yok');
             gunluk("  [grup {$no}] yanıtta yok — {$kisaBaslik}");
             continue;
         }
@@ -1537,6 +1855,8 @@ foreach ($gruplar as $grupNo => $grup) {
              * urettigini gosterir. Ayni satirda toplanirsa kopya
              * engelinin ise yarayip yaramadigi gunlukten anlasilmaz.
              */
+            video_kaydet($girdi, $kaynak, 'model eledi — ' . $neden);
+
             if (stripos($neden, 'yinelenen') === 0) {
                 $yinelenen++;
                 gunluk("  yinelenen — {$kisaBaslik} ({$neden})");
@@ -1562,6 +1882,7 @@ foreach ($gruplar as $grupNo => $grup) {
         }
 
         $etiketler = $sonuc['etiketler'] ?? [];
+        video_kaydet($girdi, $kaynak, 'yazıldı — ' . (string) $sonuc['baslik']);
 
         $haberler[] = [
             'baslik'      => (string) $sonuc['baslik'],
@@ -1582,6 +1903,12 @@ foreach ($gruplar as $grupNo => $grup) {
             'guven_skoru' => (int) ($sonuc['guven_skoru'] ?? 0),
             'onem'        => (int) ($sonuc['onem'] ?? 50),
             'ajan_notu'   => (string) ($sonuc['ajan_notu'] ?? ''),
+            // Haberin kaynakta olmayan acisi; sayfada "Neden onemli?"
+            // (Google'in ozgun katki aradigi kisim, 26.10.2026).
+            'neden_onemli' => (string) ($sonuc['neden_onemli'] ?? ''),
+            // Haberi yazan model: site otomatik yayin esigini buna gore
+            // seciyor (Luna guveni daha temkinli puanliyor).
+            'model'       => $yanitlayanModel,
 
             // Valentra Analiz — dordu de bos olabilir, bos olmasi normal.
             'analiz_degisen'   => (string) ($sonuc['analiz_degisen'] ?? ''),
@@ -1597,6 +1924,14 @@ foreach ($gruplar as $grupNo => $grup) {
             // Haber sayfasinin gomdugu YouTube/Vimeo/Dailymotion oynaticisi
             // (bkz. Sayfa::videoBul); haber sayfasinda gorselin altinda.
             'iframe_url'  => $videolar[$sira] ?? '',
+            /*
+             * Kaynagin yayin zamani (Unix). Site haberin GUNUNU buna gore
+             * kuruyor: ajan son 36 saati taradigi icin carsamba yayimlanmis
+             * bir mac haberi cuma sabahi toplanip "bugunku" gorunuyordu
+             * (23.10.2026). Tarihi olmayan girdide 0; site toplama anini
+             * kullanir.
+             */
+            'kaynak_zamani' => ($girdi['tarih'] ?? null) !== null ? (int) strtotime((string) $girdi['tarih']) : 0,
         ];
 
         /*
@@ -1625,8 +1960,20 @@ if (!$kuruCalisma) {
 
 gunluk('---');
 
+if ($ekKaynakliAday > 0) {
+    gunluk($ekKaynakliAday . ' aday modele başka yayıncıların metniyle birlikte gitti (ek kaynak).');
+}
+
 if ($gorselsiz > 0) {
     gunluk($gorselsiz . ' aday görseli olmadığı için alınmadı (görselsiz haber yayımlanmıyor).');
+}
+
+if ($tarihsizElenen > 0) {
+    gunluk($tarihsizElenen . ' aday yayın tarihi bulunamadığı için alınmadı.');
+}
+
+if ($eskiElenen > 0) {
+    gunluk($eskiElenen . ' aday sayfasındaki yayın tarihi ' . $saat . ' saatten eski olduğu için alınmadı.');
 }
 
 gunluk(
@@ -1635,7 +1982,8 @@ gunluk(
     . ', ' . $hatali . ' hata.'
 );
 
-$kullanim = $yazar->kullanim();
+$kullanim   = $yazar->kullanim();
+$modelOzeti = '';
 
 if ($kullanim['istek'] > 0) {
     gunluk(sprintf(
@@ -1644,6 +1992,66 @@ if ($kullanim['istek'] > 0) {
         number_format($kullanim['girdi']),
         number_format($kullanim['cikti'])
     ));
+
+    $saglayici = $yazar->saglayicilar();
+
+    if ($saglayici !== []) {
+        // Zincir sirasiyla: Claude (Haiku), Luna, Gemini (yedek). Ozete de
+        // (GitHub bildirimi): hangi model kac grubu yazdi.
+        $modelOzeti = 'Modeller: ' . implode(', ', array_map(
+            static fn (array $s): string => $s['model'] . ' ' . $s['istek'] . ' grup',
+            $saglayici
+        )) . '.';
+        $cd = $yazar->claudeDurumu();
+
+        if ($cd !== null && $cd['mesaj'] !== '') {
+            $modelOzeti .= ' Claude son hata: ' . mb_substr(str_replace(["\r", "\n"], ' ', $cd['mesaj']), 0, 160, 'UTF-8') . '.';
+        }
+
+        gunluk('  ' . implode('; ', array_map(static fn (array $s): string => sprintf(
+            '%s: %d istek yanıtladı (%s giriş + %s çıkış)',
+            $s['model'],
+            $s['istek'],
+            number_format($s['kullanim']['girdi']),
+            number_format($s['kullanim']['cikti'])
+        ), $saglayici)) . '.');
+    }
+}
+
+/*
+ * OpenAI (Luna) durumu panele. Site sahibinin istegi (23.10.2026):
+ * "kredi biterse bana haber ver, ben kredi yuklerim". Kredi bitince ya
+ * da anahtar gecersizse haberler Gemini ile yaziliyor (calisma suruyor),
+ * ama panelde kirmizi uyari cikiyor ve calisma kirmizi bitiyor; GitHub
+ * kirmizi calismayi e-postayla bildiriyor. Kredi yuklenince ilk basarili
+ * istekte uyari kendiliginden kalkiyor.
+ */
+$claudeDurumu = $yazar->claudeDurumu();
+
+if ($claudeDurumu !== null && $claudeDurumu['durum'] === 'kredi') {
+    Bildirim::sorun('Anthropic (' . $claudeDurumu['model'] . ') kredisi bitti; haberler bu çalışmada sıradaki modellerle '
+        . '(Luna, Gemini) yazıldı. platform.claude.com → Billing sayfasından kredi yükleyin.');
+} elseif ($claudeDurumu !== null && $claudeDurumu['durum'] === 'anahtar') {
+    Bildirim::sorun('Anthropic anahtarı geçersiz ya da yetkisiz; haberler sıradaki modellerle yazıldı. '
+        . 'GitHub\'daki ANTHROPIC_API_KEY değerini kontrol edin.');
+}
+
+$openAiDurumu = $yazar->birincilDurumu();
+
+if ($openAiDurumu !== null && $openAiDurumu['durum'] !== 'bilinmiyor') {
+    if ($openAiDurumu['durum'] === 'kredi') {
+        Bildirim::sorun('OpenAI (' . $openAiDurumu['model'] . ') kredisi bitti; haberler bu çalışmada yedek Gemini ile '
+            . 'yazıldı (daha pahalı). platform.openai.com → Billing sayfasından kredi yükleyin.');
+    } elseif ($openAiDurumu['durum'] === 'anahtar') {
+        Bildirim::sorun('OpenAI anahtarı geçersiz ya da yetkisiz; haberler yedek Gemini ile yazıldı. '
+            . 'GitHub\'daki OPENAI_API_KEY değerini kontrol edin.');
+    }
+
+    try {
+        $site->ajanDurumu($openAiDurumu);
+    } catch (Throwable $e) {
+        gunluk('OpenAI durumu panele bildirilemedi: ' . $e->getMessage());
+    }
 }
 
 if ($modelErisimYok !== '') {
@@ -1659,6 +2067,11 @@ if ($modelErisimYok !== '') {
 
 if ($kuruCalisma) {
     gunluk('Kuru çalışma: gönderim yapılmadı.');
+
+    if ($modelOzeti !== '' && getenv('GITHUB_ACTIONS') === 'true') {
+        echo '::notice title=Valentra ajanı::' . str_replace(['%', "\r", "\n"], ['%25', '%0D', '%0A'], $modelOzeti) . PHP_EOL;
+    }
+    $videoSonuc = 'Kuru çalışma: siteye gönderilmedi.';
 
     foreach ($haberler as $haber) {
         echo PHP_EOL, '--- ', $haber['baslik'], ' ---', PHP_EOL;
@@ -1689,6 +2102,10 @@ $gonderilecek = array_merge($bekleyen, $haberler);
 
 if ($gonderilecek === []) {
     gunluk('Gönderilecek haber yok.');
+
+    if ($modelOzeti !== '' && getenv('GITHUB_ACTIONS') === 'true') {
+        echo '::notice title=Valentra ajanı::' . str_replace(['%', "\r", "\n"], ['%25', '%0D', '%0A'], $modelOzeti) . PHP_EOL;
+    }
     exit(0);
 }
 
@@ -1704,7 +2121,7 @@ try {
      * gonderiliyorlar.
      */
     gunluk('Gönderim başarısız: ' . $e->getMessage());
-    Bildirim::sorun(site_ulasilamadi_mesaji($e->getMessage(), count($gonderilecek)));
+    $videoSonuc = 'Siteye gönderilemedi, sonraki çalışmada gönderilecek: ' . $e->getMessage();
     $siteSorunuBildirildi = true;
 
     /*
@@ -1724,6 +2141,23 @@ try {
     if ($teslimYazildi) {
         gunluk(count($gonderilecek) . ' haber GitHub\'a bırakıldı; site bunları kendisi alacak '
             . '(panel → Günlük işler → "GitHub\'da bekleyen haberleri al").');
+    }
+
+    /*
+     * Haberler GitHub'a birakildiysa bu bir HATA degil, gecikme
+     * (24.10.2026): site 10 dakikada bir bekleyenleri kendisi aliyor
+     * (includes/ajan_teslim.php). IHS gunde birkac calismada GitHub'in
+     * o anki adresinden gelen baglantilari 15-20 dakika kabul etmiyor;
+     * her seferinde calisma kirmiziya donuyor ve site sahibi "hata
+     * duzelmiyor" diye goruyordu. Uyari olarak kaliyor; birakilamadiysa
+     * (dosya yazilamadi) gercek hata.
+     */
+    if ($teslimYazildi) {
+        Bildirim::uyari('Ajan siteye ulaşamadı (hosting bağlantıyı geçici olarak kabul etmedi); '
+            . count($gonderilecek) . ' haber GitHub\'a bırakıldı, site birkaç dakika içinde kendisi alacak. '
+            . 'Teknik ayrıntı: ' . $e->getMessage());
+    } else {
+        Bildirim::sorun(site_ulasilamadi_mesaji($e->getMessage(), count($gonderilecek)));
     }
 
     if ($depo->yaz('bekleyen_haberler', $gonderilecek)) {
@@ -1751,8 +2185,29 @@ try {
 // Gonderim tuttu: bekleyenler artik sitede, depoyu temizle.
 $depo->sil('bekleyen_haberler');
 
-gunluk(
-    'Siteye gönderildi: ' . ($yanit['eklenen'] ?? 0) . ' yeni taslak, '
-    . ($yanit['yinelenen'] ?? 0) . ' zaten vardı.'
-);
-gunluk('Haberler yönetim panelinde onay bekliyor.');
+/*
+ * Ozet GitHub'da da gorunsun (calisma ozeti, "notice"): kac haber
+ * eklendi, kaci hemen yayina girdi, kaci onay bekliyor, ana sayfada su an
+ * kac haber var. Site eski surumse yayinlanan/ana_sayfa alanlari yok.
+ */
+$ozet = ($modelOzeti !== '' ? $modelOzeti . ' ' : '') . 'Siteye gönderildi: ' . ($yanit['eklenen'] ?? 0) . ' yeni haber, '
+    . ($yanit['yinelenen'] ?? 0) . ' zaten vardı.';
+
+if (isset($yanit['yayinlanan'])) {
+    $ozet .= ' Hemen yayına giren: ' . (int) $yanit['yayinlanan']
+        . ', onay bekleyen (güven puanı düşük): ' . max(0, (int) ($yanit['eklenen'] ?? 0) - (int) $yanit['yayinlanan']) . '.';
+}
+
+if (is_array($yanit['ana_sayfa'] ?? null)) {
+    $as = $yanit['ana_sayfa'];
+    $ozet .= ' Ana sayfada şu an ' . (int) ($as['ana_sayfada'] ?? 0) . ' haber'
+        . (isset($as['en_yeni_dakika']) ? ' (en yenisi ' . (int) $as['en_yeni_dakika'] . ' dk önce)' : '')
+        . '; bugün onay bekleyen ' . (int) ($as['onay_bekleyen_bugun'] ?? 0) . '.';
+}
+
+gunluk($ozet);
+$videoSonuc = $ozet;
+
+if (getenv('GITHUB_ACTIONS') === 'true') {
+    echo '::notice title=Valentra ajanı::' . str_replace(["%", "\r", "\n"], ['%25', '%0D', '%0A'], $ozet) . PHP_EOL;
+}

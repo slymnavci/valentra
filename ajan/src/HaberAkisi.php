@@ -19,7 +19,7 @@ final class HaberAkisi
     public const KATEGORILER = [
         'gundem', 'politika', 'ekonomi', 'dunya',
         'spor', 'teknoloji', 'saglik', 'kultur-sanat',
-        'yemek-tarifleri',
+        'magazin', 'yemek-tarifleri',
     ];
 
     /**
@@ -35,30 +35,37 @@ final class HaberAkisi
      * @var array<string,int>
      */
     public const PAYLAR = [
-        'politika'     => 10,
+        // Sira kontenjan dagitiminin sirasi (bkz. SIRA): sinir dar
+        // olursa kalan yer once bu sirayla dagiliyor.
         'gundem'       => 8,
-        'ekonomi'      => 8,
-        'dunya'        => 10,
         'spor'         => 8,
-        'teknoloji'    => 6,
+        'politika'     => 10,
+        'ekonomi'      => 8,
         'saglik'       => 5,
         'kultur-sanat' => 5,
-        // Tarifler haber degil; az ama surekli (22.10.2026).
-        'yemek-tarifleri' => 4,
+        // Magazin (29.10.2026, ValMagazin): olculu; sanatcilarin
+        // aciklamalari, roportajlari, yeni isleri.
+        'magazin'      => 5,
+        // Tarifler haber degil; surekli. 4'ten 12'ye (22.10.2026, site
+        // sahibinin istegi: "yemek tarifi sayisini artiralim"; 7 kaynak).
+        'yemek-tarifleri' => 12,
+        'dunya'        => 10,
+        'teknoloji'    => 6,
     ];
 
     /**
-     * Basliklarin modele gidis sirasi (site sahibinin istegi, 22.10.2026):
-     * spor, politika, yabanci haber kuruluslari (dunya), sanat,
-     * teknoloji, sonra digerleri. Her baslik kendi gruplariyla, digerine
-     * karismadan isleniyor; model kotasi biterse sonda kalan basliklar
-     * bir sonraki calismaya kaliyor.
+     * Basliklarin modele gidis sirasi (site sahibinin karari, 23.10.2026:
+     * "once gundem maddeleri, sonra spor, politika ve ekonomi; ama saglik,
+     * kultur, yemek tarifi de her seferinde toplansin"). Her baslik kendi
+     * gruplariyla, digerine karismadan isleniyor; model kotasi ya da sure
+     * biterse sonda kalan basliklar bir sonraki calismaya kaliyor. Saglik,
+     * kultur-sanat ve yemek tarifleri bu yuzden dunya ve teknolojiden
+     * once: her calismada mutlaka islensinler.
      */
     public const SIRA = [
-        'spor', 'politika', 'dunya', 'kultur-sanat',
-        'teknoloji', 'gundem', 'saglik', 'ekonomi',
-        // En sonda: kota biterse ilk tarifler kalsin, haberler degil.
-        'yemek-tarifleri',
+        'gundem', 'spor', 'politika', 'ekonomi',
+        'saglik', 'kultur-sanat', 'magazin', 'yemek-tarifleri',
+        'dunya', 'teknoloji',
     ];
 
     /** Gunluge yazilacak baslik adi. */
@@ -71,6 +78,7 @@ final class HaberAkisi
         'teknoloji'    => 'Teknoloji',
         'saglik'       => 'Sağlık',
         'kultur-sanat' => 'Kültür-Sanat',
+        'magazin'      => 'Magazin',
         'yemek-tarifleri' => 'Yemek Tarifleri',
     ];
 

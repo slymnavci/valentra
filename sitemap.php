@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/seo.php';
+require_once __DIR__ . '/includes/kurumsal.php';
 require_once __DIR__ . '/includes/pratik.php';
 require_once __DIR__ . '/includes/piyasalar.php';
 
@@ -21,12 +22,14 @@ header('Content-Type: application/xml; charset=utf-8');
 
 $taban = site_adresi();
 
+// Google'a sunulan haberler (bkz. haber_dizinlenir_kosulu).
 $haberler = db()->query(
     'SELECT slug, yayin_tarihi, guncellendi
        FROM haberler
       WHERE durum = ' . db()->quote(HABER_YAYINDA) . '
+        AND ' . haber_dizinlenir_kosulu() . '
       ORDER BY yayin_tarihi DESC
-      LIMIT 2000'
+      LIMIT 10000'
 )->fetchAll();
 
 $kategoriler = db()->query(
@@ -74,6 +77,14 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         <priority>0.7</priority>
     </url>
 
+    <?php foreach (array_keys(kurumsal_sayfalar()) as $kurumsalAnahtar): ?>
+        <url>
+            <loc><?= e($taban . kurumsal_yolu($kurumsalAnahtar)) ?></loc>
+            <changefreq>monthly</changefreq>
+            <priority>0.3</priority>
+        </url>
+    <?php endforeach; ?>
+
     <?php /* TMS/TFRS egitim platformu: giris sayfasi herkese acik, icerik uyelere. */ ?>
     <url>
         <loc><?= e($taban) ?>/egitim/</loc>
@@ -112,6 +123,21 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         <changefreq>daily</changefreq>
         <priority>0.7</priority>
     </url>
+
+    <?php // Gunluk burc yorumlari (29.10.2026): her gun yenileniyor. ?>
+    <?php require_once __DIR__ . '/includes/burclar.php'; ?>
+    <url>
+        <loc><?= e($taban . burclar_yolu()) ?></loc>
+        <changefreq>daily</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <?php foreach (array_keys(BURCLAR) as $burcAnahtari): ?>
+        <url>
+            <loc><?= e($taban . burc_yolu($burcAnahtari)) ?></loc>
+            <changefreq>daily</changefreq>
+            <priority>0.6</priority>
+        </url>
+    <?php endforeach; ?>
 
     <url>
         <loc><?= e($taban . piyasalar_yolu()) ?></loc>
@@ -169,7 +195,27 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         </url>
     <?php endforeach; ?>
 
+    <?php // ValPapel, ValSpor, ValMagazin ve haber basliklari (29.10.2026). ?>
+    <?php require_once __DIR__ . '/includes/gazeteler.php'; ?>
+    <?php foreach (gazeteler() as $gazeteAnahtari => $gazete): ?>
+        <url>
+            <loc><?= e($taban . gazete_yolu($gazeteAnahtari)) ?></loc>
+            <changefreq>hourly</changefreq>
+            <priority>0.8</priority>
+        </url>
+        <?php foreach ($gazete['bolumler'] as $bolumAnahtari => $gazeteBolumu): ?>
+            <?php if (!isset($gazeteBolumu['kosullar'])) { continue; } ?>
+            <url>
+                <loc><?= e($taban . gazete_yolu($gazeteAnahtari, $bolumAnahtari)) ?></loc>
+                <changefreq>daily</changefreq>
+                <priority>0.6</priority>
+            </url>
+        <?php endforeach; ?>
+    <?php endforeach; ?>
+
     <?php foreach ($kategoriler as $kategori): ?>
+        <?php // Gazetesi olan kategorinin adresi gazeteye yonleniyor; yukarida. ?>
+        <?php if (isset(KATEGORI_GAZETESI[(string) $kategori['slug']])) { continue; } ?>
         <url>
             <loc><?= e($taban . kategori_yolu((string) $kategori['slug'])) ?></loc>
             <lastmod><?= e($zaman($kategori['son'])) ?></lastmod>
@@ -182,7 +228,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
     <?php if (in_array('spor', array_column($kategoriler, 'slug'), true)): ?>
         <?php require_once __DIR__ . '/includes/spor_panel.php'; ?>
         <?php foreach (array_keys(SPOR_BOLUMLERI) as $bolum): ?>
-            <?php if ($bolum === 'gol-kralligi' && !futbol_api_acik()) { continue; } ?>
+            <?php if (in_array($bolum, ['gol-kralligi', 'asist-kralligi'], true) && !futbol_api_acik()) { continue; } ?>
             <url>
                 <loc><?= e($taban . spor_bolum_yolu($bolum)) ?></loc>
                 <changefreq>daily</changefreq>

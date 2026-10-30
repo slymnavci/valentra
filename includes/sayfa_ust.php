@@ -38,7 +38,8 @@ $menu = site_menusu();
  * varsayilanla yetiniyor.
  */
 $seoAdres  = $seoAdres  ?? gecerli_adres();
-$seoGorsel = $seoGorsel ?? (site_adresi() . '/assets/logo.svg');
+// Varsayilan paylasim gorseli PNG: SVG'yi Facebook, WhatsApp ve X gostermiyor.
+$seoGorsel = $seoGorsel ?? (site_adresi() . '/assets/paylasim.png');
 $seoTur    = $seoTur    ?? 'website';
 $seoSema   = $seoSema   ?? seo_site_semasi();
 
@@ -53,7 +54,9 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="description" content="<?= e($sayfaAciklama) ?>">
     <title><?= e($sayfaBasligi) ?></title>
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/assets/ikon-180.png">
     <?php /* Gece/gunduz modu: ziyaretcinin sectigi tema stil dosyasindan
              ONCE uygulaniyor, yoksa sayfa bir an yanlis renkte gorunup
              sonra degisirdi. Secim yoksa sistem ayari gecerli. */ ?>
@@ -65,9 +68,9 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
              sayfa sanip ikisinin de degerini dusurur. */ ?>
     <link rel="canonical" href="<?= e($seoAdres) ?>">
 
-    <?php if (($seoRobots ?? '') !== ''): ?>
-        <meta name="robots" content="<?= e($seoRobots) ?>">
-    <?php endif; ?>
+    <?php /* Dizine acik sayfalarda buyuk gorsel onizleme izni: yoksa
+             Google Discover ve Haberler haberi kucuk resimle gosteriyor. */ ?>
+    <meta name="robots" content="<?= e(($seoRobots ?? '') !== '' ? $seoRobots : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1') ?>">
 
     <?php
     /*
@@ -117,8 +120,76 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
 $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
 ?>
 <body<?= $govdeSinifi !== '' ? ' class="' . e($govdeSinifi) . '"' : '' ?>>
+    <?php
+    /*
+     * UST BOLUM (site sahibinin istegi, 24.10.2026: "menuleri daha kolay
+     * ve akici yapalim; Milliyet'e benzesin ama tam benzemesin; beyaz ve
+     * kirmizi tonlar, agirlikli beyaz; bir yere hava durumunu koyalim").
+     *
+     *   1. Bilgi cubugu: tarih, gece/gunduz. (Hava durumu 24.10.2026'da
+     *      yan penceredeki karta tasindi, bkz. includes/hava_kutu.php.)
+     *   2. Logo satiri: menu dugmesi (acilir cekmece), logo, arama; beyaz.
+     *   3. Menu: beyaz zemin, koyu kalin yazi, aktif ogede kirmizi cizgi;
+     *      sayfadaki tek yapiskan serit.
+     */
+    ?>
+    <?php
+    /*
+     * KAYAN SON DAKIKA SERIDI (site sahibinin istegi, 24.10.2026: "en
+     * ustte de kayan son dakika haberleri gecsin"). Kaynakta bugun
+     * yayimlanmis en yeni haberler; liste iki kez basiliyor ki kayma
+     * kesintisiz donsun (ikinci kopya ekran okuyucudan gizli). Uzerine
+     * gelince ya da odaklaninca duruyor; hareket azaltma tercihinde
+     * kaymiyor, yatay kaydirilabiliyor.
+     */
+    $sonDakikaSeridi = haber_son_dakika_seridi();
+    ?>
+    <?php if ($sonDakikaSeridi !== []): ?>
+        <div class="sd-serit" aria-label="Son dakika haberleri">
+            <div class="sinirli sd-satir">
+                <span class="sd-etiket">Son Dakika</span>
+                <div class="sd-pencere">
+                    <div class="sd-akis" style="--sure: <?= max(30, count($sonDakikaSeridi) * 7) ?>s">
+                        <?php foreach ([false, true] as $kopya): ?>
+                            <ul class="sd-liste" <?= $kopya ? 'aria-hidden="true"' : '' ?>>
+                                <?php foreach ($sonDakikaSeridi as $sd): ?>
+                                    <li>
+                                        <span class="sd-saat"><?= e($sd['zaman']) ?></span>
+                                        <a href="<?= e(haber_yolu($sd['slug'])) ?>" <?= $kopya ? 'tabindex="-1"' : '' ?>><?= e($sd['baslik']) ?></a>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <div class="bilgi-cubugu">
+        <div class="sinirli bilgi-satir">
+            <span class="bilgi-tarih"><?= e(tarih_bicimle(date('Y-m-d H:i:s'), false)) ?></span>
+
+            <button type="button" class="tema-dugme" id="tema-dugme"
+                    aria-label="Gece / gündüz modu" title="Gece / gündüz modu">
+                <svg class="tema-ay" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                </svg>
+                <svg class="tema-gunes" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                    <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
     <header class="ust-bant">
         <div class="sinirli ust-satir">
+            <button type="button" class="cekmece-dugme" id="cekmece-dugme"
+                    aria-controls="cekmece" aria-expanded="false" aria-label="Menüyü aç">
+                <span></span><span></span><span></span>
+            </button>
+
             <a class="logo" href="/">
                 <img class="marka" src="/assets/logo.svg" alt="" width="40" height="35">
                 <span class="yazi">
@@ -126,35 +197,96 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
                     <span class="alt">GÜNCEL HABER ÖZETLERİ</span>
                 </span>
             </a>
-            <div class="ust-sag">
-                <div class="ust-bilgi"><?= e(tarih_bicimle(date('Y-m-d H:i:s'), false)) ?></div>
 
-                <button type="button" class="tema-dugme" id="tema-dugme"
-                        aria-label="Gece / gündüz modu" title="Gece / gündüz modu">
-                    <svg class="tema-ay" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                    </svg>
-                    <svg class="tema-gunes" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                        <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/>
-                        <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <form class="ust-arama" action="<?= e(arama_yolu()) ?>" method="get" role="search">
+                <label class="gizli-etiket" for="ust-arama-q">Sitede ara</label>
+                <input id="ust-arama-q" type="search" name="q" placeholder="Haber ara"
+                       value="<?= e(($aktifKategori ?? '') === 'ara' ? (string) ($_GET['q'] ?? '') : '') ?>"
+                       maxlength="100" autocomplete="off">
+                <button type="submit" aria-label="Ara">
+                    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                        <circle cx="7" cy="7" r="5.2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                        <path d="M11 11l3.6 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                     </svg>
                 </button>
-
-                <form class="ust-arama" action="<?= e(arama_yolu()) ?>" method="get" role="search">
-                    <label class="gizli-etiket" for="ust-arama-q">Sitede ara</label>
-                    <input id="ust-arama-q" type="search" name="q" placeholder="Haber ara"
-                           value="<?= e(($aktifKategori ?? '') === 'ara' ? (string) ($_GET['q'] ?? '') : '') ?>"
-                           maxlength="100" autocomplete="off">
-                    <button type="submit" aria-label="Ara">
-                        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                            <circle cx="7" cy="7" r="5.2" fill="none" stroke="currentColor" stroke-width="1.8"/>
-                            <path d="M11 11l3.6 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                        </svg>
-                    </button>
-                </form>
-            </div>
+            </form>
         </div>
     </header>
+
+    <?php
+    /*
+     * ACILIR MENU (site sahibinin istegi, 24.10.2026: "Valentra'nin yanina
+     * acilir gizlenir bir menu isareti koyalim, basinca menu acilsin").
+     * Soldan kayan cekmece: butun basliklar ve alt basliklar tek listede.
+     * Ust menu de duruyor; cekmece ozellikle telefonda yatay kayan menu
+     * yerine hepsini bir bakista gosteriyor.
+     */
+    ?>
+    <div class="cekmece" id="cekmece" hidden>
+        <div class="cekmece-perde" data-kapat></div>
+        <nav class="cekmece-panel" aria-label="Tüm bölümler">
+            <div class="cekmece-ust">
+                <span class="cekmece-baslik">Menü</span>
+                <button type="button" class="cekmece-kapat" data-kapat aria-label="Menüyü kapat">&times;</button>
+            </div>
+
+            <a class="cekmece-oge <?= $aktifKategori === '' && $anaSayfa ? 'aktif' : '' ?>" href="/">Ana Sayfa</a>
+
+            <?php foreach ($menu as $oge): ?>
+                <?php if ($oge['href'] !== null): ?>
+                    <a class="cekmece-oge <?= site_menu_aktif($oge, $aktifKategori) ? 'aktif' : '' ?>"
+                       href="<?= e($oge['href']) ?>"><?= site_menu_adi_html($oge) ?></a>
+                <?php else: ?>
+                    <details class="cekmece-grup" <?= site_menu_aktif($oge, $aktifKategori) ? 'open' : '' ?>>
+                        <summary class="cekmece-oge"><?= e($oge['ad']) ?></summary>
+                        <?php foreach ($oge['altlar'] as $alt): ?>
+                            <a class="cekmece-alt <?= $aktifKategori === $alt['anahtar'] ? 'aktif' : '' ?>"
+                               href="<?= e($alt['href']) ?>"><?= e($alt['ad']) ?></a>
+                        <?php endforeach; ?>
+                    </details>
+                <?php endif; ?>
+            <?php endforeach; ?>
+        </nav>
+    </div>
+
+    <script>
+    (function () {
+        var cekmece = document.getElementById('cekmece');
+        var dugme = document.getElementById('cekmece-dugme');
+        if (!cekmece || !dugme) { return; }
+
+        function ac() {
+            cekmece.hidden = false;
+            // Bir kare sonra: gecis (transition) gizli durumdan baslasin.
+            requestAnimationFrame(function () { cekmece.classList.add('acik'); });
+            dugme.setAttribute('aria-expanded', 'true');
+            document.documentElement.classList.add('cekmece-acik');
+            var ilk = cekmece.querySelector('.cekmece-kapat');
+            if (ilk) { ilk.focus(); }
+        }
+
+        function kapat() {
+            cekmece.classList.remove('acik');
+            dugme.setAttribute('aria-expanded', 'false');
+            document.documentElement.classList.remove('cekmece-acik');
+            setTimeout(function () { cekmece.hidden = true; }, 200);
+            dugme.focus();
+        }
+
+        dugme.addEventListener('click', function () {
+            if (cekmece.hidden) { ac(); } else { kapat(); }
+        });
+
+        cekmece.addEventListener('click', function (olay) {
+            if (olay.target.closest('[data-kapat]')) { kapat(); }
+        });
+
+        document.addEventListener('keydown', function (olay) {
+            if (olay.key === 'Escape' && !cekmece.hidden) { kapat(); }
+        });
+    })();
+    </script>
+
 
     <script>
     (function () {
@@ -193,7 +325,7 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
                 <?php foreach ($menu as $oge): ?>
                     <?php if ($oge['href'] !== null): ?>
                         <a class="menu-oge <?= site_menu_aktif($oge, $aktifKategori) ? 'aktif' : '' ?>"
-                           href="<?= e($oge['href']) ?>"><?= e($oge['ad']) ?></a>
+                           href="<?= e($oge['href']) ?>"><?= site_menu_adi_html($oge) ?></a>
                     <?php else: ?>
                         <div class="menu-grup <?= site_menu_aktif($oge, $aktifKategori) ? 'aktif' : '' ?>">
                             <button type="button" class="menu-oge" aria-expanded="false"
@@ -240,8 +372,6 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
 
                 dugme.addEventListener('click', function (olay) {
                     olay.stopPropagation();
-                    // Dar ekranda liste position:fixed; dugmenin hemen altina.
-                    grup.style.setProperty('--menu-alt', Math.round(dugme.getBoundingClientRect().bottom) + 'px');
                     var acik = grup.classList.toggle('acik');
                     dugme.setAttribute('aria-expanded', acik ? 'true' : 'false');
                     hepsiniKapat(grup);
@@ -249,13 +379,6 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
             });
 
             document.addEventListener('click', function () { hepsiniKapat(null); });
-
-            // Dar ekranda menu yatay kayinca ya da sayfa kayinca sabit liste
-            // dugmeden kopmasin: kapat.
-            document.querySelector('.menu-satir').addEventListener('scroll', function () { hepsiniKapat(null); });
-            window.addEventListener('scroll', function () {
-                if (window.matchMedia('(max-width: 720px)').matches) { hepsiniKapat(null); }
-            }, { passive: true });
 
             document.addEventListener('keydown', function (olay) {
                 if (olay.key === 'Escape') { hepsiniKapat(null); }

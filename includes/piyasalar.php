@@ -59,7 +59,8 @@ function piyasa_donemleri(): array
  * Şirket tablosu: Borsa İstanbul'un en büyük şirketlerinden bir seçki.
  *
  * BIST 30 bileseni donem donem degisiyor; liste "BIST 30" diye
- * sunulmuyor, "buyuk sirketler" diye sunuluyor.
+ * sunulmuyor, "buyuk sirketler" diye sunuluyor. 60 sirket: genis
+ * ekranda 10 sutunda 6 satir.
  *
  * @return array<string,string> kod => ad
  */
@@ -81,6 +82,25 @@ function piyasa_sirketleri(): array
         'TTKOM' => 'Türk Telekom',        'TUPRS' => 'Tüpraş',
         'ULKER' => 'Ülker',               'VAKBN' => 'Vakıfbank',
         'YKBNK' => 'Yapı Kredi',          'HALKB' => 'Halkbank',
+        // 23.10.2026 (site sahibinin istegi: "sayfanin alti bos kalmasin,
+        // sirket sayisini artiralim"): BIST 100'un buyuk ve sik islem
+        // goren diger sirketleri. Kaynakta verisi olmayan kod tabloda
+        // gorunmuyor (yahoo_spark_coz atliyor).
+        'AEFES' => 'Anadolu Efes',        'AGHOL' => 'Anadolu Grubu Holding',
+        'AKSA'  => 'Aksa Akrilik',        'AKSEN' => 'Aksa Enerji',
+        'ALBRK' => 'Albaraka Türk',       'ARCLK' => 'Arçelik',
+        'BRSAN' => 'Borusan Boru',        'BRYAT' => 'Borusan Yatırım',
+        'CCOLA' => 'Coca-Cola İçecek',    'CIMSA' => 'Çimsa',
+        'DOAS'  => 'Doğuş Otomotiv',      'DOHOL' => 'Doğan Holding',
+        'ECILC' => 'Eczacıbaşı İlaç',     'EGEEN' => 'Ege Endüstri',
+        'ENJSA' => 'Enerjisa Enerji',     'GESAN' => 'Girişim Elektrik',
+        'HEKTS' => 'Hektaş',              'ISMEN' => 'İş Yatırım',
+        'KONTR' => 'Kontrolmatik',        'MAVI'  => 'Mavi Giyim',
+        'MPARK' => 'MLP Sağlık',          'OTKAR' => 'Otokar',
+        'OYAKC' => 'Oyak Çimento',        'SKBNK' => 'Şekerbank',
+        'SOKM'  => 'Şok Marketler',       'TKFEN' => 'Tekfen Holding',
+        'TSKB'  => 'TSKB',                'TTRAK' => 'Türk Traktör',
+        'TURSG' => 'Türkiye Sigorta',     'VESTL' => 'Vestel',
     ];
 }
 
@@ -262,8 +282,12 @@ function piyasa_sirket_fiyatlari(): array
     });
 }
 
-/** @return array<string,array{fiyat:float,degisim:?float}> kod (".IS"siz) => fiyat */
-function yahoo_spark_coz(string $ham): array
+/**
+ * @param int  $hane    fiyatin ondalik hanesi (doviz ve kripto icin daha fazla)
+ * @param bool $isAtilsin ".IS" eki atilsin mi (sirket listesi kodla anahtarlaniyor)
+ * @return array<string,array{fiyat:float,degisim:?float}> kod (".IS"siz) => fiyat
+ */
+function yahoo_spark_coz(string $ham, int $hane = 2, bool $isAtilsin = true): array
 {
     $veri  = json_decode($ham, true);
     $sonuc = [];
@@ -291,8 +315,10 @@ function yahoo_spark_coz(string $ham): array
             $degisim = $onceki > 0 ? ((float) $fiyat - $onceki) / $onceki * 100 : null;
         }
 
-        $sonuc[preg_replace('/\.IS$/', '', (string) $sembol) ?? (string) $sembol] = [
-            'fiyat'   => round((float) $fiyat, 2),
+        $anahtar = $isAtilsin ? (preg_replace('/\.IS$/', '', (string) $sembol) ?? (string) $sembol) : (string) $sembol;
+
+        $sonuc[$anahtar] = [
+            'fiyat'   => round((float) $fiyat, $hane),
             'degisim' => $degisim !== null ? round((float) $degisim, 2) : null,
         ];
     }
@@ -354,6 +380,26 @@ function piyasa_kivrim(array $noktalar, ?float $degisim): string
 
     $sinif = $degisim === null ? '' : ($degisim > 0 ? ' arti' : ($degisim < 0 ? ' eksi' : ''));
 
+    /*
+     * Altinda asagi dogru solan dolgu (site sahibinin istegi, 29.10.2026:
+     * "kucuk grafiklerde boyle renkler koyalim", Bloomberg HT seridi
+     * gibi): cizginin rengi yukseliste yesil, dususte kirmizi; dolgu ayni
+     * renk, gradyanla soluyor.
+     */
+    static $no = 0;
+    $id = 'kivrim-' . (++$no);
+
+    // Renk dogrudan: Safari gradyanda currentColor'u siyah ciziyor.
+    $renk = match (trim($sinif)) {
+        'arti'  => '#157a43',
+        'eksi'  => '#c23a2e',
+        default => '#c0121b',
+    };
+
     return '<svg class="kivrim' . $sinif . '" viewBox="0 0 200 50" preserveAspectRatio="none" aria-hidden="true">'
-        . '<path d="' . $yol . '" vector-effect="non-scaling-stroke"/></svg>';
+        . '<defs><linearGradient id="' . $id . '" x1="0" y1="0" x2="0" y2="1">'
+        . '<stop offset="0" stop-color="' . $renk . '" stop-opacity=".25"/>'
+        . '<stop offset="1" stop-color="' . $renk . '" stop-opacity="0"/></linearGradient></defs>'
+        . '<path class="kivrim-dolgu" d="' . $yol . ' L200 50 L0 50 Z" fill="url(#' . $id . ')"/>'
+        . '<path class="kivrim-cizgi" d="' . $yol . '" vector-effect="non-scaling-stroke"/></svg>';
 }

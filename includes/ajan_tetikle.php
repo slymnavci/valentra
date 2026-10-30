@@ -38,7 +38,7 @@ function ajan_tetikleyebilir_mi(): bool
  *
  * @return array{tamam:bool,mesaj:string}
  */
-function ajan_tetikle(bool $kuru = false, int $saat = 36, int $enFazla = 25, string $mod = 'topla', string $konu = ''): array
+function ajan_tetikle(bool $kuru = false, int $saat = 2, int $enFazla = 25, string $mod = 'topla', string $konu = ''): array
 {
     $anahtar = trim(ayar_oku(AJAN_GITHUB_ANAHTAR));
 
@@ -63,7 +63,7 @@ function ajan_tetikle(bool $kuru = false, int $saat = 36, int $enFazla = 25, str
         'inputs' => [
             // Bilinmeyen bir mod GitHub'dan 422 dondurur; bilinen
             // degerlerle sinirlayip anlasilir hata veriyoruz.
-            'mod'     => in_array($mod, ['gunluk', 'kaynak-testi', 'kanun-testi', 'pratik-bilgiler', 'kose-yazisi'], true)
+            'mod'     => in_array($mod, ['gunluk', 'kaynak-testi', 'kanun-testi', 'pratik-bilgiler', 'kose-yazisi', 'derleme', 'burc'], true)
                 ? $mod
                 : 'topla',
             'kuru'    => $kuru ? 'true' : 'false',
@@ -118,6 +118,15 @@ function ajan_tetikle(bool $kuru = false, int $saat = 36, int $enFazla = 25, str
                 'mesaj' => 'Pratik bilgiler toplanıyor. Değerler onayınıza '
                          . 'düşecek; onaylamadığınız hiçbir değer sitede '
                          . 'görünmez.',
+            ];
+        }
+
+        if ($mod === 'derleme') {
+            return [
+                'tamam' => true,
+                'mesaj' => 'Derleme haberler yazılıyor. Birkaç dakika içinde '
+                         . 'onay bekleyen haberler listesinde "derleme" işaretiyle '
+                         . 'görünecek; onaylamadığınız hiçbir haber sitede görünmez.',
             ];
         }
 
@@ -406,4 +415,208 @@ function ajan_uyarisi_goster(?array $uyari): void
         <?php endif; ?>
     </div>
     <?php
+}
+
+/*
+ * Video haber ajani (23.10.2026, site sahibi: "videolu haberler icin ayri
+ * bir ajan kuralim, takip edebileyim"). Ayri is akisi: .github/workflows/
+ * video.yml. Panel: Haberler -> Videolu haberler (admin/videolar.php).
+ */
+const AJAN_VIDEO_WORKFLOW = 'video.yml';
+
+/**
+ * Video ajanını çalıştırır.
+ *
+ * @return array{tamam:bool,mesaj:string}
+ */
+function ajan_video_tetikle(bool $kuru = false, int $saat = 12): array
+{
+    $anahtar = trim(ayar_oku(AJAN_GITHUB_ANAHTAR));
+
+    if ($anahtar === '') {
+        return ['tamam' => false, 'mesaj' => 'GitHub erişim anahtarı tanımlı değil. Ajan sayfasından girin.'];
+    }
+
+    $ch = curl_init('https://api.github.com/repos/' . ajan_depo()
+        . '/actions/workflows/' . AJAN_VIDEO_WORKFLOW . '/dispatches');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => json_encode([
+            'ref'    => 'main',
+            'inputs' => ['kuru' => $kuru ? 'true' : 'false', 'saat' => (string) max(1, min(72, $saat))],
+        ]),
+        CURLOPT_HTTPHEADER     => [
+            'Accept: application/vnd.github+json',
+            'Authorization: Bearer ' . $anahtar,
+            'X-GitHub-Api-Version: 2022-11-28',
+            'Content-Type: application/json',
+            'User-Agent: Valentra-Panel',
+        ],
+        CURLOPT_TIMEOUT        => 20,
+        CURLOPT_CONNECTTIMEOUT => 10,
+    ]);
+
+    $yanit = curl_exec($ch);
+    $kod   = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    curl_close($ch);
+
+    if ($kod === 204) {
+        return [
+            'tamam' => true,
+            'mesaj' => 'Video ajanı çalışmaya başladı. Birkaç dakika sonra aşağıdaki '
+                     . 'çalışma listesinde sonucu, "Rapor" bağlantısında her videonun akıbetini görürsünüz.',
+        ];
+    }
+
+    if (!is_string($yanit)) {
+        return ['tamam' => false, 'mesaj' => 'GitHub\'a ulaşılamadı.'];
+    }
+
+    return [
+        'tamam' => false,
+        'mesaj' => $kod === 404
+            ? 'Video ajanı iş akışı bulunamadı (video.yml) ya da anahtarın depoya erişimi yok.'
+            : 'GitHub hatası (HTTP ' . $kod . ').',
+    ];
+}
+
+/**
+ * Video ajanının son çalışmaları ve her birinin özet satırı.
+ *
+ * @return list<array{durum:string,sonuc:string,baslangic:string,adres:string,ozet:string}>
+ */
+function ajan_video_calismalari(int $adet = 8): array
+{
+    $veri = ajan_github_json('https://api.github.com/repos/' . ajan_depo()
+        . '/actions/workflows/' . AJAN_VIDEO_WORKFLOW . '/runs?per_page=' . max(1, min(20, $adet)));
+
+    $liste = [];
+
+    foreach ($veri['workflow_runs'] ?? [] as $i => $c) {
+        $ozet = '';
+
+        // Ozet satiri (ajanin "Video haber ajanı" bildirimi) yalnizca
+        // en yeni ucunde okunuyor: her biri iki GitHub istegi.
+        if ($i < 3 && ($c['status'] ?? '') === 'completed') {
+            $isler = ajan_github_json('https://api.github.com/repos/' . ajan_depo()
+                . '/actions/runs/' . (int) $c['id'] . '/jobs?per_page=2');
+
+            foreach ($isler['jobs'] ?? [] as $is) {
+                foreach (ajan_github_json((string) ($is['check_run_url'] ?? '') . '/annotations?per_page=20') ?? [] as $not) {
+                    if (($not['title'] ?? '') === 'Video haber ajanı') {
+                        $ozet = trim((string) ($not['message'] ?? ''));
+                    }
+                }
+            }
+        }
+
+        $liste[] = [
+            'durum'     => (string) ($c['status'] ?? ''),
+            'sonuc'     => (string) ($c['conclusion'] ?? ''),
+            'baslangic' => (string) ($c['run_started_at'] ?? ''),
+            'adres'     => guvenli_url((string) ($c['html_url'] ?? '')),
+            'ozet'      => $ozet,
+        ];
+    }
+
+    return $liste;
+}
+
+/*
+ * SITE AJANI KENDISI TETIKLIYOR (23.10.2026). Site sahibi: "2 saatte bir
+ * haberleri ceksin". GitHub'in zamanlanmis calismalari guvenilmez cikti:
+ * 24 saatte 12 yerine 2 calisma basladi (GitHub yogunlukta zamanlanmis
+ * isleri atliyor). Ana sayfa acildiginda, sayfa okuyucuya gittikten SONRA,
+ * en fazla 10 dakikada bir GitHub'a bakiliyor: haber ajaninin son
+ * calismasi 2 saatten eskiyse ve su an calismiyorsa calistiriliyor; video
+ * ajani icin de ayni. GitHub'in kendi zamanlamasi yedek olarak duruyor.
+ * Panelde GitHub anahtari yoksa hicbir sey yapilmiyor.
+ */
+const AJAN_OTO_ARALIK_DAKIKA  = 120;
+const AJAN_OTO_KONTROL_SANIYE = 600;
+
+function ajan_otomatik_tetikle_arada(): void
+{
+    try {
+        if (!ajan_tetikleyebilir_mi()) {
+            return;
+        }
+
+        if (time() - (int) ayar_oku('ajan_oto_kontrol', '0') < AJAN_OTO_KONTROL_SANIYE) {
+            return;
+        }
+
+        // Once yaz: ayni anda gelen ikinci ziyaret tekrar tetiklemesin.
+        ayar_yaz('ajan_oto_kontrol', (string) time());
+
+        if (ajan_oto_zamani_geldi(AJAN_WORKFLOW)) {
+            // Kose yazilari zamanli calismadaki gibi ogleden sonra (bkz.
+            // ajan.yml, kose.php --zamanli); "gunluk" toplama + kose yazisi.
+            $saat  = (int) (new DateTimeImmutable('now', new DateTimeZone('Europe/Istanbul')))->format('G');
+            $sonuc = ajan_tetikle(false, 2, 0, $saat >= 12 ? 'gunluk' : 'topla');
+
+            if (!$sonuc['tamam']) {
+                error_log('[valentra] ajan otomatik tetiklenemedi: ' . $sonuc['mesaj']);
+            }
+        }
+
+        if (ajan_oto_zamani_geldi(AJAN_VIDEO_WORKFLOW)) {
+            $sonuc = ajan_video_tetikle(false, 2);
+
+            if (!$sonuc['tamam']) {
+                error_log('[valentra] video ajani otomatik tetiklenemedi: ' . $sonuc['mesaj']);
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('[valentra] ajan otomatik tetikleme: ' . $e->getMessage());
+    }
+}
+
+/** İş akışının son çalışması bitmiş ve 2 saatten eski mi (GitHub'a ulaşılamazsa hayır)? */
+function ajan_oto_zamani_geldi(string $isAkisi): bool
+{
+    $veri = ajan_github_json('https://api.github.com/repos/' . ajan_depo()
+        . '/actions/workflows/' . $isAkisi . '/runs?per_page=1');
+
+    if (!is_array($veri)) {
+        return false;
+    }
+
+    $son = $veri['workflow_runs'][0] ?? null;
+
+    // Hic calismamissa zamani gelmis.
+    if (!is_array($son)) {
+        return true;
+    }
+
+    // Calisiyor ya da sirada: bekle.
+    if (($son['status'] ?? '') !== 'completed') {
+        return false;
+    }
+
+    $basla = strtotime((string) ($son['run_started_at'] ?? $son['created_at'] ?? ''));
+
+    return $basla === false || time() - $basla >= (AJAN_OTO_ARALIK_DAKIKA - 5) * 60;
+}
+
+/**
+ * Ana sayfa yanıtı okuyucuya gittikten sonra ajan_otomatik_tetikle_arada
+ * çalıştırılır; okuyucu GitHub isteğini beklemez.
+ */
+function ajan_otomatik_tetikle_sayfa_sonunda(): void
+{
+    register_shutdown_function(static function (): void {
+        while (ob_get_level() > 0) {
+            @ob_end_flush();
+        }
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        } elseif (function_exists('litespeed_finish_request')) {
+            litespeed_finish_request();
+        }
+
+        ajan_otomatik_tetikle_arada();
+    });
 }

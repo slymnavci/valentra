@@ -4,8 +4,8 @@ declare(strict_types=1);
 /**
  * Ust menu.
  *
- *   Ana Sayfa · Gundem · Politika · Ekonomi · Dunya · Spor (acilir) ·
- *   Teknoloji · Saglik · Kultur-Sanat · Kose Yazilari · Yemek Tarifleri
+ *   Ana Sayfa · Gundem · Politika · ValPapel · Dunya · ValSpor ·
+ *   Teknoloji · Saglik · Kose Yazilari · ValMagazin
  *
  * Ekim 2026'da site vergi/muhasebe yayinindan genel haber ozetlerine
  * dondu (site sahibinin karari). Eski menu (Vergi ve Mevzuat, Muhasebe
@@ -24,56 +24,30 @@ declare(strict_types=1);
  */
 function site_menusu(): array
 {
-    $menu = array_map(static fn (array $k): array => [
-        'ad'      => $k['ad'],
-        'anahtar' => $k['slug'],
-        'href'    => kategori_yolu($k['slug']),
-        'altlar'  => [],
-    ], haber_akis_kategorileri());
+    require_once __DIR__ . '/gazeteler.php';
 
     /*
-     * Spor acilir menu (22.10.2026, site sahibinin istegi): puan durumu,
-     * fikstur ve guncel spor haberleri. 23.10.2026'dan beri ucu AYRI
-     * sayfa (kategori.php, includes/spor_panel.php); onceden ayni
-     * sayfanin bolumleriydi.
+     * ValPapel, ValSpor, ValMagazin (29.10.2026, site sahibinin istegi; bkz.
+     * includes/gazeteler.php). Ekonomi'nin yerinde ValPapel, Spor'un
+     * yerinde ValSpor; Kultur-Sanat, Burclar ve Yemek Tarifleri
+     * ValMagazin'in basliklari, menunun sonunda. Gazeteler dogrudan on
+     * sayfaya gidiyor; basliklari sayfanin icindeki sekmelerde.
+     *
+     * Onceki acilir menuler (22-29.10.2026): Ekonomi'de piyasa sayfalari,
+     * Spor'da puan durumu ve fikstur, Burclar'da 12 burc. Hepsi gazetelerin
+     * basliklarinda duruyor.
      */
-    require_once __DIR__ . '/spor_panel.php';
+    $menu = [];
 
-    foreach ($menu as $i => $oge) {
-        /*
-         * Ekonomi acilir menu (22.10.2026, site sahibinin istegi):
-         * piyasalar (BIST, doviz, altin, grafikler), ekonomik
-         * gostergeler, borsa sirketleri ve gunluk ekonomi haberleri ayri
-         * ayri. Ilk ucu Piyasalar sayfasinin bolumleri.
-         */
-        if ($oge['anahtar'] === 'ekonomi') {
-            $piyasa = piyasalar_yolu();
-            $menu[$i]['href']   = null;
-            $menu[$i]['altlar'] = [
-                ['ad' => 'Piyasalar (BIST, Döviz, Altın)', 'anahtar' => 'piyasalar',        'href' => $piyasa,                          'adet' => 0],
-                ['ad' => 'Ekonomik Göstergeler',          'anahtar' => 'ekonomi-gosterge', 'href' => $piyasa . '#gostergeler',         'adet' => 0],
-                ['ad' => 'Borsa İstanbul Şirketleri',     'anahtar' => 'ekonomi-borsa',    'href' => $piyasa . '#borsa',               'adet' => 0],
-                ['ad' => 'Şirket Analizi (10 Yıllık Geçmiş)', 'anahtar' => 'ekonomi-sirket', 'href' => sirket_yolu(),                  'adet' => 0],
-                ['ad' => 'Günlük Ekonomi Haberleri',      'anahtar' => 'ekonomi-haberler', 'href' => (string) $oge['href'],           'adet' => 0],
-            ];
-        }
+    foreach (haber_akis_kategorileri() as $k) {
+        $slug = (string) $k['slug'];
 
-        if ($oge['anahtar'] === 'spor') {
-            $menu[$i]['href']   = null;
-            $menu[$i]['altlar'] = [
-                ['ad' => 'Puan Durumu',           'anahtar' => 'spor-puan',     'href' => spor_bolum_yolu('puan-durumu'), 'adet' => 0],
-                ['ad' => 'Fikstür',               'anahtar' => 'spor-fikstur',  'href' => spor_bolum_yolu('fikstur'),     'adet' => 0],
-                ['ad' => 'Gol Krallığı',          'anahtar' => 'spor-gol',      'href' => spor_bolum_yolu('gol-kralligi'), 'adet' => 0],
-                ['ad' => 'Güncel Spor Haberleri', 'anahtar' => 'spor-haberler', 'href' => spor_bolum_yolu(),              'adet' => 0],
-            ];
-
-            // Gol kralligi yalnizca spor veri servisiyle (TFF'den yok).
-            if (!futbol_api_acik()) {
-                $menu[$i]['altlar'] = array_values(array_filter(
-                    $menu[$i]['altlar'],
-                    static fn (array $alt): bool => $alt['anahtar'] !== 'spor-gol'
-                ));
-            }
+        if ($slug === 'ekonomi') {
+            $menu[] = gazete_menu_ogesi('valpapel', ['ekonomi', 'piyasalar', 'resmi-gazete']);
+        } elseif ($slug === 'spor') {
+            $menu[] = gazete_menu_ogesi('valspor', ['spor']);
+        } elseif (!isset(KATEGORI_GAZETESI[$slug])) {
+            $menu[] = ['ad' => $k['ad'], 'anahtar' => $slug, 'href' => kategori_yolu($slug), 'altlar' => []];
         }
     }
 
@@ -81,18 +55,51 @@ function site_menusu(): array
     // yaziliyor, onaydan geciyor). Haber basliklarinin sonunda.
     $menu[] = ['ad' => 'Köşe Yazıları', 'anahtar' => 'kose', 'href' => kose_liste_yolu(), 'altlar' => []];
 
-    // Yemek tarifleri menunun EN SONUNDA (site sahibinin istegi):
-    // haber basliklarindan ve kose yazilarindan sonra.
-    foreach ($menu as $i => $oge) {
-        if (in_array($oge['anahtar'], HABER_AKIS_DISI, true)) {
-            unset($menu[$i]);
-            $menu[] = $oge;
-        }
-    }
-
-    $menu = array_values($menu);
+    $menu[] = gazete_menu_ogesi('valmagazin', ['kultur-sanat', 'magazin', 'yemek-tarifleri', 'burc', 'burclar']);
 
     return $menu;
+}
+
+/**
+ * Gazetenin menu ogesi: dogrudan gazetenin on sayfasina gidiyor.
+ *
+ * Acilir menu YOK (site sahibinin istegi, 29.10.2026: "ValPapel'e
+ * bastigimizda asagiya acilan menu olmasin; once sayfaya girelim, sayfanin
+ * icinde kendi menuleri olsun"). Basliklar gazetenin sayfasindaki
+ * sekmelerde (gazete_ust_html).
+ *
+ * @param list<string> $onekler Bu gazeteye sayilan sayfa anahtarlari: haber
+ *        sayfasinda kategori ('ekonomi'), piyasa sayfalarinda 'ekonomi-doviz',
+ *        burc sayfalarinda 'burc-koc'. Tam ya da "onek-" ile baslayan.
+ */
+function gazete_menu_ogesi(string $gazete, array $onekler): array
+{
+    return [
+        'ad'      => gazete_bul($gazete)['ad'],
+        'gazete'  => $gazete,
+        'anahtar' => $gazete,
+        'href'    => gazete_yolu($gazete),
+        'altlar'  => [],
+        'onekler' => array_merge([$gazete], $onekler),
+    ];
+}
+
+/**
+ * Menu ogesinin yazisi. Gazeteler sayfadaki kunyeleri gibi iki renkli
+ * (site sahibinin istegi, 29.10.2026: "ana menude ValPapel yazarken Papel
+ * yesil yazilsin; spor ve magazin de oyle"): "Val" menunun renginde,
+ * ikinci yari gazetenin renginde.
+ */
+function site_menu_adi_html(array $oge): string
+{
+    $g = isset($oge['gazete']) ? gazete_bul((string) $oge['gazete']) : null;
+
+    if ($g === null) {
+        return e((string) $oge['ad']);
+    }
+
+    return '<span class="menu-gazete gazete-' . e((string) $oge['gazete']) . '">'
+         . e($g['ust']) . '<span class="alt">' . e($g['alt']) . '</span></span>';
 }
 
 /** Menu basligi ya da alt ogelerinden biri gecerli sayfa mi? */
@@ -100,6 +107,12 @@ function site_menu_aktif(array $oge, string $aktif): bool
 {
     if ($aktif === '') {
         return false;
+    }
+
+    foreach ($oge['onekler'] ?? [] as $onek) {
+        if ($aktif === $onek || str_starts_with($aktif, $onek . '-')) {
+            return true;
+        }
     }
 
     return $oge['anahtar'] === $aktif

@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 namespace Valentra\Ajan;
 
+require_once __DIR__ . '/OpenAiErisimYokException.php';
+require_once __DIR__ . '/OpenAiIstemci.php';
+require_once __DIR__ . '/ClaudeErisimYokException.php';
+require_once __DIR__ . '/ClaudeIstemci.php';
+
 /**
  * Aday haberi Gemini'ye verip iki soruyu birden yanıtlatır:
  * yayın politikasına göre yayımlanabilir mi, ve yayımlanabilirse
@@ -15,10 +20,22 @@ namespace Valentra\Ajan;
 final class Yazar implements SemaliIstemci
 {
     /**
-     * Varsayilan model. GEMINI_MODEL ortam degiskeniyle degistirilebilir;
-     * model adi degisirse kod duzenlemeye gerek kalmaz.
+     * Haber toplamanin Gemini modeli. GEMINI_MODEL ortam degiskeniyle
+     * degistirilebilir; model adi degisirse kod duzenlemeye gerek kalmaz.
+     *
+     * 23.10.2026 (site sahibinin karari): haberler once OpenAI (GPT-6
+     * Luna) ile yaziliyor, Gemini YEDEK. Yedek olarak eskisi gibi 3.8
+     * Flash: yalnizca Luna dustugunde calistigi icin maliyeti kucuk,
+     * yazim kalitesi bilinen model. OpenAI anahtari yoksa butun is bunda.
      */
     private const VARSAYILAN_MODEL = 'gemini-3.8-flash';
+
+    /**
+     * Kose yazilarinin modeli; GEMINI_KOSE_MODEL ile degistirilebilir.
+     * Gundem secip yorumlu, akici yazi uretmek daha guclu yazim istiyor;
+     * gunde birkac yazi oldugu icin maliyeti kucuk.
+     */
+    private const KOSE_VARSAYILAN_MODEL = 'gemini-3.8-flash';
 
     /**
      * Aday basina modele giden sayfa metni siniri (karakter).
@@ -28,6 +45,9 @@ final class Yazar implements SemaliIstemci
      * duruyor ve eski sinirla modele hic ulasmiyordu.
      */
     private const SAYFA_METNI_SINIRI = 14000;
+
+    /** Ek kaynak (ayni olayi veren baska yayinci) basina metin siniri. */
+    private const EK_KAYNAK_METNI_SINIRI = 6000;
 
     /**
      * İsteme kaç tane "daha önce yayımlandı" başlığı yazılacağı.
@@ -122,9 +142,14 @@ final class Yazar implements SemaliIstemci
            g) Yorum ve görüş ağırlıklı içerik: köşe yazısı, analiz,
               "uzman görüşü", taraf tutan değerlendirme. Haberde olgu
               yerine yorum ağırlıklıysa yayımlama.
-           h) Magazin ve dedikodu, özel hayat, tık tuzağı, burç,
-              şans oyunu, reklam ve tanıtım içeriği, içeriği olmayan
-              "şu yayına katılacak" duyuruları.
+           h) Dedikodu ve özel hayat (ilişki, ayrılık, evlilik, kavga,
+              aile meselesi, görünüş, tatil, sosyal medya atışması), tık
+              tuzağı, burç, şans oyunu, reklam ve tanıtım içeriği,
+              içeriği olmayan "şu yayına katılacak" duyuruları.
+              ÖLÇÜLÜ MAGAZİN YAYIMLANIR: sanatçıların kendi açıklamaları
+              ve röportajları, yeni albüm, şarkı, dizi, film, kitap,
+              konser ve turneleri, ödüller, sanat hayatına dair
+              gelişmeler. Bunlar "magazin" grubuna yazılır.
            i) Ölüm, yaralanma ya da suç olaylarında mağdurların ve
               çocukların kimliğini açık eden ayrıntılar (bunlar özete
               hiç girmez; haber başka açıdan uygunsa kimlik vermeden
@@ -180,9 +205,19 @@ final class Yazar implements SemaliIstemci
              yazarsın; cümle cümle çevirme, anlayıp aktar. Kurum ve kişi
              adları özgün biçimini korur.
            - Para birimlerini kaynaktaki birimiyle ver, TL'ye çevirme.
-           - UZUNLUK: 3-5 paragraf. İlk paragraf haberin özünü tek
-             başına versin: ne oldu, kim, nerede, ne zaman. Kaynak kısaysa
-             kısa kal; boş cümleyle paragraf doldurma.
+           - UZUNLUK KAYNAĞA GÖRE: kaynak metin(ler) zengin ve
+             ayrıntılıysa 5-8 paragraf yaz; ayrıntıyı (rakam, tarih, kim
+             ne dedi, arka plan, sonraki adım) atma. Kaynak kısaysa 3
+             paragrafta kal. Uzunluk için ASLA boş cümle, tekrar ya da
+             kaynakta olmayan bilgi ekleme. İlk paragraf haberin özünü
+             tek başına versin: ne oldu, kim, nerede, ne zaman.
+           - EK KAYNAKLAR: adayda "Ek kaynaklar" varsa bunlar aynı olayı
+             veren başka yayıncılardır. Haberi hepsini birlikte okuyarak
+             yaz; birinde olmayan ayrıntıyı ötekinden al. Kaynaklar bir
+             rakamda ya da olguda çelişiyorsa resmî/ajans kaynağını
+             esas al ya da farkı açıkça belirt ("X'e göre ..., Y ise ...
+             bildirdi") ve ajan notuna yaz. Yalnızca BİR kaynakta geçen
+             iddiayı kesin bilgi gibi yazma, kime ait olduğunu söyle.
            - Paragrafları BOŞ SATIRLA ayır.
            - Başlık en fazla 90 karakter, olguyu bildirsin; soru ya da
              merak uyandırma kalıbı kullanma.
@@ -193,6 +228,20 @@ final class Yazar implements SemaliIstemci
            Analiz alanları (analiz_degisen, analiz_etkilenen,
            analiz_zaman, analiz_islem, isletme_etkisi, uygulama_ornegi,
            resmi_dayanak) artık kullanılmıyor: HEPSİNİ BOŞ BIRAK.
+
+        NEDEN ÖNEMLİ (neden_onemli): Haber metninden AYRI, 2-3 cümlelik
+        bir değerlendirme: bu gelişme okur için ne anlama geliyor, kimi
+        nasıl etkiliyor, hangi sürecin parçası. Haberin özetini tekrar
+        etme; metinde olmayan bir açı ekle. KURALLAR:
+           - Yalnızca kaynak metindeki olgulara dayan. Yeni rakam, tarih,
+             isim, iddia ya da tahmin EKLEME; "artacak, düşecek" gibi
+             kehanette bulunma.
+           - Taraf tutma, siyasi değerlendirme yapma, kimseyi övme ya da
+             eleştirme.
+           - Kaynak bunu söylemeye yetmiyorsa (çok kısa haber, sonuç
+             maçı, magazin) BOŞ BIRAK. Boş bırakmak, zorlama bir cümleden
+             iyidir.
+           - Yemek tariflerinde her zaman boş.
 
         GÜVEN SKORU (0-100): Haberin doğruluğundan ve yayın politikasına
         uygunluğundan ne kadar eminsin. Haber ajansı ya da resmî kurum
@@ -215,6 +264,13 @@ final class Yazar implements SemaliIstemci
           önemli diplomatik görüşmeler, büyük kulüplerin ve milli
           takımların maçları, piyasalarda belirgin hareket, önemli bilim
           ve sağlık haberleri.
+        - SPOR: Galatasaray, Fenerbahçe, Beşiktaş ve Trabzonspor'un
+          maçları (sonuç, maç öncesi, kadro) ve önemli gelişmeleri
+          (transfer, teknik direktör, sakatlık) 70-85; okurun en çok
+          ilgilendiği spor haberleri bunlardır. Milli takımlar 70-85.
+          Dünya sporunda büyük olaylar (Şampiyonlar Ligi, büyük
+          Avrupa ligleri, NBA ve EuroLeague'de öne çıkan gelişmeler,
+          büyük turnuvalar) 55-70. Diğer Süper Lig kulüpleri 55-70.
         - 30-59: Sınırlı etkili ya da rutin haberler: sektörel
           açıklamalar, alt lig ve küçük branş sonuçları, yerel olaylar,
           kültür-sanat etkinlikleri.
@@ -237,6 +293,9 @@ final class Yazar implements SemaliIstemci
           -> "ekonomi".
         - Diğerleri kendi başlıklarına: "spor", "teknoloji", "saglik",
           "kultur-sanat".
+        - Sanatçıların açıklaması, röportajı, yeni işi, konseri, ödülü
+          (ölçülü magazin) -> "magazin". Sergi, tiyatro, edebiyat,
+          kültürel miras ve kurum haberi -> "kultur-sanat".
         - Yemek tarifi -> "yemek-tarifleri" (yalnızca tarifler; yemek
           kültürü haberi, restoran ya da gıda sektörü haberi değil).
 
@@ -302,7 +361,7 @@ final class Yazar implements SemaliIstemci
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
             'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı, en fazla 90 karakter'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
-            'icerik'      => ['type' => 'string',  'description' => '3-5 paragraflık tarafsız özet, paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
+            'icerik'      => ['type' => 'string',  'description' => 'Tarafsız haber metni: kaynak zenginse 5-8, kısaysa 3 paragraf; paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
             'etiketler'   => [
                 'type'  => 'array',
                 'items' => ['type' => 'string'],
@@ -312,6 +371,7 @@ final class Yazar implements SemaliIstemci
             'guven_skoru' => ['type' => 'integer', 'description' => '0-100 arası güven'],
             'onem'        => ['type' => 'integer', 'description' => '0-100 arası önem puanı: haberin kamuoyu için ne kadar önemli olduğu (bkz. ÖNEM PUANI)'],
             'ajan_notu'   => ['type' => 'string',  'description' => 'Onaylayacak editöre tek cümlelik not'],
+            'neden_onemli'=> ['type' => 'string',  'description' => '2-3 cümle: gelişmenin okur için anlamı, yalnızca kaynaktaki olgulardan (bkz. NEDEN ÖNEMLİ). Yemek tarifinde boş.'],
 
             /*
              * Eski VALENTRA ANALIZ alanlari (vergi yayini donemi).
@@ -330,7 +390,7 @@ final class Yazar implements SemaliIstemci
         ],
         'required' => [
             'sira', 'ilgili', 'red_nedeni', 'baslik', 'ozet', 'icerik',
-            'etiketler', 'kategori', 'guven_skoru', 'onem', 'ajan_notu',
+            'etiketler', 'kategori', 'guven_skoru', 'onem', 'ajan_notu', 'neden_onemli',
             'analiz_degisen', 'analiz_etkilenen', 'analiz_zaman', 'analiz_islem',
             'isletme_etkisi', 'uygulama_ornegi', 'resmi_dayanak',
         ],
@@ -344,7 +404,7 @@ final class Yazar implements SemaliIstemci
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
             'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı, en fazla 90 karakter'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
-            'icerik'      => ['type' => 'string',  'description' => '3-5 paragraflık tarafsız özet, paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
+            'icerik'      => ['type' => 'string',  'description' => 'Tarafsız haber metni: kaynak zenginse 5-8, kısaysa 3 paragraf; paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
             'etiketler'   => [
                 'type'  => 'array',
                 'items' => ['type' => 'string'],
@@ -368,12 +428,314 @@ final class Yazar implements SemaliIstemci
     /** @var array{girdi:int,cikti:int,istek:int} Calisma boyunca biriken kullanim */
     private array $kullanim = ['girdi' => 0, 'cikti' => 0, 'istek' => 0];
 
-    public function __construct(private readonly string $apiKey, string $model = '')
-    {
-        $ortam = (string) (getenv('GEMINI_MODEL') ?: '');
+    /** Tek Gemini isteginin suresi (saniye); bkz. sureSiniri(). */
+    private int $istekZamanAsimi = 90;
 
-        $this->model = $model !== '' ? $model : ($ortam !== '' ? $ortam : self::VARSAYILAN_MODEL);
+    /** @var list<int>|null Yeniden deneme beklemeleri; null: varsayilan liste */
+    private ?array $beklemeler = null;
+
+    /** Bu zamandan (Unix) sonra yeni istek ya da yeniden deneme yapilmaz. */
+    private ?int $sonZaman = null;
+
+    /** Gecici hatada denenecek ikinci Gemini modeli; bos: yok (bkz. yedekModel()). */
+    private string $yedekModel = '';
+
+    /** Gemini once, Claude/Luna yedek mi (bkz. geminiOnce())? */
+    private bool $geminiOnce = false;
+
+    /** Son Gemini hatasi gecici miydi (5xx, zaman asimi)? */
+    private bool $sonGeciciHata = false;
+
+    /**
+     * Istek suresini ve yeniden denemeleri sinirlar.
+     *
+     * Kose yazisi adimi 26.10.2026'da 44 dakika surdu ve isin 45 dakikalik
+     * sinirina takilip iptal edildi; yazilan hicbir yazi siteye gitmedi.
+     * Sebep: uzun bir yazinin uretimi 90 saniyelik istek suresini
+     * asabiliyor, zaman asimi ise "gecici ag hatasi" sayilip artan
+     * beklemelerle alti kez deneniyordu (tek istek 11 dakikaya kadar).
+     * Kose ajani istege daha uzun sure, ama daha az deneme veriyor; son
+     * zamandan sonra yeni istek acilmiyor ve calisma butcesi asilmiyor.
+     *
+     * @param list<int> $beklemeler
+     */
+    public function sureSiniri(int $istekZamanAsimi, array $beklemeler, ?int $sonZaman = null): void
+    {
+        $this->istekZamanAsimi = max(10, $istekZamanAsimi);
+        $this->beklemeler      = array_values(array_map('intval', $beklemeler));
+        $this->sonZaman        = $sonZaman;
     }
+
+    /** Kose yazisi ajaninin modeli: GEMINI_KOSE_MODEL, yoksa guclu varsayilan. */
+    public static function koseModeli(): string
+    {
+        return self::ortamModeli('GEMINI_KOSE_MODEL', self::KOSE_VARSAYILAN_MODEL);
+    }
+
+    /**
+     * Ortam degiskenindeki model adi; bos ya da gecersizse varsayilan.
+     *
+     * Model adi adrese yaziliyor (models/<ad>:generateContent). Gecersiz
+     * bir ad ("gemini model", sonda bosluk, Turkce karakter) butun
+     * istekleri "URL rejected: Malformed input" ile dusuruyordu
+     * (23.10.2026: 72 adayin 72'si hata, 0 haber). Ad kirpiliyor,
+     * "models/" oneki atiliyor; gecersizse varsayilana donuluyor ve
+     * hangi ayarin duzeltilecegi gunluge yaziliyor.
+     */
+    private static function ortamModeli(string $degisken, string $varsayilan): string
+    {
+        $ad = preg_replace('#^models/#', '', trim((string) (getenv($degisken) ?: ''))) ?? '';
+
+        if ($ad === '') {
+            return $varsayilan;
+        }
+
+        if (!preg_match('/^[a-z0-9][a-z0-9._-]{1,99}$/i', $ad)) {
+            fwrite(STDERR, '[uyari] ' . $degisken . ' gecersiz ("' . mb_substr($ad, 0, 40) . '"); varsayilan '
+                . $varsayilan . ' kullaniliyor. GitHub -> Settings -> Secrets -> ' . $degisken
+                . ' degerini duzeltin ya da silin.' . PHP_EOL);
+
+            return $varsayilan;
+        }
+
+        return $ad;
+    }
+
+    /**
+     * Son istegi cevaplayan model (ornegin "gpt-6-luna" ya da
+     * "gemini-3.8-flash"). Site guven esigini buna gore seciyor: Luna
+     * guveni Gemini'den temkinli puanliyor (bkz. includes/haberler.php,
+     * haber_guven_esigi).
+     */
+    public function sonYanitlayan(): string
+    {
+        return $this->sonYanitlayan;
+    }
+
+    /** Kullanilan model adi (gunluge yazmak icin). */
+    public function model(): string
+    {
+        $sira = array_filter([$this->claude?->model(), $this->birincil?->model()]);
+
+        return $sira !== []
+            ? implode(' → ', $sira) . ' (yedek: ' . $this->model . ')'
+            : $this->model;
+    }
+
+    /*
+     * BIRINCIL MODEL: OpenAI (site sahibinin karari, 23.10.2026: "Luna
+     * ile calissin, basarisiz olursa Gemini ile devam etsin").
+     *
+     * OpenAI anahtari verilmisse her istek once ona gidiyor; hata olursa
+     * (ag, zaman asimi, kesik/bozuk yanit, bos sonuc) AYNI istek Gemini'ye
+     * gidiyor. Anahtar gecersiz ya da kredi bittiyse ya da ust uste
+     * BIRINCIL_HATA_SINIRI istek dustuyse OpenAI bu calismada bir daha
+     * denenmiyor; her istekte once onu bekleyip zaman kaybetmeyelim.
+     * Anahtar yoksa her sey eskisi gibi yalnizca Gemini.
+     */
+    private const OPENAI_VARSAYILAN_MODEL = 'gpt-6-luna';
+    private const BIRINCIL_HATA_SINIRI    = 3;
+
+    private ?OpenAiIstemci $birincil = null;
+    private int $birincilArdisikHata = 0;
+
+    /** @var array{birincil:int,yedek:int} Hangi saglayicinin kac istegi cevapladigi */
+    private array $saglayiciSayaci = ['birincil' => 0, 'yedek' => 0];
+
+    /** @var array{tur:string,mesaj:string}|null OpenAI'nin bu calismada neden kapandigi */
+    private ?array $birincilErisimSorunu = null;
+
+    /** Son istegi cevaplayan model; haberle birlikte siteye gidiyor. */
+    private string $sonYanitlayan = '';
+
+    /*
+     * EN ONDE CLAUDE (site sahibinin karari, 23.10.2026: "once Haiku 5.5
+     * baksin, sonra Luna, en son bunlar da yapamiyorsa Gemini").
+     * ANTHROPIC_API_KEY verilmisse her istek once Claude'a gidiyor;
+     * olmazsa ayni istek Luna'ya, o da olmazsa Gemini'ye. Kapanma kurali
+     * Luna'daki gibi: anahtar/kredi sorunu ya da ust uste
+     * BIRINCIL_HATA_SINIRI hata.
+     */
+    private const CLAUDE_VARSAYILAN_MODEL = 'claude-haiku-5-5';
+
+    private ?ClaudeIstemci $claude = null;
+    private bool $claudeKapali = false;
+    private int $claudeArdisikHata = 0;
+    private int $claudeSayac = 0;
+
+    /** @var array{tur:string,mesaj:string}|null Claude'un bu calismada neden kapandigi */
+    private ?array $claudeErisimSorunu = null;
+
+    /** Claude'un son gecici hatasi (ozete yazmak icin). */
+    private string $claudeSonHata = '';
+
+    public function __construct(
+        private readonly string $apiKey,
+        string $model = '',
+        string $openAiAnahtari = '',
+        string $claudeAnahtari = '',
+    ) {
+        // Model verilmediyse haber modeli (GEMINI_MODEL, yoksa varsayilan).
+        $this->model = $model !== '' ? $model : self::ortamModeli('GEMINI_MODEL', self::VARSAYILAN_MODEL);
+
+        // Kurulamazsa (kutuphane eksik vb.) calisma dusmesin: Claude atlanir.
+        if (trim($claudeAnahtari) !== '') {
+            try {
+                $this->claude = new ClaudeIstemci(
+                    trim($claudeAnahtari),
+                    self::ortamModeli('CLAUDE_MODEL', self::CLAUDE_VARSAYILAN_MODEL)
+                );
+            } catch (\Throwable $e) {
+                fwrite(STDERR, '[uyari] Claude istemcisi kurulamadı, atlanıyor: ' . $e->getMessage() . PHP_EOL);
+            }
+        }
+
+        if (trim($openAiAnahtari) !== '') {
+            $this->birincil = new OpenAiIstemci(
+                trim($openAiAnahtari),
+                self::ortamModeli('OPENAI_MODEL', self::OPENAI_VARSAYILAN_MODEL),
+                trim((string) (getenv('OPENAI_API_TABAN') ?: ''))
+            );
+        }
+    }
+
+    /**
+     * Önce birincil modele (OpenAI) sorar; olmazsa null döner ve çağıran
+     * aynı isteği Gemini'ye gönderir.
+     *
+     * @param array<string,mixed> $sema
+     * @param callable(array<string,mixed>):bool $gecerli yanit kullanilabilir mi
+     * @return array<string,mixed>|null
+     */
+    private function birincildenIste(string $yonerge, string $istem, array $sema, int $enFazlaToken, callable $gecerli): ?array
+    {
+        $claudeVeri = $this->claudedenIste($yonerge, $istem, $sema, $enFazlaToken, $gecerli);
+
+        if ($claudeVeri !== null) {
+            return $claudeVeri;
+        }
+
+        if ($this->birincil === null || $this->birincilKapali) {
+            return null;
+        }
+
+        try {
+            $veri = $this->birincil->jsonIstek($yonerge, $istem, $sema, $enFazlaToken);
+
+            if (!$gecerli($veri)) {
+                throw new \RuntimeException('yanıt beklenen alanları içermiyor');
+            }
+
+            $this->birincilArdisikHata = 0;
+            $this->saglayiciSayaci['birincil']++;
+            $this->sonYanitlayan = $this->birincil->model();
+
+            return $veri;
+        } catch (OpenAiErisimYokException $e) {
+            $this->birincilErisimSorunu = ['tur' => $e->tur, 'mesaj' => $e->getMessage()];
+            $this->birincilKapat('erişim yok (' . $e->getMessage() . ')');
+        } catch (\Throwable $e) {
+            $this->birincilArdisikHata++;
+            fwrite(STDERR, '[' . date('H:i:s') . '] ' . $this->birincil->model() . ' başarısız, Gemini ile devam: '
+                . mb_substr($e->getMessage(), 0, 300, 'UTF-8') . PHP_EOL);
+
+            if ($this->birincilArdisikHata >= self::BIRINCIL_HATA_SINIRI) {
+                $this->birincilKapat(self::BIRINCIL_HATA_SINIRI . ' istek üst üste düştü');
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Zincirin ilk halkasi: Claude (Haiku 5.5). Olmazsa null; cagiran
+     * Luna'ya, o da olmazsa Gemini'ye gecer.
+     *
+     * @param array<string,mixed> $sema
+     * @param callable(array<string,mixed>):bool $gecerli
+     * @return array<string,mixed>|null
+     */
+    private function claudedenIste(string $yonerge, string $istem, array $sema, int $enFazlaToken, callable $gecerli): ?array
+    {
+        if ($this->claude === null || $this->claudeKapali) {
+            return null;
+        }
+
+        try {
+            $veri = $this->claude->jsonIstek($yonerge, $istem, $sema, $enFazlaToken);
+
+            if (!$gecerli($veri)) {
+                throw new \RuntimeException('yanıt beklenen alanları içermiyor');
+            }
+
+            $this->claudeArdisikHata = 0;
+            $this->claudeSayac++;
+            $this->sonYanitlayan = $this->claude->model();
+
+            return $veri;
+        } catch (ClaudeErisimYokException $e) {
+            $this->claudeErisimSorunu = ['tur' => $e->tur, 'mesaj' => $e->getMessage()];
+            $this->claudeKapat('erişim yok (' . $e->getMessage() . ')');
+        } catch (\Throwable $e) {
+            $this->claudeArdisikHata++;
+            $this->claudeSonHata = $e->getMessage();
+            fwrite(STDERR, '[' . date('H:i:s') . '] ' . $this->claude->model() . ' başarısız, sıradaki modelle devam: '
+                . mb_substr($e->getMessage(), 0, 300, 'UTF-8') . PHP_EOL);
+
+            if ($this->claudeArdisikHata >= self::BIRINCIL_HATA_SINIRI) {
+                $this->claudeKapat(self::BIRINCIL_HATA_SINIRI . ' istek üst üste düştü');
+            }
+        }
+
+        return null;
+    }
+
+    private function claudeKapat(string $neden): void
+    {
+        if ($this->claude === null) {
+            return;
+        }
+
+        fwrite(STDERR, '[' . date('H:i:s') . '] ' . $this->claude->model() . ' bu çalışmada kapatıldı: '
+            . mb_substr($neden, 0, 300, 'UTF-8') . '. Kalan istekler sıradaki modelle.' . PHP_EOL);
+
+        $this->claudeKapali = true;
+    }
+
+    /**
+     * Claude'un bu calismadaki durumu (birincilDurumu ile ayni bicim);
+     * anahtar yoksa null.
+     *
+     * @return array{model:string,durum:string,mesaj:string}|null
+     */
+    public function claudeDurumu(): ?array
+    {
+        if ($this->claude === null) {
+            return null;
+        }
+
+        return [
+            'model' => $this->claude->model(),
+            'durum' => $this->claudeErisimSorunu['tur'] ?? ($this->claudeSayac > 0 ? 'tamam' : 'bilinmiyor'),
+            'mesaj' => mb_substr($this->claudeErisimSorunu['mesaj'] ?? $this->claudeSonHata, 0, 300, 'UTF-8'),
+        ];
+    }
+
+    private function birincilKapat(string $neden): void
+    {
+        if ($this->birincil === null) {
+            return;
+        }
+
+        fwrite(STDERR, '[' . date('H:i:s') . '] ' . $this->birincil->model() . ' bu çalışmada kapatıldı: '
+            . mb_substr($neden, 0, 300, 'UTF-8') . '. Kalan istekler Gemini ile.' . PHP_EOL);
+
+        // Kullanimi kaybetmemek icin istemci tutuluyor; yalnizca kullanilmiyor.
+        $this->birincilKapali = true;
+    }
+
+    private bool $birincilKapali = false;
+
 
     /**
      * @param array{baslik:string,ozet:string,baglanti:string} $aday
@@ -387,6 +749,13 @@ final class Yazar implements SemaliIstemci
         array $kategoriler,
     ): ?array {
         $istem = $this->istemHazirla($aday, $sayfaMetni, $kaynakAdi, $kaynakTuru, $kategoriler);
+
+        $birincil = $this->birincildenIste(self::YONERGE, $istem, self::SEMA, 8000,
+            static fn (array $v): bool => array_key_exists('ilgili', $v));
+
+        if ($birincil !== null) {
+            return $birincil;
+        }
 
         $govde = [
             'systemInstruction' => [
@@ -444,7 +813,69 @@ final class Yazar implements SemaliIstemci
      */
     private function geminiIstegi(array $govde): array
     {
-        $adres = self::API . $this->model . ':generateContent';
+        $this->sonGeciciHata = false;
+
+        try {
+            $yanit = $this->geminiModelIstegi($govde, $this->model);
+            $this->sonYanitlayan = $this->model;
+
+            return $yanit;
+        } catch (\RuntimeException $e) {
+            if (!$this->sonGeciciHata || $this->yedekModel === '' || $this->yedekModel === $this->model
+                || $e instanceof ModelErisimYokException || $e instanceof KotaBittiException) {
+                throw $e;
+            }
+
+            fwrite(STDERR, '[uyari] ' . $this->model . ' yanit vermedi (' . mb_substr($e->getMessage(), 0, 160)
+                . '); yedek model ' . $this->yedekModel . ' deneniyor.' . PHP_EOL);
+        }
+
+        $yanit = $this->geminiModelIstegi($govde, $this->yedekModel);
+        $this->sonYanitlayan = $this->yedekModel;
+
+        return $yanit;
+    }
+
+    /**
+     * Gecici hatada (5xx, zaman asimi) denenecek ikinci Gemini modeli.
+     *
+     * Kose yazilari 26.10.2026'da yazilamadi: kose modeli butun yazarlarda
+     * "HTTP 503: high demand" dondu ve yedek yoktu (haber toplamada OpenAI
+     * ve Claude once geliyor, Gemini yedek). Yogunluk genellikle tek
+     * modelde oluyor; ayni istek haber modeline gidiyor.
+     */
+    public function yedekModel(string $model): void
+    {
+        $this->yedekModel = $model;
+    }
+
+    /**
+     * Gemini once, Claude ve Luna yedek (kose yazisi).
+     *
+     * Haber toplamada sira Claude -> Luna -> Gemini. Kose yazilari site
+     * sahibinin karariyla Gemini'de (23.10.2026); 26.10.2026'da iki Gemini
+     * modeli de "503 high demand" dondu ve hic yazi cikmadi. Site sahibinin
+     * karari (26.10.2026): Gemini yine once, gecici hatada Claude ya da
+     * Luna yaziyor. Kredi ve kota hatalari yedeklenmiyor.
+     */
+    public function geminiOnce(bool $acik = true): void
+    {
+        $this->geminiOnce = $acik;
+    }
+
+    /** Haber modeli (GEMINI_MODEL, yoksa varsayilan); kose yazisinin yedegi. */
+    public static function haberModeli(): string
+    {
+        return self::ortamModeli('GEMINI_MODEL', self::VARSAYILAN_MODEL);
+    }
+
+    /**
+     * @param array<string,mixed> $govde
+     * @return array<string,mixed>
+     */
+    private function geminiModelIstegi(array $govde, string $model): array
+    {
+        $adres = self::API . $model . ':generateContent';
         $json  = json_encode($govde, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         if (!is_string($json)) {
@@ -456,10 +887,25 @@ final class Yazar implements SemaliIstemci
         // Ucretsiz katmanda 503 ("yogun talep") sik gorulur; birkac
         // saniyelik bekleme yetmez. Artan bekleme ile daha uzun israr
         // edilir: 4, 10, 20, 35, 60 saniye.
-        $beklemeler = [4, 10, 20, 35, 60];
+        $beklemeler = $this->beklemeler ?? [4, 10, 20, 35, 60];
         $enFazlaDeneme = count($beklemeler) + 1;
 
         for ($deneme = 1; $deneme <= $enFazlaDeneme; $deneme++) {
+            // Calisma butcesi (bkz. sureSiniri): kalan sure yeni bir istege
+            // yetmiyorsa acilmiyor; istek de butceyi asacak kadar surmuyor.
+            $zamanAsimi = $this->istekZamanAsimi;
+
+            if ($this->sonZaman !== null) {
+                $kalan = $this->sonZaman - time();
+
+                if ($kalan < 30) {
+                    throw new \RuntimeException('çalışma için ayrılan süre doldu'
+                        . ($sonMesaj !== '' ? ' (son hata: ' . $sonMesaj . ')' : ''));
+                }
+
+                $zamanAsimi = min($zamanAsimi, $kalan);
+            }
+
             $ch = curl_init($adres);
 
             curl_setopt_array($ch, [
@@ -471,7 +917,7 @@ final class Yazar implements SemaliIstemci
                     'x-goog-api-key: ' . $this->apiKey,
                 ],
                 CURLOPT_CONNECTTIMEOUT => 20,
-                CURLOPT_TIMEOUT        => 90,
+                CURLOPT_TIMEOUT        => $zamanAsimi,
                 CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
                 CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
             ]);
@@ -493,6 +939,8 @@ final class Yazar implements SemaliIstemci
                     sleep($beklemeler[$deneme - 1]);
                     continue;
                 }
+
+                $this->sonGeciciHata = in_array($errno, [CURLE_COULDNT_CONNECT, CURLE_OPERATION_TIMEDOUT], true);
 
                 throw new \RuntimeException('Gemini API erişim hatası: ' . $sonMesaj);
             }
@@ -532,6 +980,8 @@ final class Yazar implements SemaliIstemci
                 continue;
             }
 
+            $this->sonGeciciHata = $kod >= 500;
+
             throw new \RuntimeException('Gemini API hatası (HTTP ' . $kod . '): ' . $sonMesaj);
         }
 
@@ -545,7 +995,7 @@ final class Yazar implements SemaliIstemci
      * kotayı hemen tüketiyor. Beş adaylık bir grup tek istekte işlenince
      * aynı iş beşte bir istekle yapılır.
      *
-     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string,kapsam?:int}> $adaylar
+     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string,kapsam?:int,ekKaynaklar?:list<array{kaynakAdi:string,baglanti:string,metin:string}>}> $adaylar
      * @param list<array<string,mixed>> $kategoriler
      * @return array<int,array<string,mixed>> sira => sonuc
      */
@@ -589,6 +1039,18 @@ final class Yazar implements SemaliIstemci
         int $adayAdedi = 0,
         string $zorunluAlan = ''
     ): array {
+        $gecerli = fn (array $v): bool => $this->sonuclariAyikla($v, $adayAdedi, $zorunluAlan) !== [];
+
+        // Gemini once (kose yazisi): Claude ve Luna yalnizca Gemini gecici
+        // hatayla dustugunde (bkz. geminiOnce()).
+        if (!$this->geminiOnce) {
+            $birincil = $this->birincildenIste($yonerge, $istem, $sema, $enFazlaToken, $gecerli);
+
+            if ($birincil !== null) {
+                return $this->sonuclariAyikla($birincil, $adayAdedi, $zorunluAlan);
+            }
+        }
+
         $govde = [
             'systemInstruction' => [
                 'parts' => [['text' => $yonerge]],
@@ -604,7 +1066,25 @@ final class Yazar implements SemaliIstemci
             ],
         ];
 
-        $yanit    = $this->geminiIstegi($govde);
+        try {
+            $yanit = $this->geminiIstegi($govde);
+        } catch (\RuntimeException $e) {
+            if (!$this->geminiOnce || !$this->sonGeciciHata
+                || $e instanceof ModelErisimYokException || $e instanceof KotaBittiException) {
+                throw $e;
+            }
+
+            $birincil = $this->birincildenIste($yonerge, $istem, $sema, $enFazlaToken, $gecerli);
+
+            if ($birincil === null) {
+                throw $e;
+            }
+
+            fwrite(STDERR, '[uyari] Gemini yoğun; yanıtı ' . $this->sonYanitlayan . ' verdi.' . PHP_EOL);
+
+            return $this->sonuclariAyikla($birincil, $adayAdedi, $zorunluAlan);
+        }
+
         $parcalar = $yanit['candidates'][0]['content']['parts'] ?? [];
 
         if (!is_array($parcalar)) {
@@ -622,39 +1102,55 @@ final class Yazar implements SemaliIstemci
                 continue;
             }
 
-            $sonuclar = [];
-
-            foreach ($veri['sonuclar'] as $sonuc) {
-                if (!is_array($sonuc)) {
-                    continue;
-                }
-
-                if ($zorunluAlan !== '' && !array_key_exists($zorunluAlan, $sonuc)) {
-                    continue;
-                }
-
-                // Sira numarasi 1'den baslar; dizi indisine cevriliyor.
-                $sira = (int) ($sonuc['sira'] ?? 0) - 1;
-
-                if ($sira < 0) {
-                    continue;
-                }
-
-                if ($adayAdedi > 0 && $sira >= $adayAdedi) {
-                    continue;
-                }
-
-                $sonuclar[$sira] = $sonuc;
-            }
-
-            return $sonuclar;
+            return $this->sonuclariAyikla($veri, $adayAdedi, $zorunluAlan);
         }
 
         return [];
     }
 
     /**
-     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string,kapsam?:int}> $adaylar
+     * Yanıttaki "sonuclar" dizisini 0 tabanlı sıraya göre ayıklar.
+     * Gemini ve OpenAI yanıtı aynı denetimden geçiyor.
+     *
+     * @param array<string,mixed> $veri
+     * @return array<int,array<string,mixed>>
+     */
+    private function sonuclariAyikla(array $veri, int $adayAdedi, string $zorunluAlan): array
+    {
+        if (!isset($veri['sonuclar']) || !is_array($veri['sonuclar'])) {
+            return [];
+        }
+
+        $sonuclar = [];
+
+        foreach ($veri['sonuclar'] as $sonuc) {
+            if (!is_array($sonuc)) {
+                continue;
+            }
+
+            if ($zorunluAlan !== '' && !array_key_exists($zorunluAlan, $sonuc)) {
+                continue;
+            }
+
+            // Sira numarasi 1'den baslar; dizi indisine cevriliyor.
+            $sira = (int) ($sonuc['sira'] ?? 0) - 1;
+
+            if ($sira < 0) {
+                continue;
+            }
+
+            if ($adayAdedi > 0 && $sira >= $adayAdedi) {
+                continue;
+            }
+
+            $sonuclar[$sira] = $sonuc;
+        }
+
+        return $sonuclar;
+    }
+
+    /**
+     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string,kapsam?:int,ekKaynaklar?:list<array{kaynakAdi:string,baglanti:string,metin:string}>}> $adaylar
      * @param list<array<string,mixed>> $kategoriler
      */
     private function topluIstemHazirla(array $adaylar, array $kategoriler, array $onceki = []): string
@@ -687,6 +1183,19 @@ final class Yazar implements SemaliIstemci
 
             $kapsam = max(1, (int) ($aday['kapsam'] ?? 1));
 
+            // Ayni olayi veren baska yayincilarin metni (ajan/topla.php,
+            // EK_KAYNAK_TAVANI); her biri ayri sinirla.
+            $ekler = '';
+
+            foreach ($aday['ekKaynaklar'] ?? [] as $i => $ek) {
+                $ekler .= "\nEk kaynak " . ($i + 1) . ': ' . $ek['kaynakAdi'] . ' (' . $ek['baglanti'] . ")\n---\n"
+                    . mb_substr((string) $ek['metin'], 0, self::EK_KAYNAK_METNI_SINIRI, 'UTF-8') . "\n---";
+            }
+
+            if ($ekler !== '') {
+                $ekler = "\nEk kaynaklar (aynı olay, başka yayıncılar):" . $ekler;
+            }
+
             $bloklar[] = <<<METIN
             ### ADAY {$no}
             Kaynak: {$aday['kaynakAdi']} — {$tur}
@@ -697,7 +1206,7 @@ final class Yazar implements SemaliIstemci
             Sayfa metni:
             ---
             {$metin}
-            ---
+            ---{$ekler}
             METIN;
         }
 
@@ -810,7 +1319,71 @@ final class Yazar implements SemaliIstemci
      */
     public function kullanim(): array
     {
-        return $this->kullanim;
+        $toplam = $this->kullanim;
+
+        foreach ([$this->claude, $this->birincil] as $istemci) {
+            foreach ($istemci?->kullanim() ?? [] as $alan => $deger) {
+                $toplam[$alan] += $deger;
+            }
+        }
+
+        return $toplam;
+    }
+
+    /**
+     * Sağlayıcı dökümü, zincir sırasıyla (Claude, OpenAI, Gemini): kaç
+     * isteği yanıtladılar, kaç token harcadılar. Yalnızca Gemini varsa boş.
+     *
+     * @return list<array{model:string,istek:int,kullanim:array{girdi:int,cikti:int,istek:int}}>
+     */
+    public function saglayicilar(): array
+    {
+        if ($this->claude === null && $this->birincil === null) {
+            return [];
+        }
+
+        $liste = [];
+
+        if ($this->claude !== null) {
+            $liste[] = ['model' => $this->claude->model(), 'istek' => $this->claudeSayac, 'kullanim' => $this->claude->kullanim()];
+        }
+
+        if ($this->birincil !== null) {
+            $liste[] = ['model' => $this->birincil->model(), 'istek' => $this->saglayiciSayaci['birincil'], 'kullanim' => $this->birincil->kullanim()];
+        }
+
+        $liste[] = ['model' => $this->model, 'istek' => $this->kullanim['istek'], 'kullanim' => $this->kullanim];
+
+        return $liste;
+    }
+
+    /**
+     * OpenAI'nin bu calismadaki durumu; panel uyarisi icin siteye gidiyor
+     * (site sahibinin istegi, 23.10.2026: "kredi biterse bana haber ver").
+     *
+     *   kredi     kredi/kota bitti: OpenAI'ye kredi yuklenmeli
+     *   anahtar   anahtar gecersiz ya da yetkisiz
+     *   tamam     en az bir istegi cevapladi
+     *   bilinmiyor hic istek atilmadi ya da gecici hatalarla dustu
+     *
+     * OpenAI anahtari yoksa null.
+     *
+     * @return array{model:string,durum:string,mesaj:string}|null
+     */
+    public function birincilDurumu(): ?array
+    {
+        if ($this->birincil === null) {
+            return null;
+        }
+
+        $durum = $this->birincilErisimSorunu['tur']
+            ?? ($this->saglayiciSayaci['birincil'] > 0 ? 'tamam' : 'bilinmiyor');
+
+        return [
+            'model' => $this->birincil->model(),
+            'durum' => $durum,
+            'mesaj' => mb_substr($this->birincilErisimSorunu['mesaj'] ?? '', 0, 300, 'UTF-8'),
+        ];
     }
 
     /**

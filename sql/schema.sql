@@ -110,6 +110,9 @@ CREATE TABLE IF NOT EXISTS haberler (
     -- haberleri bu puana gore siralaniyor. Ajan veriyor, panelden degisir.
     onem            TINYINT UNSIGNED NOT NULL DEFAULT 50,
     ajan_notu       VARCHAR(600)  NOT NULL DEFAULT '',
+    -- Haberi yazan model (23.10.2026; ornegin gpt-6-luna, gemini-3.8-flash).
+    -- Otomatik yayin esigi buna gore seciliyor (bkz. haber_guven_esigi_kosulu).
+    ajan_modeli     VARCHAR(80)   NOT NULL DEFAULT '',
 
     -- Valentra Analiz: haberin "bana ne" karsiligi. Bos olabilir ve
     -- bos olmasi normaldir; model bilgiyi kaynakta bulamazsa
@@ -124,10 +127,24 @@ CREATE TABLE IF NOT EXISTS haberler (
     isletme_etkisi   VARCHAR(800) NOT NULL DEFAULT '',
     uygulama_ornegi  TEXT         NULL,
     resmi_dayanak    VARCHAR(400) NOT NULL DEFAULT '',
+    -- Haberin kaynakta olmayan acisi: "Neden onemli?" (26.10.2026).
+    neden_onemli     VARCHAR(800) NOT NULL DEFAULT '',
+    -- DERLEME HABER (28.10.2026): ayni olayi veren birden cok kaynagin
+    -- haberlerinden Valentra'nin yazdigi ozgun haber (bkz.
+    -- includes/derleme.php). Google'a yalnizca derlemeler ve sitenin kendi
+    -- haberleri sunuluyor; tek kaynagin ozeti noindex. Kaynaklar JSON:
+    -- [{"id":..,"ad":..,"url":..,"baslik":..}].
+    derleme            TINYINT(1)   NOT NULL DEFAULT 0,
+    derleme_kaynaklari TEXT         NULL,
 
     onaylayan_id    INT UNSIGNED  NULL,
     onay_tarihi     DATETIME      NULL,
     yayin_tarihi    DATETIME      NULL,
+    -- Kaynagin yayin zamani (ajan bildiriyor; bilinmiyorsa NULL). Ana
+    -- sayfa ve konu sayfalari haberin gununu buna gore kuruyor.
+    kaynak_tarihi   DATETIME      NULL,
+    -- Tarih denetiminin bu habere baktigi an (ajan/tarih_denetle.php).
+    tarih_denetlendi DATETIME     NULL,
 
     olusturuldu     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     guncellendi     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -403,7 +420,7 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) 
     ('Dünya Gazetesi',      'https://www.dunya.com',
      'https://www.dunya.com/rss',                    'https://www.dunya.com/ekonomi', 'rss', 1),
     ('BigPara',             'https://bigpara.hurriyet.com.tr',
-     'https://bigpara.hurriyet.com.tr/rss/',         'https://bigpara.hurriyet.com.tr/haberler/ekonomi-haberleri/', 'rss', 1),
+     'https://bigpara.hurriyet.com.tr/rss/',         'https://bigpara.hurriyet.com.tr/haberler/ekonomi-haberleri/', 'rss', 0),
     ('TRT Haber Ekonomi',   'https://www.trthaber.com',
      'https://www.trthaber.com/ekonomi_articles.rss','https://www.trthaber.com/haber/ekonomi/', 'rss', 1),
     ('CNN Türk Ekonomi',    'https://www.cnnturk.com',
@@ -561,7 +578,7 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) 
      'https://tr.euronews.com/business', 'rss', 1),
     ('VOA Türkçe',              'https://www.amerikaninsesi.com',
      'https://www.amerikaninsesi.com/api/zkvyteumqi',
-     'https://www.amerikaninsesi.com/z/1730', 'rss', 1);
+     'https://www.amerikaninsesi.com/z/1730', 'rss', 0);
 
 -- 2) Ingilizce ekonomi ve is bolumleri
 INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) VALUES
@@ -573,7 +590,7 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, aktif) 
      'https://www.theguardian.com/business/economics', 'rss', 1),
     ('The New York Times Business', 'https://www.nytimes.com/section/business',
      'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml',
-     'https://www.nytimes.com/section/business/economy', 'rss', 1),
+     'https://www.nytimes.com/section/business/economy', 'rss', 0),
     ('The Economist Finans',    'https://www.economist.com',
      'https://www.economist.com/finance-and-economics/rss.xml',
      'https://www.economist.com/finance-and-economics', 'rss', 1),
@@ -677,12 +694,39 @@ CREATE TABLE IF NOT EXISTS ziyaretler (
     haber_id    INT UNSIGNED    NULL,
     baslik      VARCHAR(255)    NOT NULL DEFAULT '',
     yonlendiren VARCHAR(255)    NOT NULL DEFAULT '',
+    -- Tarayici dogrulamasi ve okuma olcumu (23.10.2026; bkz.
+    -- includes/ziyaret.php ve api/gorunum.php). Mevcut kurulumlara
+    -- includes/sema.php ekliyor.
+    insan       TINYINT UNSIGNED  NOT NULL DEFAULT 0,
+    tarayici_id CHAR(16)          NOT NULL DEFAULT '',
+    yeni        TINYINT UNSIGNED  NOT NULL DEFAULT 0,
+    sure        SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    kaydirma    TINYINT UNSIGNED  NOT NULL DEFAULT 0,
+    cihaz       VARCHAR(10)       NOT NULL DEFAULT '',
+    tarayici    VARCHAR(20)       NOT NULL DEFAULT '',
+    isletim     VARCHAR(20)       NOT NULL DEFAULT '',
+    kampanya    VARCHAR(100)      NOT NULL DEFAULT '',
     PRIMARY KEY (id),
     -- Butun raporlar once tarihe gore suzuyor; bu indeks olmadan
     -- tablo buyudukce panel yavaslar.
     KEY ix_ziyaret_zaman (zaman),
     KEY ix_ziyaret_haber (haber_id, zaman),
     KEY ix_ziyaret_kisi (ziyaretci, zaman)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Haber okuyucu sayilari (son 24 saat): ana sayfa sirasi icin onbellek.
+--
+-- Ana sayfa sirasina okunma da giriyor (bkz. haber_okunma_birlesimi).
+-- Onceden her sorguda ziyaretler tablosunun son gunu yeniden
+-- sayiliyordu; ana sayfa bunu dort bes kez yapiyor ve tablo buyudukce
+-- sayfa saniyelerce bekliyordu (25.10.2026). Sayim 5 dakikada bir,
+-- sayfa gonderildikten sonra buraya yaziliyor.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS haber_okuyucu (
+    haber_id    INT UNSIGNED NOT NULL,
+    okuyucu     INT UNSIGNED NOT NULL DEFAULT 0,
+    PRIMARY KEY (haber_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
@@ -1339,6 +1383,8 @@ CREATE TABLE IF NOT EXISTS kose_yazilari (
     gun           DATE          NOT NULL,
     sira          TINYINT UNSIGNED NOT NULL DEFAULT 0,
     gundem        VARCHAR(200)  NOT NULL DEFAULT '',
+    -- Yazar anahtari (includes/yazarlar.php, KOSE_YAZARLARI); 23.10.2026.
+    yazar         VARCHAR(60)   NOT NULL DEFAULT 'valentra',
     baslik        VARCHAR(300)  NOT NULL,
     slug          VARCHAR(320)  NOT NULL,
     ozet          VARCHAR(600)  NOT NULL DEFAULT '',
@@ -1551,8 +1597,8 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) V
     ('CNN',                         'https://edition.cnn.com',     'http://rss.cnn.com/rss/edition_world.rss',                'rss', 'dunya', 1),
     ('Reuters',                     'https://www.reuters.com',     'https://www.reutersagency.com/feed/?best-topics=political-general&post_type=best', 'rss', 'dunya', 1),
     ('The Guardian',                'https://www.theguardian.com', 'https://www.theguardian.com/world/rss',                   'rss', 'dunya', 1),
-    ('The New York Times',          'https://www.nytimes.com',     'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',  'rss', 'dunya', 1),
-    ('France 24',                   'https://www.france24.com/en', 'https://www.france24.com/en/rss',                         'rss', 'dunya', 1),
+    ('The New York Times',          'https://www.nytimes.com',     'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',  'rss', 'dunya', 0),
+    ('France 24',                   'https://www.france24.com/en', 'https://www.france24.com/en/rss',                         'rss', 'dunya', 0),
     ('DW News',                     'https://www.dw.com/en',       'https://rss.dw.com/rdf/rss-en-world',                     'rss', 'dunya', 1),
     ('NPR',                         'https://www.npr.org',         'https://feeds.npr.org/1004/rss.xml',                      'rss', 'dunya', 1);
 
@@ -1839,3 +1885,256 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, liste_url, liste_secici, tur, katego
     ('Habertürk Yemek Tarifleri', 'https://www.haberturk.com', 'https://www.haberturk.com/yemek-tarifleri', NULL,                    'web', 'yemek-tarifleri', 1),
     ('Sabah Yemek Tarifleri',     'https://www.sabah.com.tr',  'https://www.sabah.com.tr/yemek-tarifleri',  'yol:/yemek-tarifleri/', 'web', 'yemek-tarifleri', 1),
     ('CNN Türk Yemek Tarifleri',  'https://www.cnnturk.com',   'https://www.cnnturk.com/yemek-tarifleri',   'yol:/yemek-tarifleri/', 'web', 'yemek-tarifleri', 1);
+
+-- ---------------------------------------------------------------------------
+-- Videolu haber kaynaklari — 23.10.2026, site sahibinin istegi ("videolu
+-- haber hala hic gelmiyor"). Haber kuruluslarinin YouTube kanallari: her
+-- video bir haber, oynatici YouTube'un resmi gomme adresi (telif
+-- kaynakta). besleme_url kanal adresi; ajan bunu kanalin RSS adresine
+-- ceviriyor (Besleme::youtubeBeslemesi). Kanal bulunamazsa kaynak
+-- sessizce bos doner; panelden kapatilabilir ya da adresi duzeltilebilir.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('TRT Haber (video)',   'https://www.youtube.com', 'https://www.youtube.com/@trthaber',    'rss', 'gundem',  1),
+    ('NTV (video)',         'https://www.youtube.com', 'https://www.youtube.com/@ntv',         'rss', 'gundem',  1),
+    ('CNN TÜRK (video)',    'https://www.youtube.com', 'https://www.youtube.com/@cnnturk',     'rss', 'gundem',  1),
+    ('Habertürk (video)',   'https://www.youtube.com', 'https://www.youtube.com/@haberturktv', 'rss', 'gundem',  1),
+    ('Bloomberg HT (video)','https://www.youtube.com', 'https://www.youtube.com/@BloombergHT', 'rss', 'ekonomi', 1),
+    ('TRT Spor (video)',    'https://www.youtube.com', 'https://www.youtube.com/@trtspor',     'rss', 'spor',    1);
+
+-- ---------------------------------------------------------------------------
+-- YouTube videolarinin tarihi duzeltmeden once "updated"tan alinmisti
+-- (23.10.2026): YouTube bunu eski videolarda da yeniliyor ve sali oynanan
+-- macin videosu persembe son dakika oldu. O zamana kadar gelen videolu
+-- haberlerin yayin zamani bilinmiyor sayiliyor: son dakika olamazlar,
+-- yaslari toplandiklari andan. Tekrar calismasi zararsiz (sabit tarih).
+-- ---------------------------------------------------------------------------
+UPDATE haberler SET kaynak_tarihi = NULL
+ WHERE kaynak_url LIKE 'https://www.youtube.com/%'
+   AND kaynak_tarihi IS NOT NULL
+   AND olusturuldu < '2026-10-23 13:00:00';
+
+-- ---------------------------------------------------------------------------
+-- Ekonomim'in 22.10.2026 aksamki PPK haberi kaynakta "23 Ekim 00:00"
+-- (yalnizca gun, saat yok) tarihiyle geldi ve ana sayfada 2. oldu. Saati
+-- bilinmeyen zaman artik tarihsiz sayiliyor (haber_yalnizca_gun_mu); bu
+-- kayit icin tek seferlik. Tekrar calismasi zararsiz.
+-- ---------------------------------------------------------------------------
+UPDATE haberler SET kaynak_tarihi = NULL
+ WHERE kaynak_baslik LIKE 'TCMB, indirime 1 puan ile başladı%'
+   AND kaynak_tarihi IS NOT NULL;
+
+-- ---------------------------------------------------------------------------
+-- Alinamayan kaynaklar kapatildi (24.10.2026, site sahibi: "alinamayan haber
+-- sitelerini cikar, o kaynaklari arastirmasin"). IHS'in kayitlarina gore bu
+-- sitelerin sunuculari sunucudan gelen istekleri yanitsiz birakiyor ve
+-- /api/getir.php takiliyordu: Amerika'nin Sesi, BigPara, New York Times,
+-- France 24. Tek seferlik: panelden yeniden acilirsa ezilmez.
+-- ---------------------------------------------------------------------------
+UPDATE kaynaklar SET aktif = 0
+ WHERE (CONCAT_WS(' ', site_url, besleme_url, liste_url) LIKE '%amerikaninsesi.com%'
+     OR CONCAT_WS(' ', site_url, besleme_url, liste_url) LIKE '%bigpara.hurriyet.com.tr%'
+     OR CONCAT_WS(' ', site_url, besleme_url, liste_url) LIKE '%nytimes.com%'
+     OR CONCAT_WS(' ', site_url, besleme_url, liste_url) LIKE '%france24.com%')
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_alinamayan_kaynaklar_2026_10_24');
+INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_alinamayan_kaynaklar_2026_10_24', '24.10.2026');
+
+-- ---------------------------------------------------------------------------
+-- Gunluk burc yorumlari (29.10.2026, site sahibinin istegi: "burc ve
+-- yorumlari gunluk yapalim, ana baslik olsun; yorumlari yapay zeka
+-- yapsin"). Her gun 12 burc; ajan (ajan/burc.php) yazip api/burc.php ile
+-- gonderiyor. Ayni gun ve burc icin tek kayit.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS burc_yorumlari (
+    id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    gun          DATE         NOT NULL,
+    burc         VARCHAR(20)  NOT NULL,
+    baslik       VARCHAR(200) NOT NULL DEFAULT '',
+    genel        TEXT         NOT NULL,
+    ask          TEXT         NOT NULL,
+    para         TEXT         NOT NULL,
+    saglik       TEXT         NOT NULL,
+    sans_sayisi  TINYINT UNSIGNED NULL,
+    sans_rengi   VARCHAR(40)  NOT NULL DEFAULT '',
+    olusturuldu  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_burc_gun (gun, burc),
+    KEY ix_burc_burc (burc, gun)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Cok okunan uluslararasi ve yerli siteler (29.10.2026, site sahibinin
+-- istegi: "kaynak sayisini artiralim; CNN Turk, New York Times, Financial
+-- Times, Economist, BBC, Yahoo News, Mynet, Globo, Times of India, Fox
+-- News, Daily Mail, Bild, People, Livedoor ... dahil edelim").
+--
+-- Yabanci dildeki haberi ajan anlayip Turkce ozetliyor (Yazar yonergesi).
+-- Daha fazla yayin derlemeye de yariyor: ayni olayi veren iki farkli yayin
+-- bulmak kolaylasiyor.
+--
+--   - 22-24.10'da kapatilan Ingilizce kaynaklar yeniden aciliyor: New York
+--     Times (Dunya, Business), Financial Times, The Economist Finans, BBC
+--     Business. NYT o gun site sunucusundan sayfa alinamadigi icin
+--     kapatilmisti; artik sayfa okuma 12 sn ile sinirli (getir.php) ve
+--     besleme GitHub'dan dogrudan okunuyor. FT, Economist ve NYT'nin
+--     metinleri cogunlukla abonelik duvarinin arkasinda: ozet besleme
+--     metninden yaziliyor.
+--   - Eklenmeyenler: Tencent QQ (herkese acik RSS yok, sayfa betikle
+--     doluyor), Substack (tek bir yayin degil, binlerce bulten; belirli
+--     bultenler adlariyla eklenebilir).
+--   - People ve Daily Mail'in magazin haberlerini yayin politikasi zaten
+--     eliyor; geriye kalan genel haberler giriyor.
+-- Tek seferlik (gecis anahtari): panelden kapatilan kaynak yeniden acilmaz.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('CNN Türk Teknoloji',  'https://www.cnnturk.com',             'https://www.cnnturk.com/feed/rss/bilim-teknoloji/news',              'rss', 'teknoloji',    1),
+    ('The Economist',       'https://www.economist.com',           'https://www.economist.com/the-world-this-week/rss.xml',             'rss', 'dunya',        1),
+    ('Yahoo News',          'https://www.yahoo.com/news',          'https://www.yahoo.com/news/rss',                                     'rss', 'dunya',        1),
+    ('Mynet Haber',         'https://www.mynet.com',               'https://www.mynet.com/haber/rss/sondakika',                          'rss', 'gundem',       1),
+    ('Globo G1',            'https://g1.globo.com',                'https://g1.globo.com/rss/g1/',                                       'rss', 'dunya',        1),
+    ('The Times of India',  'https://timesofindia.indiatimes.com', 'https://timesofindia.indiatimes.com/rssfeeds/296589292.cms',         'rss', 'dunya',        1),
+    ('Fox News',            'https://www.foxnews.com',             'https://moxie.foxnews.com/google-publisher/world.xml',               'rss', 'dunya',        1),
+    ('Daily Mail',          'https://www.dailymail.co.uk',         'https://www.dailymail.co.uk/news/worldnews/index.rss',               'rss', 'dunya',        1),
+    ('Bild',                'https://www.bild.de',                 'https://www.bild.de/feed/alles.xml',                                 'rss', 'dunya',        1),
+    ('People',              'https://people.com',                  'https://people.com/feed/',                                           'rss', 'kultur-sanat', 1),
+    ('Livedoor News',       'https://news.livedoor.com',           'https://news.livedoor.com/topics/rss/int.xml',                       'rss', 'dunya',        1);
+
+UPDATE kaynaklar SET aktif = 1
+ WHERE ad IN ('The New York Times', 'The New York Times Business', 'Financial Times', 'The Economist Finans', 'BBC Business', 'CNN Türk Ekonomi')
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_cok_okunan_kaynaklar_2026_10_29');
+-- Financial Times: ana sayfa beslemesi yerine dunya bolumu (genel habere uygun).
+UPDATE kaynaklar SET besleme_url = 'https://www.ft.com/world?format=rss', kategori = COALESCE(kategori, 'dunya')
+ WHERE ad = 'Financial Times' AND besleme_url = 'https://www.ft.com/rss/home'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_cok_okunan_kaynaklar_2026_10_29');
+-- Her ulkenin en cok okunan yayinlari (29.10.2026, site sahibinin istegi:
+-- "her ulkenin en cok okunan gazetelerine bak; onemli haberlerinden haber
+-- derleyelim, dunyada neler oluyor bakmis olalim"). Dunya basligina
+-- dusuyorlar; derleme ajani da her calismada en az iki dunya olayi seciyor.
+-- FM Korea eklenmedi: haber sitesi degil, kullanici forumu (dogrulanmamis
+-- paylasim yayin politikasina aykiri); Kore icin Yonhap.
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('Infobae (Arjantin)',          'https://www.infobae.com',          'https://www.infobae.com/arc/outboundfeeds/rss/',                         'rss', 'dunya', 1),
+    ('Clarín (Arjantin)',           'https://www.clarin.com',           'https://www.clarin.com/rss/lo-ultimo/',                                  'rss', 'dunya', 1),
+    ('UOL (Brezilya)',              'https://noticias.uol.com.br',      'https://rss.uol.com.br/feed/noticias.xml',                               'rss', 'dunya', 1),
+    ('Folha de S.Paulo (Brezilya)', 'https://www.folha.uol.com.br',     'https://feeds.folha.uol.com.br/mundo/rss091.xml',                        'rss', 'dunya', 1),
+    ('Yonhap (Güney Kore)',         'https://en.yna.co.kr',             'https://en.yna.co.kr/RSS/news.xml',                                      'rss', 'dunya', 1),
+    ('The Japan Times (Japonya)',   'https://www.japantimes.co.jp',     'https://www.japantimes.co.jp/feed/',                                     'rss', 'dunya', 1),
+    ('South China Morning Post',    'https://www.scmp.com',             'https://www.scmp.com/rss/91/feed',                                       'rss', 'dunya', 1),
+    ('Hindustan Times (Hindistan)', 'https://www.hindustantimes.com',   'https://www.hindustantimes.com/feeds/rss/world-news/rssfeed.xml',        'rss', 'dunya', 1),
+    ('TASS (Rusya)',                'https://tass.com',                 'https://tass.com/rss/v2.xml',                                            'rss', 'dunya', 1),
+    ('Kyiv Independent (Ukrayna)',  'https://kyivindependent.com',      'https://kyivindependent.com/rss/',                                       'rss', 'dunya', 1),
+    ('Der Spiegel (Almanya)',       'https://www.spiegel.de',           'https://www.spiegel.de/international/index.rss',                         'rss', 'dunya', 1),
+    ('Le Monde (Fransa)',           'https://www.lemonde.fr',           'https://www.lemonde.fr/international/rss_full.xml',                      'rss', 'dunya', 1),
+    ('El País (İspanya)',           'https://elpais.com',               'https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/internacional/portada', 'rss', 'dunya', 1),
+    ('Corriere della Sera (İtalya)','https://www.corriere.it',          'https://xml2.corriereobjects.it/rss/esteri.xml',                         'rss', 'dunya', 1),
+    ('Kathimerini (Yunanistan)',    'https://www.ekathimerini.com',     'https://www.ekathimerini.com/rss',                                       'rss', 'dunya', 1),
+    ('Al Jazeera English',          'https://www.aljazeera.com',        'https://www.aljazeera.com/xml/rss/all.xml',                              'rss', 'dunya', 1),
+    ('ABC News (Avustralya)',       'https://www.abc.net.au/news',      'https://www.abc.net.au/news/feed/51120/rss.xml',                         'rss', 'dunya', 1),
+    ('CBC News (Kanada)',           'https://www.cbc.ca/news',          'https://www.cbc.ca/webfeed/rss/rss-world',                               'rss', 'dunya', 1);
+
+INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_cok_okunan_kaynaklar_2026_10_29', '29.10.2026');
+
+-- ---------------------------------------------------------------------------
+-- Kaynak testi sonrasi onarim (29.10.2026, site sahibi: "kaynaklarin hepsini
+-- test et; hatali kaynak varsa duzelt, duzelmiyorsa kaldir"). Tum kaynaklar
+-- GitHub Actions'tan sinandi (105 kaynak: 95 calisan, 10 calismayan); yeni
+-- adresler ayni yerden aday olarak sinandi, calisanlar yaziliyor.
+--
+-- Duzeltilenler (RSS bos ya da reddediyorsa ajan liste sayfasini kaziyor):
+--   - CNN Turk Teknoloji: bilim-teknoloji beslemesi bos; teknoloji beslemesi
+--     16 girdi, liste yedegi 7 baglanti.
+--   - Corriere della Sera: esteri beslemesi bos; Esteri sayfasi 40 baglanti.
+--   - Kathimerini: besleme 403; News sayfasi 21 baglanti.
+--   - Kyiv Independent: /rss/ 404; sitenin ilan ettigi besleme 15 girdi.
+--   - Milliyet Gundem / Dunya: beslemeler bos; bolum sayfalari 34 / 38
+--     baglanti (Milliyet Ekonomi de boyle calisiyor).
+--   - Yahoo News: yeni besleme 403; news.yahoo.com/rss 12 girdi, World
+--     sayfasi yedek.
+--   - Anadolu Ajansi Politika / Saglik: beslemelerin en taze girdisi 203 /
+--     186 gun once; bolum sayfalari 25'er baglanti.
+--   - TRT Haber Spor, NTV Saglik: beslemeler 2-3 gundur bos kaliyor; bolum
+--     sayfasi yedek (15 / 11 baglanti).
+--   - Der Spiegel: International beslemesi 2 gundur bos; Ausland beslemesi
+--     20 girdi (Almanca; ajan Turkce ozetliyor).
+-- Kapatilanlar (hicbir yoldan haber alinamadi):
+--   - Fortune Turkiye: sunucu baglanti kabul etmiyor (HTTP 0), RSS de liste de.
+--   - People: her adres 403.
+--   - TUIK: bulten sayfasi betikle doluyor, kazima sonuc vermiyor; enflasyon
+--     zaten TCMB EVDS uzerinden geliyor.
+-- Tek seferlik (gecis anahtari): panelden yapilan sonraki degisiklik ezilmez.
+-- ---------------------------------------------------------------------------
+UPDATE kaynaklar SET besleme_url = 'https://www.cnnturk.com/feed/rss/teknoloji/news',
+       liste_url = 'https://www.cnnturk.com/teknoloji-haberleri/'
+ WHERE ad = 'CNN Türk Teknoloji'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = NULL, tur = 'web', liste_url = 'https://www.corriere.it/esteri/'
+ WHERE ad = 'Corriere della Sera (İtalya)'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = NULL, tur = 'web', liste_url = 'https://www.ekathimerini.com/news/'
+ WHERE ad = 'Kathimerini (Yunanistan)'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = 'https://kyivindependent.com/news-archive/rss/'
+ WHERE ad = 'Kyiv Independent (Ukrayna)'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = NULL, tur = 'web', liste_url = 'https://www.milliyet.com.tr/gundem/'
+ WHERE ad = 'Milliyet Gündem'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = NULL, tur = 'web', liste_url = 'https://www.milliyet.com.tr/dunya/'
+ WHERE ad = 'Milliyet Dünya'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = 'https://news.yahoo.com/rss/',
+       liste_url = 'https://www.yahoo.com/news/world/'
+ WHERE ad = 'Yahoo News'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = NULL, tur = 'web', liste_url = 'https://www.aa.com.tr/tr/politika'
+ WHERE ad = 'Anadolu Ajansı Politika'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = NULL, tur = 'web', liste_url = 'https://www.aa.com.tr/tr/saglik'
+ WHERE ad = 'Anadolu Ajansı Sağlık'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET liste_url = 'https://www.trthaber.com/haber/spor/'
+ WHERE ad = 'TRT Haber Spor'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET liste_url = 'https://www.ntv.com.tr/saglik'
+ WHERE ad = 'NTV Sağlık'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET besleme_url = 'https://www.spiegel.de/ausland/index.rss'
+ WHERE ad = 'Der Spiegel (Almanya)'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+UPDATE kaynaklar SET aktif = 0
+ WHERE ad IN ('Fortune Türkiye', 'People', 'TÜİK')
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_kaynak_onarimi_2026_10_29');
+INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_kaynak_onarimi_2026_10_29', '29.10.2026');
+-- ValPapel, ValSpor, ValMagazin (29.10.2026, site sahibinin istegi:
+-- "ekonomi sayfasini ValPapel yapalim: dunyadan ekonomi haberleri, Turkiye
+-- haberleri, doviz, altin, kripto paralar, borsa, dunya borsalari; ValSpor:
+-- futbol, basketbol, voleybol, puan durumu, dunya futbolu, Super Lig;
+-- ValMagazin: burclar, sanat haberleri, sanatcilarin yorumlari, yemek
+-- tarifleri"). Sayfalar gazete.php, tanimlar includes/gazeteler.php.
+--
+-- Magazin basligi OLCULU (site sahibinin karari): sanatcilarin
+-- aciklamalari, roportajlari, yeni albüm/dizi/film/konser ve odulleri;
+-- dedikodu ve ozel hayat yayimlanmaz (ajan/src/Yazar.php). Ana sayfa
+-- akisina girmiyor, yalnizca ValMagazin'de (HABER_AKIS_DISI).
+--
+-- Yeni kaynaklar GitHub Actions'tan aday olarak sinandi (29.10.2026):
+-- hepsi calisti. Sinanip eklenmeyenler: NTV Magazin (404), TRT Spor (404).
+-- Ingilizce kripto ve piyasa yayinlarini ajan Turkce ozetliyor.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kategoriler (ad, slug, aciklama, sira) VALUES
+    ('Magazin', 'magazin', 'Sanatçıların açıklamaları ve röportajları, yeni albüm, şarkı, dizi, film, konser ve ödüller (dedikodu ve özel hayat değil)', 85);
+
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, kategori, aktif) VALUES
+    ('Hürriyet Kelebek',     'https://www.hurriyet.com.tr', 'https://www.hurriyet.com.tr/rss/kelebek',            NULL,                                           'rss', 'magazin', 1),
+    ('Habertürk Magazin',    'https://www.haberturk.com',   'https://www.haberturk.com/rss/magazin.xml',          NULL,                                           'rss', 'magazin', 1),
+    ('CNN Türk Magazin',     'https://www.cnnturk.com',     'https://www.cnnturk.com/feed/rss/magazin/news',      'https://www.cnnturk.com/magazin-haberleri/',   'rss', 'magazin', 1),
+    ('Milliyet Magazin',     'https://www.milliyet.com.tr', NULL,                                                 'https://www.milliyet.com.tr/magazin/',         'web', 'magazin', 1),
+    ('CoinDesk',             'https://www.coindesk.com',    'https://www.coindesk.com/arc/outboundfeeds/rss/',    NULL,                                           'rss', 'ekonomi', 1),
+    ('Cointelegraph',        'https://cointelegraph.com',   'https://cointelegraph.com/rss',                      NULL,                                           'rss', 'ekonomi', 1),
+    ('Habertürk Kripto',     'https://www.haberturk.com',   NULL,                                                 'https://www.haberturk.com/ekonomi/kripto-para', 'web', 'ekonomi', 1),
+    ('Habertürk Borsa',      'https://www.haberturk.com',   NULL,                                                 'https://www.haberturk.com/ekonomi/borsa',      'web', 'ekonomi', 1),
+    ('CNBC Markets',         'https://www.cnbc.com',        'https://www.cnbc.com/id/20910258/device/rss/rss.html', NULL,                                         'rss', 'ekonomi', 1),
+    ('MarketWatch',          'https://www.marketwatch.com', 'https://feeds.marketwatch.com/marketwatch/topstories/', NULL,                                        'rss', 'ekonomi', 1),
+    ('Anadolu Ajansı Basketbol', 'https://www.aa.com.tr',   NULL,                                                 'https://www.aa.com.tr/tr/spor/basketbol',      'web', 'spor',    1),
+    ('Anadolu Ajansı Voleybol',  'https://www.aa.com.tr',   NULL,                                                 'https://www.aa.com.tr/tr/spor/voleybol',       'web', 'spor',    1);

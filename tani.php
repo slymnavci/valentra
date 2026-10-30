@@ -186,7 +186,7 @@ if (!is_file($ayarDosyasi)) {
     <meta name="robots" content="noindex, nofollow">
     <title>Bağlantı Teşhisi — Valentra</title>
     <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/assets/admin.css">
+    <link rel="stylesheet" href="/assets/admin.css?s=<?= (int) @filemtime(__DIR__ . '/assets/admin.css') ?>">
 </head>
 <body>
     <div class="giris-sayfa">

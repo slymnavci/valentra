@@ -2,47 +2,68 @@
 declare(strict_types=1);
 
 /**
- * Yan pencerenin "Valentra Diyor ki…" kutusu (en ustte).
+ * Yan pencerenin "Yazarlarımız" kutusu (en ustte, sayfanin en saginda).
  *
- * 22.10.2026'ya kadar ana sayfada mansetle ayni siradaydi ve mansetin
- * boyuna sigdiriliyordu; artik yan pencerede, kendi boyunda. Gorunum
- * oteki pencerelerle ayni aileden (numarali liste, baslik, altinda
- * konu). Tarih baslikta: bir gunun yazilari, her satirda ayni tarihi
- * tekrarlamak yer kaybi. En altta butun yazilarin listesine bag.
+ * Site sahibinin istegi (23.10.2026): "yazarlarin yazilari her gun
+ * gazetenin en saginda dursun, gecmis yazilarina da okuyucular
+ * ulasabilsin". Her yazar: portresi, adi, alani ve en son yazisinin
+ * basligi. Portre ve ad yazar sayfasina (butun yazilari), baslik yaziya
+ * gidiyor. En altta butun yazilarin listesine bag.
  *
  * Yayinda yazi yoksa HICBIR SEY basilmiyor: bos bir kutu siteyi eksik
  * gosterir.
  *
- * $koseYazilari'ni cagiran doldurur (includes/yan_pencere.php).
+ * $yazarYazilari'ni cagiran doldurur (includes/yan_pencere.php).
  */
 
-if (($koseYazilari ?? []) === []) {
+if (($yazarYazilari ?? []) === []) {
     return;
 }
 ?>
 <section class="pencere kose-kutu" aria-labelledby="kose-kutu-baslik">
-    <h2 class="pencere-baslik kose-kutu-baslik" id="kose-kutu-baslik">
-        Valentra Diyor ki…
-        <span><?= e(tarih_bicimle((string) $koseYazilari[0]['gun'], false)) ?></span>
-    </h2>
+    <h2 class="pencere-baslik kose-kutu-baslik" id="kose-kutu-baslik">Yazarlarımız</h2>
 
-    <ol class="sirali-liste">
-        <?php foreach ($koseYazilari as $sira => $yazi): ?>
+    <ul class="yazar-listesi">
+        <?php foreach ($yazarYazilari as $satir): ?>
+            <?php $yazar = $satir['yazar']; $yazi = $satir['yazi']; ?>
             <li>
-                <span class="sira"><?= $sira + 1 ?></span>
-                <a href="<?= e(kose_yolu((string) $yazi['slug'])) ?>">
-                    <span class="ad"><?= e((string) $yazi['baslik']) ?></span>
-                    <?php if ((string) $yazi['gundem'] !== ''): ?>
-                        <span class="ust-bilgi"><?= e((string) $yazi['gundem']) ?></span>
-                    <?php endif; ?>
+                <a class="yazar-portre-bag" href="<?= e(yazar_yolu($yazar['anahtar'])) ?>" aria-hidden="true" tabindex="-1">
+                    <?= yazar_portre_svg($yazar['anahtar'], 52) ?>
                 </a>
+                <div class="yazar-metin">
+                    <a class="yazar-ad" href="<?= e(yazar_yolu($yazar['anahtar'])) ?>"><?= e($yazar['ad']) ?></a>
+                    <a class="yazar-yazi" href="<?= e(kose_yolu((string) $yazi['slug'])) ?>"><?= e((string) $yazi['baslik']) ?></a>
+                    <span class="yazar-tarih"><?= e(tarih_bicimle((string) $yazi['gun'], false)) ?></span>
+                </div>
             </li>
         <?php endforeach; ?>
-    </ol>
+    </ul>
 
     <p class="pencere-not kose-kutu-tumu">
         <a href="<?= e(kose_liste_yolu()) ?>">Tüm yazılar &rarr;</a>
-        &middot; Valentra Yayın Kurulu
     </p>
 </section>
 
+<script>
+(function () {
+    /*
+     * Ana sayfa vitrininde kutu yuksekligi sabit (kaydirakla esit): sigmayan
+     * yazar yarim kesik gorunmesin, tamamen gizlensin; hepsi "Tum yazilar"da.
+     * Yeniden boyutlanmada tekrar hesaplaniyor.
+     */
+    var liste = document.currentScript.previousElementSibling.querySelector('.yazar-listesi');
+    if (!liste || !liste.closest('.vitrin')) { return; }
+
+    function sigdir() {
+        var ogeler = liste.querySelectorAll('li');
+        ogeler.forEach(function (li) { li.hidden = false; });
+        var alt = liste.getBoundingClientRect().bottom;
+        ogeler.forEach(function (li) {
+            if (li.getBoundingClientRect().bottom > alt + 1) { li.hidden = true; }
+        });
+    }
+
+    sigdir();
+    window.addEventListener('resize', sigdir);
+})();
+</script>

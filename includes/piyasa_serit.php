@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Piyasa şeridi: dolar, euro, gram altın, ons altın, BIST 100.
+ * Piyasa şeridi: dolar, euro, gram altın, BIST 100.
  *
  * Ilk deger sunucu tarafinda basiliyor; JavaScript kapali olsa da serit
  * dolu geliyor. Sonrasini 2 dakikada bir tarayici tazeliyor.
@@ -17,7 +17,7 @@ $piyasa = piyasa_verisi();
 
 // Hicbir deger yoksa serit hic cizilmesin; bos bir cubuk kotu durur.
 if ($piyasa['usd'] === null && $piyasa['eur'] === null && $piyasa['bist'] === null
-    && ($piyasa['altin'] ?? null) === null && ($piyasa['ons'] ?? null) === null) {
+    && ($piyasa['altin'] ?? null) === null) {
     return;
 }
 
@@ -64,7 +64,7 @@ $yon = static function (?float $degisim, string $ad) : string {
         <div class="piyasa-grup"<?= $kopya === 1 ? ' aria-hidden="true"' : '' ?>>
             <?php if ($piyasa['usd'] !== null): ?>
                 <span class="piyasa-oge">
-                    <span class="ad">USD/TL</span>
+                    <span class="ad"><span class="uzun">USD/TL</span><span class="kisa">USD</span></span>
                     <span class="deger" data-piyasa="usd"><?= e($bicimle($piyasa['usd'], 4)) ?></span>
                     <?= $yon($piyasa['usd_degisim'] ?? null, 'usd_degisim') ?>
                 </span>
@@ -72,7 +72,7 @@ $yon = static function (?float $degisim, string $ad) : string {
 
             <?php if ($piyasa['eur'] !== null): ?>
                 <span class="piyasa-oge">
-                    <span class="ad">EUR/TL</span>
+                    <span class="ad"><span class="uzun">EUR/TL</span><span class="kisa">EUR</span></span>
                     <span class="deger" data-piyasa="eur"><?= e($bicimle($piyasa['eur'], 4)) ?></span>
                     <?= $yon($piyasa['eur_degisim'] ?? null, 'eur_degisim') ?>
                 </span>
@@ -80,32 +80,20 @@ $yon = static function (?float $degisim, string $ad) : string {
 
             <?php if (($piyasa['altin'] ?? null) !== null): ?>
                 <span class="piyasa-oge">
-                    <span class="ad">GRAM ALTIN</span>
+                    <span class="ad"><span class="uzun">GRAM ALTIN</span><span class="kisa">ALTIN</span></span>
                     <span class="deger" data-piyasa="altin"><?= e($bicimle($piyasa['altin'], 2)) ?></span>
                     <?= $yon($piyasa['altin_degisim'] ?? null, 'altin_degisim') ?>
                 </span>
             <?php endif; ?>
 
-            <?php if (($piyasa['ons'] ?? null) !== null): ?>
-                <span class="piyasa-oge">
-                    <span class="ad">ONS ($)</span>
-                    <span class="deger" data-piyasa="ons"><?= e($bicimle($piyasa['ons'], 2)) ?></span>
-                    <?= $yon($piyasa['ons_degisim'] ?? null, 'ons_degisim') ?>
-                </span>
-            <?php endif; ?>
-
+            <?php // Ons altin ve guncelleme saati seritten cikti (24.10.2026, site sahibi). ?>
             <?php if ($piyasa['bist'] !== null): ?>
                 <span class="piyasa-oge">
-                    <span class="ad">BIST 100</span>
+                    <span class="ad"><span class="uzun">BIST 100</span><span class="kisa">BIST</span></span>
                     <span class="deger" data-piyasa="bist"><?= e($bicimle($piyasa['bist'], 2)) ?></span>
                     <?= $yon($piyasa['bist_degisim'] ?? null, 'bist_degisim') ?>
                 </span>
             <?php endif; ?>
-
-            <span class="piyasa-oge piyasa-zaman">
-                <span class="ad">GÜNCELLEME</span>
-                <span class="deger" data-piyasa="zaman"><?= e(date('H:i', strtotime($piyasa['zaman']))) ?></span>
-            </span>
         </div>
         <?php endfor; ?>
     </div>
@@ -142,11 +130,10 @@ $yon = static function (?float $degisim, string $ad) : string {
                 if (v.eur !== null)  { yaz('eur', bicimle(v.eur, 4)); }
                 if (v.bist !== null) { yaz('bist', bicimle(v.bist, 2)); }
                 if (v.altin !== null && v.altin !== undefined) { yaz('altin', bicimle(v.altin, 2)); }
-                if (v.ons !== null && v.ons !== undefined) { yaz('ons', bicimle(v.ons, 2)); }
 
                 // Butun kalemler ayni sekilde tazeleniyor; PHP tarafindaki
                 // $yon islevinin JavaScript karsiligi.
-                ['usd_degisim', 'eur_degisim', 'altin_degisim', 'ons_degisim', 'bist_degisim'].forEach(function (ad) {
+                ['usd_degisim', 'eur_degisim', 'altin_degisim', 'bist_degisim'].forEach(function (ad) {
                     var d = v[ad];
 
                     if (d === null || d === undefined) { return; }
@@ -161,7 +148,6 @@ $yon = static function (?float $degisim, string $ad) : string {
                     });
                 });
 
-                if (v.zaman) { yaz('zaman', v.zaman.substring(11, 16)); }
             })
             .catch(function () { /* Gecici hata seridi bozmasin, eski deger kalsin. */ });
     }

@@ -20,15 +20,17 @@ $sayfa = max(1, (int) ($_GET['sayfa'] ?? 1));
  */
 $adet       = 12;   // izgaradaki kart sayisi
 /*
- * Manset 10 haber — SITE SAHIBININ KARARI, degistirmeyin.
+ * Manset 20 haber — SITE SAHIBININ KARARI, degistirmeyin.
  *
  * Iki kez dusuruldu (tasarim turunda 5'e, Eylul 2026'daki ana sayfa
- * duzeninde 3'e) ve ikisinde de site sahibi 10'a geri aldirdi. "Bugun
- * bilmeniz gerekenler" kutusu mansetle birlikte duruyor; manset sayisini
- * azaltmayi gerektirmiyor. Kaydirak tukettigi haberleri izgaradan
- * dusuyor, yani ilk sayfadaki izgara 11. haberden basliyor.
+ * duzeninde 3'e) ve ikisinde de site sahibi 10'a geri aldirdi; 22.10.2026
+ * site sahibinin istegiyle 20'ye cikti. "Bugun bilmeniz gerekenler"
+ * kutusu mansetle birlikte duruyor; manset sayisini azaltmayi
+ * gerektirmiyor. Kaydirak tukettigi haberleri izgaradan dusuyor, yani
+ * ilk sayfadaki izgara 21. haberden basliyor. Secici dugmeler tek satir;
+ * telefonda numarasiz noktalar (assets/style.css, .kaydirak-sayfalar).
  */
-$mansetAdet = 10;   // kaydiraktaki haber sayisi
+$mansetAdet = ANA_SAYFA_MANSET_ADEDI;   // 20; kaydiraktaki haber sayisi (spor kotasi da buna gore)
 
 /*
  * Resmi Gazete kaynakli haberler ana sayfa akisinda yok; kendi
@@ -41,6 +43,19 @@ $toplam = haber_yayinda_sayisi(true);
 // Kaydirak yalnizca ilk sayfada; tukettigi haberler izgarada tekrarlanmaz.
 // Iki sorgu da ayni siralamayi (one_cikan, yayin_tarihi) kullandigi icin
 // kaydiragin tukettigi kadar atlamak yeterli.
+// Taslakta kalan haberler (otomatik yayin acikken; bkz. haber_bugunku_taslaklari_yayinla).
+haber_bugunku_taslaklari_yayinla_arada();
+
+// Ajan iki saatte bir: GitHub zamanlamasi guvenilmez, site de tetikliyor
+// (bkz. ajan_otomatik_tetikle_arada). Sayfa gittikten sonra calisir.
+require_once __DIR__ . '/includes/ajan_tetikle.php';
+ajan_otomatik_tetikle_sayfa_sonunda();
+
+// Ajanin siteye gonderemedigi (IHS zaman asimi) haberleri site GitHub'dan
+// kendisi aliyor; en fazla yarim saatte bir, sayfa gittikten sonra.
+require_once __DIR__ . '/includes/ajan_teslim.php';
+ajan_teslim_sayfa_sonunda();
+
 $mansetler = $sayfa === 1 ? haber_manset($mansetAdet, true) : [];
 $tuketilen = min($mansetAdet, $toplam);
 
@@ -53,40 +68,73 @@ $sayfaBasligi = $sayfa > 1
     ? 'Güncel Haberler — Sayfa ' . $sayfa . ' | Valentra'
     : 'Valentra — Güncel Haberler';
 
+// Ana sayfanin 2., 3. ... sayfalari Google'a sunulmuyor (26.10.2026):
+// icerikleri haberlerin kendisinde; 'follow' ile baglantilar yine taraniyor.
+if ($sayfa > 1) {
+    $seoRobots = 'noindex, follow';
+}
+
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
 
 <?php if ($toplam === 0): ?>
     <div class="bos-durum">
-        <strong>Henüz yayımlanmış haber yok.</strong>
-        Ajanın derlediği haberler yönetici onayından geçtikten sonra burada görünecek.
+        <?php /* Ana sayfa kaynakta bugun ve dun yayimlanmis haberleri gosteriyor
+                 (haber_ana_akis_kosulu); eskiler konu sayfalarinda. */ ?>
+        <strong>Henüz haber yok.</strong>
+        Yeni haberler gün içinde burada görünecek; önceki haberler konu sayfalarında.
     </div>
 <?php else: ?>
 
-    <?php /* Ana kolon + yan pencere. Yan pencere mobilde ana kolonun altina duser. */ ?>
-    <div class="ana-duzen">
-        <div class="ana-kolon">
-            <?php
-            /*
-             * Manset ana kolonun tam genisliginde (22.10.2026, site
-             * sahibinin istegi: "ana haber alani daha buyuk olsun").
-             * "Valentra Diyor ki…" kutusu eskiden mansetle ayni siradaydi
-             * ve mansetı daraltiyordu; artik yan pencerede, "Konular"in
-             * yerinde (includes/yan_pencere.php).
-             *
-             * "Bugun bilmeniz gerekenler" (vergi takvimi, KDV hesabi,
-             * pratik bilgiler kisayollari) Ekim 2026'da kaldirildi; site
-             * genel haber ozetlerine dondu.
-             */
-            ?>
+    <?php
+    /*
+     * VITRIN (site sahibinin istegi, 24.10.2026: "yazarlar en sagda;
+     * hava durumunun boyu ile slaytlarin boyu, yazarlarin boyu ayni; alti
+     * haber olacak; seritte bosluklar istemiyorum, yerlesim cok muntazam
+     * olmali" ve "hava durumunda seride paralel buyuk sehir havasi").
+     *
+     *   1. sira, ayni yukseklikte: kaydirak | hava durumu | Yazarlarimiz
+     *   2. sira, ayni yukseklikte: piyasa seridi | buyuk sehirler seridi
+     *   Altinda haberler (ana kolon) ve yan pencerenin geri kalani.
+     *
+     * Dar ekranda kaydirak tam genislikte, hava ve Yazarlarimiz yan
+     * yana; telefonda hepsi alt alta (assets/style.css, .vitrin).
+     */
+    require_once __DIR__ . '/includes/kose.php';
+
+    try {
+        $yazarYazilari = $sayfa === 1 ? kose_yazarlarin_son_yazilari() : [];
+    } catch (PDOException $e) {
+        $yazarYazilari = [];
+    }
+
+    ?>
+    <?php if ($sayfa === 1): ?>
+    <section class="vitrin">
+        <div class="vitrin-manset">
             <?php require __DIR__ . '/includes/kaydirak.php'; ?>
+        </div>
 
-            <?php /* Piyasa seridi kaydiragin hemen altinda: sayfa acilir
-                     acilmaz gorunen, surekli degisen tek veri. */ ?>
+        <?php require __DIR__ . '/includes/hava_kutu.php'; ?>
+        <?php require __DIR__ . '/includes/kose_kutu.php'; ?>
+
+        <div class="vitrin-piyasa">
             <?php require __DIR__ . '/includes/piyasa_serit.php'; ?>
+        </div>
 
-            <?php /* Kur grafikleri ana sayfadan kaldirildi (22.10.2026, site
-                     sahibinin karari); kurlar ve BIST seritte kaliyor. */ ?>
+        <div class="vitrin-sehirler">
+            <?php require __DIR__ . '/includes/hava_sehir_seridi.php'; ?>
+        </div>
+    </section>
+
+    <?php /* Dunyadan son dakika (29.10.2026): vitrinin hemen altinda, tam genislikte. */ ?>
+    <?php require __DIR__ . '/includes/dunya_seridi.php'; ?>
+    <?php endif; ?>
+
+    <?php /* Ana kolon + yan pencere. Yan pencere mobilde ana kolonun altina duser.
+             Vitrin (Yazarlarimiz, hava) yalnizca ilk sayfada. */ ?>
+    <div class="ana-duzen anasayfa">
+        <div class="ana-kolon">
 
             <?php
             /*

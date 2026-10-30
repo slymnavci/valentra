@@ -29,6 +29,45 @@
         </div>
     <?php endif; ?>
 
+    <?php
+    /*
+     * OpenAI (Luna) kredisi bitti / anahtar gecersiz uyarisi. Site
+     * sahibinin istegi (23.10.2026): "kredi biterse bana haber ver".
+     * Ajan her toplamada durumu bildiriyor; kredi yuklenince ilk
+     * basarili calismada uyari kendiliginden kalkiyor.
+     */
+    require_once __DIR__ . '/../includes/openai_durum.php';
+    $openAiUyari = openai_durum_uyarisi();
+
+    if ($openAiUyari !== null):
+        $openAiGun = intdiv(time() - (int) $openAiUyari['ilk'], 86400);
+    ?>
+        <div class="sinirli">
+            <div class="uyari uyari-hata" style="margin-top:18px;">
+                <?php if ($openAiUyari['durum'] === 'kredi'): ?>
+                    <strong>OpenAI kredisi bitti.</strong>
+                    Haberler şu an yedek model (Gemini) ile yazılıyor; bu yaklaşık
+                    6 kat daha pahalı. Kredi yükleyin; ajanın bir sonraki
+                    çalışmasında Luna'ya kendiliğinden döner ve bu uyarı kalkar.
+                    <a href="https://platform.openai.com/settings/organization/billing/overview"
+                       target="_blank" rel="noopener" class="dugme dugme-ana"
+                       style="margin-left:10px;">Kredi yükle</a>
+                <?php else: ?>
+                    <strong>OpenAI anahtarı geçersiz.</strong>
+                    Haberler şu an yedek model (Gemini) ile yazılıyor. GitHub'daki
+                    <code>OPENAI_API_KEY</code> değerini yeni bir anahtarla güncelleyin.
+                    <a href="https://platform.openai.com/api-keys" target="_blank"
+                       rel="noopener" class="dugme dugme-ana" style="margin-left:10px;">API anahtarları</a>
+                <?php endif; ?>
+                <br><small>
+                    Son kontrol: <?= e(date('d.m.Y H:i', (int) $openAiUyari['zaman'])) ?>
+                    <?= $openAiGun > 0 ? ' · ' . $openAiGun . ' gündür sürüyor' : '' ?>
+                    <?= $openAiUyari['mesaj'] !== '' ? ' · OpenAI: ' . e(mb_substr($openAiUyari['mesaj'], 0, 160, 'UTF-8')) : '' ?>
+                </small>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <div class="sinirli">
             <a class="logo" href="gunluk.php" style="color:#fff;display:flex;align-items:center;gap:10px;"><img src="/assets/logo.svg" alt="" width="30" height="26" style="background:#fff;border-radius:4px;padding:2px;">VALENTRA</a>
             <?php
@@ -39,28 +78,38 @@
              */
             $panelMenu = [
                 'Günlük işler'  => 'gunluk.php',
-                'Haberler'      => 'index.php',
+                'Haberler'      => [
+                    'Haberler'          => 'index.php',
+                    'Videolu haberler'  => 'videolar.php',
+                ],
+                // Site sahibinin istegi (23.10.2026): okunma istatistigi
+                // ust menude, acilir listenin icinde kaybolmasin.
+                'Ziyaretçiler'  => 'istatistik.php',
+                /*
+                 * Sitede gorunmeyen bolumler menuden cikti (site sahibinin
+                 * istegi, 24.10.2026: "yonetim alanindan egitim, rehberler
+                 * gibi ana sayfada olmayan bilgileri kaldiralim"): Egitim,
+                 * Egitim aktarimi, Rehberler, Pratik bilgiler, Kanun
+                 * metinleri. Sayfalar ve veriler duruyor; adresle
+                 * acilabiliyor. Grafikler kaldi: Piyasalar sayfasindaki
+                 * Ekonomik Gostergeler onlardan.
+                 */
                 'İçerik'        => [
                     'Köşe yazıları'   => 'kose-yazilari.php',
-                    'Rehberler'       => 'rehberler.php',
-                    'Pratik bilgiler' => 'pratik.php',
                     'Grafikler'       => 'grafikler.php',
-                    'Kanun metinleri' => 'kanunlar.php',
                 ],
-                'Eğitim'        => 'egitim.php',
                 'Ajan ve aktarım' => [
                     'Ajan'             => 'ajan.php',
                     'Kaynaklar'        => 'kaynaklar.php',
                     'Ajan anahtarları' => 'anahtarlar.php',
-                    'Eğitim aktarımı'  => 'egitim.php',
                 ],
                 'Arama motorları' => [
                     'Google görünürlüğü'       => 'google.php',
                     'Arama motoru ayarları'    => 'seo.php',
                 ],
                 'Site'          => [
+                    'Künye ve iletişim' => 'kunye.php',
                     'Spor verisi'  => 'spor.php',
-                    'Ziyaretçiler' => 'istatistik.php',
                     'Veritabanı'   => 'veritabani.php',
                     'Siteyi gör ↗' => '/',
                 ],

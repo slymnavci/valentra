@@ -4,17 +4,20 @@ declare(strict_types=1);
 /**
  * Köşe yazıları: "Valentra Diyor ki…"
  *
- * Ajan her gun gundemden 3-4 madde seciyor ve her biri icin ayri bir yazi
- * yaziyor (ajan/kose.php). Yazilar taslak olarak giriyor ve yalnizca
- * panelden yayina aliniyor: yorum iceren bir yazida yanlis bir rakam ya da
- * degerlendirme dogrudan okuyucuya ulasmamali.
+ * Her gun her yazar (includes/yazarlar.php) kendi alanindan bir konu
+ * seciyor ve kendi uslubuyla bir yazi yaziyor (ajan/kose.php; 23.10.2026,
+ * site sahibinin istegi). Yazilar taslak olarak giriyor; otomatik yayin
+ * aciksa (haberlerle ayni ayar, bkz. haber_otomatik_yayin_acik) hemen
+ * yayina aliniyor, kapaliysa panelden onay bekliyor.
  *
  * Durumlar haberlerle ayni (HABER_TASLAK / HABER_YAYINDA /
  * HABER_REDDEDILDI); panelde ayni rozetler ve ayni akis kullaniliyor.
  */
 
-/** Bir günün en fazla kaç yazısı olabilir. */
-const KOSE_GUNLUK_TAVAN = 4;
+require_once __DIR__ . '/yazarlar.php';
+
+/** Bir günün en fazla kaç yazısı olabilir: her yazara bir yazı. */
+const KOSE_GUNLUK_TAVAN = 12;   // 7 genel + 5 spor yorumcusu (25.10.2026)
 
 /** Yazının asgari uzunluğu (karakter). Kısa bir yazı köşe yazısı değildir. */
 const KOSE_ASGARI_METIN = 800;
@@ -46,6 +49,18 @@ function kose_taslak_ekle(array $veri): array
     }
 
     $idler = kose_id_listesi($veri['haber_idleri'] ?? []);
+    $yazar = yazar_bul((string) ($veri['yazar'] ?? '')) !== null ? (string) $veri['yazar'] : KOSE_VARSAYILAN_YAZAR;
+
+    // Her yazara gunde bir yazi (reddedilen sayilmaz).
+    $gunun = db()->prepare(
+        'SELECT id FROM kose_yazilari WHERE gun = :g AND yazar = :y AND durum <> :r LIMIT 1'
+    );
+    $gunun->execute(['g' => $gun, 'y' => $yazar, 'r' => HABER_REDDEDILDI]);
+    $gununki = $gunun->fetchColumn();
+
+    if ($gununki !== false) {
+        return ['durum' => 'yinelenen', 'id' => (int) $gununki];
+    }
 
     $parmak = hash('sha256', $gun . '|' . mb_strtolower($baslik, 'UTF-8'));
 
@@ -59,14 +74,15 @@ function kose_taslak_ekle(array $veri): array
 
     $ekle = db()->prepare(
         'INSERT INTO kose_yazilari
-            (gun, sira, gundem, baslik, slug, ozet, icerik, haber_idleri, ajan_notu, parmak, durum)
+            (gun, sira, gundem, yazar, baslik, slug, ozet, icerik, haber_idleri, ajan_notu, parmak, durum)
          VALUES
-            (:gun, :sira, :gundem, :baslik, :slug, :ozet, :icerik, :idler, :not, :parmak, :durum)'
+            (:gun, :sira, :gundem, :yazar, :baslik, :slug, :ozet, :icerik, :idler, :not, :parmak, :durum)'
     );
     $ekle->execute([
         'gun'    => $gun,
         'sira'   => max(0, min(255, (int) ($veri['sira'] ?? 0))),
         'gundem' => mb_substr($gundem, 0, 200, 'UTF-8'),
+        'yazar'  => $yazar,
         'baslik' => mb_substr($baslik, 0, 300, 'UTF-8'),
         'slug'   => kose_benzersiz_slug($baslik),
         'ozet'   => mb_substr($ozet, 0, 600, 'UTF-8'),
@@ -77,7 +93,13 @@ function kose_taslak_ekle(array $veri): array
         'durum'  => HABER_TASLAK,
     ]);
 
-    return ['durum' => 'eklendi', 'id' => (int) db()->lastInsertId()];
+    $id = (int) db()->lastInsertId();
+
+    if (haber_otomatik_yayin_acik()) {
+        kose_yayinla($id, null);
+    }
+
+    return ['durum' => 'eklendi', 'id' => $id];
 }
 
 /**
@@ -350,6 +372,71 @@ function kose_dayanaklar(string $idler): array
     return $sonuc;
 }
 
+/**
+ * Yazıların görselleri: dayandığı haberlerden görseli olan İLKİNİN görseli
+ * (site sahibinin istegi, 23.10.2026: "kose yazilarinda resim de
+ * ekleyelim, konuyla ilgili bir resim"). Yazi o haberlerin yorumu; haberin
+ * gorseli konuyla birebir ilgili ve haber gorselleriyle ayni yoldan
+ * (sitenin kendi sunucusu, bkz. haber_gorsel) geliyor. Ajan haberleri
+ * onem sirasiyla verdigi icin ilk gorselli haber yazinin ana konusu.
+ *
+ * Liste sayfasi icin toplu: tek sorgu.
+ *
+ * @param list<array<string,mixed>> $yazilar
+ * @return array<int,array{src:string,kaynak:string}> yazi id => gorsel
+ */
+function kose_gorselleri(array $yazilar): array
+{
+    $yaziHaberleri = [];
+    $hepsi = [];
+
+    foreach ($yazilar as $yazi) {
+        $idler = kose_id_listesi((string) ($yazi['haber_idleri'] ?? ''));
+        $yaziHaberleri[(int) $yazi['id']] = $idler;
+        array_push($hepsi, ...$idler);
+    }
+
+    $hepsi = array_values(array_unique($hepsi));
+
+    if ($hepsi === []) {
+        return [];
+    }
+
+    $yer = implode(',', array_fill(0, count($hepsi), '?'));
+    $ifade = db()->prepare(
+        'SELECT id, gorsel_url, kaynak_adi FROM haberler
+          WHERE id IN (' . $yer . ') AND gorsel_url IS NOT NULL AND gorsel_url <> \'\''
+    );
+    $ifade->execute($hepsi);
+
+    $haberler = [];
+
+    foreach ($ifade->fetchAll() as $h) {
+        $haberler[(int) $h['id']] = $h;
+    }
+
+    $sonuc = [];
+
+    foreach ($yaziHaberleri as $yaziId => $idler) {
+        foreach ($idler as $id) {
+            if (!isset($haberler[$id])) {
+                continue;
+            }
+
+            $src = haber_gorsel($haberler[$id]);
+
+            if ($src !== '') {
+                $sonuc[$yaziId] = ['src' => $src, 'kucuk' => haber_gorsel_kucuk($haberler[$id], 480),
+                                   'orta' => haber_gorsel_kucuk($haberler[$id], 960),
+                                   'kaynak' => (string) $haberler[$id]['kaynak_adi']];
+                break;
+            }
+        }
+    }
+
+    return $sonuc;
+}
+
 /** Yazı metnini HTML'e çevirir (bkz. bicimli_metin_html). */
 function kose_icerik_html(string $icerik): string
 {
@@ -371,7 +458,7 @@ function kose_icerik_html(string $icerik): string
  *
  * @return list<array<string,mixed>>
  */
-function kose_malzeme(int $saat = 36, int $limit = 60): array
+function kose_malzeme(int $saat = 36, int $limit = 300): array
 {
     $kullanilan = [];
 
@@ -390,7 +477,8 @@ function kose_malzeme(int $saat = 36, int $limit = 60): array
     $haberler = db()->prepare(
         'SELECT h.id, h.baslik, h.ozet, h.icerik, h.durum, h.kaynak_adi, h.kaynak_url,
                 h.analiz_degisen, h.analiz_etkilenen, h.analiz_zaman, h.analiz_islem,
-                h.onem, COALESCE(h.yayin_tarihi, h.olusturuldu) AS tarih, k.ad AS kategori
+                h.onem, COALESCE(h.yayin_tarihi, h.olusturuldu) AS tarih, k.ad AS kategori,
+                k.slug AS kategori_slug
            FROM haberler h
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
           WHERE h.durum IN (:y, :t)
@@ -429,7 +517,7 @@ function kose_malzeme(int $saat = 36, int $limit = 60): array
 function kose_onceki(int $gun = 10): array
 {
     $ifade = db()->prepare(
-        'SELECT gun, gundem, baslik FROM kose_yazilari
+        'SELECT gun, gundem, baslik, yazar FROM kose_yazilari
           WHERE gun >= :g AND durum <> :r
           ORDER BY gun DESC, sira'
     );
@@ -439,6 +527,7 @@ function kose_onceki(int $gun = 10): array
         'gun'    => substr((string) $s['gun'], 0, 10),
         'gundem' => (string) $s['gundem'],
         'baslik' => (string) $s['baslik'],
+        'yazar'  => (string) $s['yazar'],
     ], $ifade->fetchAll());
 }
 
@@ -464,4 +553,88 @@ function kose_gun_yazilari(string $gun): array
     $ifade->execute(['d' => HABER_YAYINDA, 'g' => substr($gun, 0, 10)]);
 
     return $ifade->fetchAll();
+}
+
+/**
+ * Her yazarın en son yayımlanan yazısı (yan pencere: "Yazarlarımız").
+ * Yazar sırası KOSE_YAZARLARI; yazısı olmayan yazar listede yok.
+ *
+ * @return list<array{yazar:array<string,mixed>,yazi:array<string,mixed>}>
+ */
+function kose_yazarlarin_son_yazilari(): array
+{
+    $ifade = db()->prepare(
+        'SELECT * FROM kose_yazilari WHERE durum = :d ORDER BY gun DESC, sira, id DESC LIMIT 200'
+    );
+    $ifade->execute(['d' => HABER_YAYINDA]);
+
+    $son = [];
+
+    foreach ($ifade->fetchAll() as $y) {
+        $anahtar = yazar_yazinin($y)['anahtar'];
+        $son[$anahtar] ??= $y;
+    }
+
+    $sonuc = [];
+
+    foreach (array_keys(KOSE_YAZARLARI) as $anahtar) {
+        if (isset($son[$anahtar])) {
+            $sonuc[] = ['yazar' => yazar_bul($anahtar), 'yazi' => $son[$anahtar]];
+        }
+    }
+
+    return $sonuc;
+}
+
+/**
+ * Bir yazarın yayımlanmış yazıları (yazar sayfası), en yenisi önce.
+ *
+ * @return array{yazilar:list<array<string,mixed>>,toplam:int}
+ */
+function kose_yazarin_yazilari(string $anahtar, int $sayfa = 1, int $adet = 12): array
+{
+    $kosul = 'durum = :d AND yazar = :y';
+    $param = ['d' => HABER_YAYINDA, 'y' => $anahtar];
+
+    $say = db()->prepare('SELECT COUNT(*) FROM kose_yazilari WHERE ' . $kosul);
+    $say->execute($param);
+
+    $liste = db()->prepare(
+        'SELECT * FROM kose_yazilari WHERE ' . $kosul . '
+          ORDER BY gun DESC, id DESC
+          LIMIT ' . max(1, $adet) . ' OFFSET ' . (max(1, $sayfa) - 1) * max(1, $adet)
+    );
+    $liste->execute($param);
+
+    return ['yazilar' => $liste->fetchAll(), 'toplam' => (int) $say->fetchColumn()];
+}
+
+/**
+ * Ajan için yazar listesi: alanı, konu başlıkları, üslubu ve bugün yazısı
+ * olup olmadığı (reddedilen sayılmaz).
+ *
+ * @return list<array<string,mixed>>
+ */
+function kose_yazarlar_ajan_icin(?string $gun = null): array
+{
+    $ifade = db()->prepare('SELECT DISTINCT yazar FROM kose_yazilari WHERE gun = :g AND durum <> :r');
+    $ifade->execute(['g' => $gun ?? date('Y-m-d'), 'r' => HABER_REDDEDILDI]);
+    $yazanlar = array_flip($ifade->fetchAll(PDO::FETCH_COLUMN));
+
+    $sonuc = [];
+
+    foreach (KOSE_YAZARLARI as $anahtar => $y) {
+        $sonuc[] = [
+            'anahtar'     => $anahtar,
+            'ad'          => $y['ad'],
+            'alan'        => $y['alan'],
+            'kategoriler' => $y['kategoriler'],
+            'anahtar_kelimeler' => $y['anahtar_kelimeler'] ?? [],
+            'haric_kelimeler'   => $y['haric_kelimeler'] ?? [],
+            'uslup'       => $y['uslup'],
+            'bugun_yazdi' => isset($yazanlar[$anahtar]),
+        ];
+    }
+
+    return $sonuc;
 }

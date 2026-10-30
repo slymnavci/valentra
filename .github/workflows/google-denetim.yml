@@ -1,0 +1,76 @@
+name: Google denetimi
+
+# Google tam denetimi (28.10.2026, site sahibinin istegi: "Google ile
+# ilgili hicbir eksik kalmasin"). Denetimi SITE yapiyor: Search Console
+# anahtari yalnizca sitede (api/google-denetim.php); bu is akisi
+# sonucu ve PageSpeed Insights olcumunu kayda yaziyor. Hata varsa
+# calisma kirmizi biter.
+#
+# Haber ajanindan AYRI is akisi: ajanin eszamanlilik grubunda sirada
+# bekleyen haber calismasini iptal etmesin.
+
+on:
+  schedule:
+    # Her pazartesi 10:17 (Turkiye saati).
+    - cron: '17 7 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: valentra-google-denetim
+  cancel-in-progress: true
+
+jobs:
+  denetle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Repository kodlarini al
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout: ajan/google_denetim.php
+          sparse-checkout-cone-mode: false
+
+      - name: Google tam denetimi
+        working-directory: ajan
+        env:
+          VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: php google_denetim.php
+
+      # Google'in hiz ve sayfa kalitesi olcumu (PageSpeed Insights'in
+      # kullandigi Lighthouse). PSI'nin anahtarsiz ortak kotasi cogu gun
+      # dolu oldugu icin ayni olcum burada, makinenin Chrome'uyla yapiliyor.
+      - name: Lighthouse (mobil ve masaustu)
+        if: ${{ !cancelled() }}
+        env:
+          VALENTRA_SITE_URL: ${{ secrets.VALENTRA_SITE_URL }}
+        run: |
+          site="${VALENTRA_SITE_URL%/}"
+          for tur in mobil masaustu; do
+            ek=""
+            [ "$tur" = masaustu ] && ek="--preset=desktop"
+            npx -y lighthouse@12.8.2 "$site/" $ek --quiet --output=json --output-path="lh-$tur.json" \
+              --only-categories=performance,seo,best-practices,accessibility \
+              --chrome-flags="--headless=new --no-sandbox" || { echo "::warning::Lighthouse $tur calismadi"; continue; }
+            echo "== Lighthouse: $tur =="
+            jq -r '.categories[] | "\(.title): \((.score*100)|round)"' "lh-$tur.json"
+            jq -r '.audits | to_entries[] | select(.value.score != null and .value.score < 0.9
+                   and (.value.scoreDisplayMode == "binary" or .value.scoreDisplayMode == "numeric" or .value.scoreDisplayMode == "metricSavings"))
+                   | "  - \(.value.title)\(if .value.displayValue then " (" + .value.displayValue + ")" else "" end)"' "lh-$tur.json"
+          done
+          # Gecemeyen erisilebilirlik denetimlerinin hangi ogede takildigi
+          # (or. "dokunma hedefi kucuk": hangi dugme, kac piksel).
+          for tur in mobil masaustu; do
+            [ -f "lh-$tur.json" ] || continue
+            jq -r --arg tur "$tur" '.categories.accessibility.auditRefs[] as $r | .audits[$r.id] | select(.score == 0)
+                   | "== Erisilebilirlik (\($tur)): \(.title)", (.details.items[]? | "  - \(.node.nodeLabel // "") | \(.node.selector // "") | \((.node.explanation // "") | gsub("\n"; " "))")' "lh-$tur.json" | head -60
+          done
+          # Lighthouse robots.txt'yi gecersiz bulursa sebebini ve dosyanin canli halini goster.
+          for tur in mobil masaustu; do
+            [ -f "lh-$tur.json" ] || continue
+            jq -r '.audits["robots-txt"].details.items[]? | "  robots.txt satir \(.index): \(.line) -> \(.message)"' "lh-$tur.json"
+            break
+          done
+          echo "== Canli robots.txt =="
+          curl -sS --max-time 20 "$site/robots.txt" | cat -A | head -60

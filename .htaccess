@@ -42,6 +42,30 @@
     # bagli degil: robots.txt dogrudan /sitemap.php adresini bildiriyor,
     # cunku arama motorlari harita adresinde .xml uzantisi sart
     # kosmuyor.
+    # --- Tek adres: https://valentra.com.tr (26.10.2026) ----------------
+    #
+    # Google'dan neredeyse hic ziyaretci gelmiyordu ve ayni sayfa http://,
+    # https://, www. ile dort ayri adreste aciliyordu. Search Console'da
+    # kayitli adres https://valentra.com.tr; digerleri kalici yonleniyor.
+    #
+    # /api/ disarida: ajan POST istekleri gonderiyor ve yonlendirmeyi
+    # izlemiyor; VALENTRA_SITE_URL http:// ya da www. ile girilmisse
+    # ajan bozulmasin.
+    #
+    # HTTPS uc yoldan taniniyor (sunucu degiskeni, vekil sunucu basligi,
+    # 443 portu): vekil arkasinda HTTPS degiskeni bos gelirse sonsuz
+    # yonlendirme olmasin.
+    RewriteCond %{HTTP_HOST} ^www\.valentra\.com\.tr(:\d+)?$ [NC]
+    RewriteCond %{REQUEST_URI} !^/api/
+    RewriteRule ^ https://valentra.com.tr%{REQUEST_URI} [R=301,L]
+
+    RewriteCond %{HTTP_HOST} ^valentra\.com\.tr(:\d+)?$ [NC]
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+    RewriteCond %{SERVER_PORT} !=443
+    RewriteCond %{REQUEST_URI} !^/api/
+    RewriteRule ^ https://valentra.com.tr%{REQUEST_URI} [R=301,L]
+
     RewriteRule ^sitemap\.xml$ /sitemap.php [L]
 
     # IndexNow anahtar dosyasi: Bing/Yandex anahtari /<anahtar>.txt
@@ -119,6 +143,9 @@
     RewriteCond %{THE_REQUEST} \s/rehber\.php\?r=([^\s&]+) [NC]
     RewriteRule ^ /rehber/%1? [R=301,L]
 
+    RewriteCond %{THE_REQUEST} \s/kurumsal\.php\?s=(hakkimizda|yayin-ilkeleri|kunye|iletisim)[\s&] [NC]
+    RewriteRule ^ /%1? [R=301,L]
+
     RewriteCond %{THE_REQUEST} \s/index\.php[\s?] [NC]
     RewriteRule ^ /? [R=301,L]
 
@@ -133,9 +160,24 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^haber/([^/]+)/?$ haber.php?h=$1 [L,QSA]
 
+    # Kurumsal sayfalar (26.10.2026)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(hakkimizda|yayin-ilkeleri|kunye|iletisim)/?$ kurumsal.php?s=$1 [L,QSA]
+
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^kategori/([^/]+)/?$ kategori.php?k=$1 [L,QSA]
+
+    # ValPapel, ValSpor, ValMagazin (29.10.2026): /valpapel, /valpapel/doviz
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(valpapel|valspor|valmagazin)(?:/([a-z0-9-]+))?/?$ gazete.php?g=$1&b=$2 [L,QSA]
+
+    # Etiket sayfalari (28.10.2026)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^etiket/([^/]+)/?$ etiket.php?e=$1 [L,QSA,B]
 
     # Piyasalar (Ekonomi menusu, 22.10.2026)
     RewriteCond %{REQUEST_FILENAME} !-f
@@ -202,4 +244,27 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^valentra-diyor-ki/([^/]+)/?$ kose-yazisi.php?y=$1 [L,QSA]
+
+    # Kose yazari sayfasi (23.10.2026): /yazar/ahmet-sami-gumus
+    RewriteRule ^yazar/([a-z0-9-]+)/?$ yazar.php?y=$1 [L,QSA]
+
+    # Gunluk burc yorumlari (29.10.2026): /burclar ve /burc/koc
+    RewriteRule ^burclar/?$ burclar.php [L,QSA]
+    RewriteRule ^burc/([a-z]+)/?$ burc.php?b=$1 [L,QSA]
+</IfModule>
+
+# --- Statik dosyalarin tarayici onbellegi (29.10.2026) ----------------
+#
+# Lighthouse "verimli onbellek politikasi" uyarisi: stil, betik, logo ve
+# simgeler her ziyarette yeniden soruluyordu. CSS/JS varlik() ile ?s=
+# surumlu baglaniyor (degisince adres degisir), bir yil guvenli. Surumsuz
+# baglanan logo ve simgeler bir hafta. Haber gorselleri kendi klasorunde
+# (gorseller/haber/.htaccess). IfModule: modul yoksa site dusmesin.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|woff2?)$">
+        Header set Cache-Control "public, max-age=31536000"
+    </FilesMatch>
+    <FilesMatch "\.(png|jpe?g|webp|gif|avif|svg|ico)$">
+        Header set Cache-Control "public, max-age=604800"
+    </FilesMatch>
 </IfModule>

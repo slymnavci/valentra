@@ -32,6 +32,8 @@ function gunluk_isler(): array
         // (22.10.2026, site sahibinin karari: ajan yalnizca haber ve
         // kose yazisi uretiyor; ana sayfada grafik yok). Islevleri
         // asagida duruyor, geri almak icin satirlari eklemek yeterli.
+        'ozgun'    => ['grup' => 'veri',  'ad' => 'Özgün veri haberleri',
+                       'aciklama' => 'Zamanı gelen veri haberlerini şimdi yazar: piyasa kapanışı, Süper Lig, Resmî Gazete özeti, hava, vergi takvimi, ekonomik veri. Normalde iki saatte bir kendiliğinden.'],
         'gsc'      => ['grup' => 'arama', 'ad' => 'Search Console verisi',
                        'aciklama' => 'Google\'daki tıklama, gösterim ve dizin durumunu günceller.'],
         'indexnow' => ['grup' => 'arama', 'ad' => 'Bing ve Yandex\'e bildir',
@@ -46,6 +48,10 @@ function gunluk_isler(): array
                           'aciklama' => 'Kaynakları tarar, yeni haberleri onay bekleyenlere ekler.'],
         'ajan_kose'   => ['grup' => 'ajan', 'ad' => 'Yalnızca köşe yazılarını yaz',
                           'aciklama' => 'Günün köşe yazılarını yazar (günlük tavan dolmuşsa yazmaz).'],
+        'ajan_derleme' => ['grup' => 'ajan', 'ad' => 'Yalnızca derleme haberleri yaz',
+                          'aciklama' => 'Birden çok yayının verdiği olaylardan derleme haber yazar (çalışma başına en fazla 5, günde 20). Google\'a yalnızca derlemeler sunulur; hepsi onayınıza düşer.'],
+        'ajan_burc'    => ['grup' => 'ajan', 'ad' => 'Bugünün burç yorumlarını yaz',
+                          'aciklama' => '12 burcun günlük yorumunu yapay zekâ ile yazar; bugünün yorumları varsa yeniden yazar. Normalde gece yarısından sonraki ilk çalışmada kendiliğinden.'],
     ];
 }
 
@@ -59,6 +65,7 @@ function gunluk_is_calistir(string $is): array
     try {
         return match ($is) {
             'piyasa'      => gunluk_piyasa(),
+            'ozgun'       => gunluk_ozgun(),
             'gsc'         => gunluk_gsc(),
             'indexnow'    => gunluk_indexnow(),
             'harita'      => gunluk_harita(),
@@ -66,6 +73,8 @@ function gunluk_is_calistir(string $is): array
             'ajan'        => gunluk_ajan('gunluk'),
             'ajan_haber'  => gunluk_ajan('topla'),
             'ajan_kose'   => gunluk_ajan('kose-yazisi'),
+            'ajan_derleme' => gunluk_ajan('derleme'),
+            'ajan_burc'    => gunluk_ajan('burc'),
             default       => ['tamam' => false, 'mesaj' => 'Bilinmeyen iş.'],
         };
     } catch (Throwable $e) {
@@ -73,6 +82,34 @@ function gunluk_is_calistir(string $is): array
 
         return ['tamam' => false, 'mesaj' => 'Beklenmeyen hata: ' . $e->getMessage()];
     }
+}
+
+/** @return array{tamam:bool, mesaj:string} */
+function gunluk_ozgun(): array
+{
+    require_once __DIR__ . '/ozgun_haber.php';
+
+    @set_time_limit(110);
+    canli_zorla(true);
+
+    try {
+        $sonuc = ozgun_haberleri_uret();
+    } finally {
+        canli_zorla(false);
+    }
+
+    $yazilan = array_filter($sonuc, static fn (string $s): bool => str_starts_with($s, 'yayında') || str_starts_with($s, 'taslakta'));
+    $satirlar = [];
+
+    foreach ($sonuc as $tur => $durum) {
+        $satirlar[] = $tur . ': ' . $durum;
+    }
+
+    return [
+        'tamam' => true,
+        'mesaj' => ($yazilan === [] ? 'Şu an yazılacak yeni veri haberi yok. ' : count($yazilan) . ' haber yazıldı. ')
+            . implode(' | ', $satirlar),
+    ];
 }
 
 /** @return array{tamam:bool, mesaj:string} */
@@ -206,7 +243,8 @@ function gunluk_ajan(string $mod): array
         return ['tamam' => false, 'mesaj' => 'Ajan zaten çalışıyor; bitince yeniden deneyin. Şimdi göndermek süreni iptal ederdi.'];
     }
 
-    return ajan_tetikle(false, 36, 0, $mod);
+    // Haber toplama son 2 saat (bkz. ajan/topla.php); kose yazisi bunu kullanmiyor.
+    return ajan_tetikle(false, 2, 0, $mod);
 }
 
 /**

@@ -34,7 +34,7 @@ final class Sayfa
      * İkisi ayrı metot olsaydı aynı sayfa iki kez inecekti; kaynak
      * sitelere gereksiz yük ve çalışma süresi demek.
      *
-     * @return array{metin:string,gorsel:string,video:string}
+     * @return array{metin:string,gorsel:string,video:string,zaman:?int}
      */
     public function oku(string $url, int $enFazlaKarakter = 6000): array
     {
@@ -46,7 +46,7 @@ final class Sayfa
         $html = $this->http->indir($url, 12_000_000);
 
         if ($html === null) {
-            return ['metin' => '', 'gorsel' => '', 'video' => ''];
+            return ['metin' => '', 'gorsel' => '', 'video' => '', 'zaman' => null];
         }
 
         /*
@@ -62,6 +62,7 @@ final class Sayfa
                 'metin'  => mb_substr($metin, 0, $enFazlaKarakter, 'UTF-8'),
                 'gorsel' => '',
                 'video'  => '',
+                'zaman'  => null,
             ];
         }
 
@@ -71,6 +72,7 @@ final class Sayfa
         $gorsel = $this->gorseliBul($html, $url);
         $video  = self::videoBul($html);
         $tarif  = self::tarifVerisi($html);
+        $zaman  = self::yayinZamani($html);
 
         // Metin taşımayan bloklar önce tamamen atılır.
         $html = (string) preg_replace(
@@ -136,7 +138,51 @@ final class Sayfa
             'metin'  => mb_substr($sonuc, 0, $enFazlaKarakter, 'UTF-8'),
             'gorsel' => $gorsel,
             'video'  => $video,
+            'zaman'  => $zaman,
         ];
+    }
+
+    /**
+     * Sayfanın kendi yayın zamanı (Unix); bulunamazsa null.
+     *
+     * NEDEN (23.10.2026): ana sayfasi kazinan kaynaklarin (IHA, DHA)
+     * girdilerinde tarih yok. Tarihsiz haberin yasi toplandigi andan
+     * sayiliyordu; IHA ana sayfasinin "Editorun Sectikleri" kutusundaki
+     * dunku haber Valentra'da ertesi gun 1. haber oldu. Haber siteleri
+     * yayin zamanini arama motorlari icin makine okunur biciminde
+     * veriyor; sirayla bakilan yerler:
+     *   1. <meta property="article:published_time">
+     *   2. JSON-LD "datePublished"
+     *   3. itemprop="datePublished" ve benzeri meta adlari
+     *   4. <time datetime="...">
+     * Gelecekteki ya da bir yildan eski zaman yok sayiliyor.
+     *
+     * @return int|null
+     */
+    public static function yayinZamani(string $html): ?int
+    {
+        $desenler = [
+            '~<meta[^>]+(?:property|name)\s*=\s*["\'](?:article:published_time|og:published_time)["\'][^>]*content\s*=\s*["\']([^"\']+)~i',
+            '~<meta[^>]+content\s*=\s*["\']([^"\']+)["\'][^>]*(?:property|name)\s*=\s*["\'](?:article:published_time|og:published_time)["\']~i',
+            '~"datePublished"\s*:\s*"([^"]+)"~i',
+            '~"(?:uploadDate|publishDate)"\s*:\s*"([^"]+)"~',
+            '~<meta[^>]+(?:itemprop|name)\s*=\s*["\'](?:datePublished|pubdate|publish-date|publishdate|sailthru\.date|parsely-pub-date|dc\.date\.issued)["\'][^>]*content\s*=\s*["\']([^"\']+)~i',
+            '~<time[^>]+datetime\s*=\s*["\']([^"\']+)~i',
+        ];
+
+        foreach ($desenler as $desen) {
+            if (preg_match($desen, $html, $eslesme) !== 1) {
+                continue;
+            }
+
+            $zaman = strtotime(trim(html_entity_decode($eslesme[1], ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+
+            if ($zaman !== false && $zaman <= time() + 3600 && $zaman >= time() - 365 * 86400) {
+                return $zaman;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -301,23 +347,39 @@ final class Sayfa
         }
 
         foreach ($adaylar as $aday) {
-            $aday = html_entity_decode(trim($aday), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $adres = self::oynaticiAdresi(html_entity_decode(trim($aday), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
 
-            if (str_starts_with($aday, '//')) {
-                $aday = 'https:' . $aday;
+            if ($adres !== '') {
+                return $adres;
             }
+        }
 
-            if (preg_match('#^https?://(?:www\.|m\.)?(?:youtube(?:-nocookie)?\.com/(?:embed/|watch\?(?:.*&)?v=|shorts/)|youtu\.be/)([A-Za-z0-9_-]{11})#', $aday, $e)) {
-                return 'https://www.youtube-nocookie.com/embed/' . $e[1];
-            }
+        return '';
+    }
 
-            if (preg_match('#^https?://(?:player\.)?vimeo\.com/(?:video/)?(\d{6,12})#', $aday, $e)) {
-                return 'https://player.vimeo.com/video/' . $e[1];
-            }
+    /**
+     * Tek bir adres izinli bir platformun videosuysa resmi gomme adresi;
+     * degilse bos. Haber baglantisinin kendisi bir YouTube videosu
+     * oldugunda (YouTube kanal beslemeleri) video dogrudan buradan.
+     */
+    public static function oynaticiAdresi(string $aday): string
+    {
+        $aday = trim($aday);
 
-            if (preg_match('#^https?://(?:www\.)?dailymotion\.com/(?:embed/)?video/([A-Za-z0-9]{5,12})#', $aday, $e)) {
-                return 'https://www.dailymotion.com/embed/video/' . $e[1];
-            }
+        if (str_starts_with($aday, '//')) {
+            $aday = 'https:' . $aday;
+        }
+
+        if (preg_match('#^https?://(?:www\.|m\.)?(?:youtube(?:-nocookie)?\.com/(?:embed/|watch\?(?:.*&)?v=|shorts/)|youtu\.be/)([A-Za-z0-9_-]{11})#', $aday, $e)) {
+            return 'https://www.youtube-nocookie.com/embed/' . $e[1];
+        }
+
+        if (preg_match('#^https?://(?:player\.)?vimeo\.com/(?:video/)?(\d{6,12})#', $aday, $e)) {
+            return 'https://player.vimeo.com/video/' . $e[1];
+        }
+
+        if (preg_match('#^https?://(?:www\.)?dailymotion\.com/(?:embed/)?video/([A-Za-z0-9]{5,12})#', $aday, $e)) {
+            return 'https://www.dailymotion.com/embed/video/' . $e[1];
         }
 
         return '';

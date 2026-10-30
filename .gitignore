@@ -25,3 +25,13 @@ egitim/materyaller/
 
 # Ajanin siteye gonderemedigi haberler (GitHub eserine yuklenir)
 ajan/teslim/
+
+# Kaynaklardan indirilen haber gorselleri (gorsel.php); sunucuda duruyor.
+gorseller/haber/*
+!gorseller/haber/.htaccess
+!gorseller/haber/index.html
+
+# Kose yazari fotograflari (ajan uretip yukluyor); sunucuda duruyor.
+gorseller/yazar/*
+!gorseller/yazar/.htaccess
+!gorseller/yazar/index.html
