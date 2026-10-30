@@ -348,6 +348,64 @@ function futbol_gol_kralligi(string $lig): array
 }
 
 /**
+ * Su an canli bir mac var mi? Ana sayfa siralamasi icin (30.10.2026, site
+ * sahibinin istegi: "canli bir mac yoksa ilk haber olarak spor haberi
+ * koymayalim; spor en iyi 2. ya da 3. siradan baslasin").
+ *
+ * YALNIZCA ONBELLEKTEN: ana sayfa ESPN'i beklemesin. Bugunun ve dunun
+ * fikstur kaydi (futbol_gun_maclari; spor sayfalari ve canli veri isi
+ * dolduruyor) okunuyor; mac durumu bayat olabilecegi icin baslama saati
+ * esas: baslamis, iki saati gecmemis ve bitti olarak isaretlenmemis mac
+ * canli sayiliyor. Super Lig'in her maci; Avrupa kupalarinda yalnizca
+ * Turk takiminin maci.
+ */
+function futbol_canli_mac_var(): bool
+{
+    static $sonuc = null;
+
+    if ($sonuc !== null) {
+        return $sonuc;
+    }
+
+    $sonuc = false;
+
+    if (!futbol_api_acik()) {
+        return $sonuc;
+    }
+
+    $simdi   = time();
+    $istanbul = new DateTimeZone('Europe/Istanbul');
+    $gunler  = [
+        (new DateTimeImmutable('now', $istanbul))->format('Ymd'),
+        (new DateTimeImmutable('-1 day', $istanbul))->format('Ymd'),
+    ];
+    $turk    = '/galatasaray|fenerbah|be[sş]ikta[sş]|trabzonspor|ba[sş]ak[sş]ehir|samsunspor|g[oö]ztepe/iu';
+
+    foreach (['tur.1', 'uefa.champions', 'uefa.europa', 'uefa.europa.conf'] as $lig) {
+        foreach ($gunler as $gun) {
+            $parametre = ['dates' => $gun, 'limit' => 200];
+            ksort($parametre);
+            $kayit = canli_onbellek_oku('es_' . substr(md5('/site/v2/sports/soccer/' . $lig . '/scoreboard?' . http_build_query($parametre)), 0, 24));
+
+            foreach ($kayit['veri']['maclar'] ?? [] as $m) {
+                $basladi = (int) $m['zaman'] > 0 && (int) $m['zaman'] <= $simdi && $simdi - (int) $m['zaman'] < 7200;
+                $bitti   = in_array($m['durum'], FUTBOL_BITTI, true);
+
+                if (!$basladi || $bitti) {
+                    continue;
+                }
+
+                if ($lig === 'tur.1' || preg_match($turk, $m['ev'] . ' ' . $m['dep'])) {
+                    return $sonuc = true;
+                }
+            }
+        }
+    }
+
+    return $sonuc;
+}
+
+/**
  * Asist kralligi (30.10.2026, site sahibinin istegi: "gol ve asist
  * kralligina menuden gidelim"). Gol kralligiyla ayni ESPN cevabindan.
  *
