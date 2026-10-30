@@ -23,12 +23,11 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Yukleme adimi kendi icinde uc kez deneniyor ve her deneme en
-    # fazla bes dakika suruyor; beklemelerle birlikte en kotu durum
-    # ~17 dakika. 12 dakika yetmiyordu: bir deploy tam bu yuzden
-    # "cancelled" ile kesildi ve sertifika duzeltmesi sunucuya hic
-    # gitmedi.
-    timeout-minutes: 22
+    # Yukleme adimi kendi icinde yeniden deniyor (bkz. .github/yukle.sh):
+    # degisen dosyalar en kotu ~16 dakika, tam yukleme iki kez 15 dakika.
+    # 12 dakika yetmiyordu: bir deploy tam bu yuzden "cancelled" ile
+    # kesildi ve sertifika duzeltmesi sunucuya hic gitmedi.
+    timeout-minutes: 35
 
     steps:
       - name: Repository kodlarini al

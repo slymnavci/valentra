@@ -45,11 +45,27 @@ lftp_calistir() {
 }
 
 # Sunucudaki son yukleme isareti (yoksa bos).
+#
+# TAKILAN BAGLANTI TAM YUKLEME DEGILDIR (30.10.2026). IHS'in FTP'si
+# zaman zaman baglantiyi kabul edip yanit vermiyor; isaret okunamayinca
+# "isaret yok" sanilip butun site (15 dakikalik deneme) gonderiliyordu.
+# Simdi her okuma 30 sn ile sinirli; zaman asimi (124) yeniden deneniyor,
+# yalnizca sunucu gercekten cevap verip isaret yoksa bos donuyor.
 onceki_surum() {
   { ortak_ayarlar | sed 's/^set cmd:fail-exit yes$/set cmd:fail-exit no/'
     echo "cat \"$FTP_DIRECTORY/$SURUM_DOSYASI\""
     echo "bye"; } > /tmp/lftp_surum.txt
-  lftp_calistir 60 /tmp/lftp_surum.txt 2>/dev/null | tr -dc '0-9a-f' | cut -c1-40
+
+  local cikti durum
+  for bekle in 10 20 ""; do
+    cikti=$(lftp_calistir 30 /tmp/lftp_surum.txt 2>/dev/null)
+    durum=$?
+    [ "$durum" -ne 124 ] && break
+    echo "Yukleme isareti okunamadi (zaman asimi)${bekle:+; $bekle sn sonra tekrar}." >&2
+    [ -n "$bekle" ] && sleep "$bekle"
+  done
+
+  printf '%s' "$cikti" | tr -dc '0-9a-f' | cut -c1-40
 }
 
 # Yuklenmemesi gerekenler (eskiden de gitmiyordu).
@@ -127,21 +143,36 @@ betik_hazirla() {
   echo "bye"
 }
 
-# --- Yukle (IHS FTP'si zaman zaman baglanti kabul etmiyor: artan
-# beklemeyle uc deneme; her deneme timeout ile sinirli) ---------------
+# --- Yukle (IHS FTP'si zaman zaman baglanti kabul etmiyor) ----------
+#
+# KISA DENEME, COK DENEME (30.10.2026). Takilan deneme sonuna kadar
+# bekliyordu: degisen dosyalarin yuklemesi normalde 30-40 sn surerken
+# uc deneme de bes dakikalik sinira takilip is 15 dakikada basarisiz
+# oluyor, elle yeniden calistirilinca 35 sn'de bitiyordu (#184, #185).
+# Degisen dosyalar: 2 dakikalik alti deneme, artan bekleme (en kotu ~16
+# dk). Tam yukleme 10-15 dakika surdugu icin 15 dakikalik iki deneme.
 
-SURE=900
-[ "$MOD" = fark ] && SURE=300
+if [ "$MOD" = fark ]; then
+  SURE=120
+  BEKLEMELER="15 30 45 60 90 -"
+else
+  SURE=900
+  BEKLEMELER="30 -"
+fi
 
 DENEME=1
-for bekle in 20 45 ""; do
+for bekle in $BEKLEMELER; do
+  [ "$bekle" = - ] && bekle=""
+  BASLA=$(date +%s)
   echo "--- Yukleme denemesi $DENEME ($MOD) ---"
   betik_hazirla > /tmp/lftp_betigi.txt
 
   if lftp_calistir "$SURE" /tmp/lftp_betigi.txt 2>&1 | tee /tmp/lftp_cikti.txt; [ "${PIPESTATUS[0]}" -eq 0 ]; then
-    echo "Yukleme basarili (deneme $DENEME, $MOD)."
+    echo "Yukleme basarili (deneme $DENEME, $MOD, $(( $(date +%s) - BASLA )) sn)."
     exit 0
   fi
+
+  echo "Deneme $DENEME basarisiz ($(( $(date +%s) - BASLA )) sn; $SURE sn siniri)."
 
   if [ -z "$bekle" ]; then
     echo "Yukleme $DENEME denemede de basarisiz oldu."
