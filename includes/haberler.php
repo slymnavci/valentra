@@ -335,7 +335,9 @@ function haber_son_dakika_id(): ?int
                 AND h.kaynak_tarihi IS NOT NULL
                 AND h.onem >= " . ANA_SAYFA_ONEM_ESIGI . "
                 AND (h.kategori_id IS NULL OR h.kategori_id NOT IN
-                     (SELECT id FROM kategoriler WHERE slug IN ('teknoloji', 'kultur-sanat')))
+                     (SELECT id FROM kategoriler WHERE slug IN ('teknoloji', 'kultur-sanat'"
+                     // Canli mac yoksa spor son dakika olmuyor (30.10.2026).
+                     . (haber_ana_sayfa_spor_basta_olabilir() ? '' : ", 'spor'") . ")))
               ORDER BY h.olusturuldu DESC, h.id DESC
               LIMIT 100"
         )->fetchAll();
@@ -390,11 +392,75 @@ function haber_sirasi(bool $anaSayfa = false): string
      * kaldirildi (site sahibi, 23.10.2026: "once puanlamayi yap, ondan
      * sonra sirayla ana sayfaya gelsin"): tazelik artik puanin icinde.
      */
-    $ilk = haber_ana_sayfa_ilk_set();
+    $ilk    = haber_ana_sayfa_ilk_set();
+    $ilkSet = $ilk !== [] ? '(h.id IN (' . implode(', ', $ilk) . ')) DESC, ' : '';
+
+    // Ilk haber spor olmasin (canli mac yoksa); bkz. haber_ana_sayfa_basi_id.
+    $basi = $sonDakika === null ? haber_ana_sayfa_basi_id($ilkSet . $temel) : null;
 
     return $onu
-        . ($ilk !== [] ? '(h.id IN (' . implode(', ', $ilk) . ')) DESC, ' : '')
+        . ($basi !== null ? '(h.id = ' . $basi . ') DESC, ' : '')
+        . $ilkSet
         . $temel;
+}
+
+/*
+ * ILK HABER SPOR OLMAZ (site sahibinin istegi, 30.10.2026: "baktigimda
+ * yine ilk haberler spor haberi; canli bir mac yoksa spor en iyi 2. veya
+ * 3. siradan baslayabilir; ilk haber olarak spor haberi koymayalim").
+ * Canli mac yoksa (futbol_canli_mac_var) son dakika yuvasina spor girmiyor
+ * ve sira spor haberiyle basliyorsa en iyi spor disi haber basa aliniyor;
+ * sporun geri kalani yerinde, yani en iyi ikinci sirada.
+ */
+function haber_ana_sayfa_spor_basta_olabilir(): bool
+{
+    require_once __DIR__ . '/futbol.php';
+
+    return futbol_canli_mac_var();
+}
+
+/** Siranin basi spor haberiyse yerine gececek spor disi haber; degilse null. */
+function haber_ana_sayfa_basi_id(string $sira): ?int
+{
+    static $onbellek = [];
+
+    if (array_key_exists($sira, $onbellek)) {
+        return $onbellek[$sira];
+    }
+
+    $onbellek[$sira] = null;
+
+    if (haber_ana_sayfa_spor_basta_olabilir()) {
+        return null;
+    }
+
+    try {
+        $satirlar = db()->query(
+            'SELECT h.id, k.slug
+               FROM haberler h
+               LEFT JOIN kategoriler k ON k.id = h.kategori_id
+               ' . haber_okunma_birlesimi() . '
+              WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . haber_ana_akis_kosulu() . '
+              ORDER BY ' . $sira . '
+              LIMIT 20'
+        )->fetchAll();
+    } catch (Throwable $e) {
+        error_log('[valentra] ana sayfa basi: ' . $e->getMessage());
+
+        return null;
+    }
+
+    if ($satirlar === [] || ($satirlar[0]['slug'] ?? '') !== 'spor') {
+        return null;
+    }
+
+    foreach ($satirlar as $s) {
+        if (($s['slug'] ?? '') !== 'spor') {
+            return $onbellek[$sira] = (int) $s['id'];
+        }
+    }
+
+    return null;
 }
 
 function haber_sirasi_temel(bool $anaSayfa): string

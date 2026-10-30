@@ -47,6 +47,21 @@ $yon = static function (?float $degisim, string $ad) : string {
         . $ok . ' %' . number_format(abs($degisim), 2, ',', '.')
         . '</span>';
 };
+
+/*
+ * Kalemin simgesi: yuvarlak bayrak ya da isaret (site sahibinin istegi,
+ * 30.10.2026: "USD ve EUR artisi belli olmuyor; adi kirmizi yaziyor, sanki
+ * dusus var gibi gorunuyor; bayrakla gosterelim", BigPara gibi). Ad artik
+ * notr renkte; yukselis ve dusus yalnizca degisimin renginde. Emoji bayrak
+ * kullanilmadi: Windows'ta harf olarak gorunuyor.
+ */
+$simge = static fn (string $svg): string => '<span class="piyasa-simge">' . $svg . '</span>';
+$simgeler = [
+    'usd'   => $simge('<svg viewBox="0 0 26 20" aria-hidden="true"><rect width="26" height="20" fill="#fff"/><rect y="0.0" width="26" height="1.54" fill="#b22234"/><rect y="3.08" width="26" height="1.54" fill="#b22234"/><rect y="6.15" width="26" height="1.54" fill="#b22234"/><rect y="9.23" width="26" height="1.54" fill="#b22234"/><rect y="12.31" width="26" height="1.54" fill="#b22234"/><rect y="15.38" width="26" height="1.54" fill="#b22234"/><rect y="18.46" width="26" height="1.54" fill="#b22234"/><rect width="12" height="10.8" fill="#3c3b6e"/></svg>'),
+    'eur'   => $simge('<svg viewBox="0 0 20 20" aria-hidden="true"><rect width="20" height="20" fill="#003399"/><circle cx="16.00" cy="10.00" r="1.05" fill="#ffcc00"/><circle cx="15.20" cy="13.00" r="1.05" fill="#ffcc00"/><circle cx="13.00" cy="15.20" r="1.05" fill="#ffcc00"/><circle cx="10.00" cy="16.00" r="1.05" fill="#ffcc00"/><circle cx="7.00" cy="15.20" r="1.05" fill="#ffcc00"/><circle cx="4.80" cy="13.00" r="1.05" fill="#ffcc00"/><circle cx="4.00" cy="10.00" r="1.05" fill="#ffcc00"/><circle cx="4.80" cy="7.00" r="1.05" fill="#ffcc00"/><circle cx="7.00" cy="4.80" r="1.05" fill="#ffcc00"/><circle cx="10.00" cy="4.00" r="1.05" fill="#ffcc00"/><circle cx="13.00" cy="4.80" r="1.05" fill="#ffcc00"/><circle cx="15.20" cy="7.00" r="1.05" fill="#ffcc00"/></svg>'),
+    'altin' => $simge('<svg viewBox="0 0 20 20" aria-hidden="true"><rect width="20" height="20" fill="#e2b33c"/><path d="M4.5 13.5h11l-2-5h-7z" fill="#f6d77a" stroke="#a87a12" stroke-width=".9" stroke-linejoin="round"/><path d="M7.3 8.5l.8-2h3.8l.8 2" fill="none" stroke="#a87a12" stroke-width=".9" stroke-linejoin="round"/></svg>'),
+    'bist'  => $simge('<svg viewBox="0 0 20 20" aria-hidden="true"><rect width="20" height="20" fill="#1f2a44"/><path d="M4 13.5l3.5-3.5 2.5 2.5 5-5.5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'),
+];
 ?>
 <div class="piyasa-serit" id="piyasaSerit" aria-label="Piyasa özeti">
     <div class="piyasa-akis">
@@ -64,7 +79,8 @@ $yon = static function (?float $degisim, string $ad) : string {
         <div class="piyasa-grup"<?= $kopya === 1 ? ' aria-hidden="true"' : '' ?>>
             <?php if ($piyasa['usd'] !== null): ?>
                 <span class="piyasa-oge">
-                    <span class="ad"><span class="uzun">USD/TL</span><span class="kisa">USD</span></span>
+                    <?= $simgeler['usd'] ?>
+                    <span class="ad"><span class="uzun">Dolar</span><span class="kisa">USD</span></span>
                     <span class="deger" data-piyasa="usd"><?= e($bicimle($piyasa['usd'], 4)) ?></span>
                     <?= $yon($piyasa['usd_degisim'] ?? null, 'usd_degisim') ?>
                 </span>
@@ -72,7 +88,8 @@ $yon = static function (?float $degisim, string $ad) : string {
 
             <?php if ($piyasa['eur'] !== null): ?>
                 <span class="piyasa-oge">
-                    <span class="ad"><span class="uzun">EUR/TL</span><span class="kisa">EUR</span></span>
+                    <?= $simgeler['eur'] ?>
+                    <span class="ad"><span class="uzun">Euro</span><span class="kisa">EUR</span></span>
                     <span class="deger" data-piyasa="eur"><?= e($bicimle($piyasa['eur'], 4)) ?></span>
                     <?= $yon($piyasa['eur_degisim'] ?? null, 'eur_degisim') ?>
                 </span>
@@ -80,7 +97,8 @@ $yon = static function (?float $degisim, string $ad) : string {
 
             <?php if (($piyasa['altin'] ?? null) !== null): ?>
                 <span class="piyasa-oge">
-                    <span class="ad"><span class="uzun">GRAM ALTIN</span><span class="kisa">ALTIN</span></span>
+                    <?= $simgeler['altin'] ?>
+                    <span class="ad"><span class="uzun">Gram Altın</span><span class="kisa">Altın</span></span>
                     <span class="deger" data-piyasa="altin"><?= e($bicimle($piyasa['altin'], 2)) ?></span>
                     <?= $yon($piyasa['altin_degisim'] ?? null, 'altin_degisim') ?>
                 </span>
@@ -89,6 +107,7 @@ $yon = static function (?float $degisim, string $ad) : string {
             <?php // Ons altin ve guncelleme saati seritten cikti (24.10.2026, site sahibi). ?>
             <?php if ($piyasa['bist'] !== null): ?>
                 <span class="piyasa-oge">
+                    <?= $simgeler['bist'] ?>
                     <span class="ad"><span class="uzun">BIST 100</span><span class="kisa">BIST</span></span>
                     <span class="deger" data-piyasa="bist"><?= e($bicimle($piyasa['bist'], 2)) ?></span>
                     <?= $yon($piyasa['bist_degisim'] ?? null, 'bist_degisim') ?>
