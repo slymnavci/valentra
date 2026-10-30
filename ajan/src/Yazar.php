@@ -271,30 +271,39 @@ final class Yazar implements SemaliIstemci
         sıranın ölçüsüdür, güven skorundan ayrıdır. Ölçütler: kaç kişiyi
         etkilediği (ülke geneli > bölge > yerel), Türkiye'ye etkisi,
         aciliyeti ve kalıcılığı.
+        Türkiye'de okurun ilgi sırası (site sahibinin belirlediği): önce
+        siyaset ve ülke gündemi; sonra kazalar, ölüm ve yaralanmalı olaylar,
+        terör saldırıları; spor (futbol, basketbol, voleybol) bunların ÇOK
+        GERİSİNDE. Puanı bu sıraya göre ver.
         - 85-100: Ülke gündemini belirleyen gelişmeler: kabul edilen
           önemli kanunlar, Cumhurbaşkanlığı kararları, Merkez Bankası faiz
           kararı, enflasyon verisi, büyük afetler, seçim sonuçları,
-          Türkiye'yi doğrudan etkileyen büyük uluslararası olaylar.
-        - 60-84: Geniş kesimi ilgilendiren gelişmeler: bakanlık kararları,
-          önemli diplomatik görüşmeler, büyük kulüplerin ve milli
-          takımların maçları, piyasalarda belirgin hareket, önemli bilim
-          ve sağlık haberleri.
-        - SPOR: Galatasaray, Fenerbahçe, Beşiktaş ve Trabzonspor'un
-          maçları (sonuç, maç öncesi, kadro) ve önemli gelişmeleri
-          (transfer, teknik direktör, sakatlık) 70-85; okurun en çok
-          ilgilendiği spor haberleri bunlardır. Milli takımlar 70-85.
-          Dünya sporunda büyük olaylar (Şampiyonlar Ligi, büyük
-          Avrupa ligleri, NBA ve EuroLeague'de öne çıkan gelişmeler,
-          büyük turnuvalar) 55-70. Diğer Süper Lig kulüpleri 55-70.
+          Türkiye'de can kaybı olan terör saldırıları, çok sayıda ölü ya da
+          yaralının olduğu kazalar, Türkiye'yi doğrudan etkileyen büyük
+          uluslararası olaylar.
+        - 70-84: Türkiye siyaseti ve gündemi: partilerin ve hükümetin
+          politika içeren açıklamaları, bakanlık kararları, önemli
+          diplomatik görüşmeler; ölüm ya da yaralanmalı kazalar ve
+          olaylar (trafik, iş kazası, yangın, patlama, göçük), güvenlik
+          operasyonları; piyasalarda belirgin hareket.
+        - SPOR çok geride: Galatasaray, Fenerbahçe, Beşiktaş,
+          Trabzonspor ve milli takımların maçları ve önemli gelişmeleri
+          45-60; diğer futbol, basketbol ve voleybol haberleri, dünya
+          sporu 30-45. TEK İSTİSNA Türkiye'nin büyük başarısı: milli
+          takımın ya da bir Türk kulübünün kupa, şampiyonluk ya da
+          madalya kazanması (Avrupa ve dünya şampiyonaları, olimpiyat,
+          Avrupa kupaları finali) 88-100; o zaman ana haber olur.
         - 30-59: Sınırlı etkili ya da rutin haberler: sektörel
-          açıklamalar, alt lig ve küçük branş sonuçları, yerel olaylar,
+          açıklamalar, yerel olaylar, bilim ve sağlık haberleri,
           kültür-sanat etkinlikleri.
         - 0-29: Çok dar ilgi alanı.
         Başlığın çarpıcılığına değil, olayın etkisine bak.
         Her adayda "Bu olayı veren kaynak sayısı" yazar: aynı olayı birden
         çok haber sitesi veriyorsa olay gündemdedir ve çok okunuyordur.
         3 ve üzeri kaynakta geçen olayın puanını yükselt (en az 60); tek
-        kaynakta geçen olayı kendi etkisine göre puanla.
+        kaynakta geçen olayı kendi etkisine göre puanla. Spor bu kuralın
+        dışında: büyük maçlar her sitede yer aldığı için spor haberi
+        yukarıdaki spor aralığında kalır.
 
         KONU GRUBU: Haberi, kullanıcı mesajında verilen gruplardan birine
         ata. Yanıtta grubun slug değerini TAM olarak yaz. Eşleme:
