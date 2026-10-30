@@ -108,6 +108,10 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
              soyler. Haber siteleri icin belirleyici — haber olarak
              taninmayan sayfa Haberler sekmesine hic girmez. */ ?>
     <script type="application/ld+json"><?= $seoSema ?></script>
+
+    <?php /* Google Analytics ve AdSense (panelden; bos ise hicbir sey yok). */ ?>
+    <?php require_once __DIR__ . '/olcum_reklam.php'; ?>
+    <?= olcum_head_html() ?>
 </head>
 <?php
 /*

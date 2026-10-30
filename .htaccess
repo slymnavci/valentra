@@ -68,6 +68,9 @@
 
     RewriteRule ^sitemap\.xml$ /sitemap.php [L]
 
+    # AdSense yetkili satici dosyasi (29.10.2026; bkz. ads-txt.php).
+    RewriteRule ^ads\.txt$ ads-txt.php [L]
+
     # IndexNow anahtar dosyasi: Bing/Yandex anahtari /<anahtar>.txt
     # adresinde bir metin dosyasi olarak bekliyor; .php adresi
     # "anahtar dogrulanamadi" (403) ile reddedildi. Dosya diskte yok,
@@ -143,7 +146,7 @@
     RewriteCond %{THE_REQUEST} \s/rehber\.php\?r=([^\s&]+) [NC]
     RewriteRule ^ /rehber/%1? [R=301,L]
 
-    RewriteCond %{THE_REQUEST} \s/kurumsal\.php\?s=(hakkimizda|yayin-ilkeleri|kunye|iletisim)[\s&] [NC]
+    RewriteCond %{THE_REQUEST} \s/kurumsal\.php\?s=(hakkimizda|yayin-ilkeleri|kunye|iletisim|gizlilik)[\s&] [NC]
     RewriteRule ^ /%1? [R=301,L]
 
     RewriteCond %{THE_REQUEST} \s/index\.php[\s?] [NC]
@@ -163,7 +166,7 @@
     # Kurumsal sayfalar (26.10.2026)
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(hakkimizda|yayin-ilkeleri|kunye|iletisim)/?$ kurumsal.php?s=$1 [L,QSA]
+    RewriteRule ^(hakkimizda|yayin-ilkeleri|kunye|iletisim|gizlilik)/?$ kurumsal.php?s=$1 [L,QSA]
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
