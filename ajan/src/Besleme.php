@@ -421,7 +421,11 @@ final class Besleme
 
             if (!isset($cozulen[$tutamac])) {
                 $sayfa = $this->http->indir('https://www.youtube.com/' . $e[2]) ?? '';
-                $cozulen[$tutamac] = preg_match('#"(?:externalId|channelId)":"(UC[\w-]{22})"#', $sayfa, $k)
+                // Once kanalin kendi kimligi (externalId, canonical): sayfadaki
+                // ilk "channelId" onerilen baska bir kanala ait olabiliyor.
+                $cozulen[$tutamac] = preg_match('#"externalId":"(UC[\w-]{22})"#', $sayfa, $k)
+                    || preg_match('#<link rel="canonical" href="https://www\.youtube\.com/channel/(UC[\w-]{22})"#', $sayfa, $k)
+                    || preg_match('#"channelId":"(UC[\w-]{22})"#', $sayfa, $k)
                     || preg_match('#youtube\.com/channel/(UC[\w-]{22})#', $sayfa, $k)
                     ? $k[1]
                     : '';
