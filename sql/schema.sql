@@ -1902,6 +1902,26 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) V
     ('Bloomberg HT (video)','https://www.youtube.com', 'https://www.youtube.com/@BloombergHT', 'rss', 'ekonomi', 1),
     ('TRT Spor (video)',    'https://www.youtube.com', 'https://www.youtube.com/@trtspor',     'rss', 'spor',    1);
 
+-- Daha cok video kanali (30.10.2026, site sahibi: "videolu haberler neden
+-- hep Haberturk'ten geliyor, CNN, Hurriyet, Milliyet, Anadolu Ajansi da
+-- olsun"). GitHub Actions'tan sinandi (kaynak testi, son 24 saat). CNN TURK
+-- ve NTV az video veriyordu: kanal adresi cozulurken sayfadaki onerilen
+-- baska bir kanalin kimligi aliniyordu (ajan/src/Besleme.php duzeltildi).
+-- Milliyet'in YouTube kanalinda guncel video yok, Sozcu gazetesinin
+-- kanali bulunamadi: eklenmedi.
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('Anadolu Ajansı (video)', 'https://www.youtube.com', 'https://www.youtube.com/@anadoluajansi',     'rss', 'gundem',  1),
+    ('Hürriyet (video)',       'https://www.youtube.com', 'https://www.youtube.com/@hurriyet',          'rss', 'gundem',  1),
+    ('Sözcü TV (video)',       'https://www.youtube.com', 'https://www.youtube.com/@sozcutelevizyonu',  'rss', 'gundem',  1),
+    ('TV100 (video)',          'https://www.youtube.com', 'https://www.youtube.com/@tv100',             'rss', 'gundem',  1),
+    ('A Haber (video)',        'https://www.youtube.com', 'https://www.youtube.com/@ahaber',            'rss', 'gundem',  1),
+    ('Haber Global (video)',   'https://www.youtube.com', 'https://www.youtube.com/@HaberGlobal',       'rss', 'gundem',  1),
+    ('TGRT Haber (video)',     'https://www.youtube.com', 'https://www.youtube.com/@tgrthaber',         'rss', 'gundem',  1),
+    ('BBC News Türkçe (video)','https://www.youtube.com', 'https://www.youtube.com/@bbcnewsturkce',     'rss', 'dunya',   1),
+    ('DW Türkçe (video)',      'https://www.youtube.com', 'https://www.youtube.com/@dwturkce',          'rss', 'dunya',   1),
+    ('Euronews Türkçe (video)','https://www.youtube.com', 'https://www.youtube.com/@euronewstr',        'rss', 'dunya',   1),
+    ('Ekotürk (video)',        'https://www.youtube.com', 'https://www.youtube.com/@ekoturktv',         'rss', 'ekonomi', 1);
+
 -- ---------------------------------------------------------------------------
 -- YouTube videolarinin tarihi duzeltmeden once "updated"tan alinmisti
 -- (23.10.2026): YouTube bunu eski videolarda da yeniliyor ve sali oynanan
