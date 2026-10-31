@@ -304,8 +304,11 @@ body.okuma .sinirli { max-width: 1320px; }
 .ust-bant { border-top: 3px solid var(--altin); }
 
 /* Son dakika seridi menunun altinda (30.10.2026): menunun kirmizi alt
-   cizgisi zaten ayiriyor, ikinci kirmizi cizgi olmasin. */
-.menu-bant + .sd-serit { border-top: none; }
+   cizgisi zaten ayiriyor, ikinci kirmizi cizgi olmasin. "+" yerine "~"
+   (31.10.2026, site sahibi: "iki cizgi birlesince cok kalin duruyor"):
+   aralarinda baska bir oge oldugu icin "+" hic tutmuyordu ve 2px + 3px
+   kirmizi ust uste geliyordu. */
+.menu-bant ~ .sd-serit { border-top: none; }
 
 /* --- Tarih ve gece/gunduz: aramanin yaninda, sagda (30.10.2026) ---------- */
 
