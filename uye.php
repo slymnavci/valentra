@@ -97,7 +97,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
 <div class="uye-sayfa">
     <div class="uye-kutu">
-        <p class="nw-marka"><span class="nw-val">VALENTRA</span> Network</p>
+        <a class="nw-marka" href="<?= e(network_yolu()) ?>"><?= network_logo_html(64) ?></a>
         <h1><?= $kayit ? 'Üye olun' : 'Giriş yapın' ?></h1>
         <p class="uye-alt"><?= $kayit
             ? 'Ücretsiz üyelikle haberlere yorum yapabilir, gündemi tartışabilirsiniz.'

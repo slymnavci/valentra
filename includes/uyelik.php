@@ -232,6 +232,23 @@ function uye_guvenli_donus(string $donus): string
     return preg_match('#^/(?![/\\\\])[^\s]*$#', $donus) ? mb_substr($donus, 0, 300) : '';
 }
 
+/**
+ * Valentra Network logosu (31.10.2026, site sahibinin verdigi gorsel):
+ * kirmizi V ve el yazisi "Network". Gece modunda yazisi acik renk olan
+ * kopya (assets/network-logo-koyu.webp); hangisinin gorunecegi CSS'te,
+ * elle secilen temayi da izliyor. Metin ekran okuyucu icin.
+ */
+function network_logo_html(int $yukseklik, string $sinif = ''): string
+{
+    $genislik = (int) round($yukseklik * 480 / 242);
+    $ozellik  = 'width="' . $genislik . '" height="' . $yukseklik . '" alt="" decoding="async"';
+
+    return '<span class="nw-logo ' . e($sinif) . '">'
+         . '<img class="nw-logo-acik" src="' . e(varlik('/assets/network-logo.webp')) . '" ' . $ozellik . '>'
+         . '<img class="nw-logo-koyu" src="' . e(varlik('/assets/network-logo-koyu.webp')) . '" ' . $ozellik . '>'
+         . '<span class="gizli-etiket">VALENTRA Network</span></span>';
+}
+
 function network_yolu(int $sayfa = 1): string
 {
     return '/network' . ($sayfa > 1 ? '?sayfa=' . $sayfa : '');

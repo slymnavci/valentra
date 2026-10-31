@@ -5637,10 +5637,27 @@ a.bulut-etiket:hover,
  */
 .nw-val { color: var(--altin); font-weight: 900; letter-spacing: .04em; }
 
-/* Menude en sagda. */
+/* Network logosu: gunduz siyah, gece acik renk yazili kopya. */
+.nw-logo { display: inline-flex; align-items: center; line-height: 0; }
+.nw-logo img { height: 100%; width: auto; }
+.nw-logo-koyu { display: none; }
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) .nw-logo-acik { display: none; }
+    :where(:root:not([data-tema="acik"])) .nw-logo-koyu { display: block; }
+}
+:where(:root[data-tema="koyu"]) .nw-logo-acik { display: none; }
+:where(:root[data-tema="koyu"]) .nw-logo-koyu { display: block; }
+
+/* Menude en sagda (yazi; logo Network sayfasinda). */
 .menu-oge-network { margin-left: auto; }
 .menu-network { font-weight: 800; }
 .menu-network .nw-val { font-size: .92em; }
+.nw-ust .nw-logo { height: 96px; }
+.uye-kutu .nw-logo { height: 64px; }
+.nw-marka:has(.nw-logo) { line-height: 0; }
+@media (max-width: 720px) {
+    .nw-ust .nw-logo { height: 76px; }
+}
 
 .nw-duzen {
     display: grid;
@@ -5651,7 +5668,7 @@ a.bulut-etiket:hover,
     align-items: start;
 }
 
-.nw-ust { margin-bottom: 18px; }
+.nw-ust { grid-column: 1 / -1; margin-bottom: -10px; }
 .nw-marka { margin: 0 0 4px; font-size: clamp(1.5rem, 3.5vw, 2rem); font-weight: 800; letter-spacing: -.01em; }
 .nw-ust p { margin: 0; color: var(--metin-soluk); }
 
@@ -5702,7 +5719,7 @@ a.bulut-etiket:hover,
 
 @media (max-width: 1000px) {
     .nw-duzen { grid-template-columns: minmax(0, 640px); }
-    .nw-yan { position: static; grid-row: 1; }
+    .nw-yan { position: static; grid-row: 2; }
     .nw-kurallar { display: none; }
 }
 

@@ -105,6 +105,8 @@ function gazete_menu_ogesi(string $gazete, array $onekler): array
 function site_menu_adi_html(array $oge): string
 {
     if (!empty($oge['network'])) {
+        // Yazi olarak: logonun el yazisi menu yuksekliginde okunmuyor
+        // (31.10.2026 olcumu); logo Network sayfasinda ve uyelik ekraninda.
         return '<span class="menu-network"><span class="nw-val">VALENTRA</span> Network</span>';
     }
 

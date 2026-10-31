@@ -70,11 +70,12 @@ require __DIR__ . '/includes/sayfa_ust.php';
 ?>
 
 <div class="nw-duzen">
+    <header class="nw-ust">
+        <h1 class="nw-marka"><?= network_logo_html(96) ?></h1>
+        <p>En son haberler en üstte. Okuyun, yorumlayın, gündemi birlikte konuşalım.</p>
+    </header>
+
     <div class="nw-akis">
-        <header class="nw-ust">
-            <h1 class="nw-marka"><span class="nw-val">VALENTRA</span> Network</h1>
-            <p>En son haberler en üstte. Okuyun, yorumlayın, gündemi birlikte konuşalım.</p>
-        </header>
 
         <?php if ($gonderiler === []): ?>
             <div class="bos-durum"><strong>Henüz paylaşım yok.</strong> Yeni haberler geldikçe burada akacak.</div>
