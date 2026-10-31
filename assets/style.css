@@ -824,7 +824,7 @@ summary.cekmece-oge::after {
 }
 
 .detay .spot {
-    font-size: 1.12rem;
+    font-size: clamp(1.15rem, 1.05rem + .4vw, 1.25rem);
     color: var(--metin-soluk);
     margin: 0 0 22px;
 }
@@ -832,12 +832,15 @@ summary.cekmece-oge::after {
 /*
  * Haber govdesi.
  *
- * Punto olcekten geliyor (govde 1rem); burada yalnizca satir araligi
- * aciliyor. Govde varsayilani 1.62, uzun duz metin icin 1.75: haber
- * sayfasi sitedeki en uzun kesintisiz metin ve satir takibi orada
- * en cok zorlaniyor.
+ * Satir araligi 1.75 (govde varsayilani 1.62): haber sayfasi sitedeki en
+ * uzun kesintisiz metin ve satir takibi orada en cok zorlaniyor.
+ *
+ * Punto bir ayar buyuk (31.10.2026, site sahibi: "haberlerin fontunu bir
+ * ayar buyutelim, rahat okunsun"): genis ekranda 18px, telefonda 17px
+ * (govde 16px). Haber ve kose yazisi ayni kurali kullaniyor.
  */
 .detay .icerik {
+    font-size: clamp(1.0625rem, .95rem + .45vw, 1.125rem);
     line-height: 1.75;
 }
 
