@@ -122,6 +122,8 @@ switch ($sayfa) {
             nw_kisiler('', 'populer', 20),
             static fn (array $k): bool => (int) $k['id'] !== $uyeId && !in_array((int) $k['id'], $takipEdilenler, true)
         )), 0, 6);
+        $populerKonular = nw_populer_konular(10);
+        $etkilesimHaberleri = nw_etkilesim_haberleri(6);
         $buYol  = nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'once' => $once]);
         $sayfaBasligi = 'V Network — Valentra okurlarının buluşma yeri';
         break;
@@ -204,7 +206,8 @@ switch ($sayfa) {
                 nw_bulunamadi();
             }
 
-            $arkadas  = arkadas_mi($uyeId, $detayId);
+            // Yoneticiyle yazisma takiplesme istemiyor (iki yonde de).
+            $arkadas  = arkadas_mi($uyeId, $detayId) || uye_yonetici_mi($uye) || ($karsi['rol'] ?? '') === 'yonetici';
             // Once sohbet (okundu isareti), sonra liste.
             $mesajlar = mesaj_sohbet($uyeId, $detayId);
         }
@@ -359,6 +362,33 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <?php endif; ?>
         </div>
         <aside class="nw-sag">
+            <?php if ($etkilesimHaberleri !== []): ?>
+                <div class="nw-yan-kutu nw-gundem">
+                    <strong>En çok etkileşim alan haberler</strong>
+                    <ol>
+                        <?php foreach ($etkilesimHaberleri as $h): ?>
+                            <li>
+                                <a href="<?= e(nw_yol('h/' . (int) $h['id'])) ?>"><?= e((string) $h['baslik']) ?></a>
+                                <small>
+                                    <?php if ((int) $h['okuyucu'] > 0): ?><span title="Son 24 saatte okuyan">👁 <?= (int) $h['okuyucu'] ?></span><?php endif; ?>
+                                    <?php if ((int) $h['begeni'] > 0): ?><span title="Beğeni">👍 <?= (int) $h['begeni'] ?></span><?php endif; ?>
+                                    <?php if ((int) $h['yorum'] > 0): ?><span title="Yorum">💬 <?= (int) $h['yorum'] ?></span><?php endif; ?>
+                                </small>
+                            </li>
+                        <?php endforeach; ?>
+                    </ol>
+                </div>
+            <?php endif; ?>
+            <?php if ($populerKonular !== []): ?>
+                <div class="nw-yan-kutu nw-konular">
+                    <strong>En popüler konular</strong>
+                    <ul>
+                        <?php foreach ($populerKonular as $k): ?>
+                            <li><a href="<?= e(etiket_yolu($k['etiket'])) ?>">#<?= e($k['etiket']) ?></a> <small><?= (int) $k['adet'] ?> haber</small></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
             <?php if ($oneriler !== []): ?>
                 <div class="nw-yan-kutu">
                     <strong>Tanışabileceğin kişiler</strong>
@@ -388,7 +418,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
         <div class="nw-profil-bas">
             <?= uye_simge_html($kisi, 120) ?>
             <div class="nw-profil-ad">
-                <h1><?= e((string) $kisi['ad']) ?></h1>
+                <h1><?= e((string) $kisi['ad']) ?><?php if (($kisi['rol'] ?? '') === 'yonetici'): ?> <span class="nw-rozet">Yönetici</span><?php endif; ?></h1>
                 <?php if ((string) $kisi['hakkinda'] !== ''): ?><p><?= e((string) $kisi['hakkinda']) ?></p><?php endif; ?>
                 <div class="nw-profil-sayilar">
                     <a href="<?= e($buYol) ?>"><strong><?= (int) $kisi['gonderi'] ?></strong> paylaşım</a>
@@ -401,10 +431,16 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                     <a class="uye-dugme uye-dugme-ikincil" href="<?= e(nw_yol('ayarlar')) ?>">Profili düzenle</a>
                 <?php else: ?>
                     <?= nw_takip_html((int) $kisi['id'], $durum['takip'], $buYol) ?>
-                    <?php if ($durum['takip'] && $durum['takipci']): ?>
+                    <?php if (($durum['takip'] && $durum['takipci']) || uye_yonetici_mi($uye)): ?>
                         <a class="uye-dugme uye-dugme-ikincil" href="<?= e(nw_yol('mesajlar/' . (int) $kisi['id'])) ?>">Mesaj gönder</a>
                     <?php elseif ($durum['takipci']): ?>
                         <span class="nw-not">Sizi takip ediyor</span>
+                    <?php endif; ?>
+                    <?php if (uye_yonetici_mi($uye) && ($kisi['rol'] ?? '') !== 'yonetici'): ?>
+                        <form method="post" action="/network-islem.php">
+                            <?= nw_form_alanlari('uye_durdur', $buYol, ['uye' => (int) $kisi['id']]) ?>
+                            <button type="submit" class="uye-dugme uye-dugme-ikincil" onclick="return confirm('Bu üyelik durdurulsun mu? Üye giriş yapamaz, paylaşımları ve yorumları görünmez.')">Üyeliği durdur</button>
+                        </form>
                     <?php endif; ?>
                 <?php endif; ?>
             </div>
@@ -575,8 +611,9 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                     <p class="nw-paylas-hata" role="alert" hidden></p>
                 </div>
             </div>
-            <label>Adınız
-                <input type="text" name="ad" value="<?= e((string) $ben['ad']) ?>" required minlength="<?= UYE_AD_EN_AZ ?>" maxlength="<?= UYE_AD_EN_FAZLA ?>">
+            <label>Rumuz (sitede adınız yerine bu görünür)
+                <input type="text" name="ad" value="<?= e((string) $ben['ad']) ?>" required maxlength="40">
+                <small class="nw-not">Boşluksuz <?= UYE_AD_EN_AZ ?>-<?= UYE_AD_EN_FAZLA ?> karakter; harf, rakam, nokta, alt çizgi ve tire.</small>
             </label>
             <label>Hakkınızda (profilinizde görünür)
                 <textarea name="hakkinda" rows="3" maxlength="<?= HAKKINDA_EN_FAZLA ?>" placeholder="Kendinizi birkaç cümleyle tanıtın…"><?= e((string) $ben['hakkinda']) ?></textarea>
@@ -611,8 +648,11 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 <li>Video dosyası yüklenmez; YouTube, Vimeo ya da Dailymotion bağlantısı paylaşılabilir.</li>
             </ul>
 
+            <h2>Rumuz</h2>
+            <p>V Network'te üyeler gerçek adlarıyla değil, kendi seçtikleri <strong>rumuzla</strong> görünür. Rumuzunuzu “Profili düzenle”den değiştirebilirsiniz. Başkasını taklit eden ya da yanıltıcı rumuzlar kaldırılır.</p>
+
             <h2>Mesajlaşma</h2>
-            <p>İstenmeyen mesajları önlemek için yalnızca <strong>karşılıklı takipleşen</strong> üyeler birbirine özel mesaj gönderebilir.</p>
+            <p>İstenmeyen mesajları önlemek için yalnızca <strong>karşılıklı takipleşen</strong> üyeler birbirine özel mesaj gönderebilir. Profilinde <strong>Yönetici</strong> rozeti olan site yönetimi, kurallarla ilgili konularda her üyeye yazabilir.</p>
 
             <h2>Bildirme ve yaptırımlar</h2>
             <ul>

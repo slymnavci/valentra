@@ -53,8 +53,18 @@ try {
             nw_bitir((preg_replace('/#.*$/', '', $donus) ?? $donus) . '#g' . $id, 'basari', 'Paylaşımınız yayımlandı.');
 
         case 'gonderi_sil':
-            gonderi_kendi_sil((int) ($_POST['gonderi'] ?? 0), $uyeId);
-            nw_bitir($donus, 'bilgi', 'Paylaşımınız silindi.');
+            // Yonetici herkesin paylasimini silebiliyor.
+            gonderi_kendi_sil((int) ($_POST['gonderi'] ?? 0), uye_yonetici_mi($uye) ? null : $uyeId);
+            nw_bitir($donus, 'bilgi', 'Paylaşım silindi.');
+
+        case 'uye_durdur':
+        case 'uye_ac':
+            if (!uye_yonetici_mi($uye)) {
+                nw_bitir($donus, 'hata', 'Bu işlem için yetkiniz yok.');
+            }
+
+            nw_uye_durum_degistir((int) ($_POST['uye'] ?? 0), $islem === 'uye_durdur');
+            nw_bitir($islem === 'uye_durdur' ? nw_yol('kisiler') : $donus, 'bilgi', $islem === 'uye_durdur' ? 'Üyelik durduruldu.' : 'Üyelik yeniden açıldı.');
 
         case 'gonderi_sikayet':
             gonderi_sikayet((int) ($_POST['gonderi'] ?? 0), $uyeId);
