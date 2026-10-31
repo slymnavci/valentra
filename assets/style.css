@@ -5652,6 +5652,14 @@ a.bulut-etiket:hover,
 .menu-oge-network { margin-left: auto; }
 .menu-network { font-weight: 800; }
 .menu-network .nw-val { font-size: .92em; }
+/* Tablet genisliginde menu tek satira sigsin: "VALENTRA" kalkiyor, "Network" kaliyor. */
+@media (min-width: 721px) and (max-width: 1180px) {
+    .menu-network .nw-val { display: none; }
+}
+/* Daha darda yer yok: Network cekmece menude (sol ustteki dugme). */
+@media (min-width: 721px) and (max-width: 880px) {
+    .menu-oge-network { display: none; }
+}
 .uye-kutu .nw-logo { height: 64px; }
 .nw-marka:has(.nw-logo) { line-height: 0; }
 
