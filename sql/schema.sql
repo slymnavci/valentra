@@ -1922,6 +1922,18 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) V
     ('Euronews Türkçe (video)','https://www.youtube.com', 'https://www.youtube.com/@euronewstr',        'rss', 'dunya',   1),
     ('Ekotürk (video)',        'https://www.youtube.com', 'https://www.youtube.com/@ekoturktv',         'rss', 'ekonomi', 1);
 
+-- Ajans olay goruntuleri (30.10.2026, site sahibi: "YouTube'a bir goruntu
+-- yuklendi, mesela Malatya'ya kurt surusu indi; bunu birkac cumle ve
+-- baslikla haber yapip videosunu ekleyecegiz"). Haber kanallarinin
+-- videolari cogunlukla bulten ve program; DHA ve IHA ise ham olay
+-- goruntusu yayimliyor (kaza, sel, kar, yerel olay). GitHub Actions'tan
+-- sinandi (kaynak testi, son 48 saat): @DHA 15, @ihacomtr 14 video.
+-- Calismayan adresler: @dhaiha, @demirorenhaberajansi (404), @iha,
+-- @ihlashaberajansi (girdi yok).
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('DHA (video)',            'https://www.youtube.com', 'https://www.youtube.com/@DHA',               'rss', 'gundem',  1),
+    ('İHA (video)',            'https://www.youtube.com', 'https://www.youtube.com/@ihacomtr',          'rss', 'gundem',  1);
+
 -- ---------------------------------------------------------------------------
 -- YouTube videolarinin tarihi duzeltmeden once "updated"tan alinmisti
 -- (23.10.2026): YouTube bunu eski videolarda da yeniliyor ve sali oynanan

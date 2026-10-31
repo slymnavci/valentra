@@ -116,6 +116,7 @@ final class Yazar implements SemaliIstemci
              duyuruları; kültür-sanat etkinlikleri ve ödüller.
            - Doğal afet, kaza ve benzeri olaylar: yalnızca resmî
              kurumların (AFAD, valilik, bakanlık) açıkladığı bilgilerle.
+             (VİDEO HABERLERİ için aşağıdaki ayrı kurallar geçerlidir.)
 
            YAYIMLANMAZ — aşağıdakilerden biri varsa ilgili=false yap ve
            red_nedeni'ni "yayın politikası: " ile başlat, ardından hangi
@@ -335,6 +336,47 @@ final class Yazar implements SemaliIstemci
 
         Yayımlanamıyorsa baslik, ozet, icerik, etiketler boş kalsın ve
         red_nedeni'ni tek cümleyle doldur.
+
+        VİDEO HABERLERİ: Aday "VİDEO HABERİ" diye işaretliyse bir haber
+        kuruluşunun YouTube kanalına yüklediği bir videodur. Sitede video
+        haberin altında oynatıcıyla gösterilir; okur görüntüyü kendisi
+        izler. Sen videoyu izleyemezsin: elinde yalnızca videonun başlığı
+        ve açıklaması var. Yukarıdaki haber kuralları yerine bunlar
+        geçerlidir (yayın politikası maddeleri a-i yine geçerlidir).
+        - YAYIMLANIR: güncel bir OLAYIN görüntüsü: kaza, yangın, sel, kar,
+          fırtına gibi doğa olayları, yerleşim yerine inen yaban
+          hayvanları, kurtarma çalışmaları, ilginç ya da dikkat çeken
+          yerel olaylar, maç anları, açıklama ve tören görüntüleri. Haber
+          kuruluşunun kendi görüntüsü olduğu için resmî kurum açıklaması
+          şartı aranmaz; ama yalnızca başlıkta ve açıklamada yazanı
+          aktarırsın.
+        - YAYIMLANMAZ (red_nedeni "video: " ile başlasın):
+          * Başlık ve açıklama bir olayı anlatmıyorsa: canlı yayın, haber
+            bülteni ya da program bölümü, tartışma ve yorum programı,
+            röportaj kesiti, fragman, "tüm detaylar", "gündem özeti",
+            derleme.
+          * Görüntünün ESKİ olduğuna dair bir işaret varsa: "arşiv",
+            "yıllar önce", "geçen yıl", bugünden eski bir tarih, yeniden
+            paylaşım. red_nedeni "video: eski görüntü" olsun. Tereddütte
+            kalırsan YAYIMLAMA: eski bir görüntüyü yeni gibi vermek en
+            büyük hatadır.
+          * Başlık ve açıklama olayın ne olduğunu, nerede olduğunu
+            anlamaya yetmiyorsa.
+        - YAZIM — KISA: Bu bir video haberidir, uzun haber değil.
+          "TÜM AYRINTILAR" ve "UZUNLUK" kuralları burada UYGULANMAZ.
+          * baslik: olayı ve yerini söyleyen kısa bir başlık (en fazla 90
+            karakter). Örnek: "Malatya'da kurt sürüsü köye indi".
+          * ozet: tek cümle.
+          * icerik: 2-4 cümle, tek paragraf (açıklama zenginse en fazla
+            iki kısa paragraf). Ne oldu, nerede, ne zaman (biliniyorsa),
+            açıklamada söylenen sonuç. Görüntüde ne olduğunu bilmediğin
+            bir şeyi anlatma; açıklamada geçmeyen yer, sayı, isim, saat
+            ekleme. Videonun sonunda neler olduğunu tahmin etme.
+          * Videonun başlığındaki büyük harf, ünlem ve "ŞOK", "SON
+            DAKİKA", "İNANILMAZ" gibi kalıpları alma; sade yaz.
+          * neden_onemli BOŞ.
+          * onem: olayın etkisine göre; ilginç ama sınırlı yerel olaylar
+            30-55.
 
         YEMEK TARİFLERİ: Aday bir yemek tarifiyse (çoğunlukla tarif
         sitelerinden gelir) yukarıdaki haber kuralları yerine bunlar
@@ -1222,6 +1264,21 @@ final class Yazar implements SemaliIstemci
 
             if ($ekler !== '') {
                 $ekler = "\nEk kaynaklar (aynı olay, başka yayıncılar):" . $ekler;
+            }
+
+            if (!empty($aday['video'])) {
+                $bloklar[] = <<<METIN
+                ### ADAY {$no} — VİDEO HABERİ
+                Kaynak: {$aday['kaynakAdi']} (YouTube kanalı)
+                Adres: {$girdi['baglanti']}
+                Videonun başlığı: {$girdi['baslik']}
+                Videonun açıklaması:
+                ---
+                {$metin}
+                ---
+                METIN;
+
+                continue;
             }
 
             $bloklar[] = <<<METIN
