@@ -2354,3 +2354,25 @@ CREATE TABLE IF NOT EXISTS gonderi_fotolari (
     CONSTRAINT fk_gfoto_gonderi FOREIGN KEY (gonderi_id) REFERENCES gonderiler (id) ON DELETE CASCADE,
     CONSTRAINT fk_gfoto_uye FOREIGN KEY (uye_id) REFERENCES uyeler (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- V Network bildirimleri (31.10.2026, site sahibinin secimi): biri uyeyi
+-- takip ettiginde, paylasimini begendiginde ya da paylasimina yorum
+-- yaptiginda. Mesajlarin kendi okunmamis sayaci var, burada yok.
+-- Kod: includes/bildirimler.php.
+CREATE TABLE IF NOT EXISTS bildirimler (
+    id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    uye_id        INT UNSIGNED  NOT NULL,
+    yapan_id      INT UNSIGNED  NOT NULL,
+    tur           ENUM('takip','begeni','yorum') NOT NULL,
+    gonderi_id    INT UNSIGNED  NULL,
+    yorum_id      INT UNSIGNED  NULL,
+    okundu        TINYINT(1)    NOT NULL DEFAULT 0,
+    olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    KEY ix_bildirim_uye (uye_id, okundu, olusturuldu),
+    KEY ix_bildirim_kaynak (yapan_id, tur, gonderi_id),
+    CONSTRAINT fk_bildirim_uye FOREIGN KEY (uye_id) REFERENCES uyeler (id) ON DELETE CASCADE,
+    CONSTRAINT fk_bildirim_yapan FOREIGN KEY (yapan_id) REFERENCES uyeler (id) ON DELETE CASCADE,
+    CONSTRAINT fk_bildirim_gonderi FOREIGN KEY (gonderi_id) REFERENCES gonderiler (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
