@@ -333,13 +333,14 @@ function uye_guvenli_donus(string $donus): string
 
 /**
  * Valentra Network logosu (31.10.2026, site sahibinin verdigi gorsel):
- * kirmizi V ve el yazisi "Network". Gece modunda yazisi acik renk olan
+ * kirmizi V ve kalin "Network" yazisi (ilk surumdeki el yazisinin yerine,
+ * ayni gun; gorsel 480x218). Gece modunda yazisi acik renk olan
  * kopya (assets/network-logo-koyu.webp); hangisinin gorunecegi CSS'te,
  * elle secilen temayi da izliyor. Metin ekran okuyucu icin.
  */
 function network_logo_html(int $yukseklik, string $sinif = ''): string
 {
-    $genislik = (int) round($yukseklik * 480 / 242);
+    $genislik = (int) round($yukseklik * 480 / 218);
     $ozellik  = 'width="' . $genislik . '" height="' . $yukseklik . '" alt="" decoding="async"';
 
     return '<span class="nw-logo ' . e($sinif) . '">'
