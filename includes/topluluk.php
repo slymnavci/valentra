@@ -231,8 +231,9 @@ function topluluk_begeni_dagit(): array
  */
 function topluluk_begeni_zamanla(): void
 {
-    // Onbellekten donen isteklerde veritabanina gitmemek icin once dosya saati.
-    $isaret = __DIR__ . '/../onbellek/topluluk_begeni.zaman';
+    // Onbellekten donen isteklerde veritabanina gitmemek icin once dosya saati
+    // (sayfa onbelleginin yazilabilir dizininde; silinirse veritabani karar verir).
+    $isaret = __DIR__ . '/../onbellek/sayfa/topluluk_begeni.zaman';
 
     if (is_file($isaret) && filemtime($isaret) > time() - 300) {
         return;
