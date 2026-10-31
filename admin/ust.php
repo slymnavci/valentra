@@ -96,6 +96,8 @@
                  */
                 'İçerik'        => [
                     'Köşe yazıları'   => 'kose-yazilari.php',
+                    // Valentra Network (31.10.2026): uye yorumlari ve uyeler.
+                    'Network yorumları' => 'yorumlar.php',
                     'Grafikler'       => 'grafikler.php',
                 ],
                 'Ajan ve aktarım' => [

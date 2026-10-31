@@ -2170,3 +2170,74 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, kategor
     ('MarketWatch',          'https://www.marketwatch.com', 'https://feeds.marketwatch.com/marketwatch/topstories/', NULL,                                        'rss', 'ekonomi', 1),
     ('Anadolu Ajansı Basketbol', 'https://www.aa.com.tr',   NULL,                                                 'https://www.aa.com.tr/tr/spor/basketbol',      'web', 'spor',    1),
     ('Anadolu Ajansı Voleybol',  'https://www.aa.com.tr',   NULL,                                                 'https://www.aa.com.tr/tr/spor/voleybol',       'web', 'spor',    1);
+
+-- ---------------------------------------------------------------------------
+-- VALENTRA NETWORK: uyelik ve yorumlar (31.10.2026)
+--
+-- Site sahibinin istegi: "Valentra Network'umuz olsun; guncel haberler
+-- sirayla dussun, Facebook ve Instagram'da oldugu gibi haberlerin altina
+-- kullanicilar yorum yapabilsin. Yorum yapabilmek icin uyelik sarti."
+-- Kod: includes/uyelik.php, includes/yorumlar.php, network.php, uye.php,
+-- yorum.php, admin/yorumlar.php.
+--
+-- uyeler: sifre password_hash ile. E-posta dogrulamasi simdilik yok (site
+-- e-posta gondermiyor); durum 'engelli' olan uye giris yapamaz, yorum
+-- yazamaz.
+-- uye_oturumlari: giris cerezi (valentra_uye) rastgele bir anahtar; burada
+-- yalnizca SHA-256 ozeti duruyor, cerez calinsa bile tablodan uretilemez.
+-- yorumlar: kufur filtresinden gecen yorum hemen yayinda; uc ayri uyenin
+-- sikayeti yorumu kendiliginden gizler, panelden geri acilir ya da silinir.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS uyeler (
+    id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    ad            VARCHAR(60)   NOT NULL,
+    eposta        VARCHAR(190)  NOT NULL,
+    sifre         VARCHAR(255)  NOT NULL,
+    durum         ENUM('aktif','engelli') NOT NULL DEFAULT 'aktif',
+    kayit_ip      VARCHAR(45)   NOT NULL DEFAULT '',
+    son_giris     DATETIME      NULL,
+    olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_uye_eposta (eposta),
+    KEY ix_uye_kayit_ip (kayit_ip, olusturuldu)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS uye_oturumlari (
+    anahtar       CHAR(64)      NOT NULL,
+    uye_id        INT UNSIGNED  NOT NULL,
+    bitis         DATETIME      NOT NULL,
+    olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (anahtar),
+    KEY ix_uye_oturum_uye (uye_id),
+    CONSTRAINT fk_uye_oturum_uye FOREIGN KEY (uye_id) REFERENCES uyeler (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS yorumlar (
+    id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    haber_id      INT UNSIGNED  NOT NULL,
+    uye_id        INT UNSIGNED  NOT NULL,
+    metin         TEXT          NOT NULL,
+    durum         ENUM('yayinda','gizli') NOT NULL DEFAULT 'yayinda',
+    sikayet       SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    ip            VARCHAR(45)   NOT NULL DEFAULT '',
+    olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    KEY ix_yorum_haber (haber_id, durum, olusturuldu),
+    KEY ix_yorum_uye (uye_id, olusturuldu),
+    KEY ix_yorum_durum (durum, olusturuldu),
+    CONSTRAINT fk_yorum_haber FOREIGN KEY (haber_id) REFERENCES haberler (id) ON DELETE CASCADE,
+    CONSTRAINT fk_yorum_uye FOREIGN KEY (uye_id) REFERENCES uyeler (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS yorum_sikayetleri (
+    yorum_id      INT UNSIGNED  NOT NULL,
+    uye_id        INT UNSIGNED  NOT NULL,
+    olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (yorum_id, uye_id),
+    CONSTRAINT fk_sikayet_yorum FOREIGN KEY (yorum_id) REFERENCES yorumlar (id) ON DELETE CASCADE,
+    CONSTRAINT fk_sikayet_uye FOREIGN KEY (uye_id) REFERENCES uyeler (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

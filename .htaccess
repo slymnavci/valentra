@@ -177,6 +177,10 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^video/?$ video.php [L,QSA]
 
+    # Valentra Network ve uyelik (31.10.2026): /network, /uye/giris, /uye/kayit, /uye/cikis
+    RewriteRule ^network/?$ network.php [L,QSA]
+    RewriteRule ^uye/(giris|kayit|cikis)/?$ uye.php?islem=$1 [L,QSA]
+
     # ValPapel, ValSpor, ValMagazin (29.10.2026): /valpapel, /valpapel/doviz
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
