@@ -2191,6 +2191,10 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, kategor
 CREATE TABLE IF NOT EXISTS uyeler (
     id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
     ad            VARCHAR(60)   NOT NULL,
+    -- Profildeki kisa tanitim ve profil fotografi (gorseller/uye/ altindaki
+    -- dosya adi); 31.10.2026, eski kurulumlarda sema.php ekliyor.
+    hakkinda      VARCHAR(300)  NOT NULL DEFAULT '',
+    foto          VARCHAR(64)   NOT NULL DEFAULT '',
     eposta        VARCHAR(190)  NOT NULL,
     sifre         VARCHAR(255)  NOT NULL,
     durum         ENUM('aktif','engelli') NOT NULL DEFAULT 'aktif',
@@ -2216,7 +2220,10 @@ CREATE TABLE IF NOT EXISTS uye_oturumlari (
 
 CREATE TABLE IF NOT EXISTS yorumlar (
     id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    haber_id      INT UNSIGNED  NOT NULL,
+    -- Haberin ya da uye paylasiminin yorumu: ikisinden biri dolu
+    -- (gonderi_id 31.10.2026; eski kurulumlarda includes/sema.php ekliyor).
+    haber_id      INT UNSIGNED  NULL,
+    gonderi_id    INT UNSIGNED  NULL,
     uye_id        INT UNSIGNED  NOT NULL,
     metin         TEXT          NOT NULL,
     durum         ENUM('yayinda','gizli') NOT NULL DEFAULT 'yayinda',
@@ -2226,6 +2233,7 @@ CREATE TABLE IF NOT EXISTS yorumlar (
 
     PRIMARY KEY (id),
     KEY ix_yorum_haber (haber_id, durum, olusturuldu),
+    KEY ix_yorum_gonderi (gonderi_id, durum, olusturuldu),
     KEY ix_yorum_uye (uye_id, olusturuldu),
     KEY ix_yorum_durum (durum, olusturuldu),
     CONSTRAINT fk_yorum_haber FOREIGN KEY (haber_id) REFERENCES haberler (id) ON DELETE CASCADE,
@@ -2240,4 +2248,106 @@ CREATE TABLE IF NOT EXISTS yorum_sikayetleri (
     PRIMARY KEY (yorum_id, uye_id),
     CONSTRAINT fk_sikayet_yorum FOREIGN KEY (yorum_id) REFERENCES yorumlar (id) ON DELETE CASCADE,
     CONSTRAINT fk_sikayet_uye FOREIGN KEY (uye_id) REFERENCES uyeler (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- V NETWORK SOSYAL ALAN (31.10.2026)
+--
+-- Site sahibinin istegi: "V Network Facebook tarzi olsun; insanlar
+-- tanisabilsin, sohbet edebilsin, yorum yapabilsin, haberlerin altina
+-- yazilar yazabilsin; kufur yasak, bunu bildiren bir yazi olsun; baska
+-- insanlari takip edebilelim, takipci kazanalim". Kod: includes/network.php.
+--
+-- gonderiler: uyelerin kendi paylasimlari (akista haberlerle birlikte).
+-- takipler: takip eden -> takip edilen. Karsilikli takiplesenler
+--   "arkadas" sayiliyor ve yalnizca onlar mesajlasabiliyor (istenmeyen
+--   mesaj ve taciz korumasi).
+-- mesajlar: iki uye arasindaki ozel mesajlar.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS gonderiler (
+    id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    uye_id        INT UNSIGNED  NOT NULL,
+    metin         TEXT          NOT NULL,
+    -- Paylasilan video BAGLANTISI (YouTube/Vimeo/Dailymotion gomme adresi);
+    -- video dosyasi yuklenmiyor (site sahibinin karari).
+    video_url     VARCHAR(300)  NOT NULL DEFAULT '',
+    durum         ENUM('yayinda','gizli') NOT NULL DEFAULT 'yayinda',
+    sikayet       SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    ip            VARCHAR(45)   NOT NULL DEFAULT '',
+    olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    KEY ix_gonderi_durum (durum, olusturuldu),
+    KEY ix_gonderi_uye (uye_id, olusturuldu),
+    CONSTRAINT fk_gonderi_uye FOREIGN KEY (uye_id) REFERENCES uyeler (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS gonderi_sikayetleri (
+    gonderi_id    INT UNSIGNED  NOT NULL,
+    uye_id        INT UNSIGNED  NOT NULL,
+    olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (gonderi_id, uye_id),
+    CONSTRAINT fk_gsikayet_gonderi FOREIGN KEY (gonderi_id) REFERENCES gonderiler (id) ON DELETE CASCADE,
+    CONSTRAINT fk_gsikayet_uye FOREIGN KEY (uye_id) REFERENCES uyeler (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS takipler (
+    takip_eden    INT UNSIGNED  NOT NULL,
+    takip_edilen  INT UNSIGNED  NOT NULL,
+    olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (takip_eden, takip_edilen),
+    KEY ix_takip_edilen (takip_edilen, olusturuldu),
+    CONSTRAINT fk_takip_eden FOREIGN KEY (takip_eden) REFERENCES uyeler (id) ON DELETE CASCADE,
+    CONSTRAINT fk_takip_edilen FOREIGN KEY (takip_edilen) REFERENCES uyeler (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mesajlar (
+    id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    gonderen_id   INT UNSIGNED  NOT NULL,
+    alici_id      INT UNSIGNED  NOT NULL,
+    metin         TEXT          NOT NULL,
+    okundu        TINYINT(1)    NOT NULL DEFAULT 0,
+    olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    KEY ix_mesaj_alici (alici_id, okundu, olusturuldu),
+    KEY ix_mesaj_cift (gonderen_id, alici_id, olusturuldu),
+    CONSTRAINT fk_mesaj_gonderen FOREIGN KEY (gonderen_id) REFERENCES uyeler (id) ON DELETE CASCADE,
+    CONSTRAINT fk_mesaj_alici FOREIGN KEY (alici_id) REFERENCES uyeler (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Begeniler (31.10.2026, site sahibi: "habere tikladigimizda kac kisi
+-- okudu, kac kisi begendi gorelim"). Haber ya da uye paylasimi; bir uye
+-- bir seyi bir kez begenir (ikinci tiklama begeniyi geri alir).
+CREATE TABLE IF NOT EXISTS begeniler (
+    hedef_tur     ENUM('haber','gonderi') NOT NULL,
+    hedef_id      INT UNSIGNED  NOT NULL,
+    uye_id        INT UNSIGNED  NOT NULL,
+    olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (hedef_tur, hedef_id, uye_id),
+    KEY ix_begeni_uye (uye_id, olusturuldu),
+    CONSTRAINT fk_begeni_uye FOREIGN KEY (uye_id) REFERENCES uyeler (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Paylasim fotograflari (31.10.2026, site sahibi: "fotograf
+-- ekleyebilsinler; fotograflarda da sinir koyalim"). Dosyalar
+-- gorseller/uye/ altinda, sunucuda yeniden kodlanmis WebP (konum bilgisi
+-- ve diger meta veriler siliniyor). Sinirlar includes/network_foto.php.
+CREATE TABLE IF NOT EXISTS gonderi_fotolari (
+    id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    gonderi_id    INT UNSIGNED  NOT NULL,
+    uye_id        INT UNSIGNED  NOT NULL,
+    dosya         VARCHAR(64)   NOT NULL,
+    genislik      SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    yukseklik     SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    KEY ix_gfoto_gonderi (gonderi_id),
+    KEY ix_gfoto_uye (uye_id, olusturuldu),
+    CONSTRAINT fk_gfoto_gonderi FOREIGN KEY (gonderi_id) REFERENCES gonderiler (id) ON DELETE CASCADE,
+    CONSTRAINT fk_gfoto_uye FOREIGN KEY (uye_id) REFERENCES uyeler (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

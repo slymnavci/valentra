@@ -39,3 +39,7 @@ gorseller/yazar/*
 # Sayfa onbellegi (includes/sayfa_onbellek.php); sunucuda uretilir.
 onbellek/sayfa/*
 !onbellek/sayfa/index.html
+# V Network uye fotograflari (includes/network_foto.php); sunucuda uretiliyor.
+gorseller/uye/*
+!gorseller/uye/.htaccess
+!gorseller/uye/index.html
