@@ -182,6 +182,8 @@
     # V Network alt sayfalari (31.10.2026): /network/h/12, /network/u/3, /network/mesajlar ...
     RewriteRule ^network/([a-z0-9/]+?)/?$ network.php?yol=$1 [L,QSA]
     RewriteRule ^uye/(giris|kayit|cikis)/?$ uye.php?islem=$1 [L,QSA]
+    # Sifremi unuttum, sifre yenileme, e-posta dogrulamasi (31.10.2026)
+    RewriteRule ^uye/(sifre|yenile|dogrula)/?$ uye-eposta.php?islem=$1 [L,QSA]
 
     # ValPapel, ValSpor, ValMagazin (29.10.2026): /valpapel, /valpapel/doviz
     RewriteCond %{REQUEST_FILENAME} !-f

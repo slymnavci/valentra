@@ -77,7 +77,7 @@ function aktif_uye(): ?array
 
     try {
         $ifade = db()->prepare(
-            "SELECT u.id, u.ad, u.eposta, u.durum, u.rol, u.foto
+            "SELECT u.id, u.ad, u.eposta, u.durum, u.rol, u.foto, u.eposta_dogrulandi
                FROM uye_oturumlari o
                JOIN uyeler u ON u.id = o.uye_id
               WHERE o.anahtar = :a AND o.bitis > NOW() AND u.durum = 'aktif'"

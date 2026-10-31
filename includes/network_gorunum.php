@@ -167,7 +167,7 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
 
     ob_start();
     ?>
-    <article class="nw-gonderi" id="<?= e($anahtar) ?>">
+    <article class="nw-gonderi" id="<?= e($anahtar) ?>"<?= !empty($oge['zaman']) ? ' data-zaman="' . (int) $oge['zaman'] . '"' : '' ?>>
         <header class="nw-gonderi-ust">
             <?php if ($haber): ?>
                 <span class="nw-hesap-simge" aria-hidden="true"><img src="/assets/logo.svg" alt="" width="24" height="19"></span>
