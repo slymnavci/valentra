@@ -2201,6 +2201,11 @@ CREATE TABLE IF NOT EXISTS uyeler (
     -- V Network yoneticisi: her paylasim ve yorumu silebilir, uye durdurabilir,
     -- herkese mesaj yazabilir (31.10.2026; panelden atanir, bkz. admin/yorumlar.php).
     rol           ENUM('uye','yonetici') NOT NULL DEFAULT 'uye',
+    -- Hesap turu (31.10.2026): gercek uye, yapay zeka hesabi ya da Valentra'nin
+    -- kurum hesabi. yz ve kurum hesaplari ajan tarafindan yonetilir, sitede
+    -- rozetle isaretlidir, giris yapamaz, ozel mesaj alip gonderemez
+    -- (bkz. includes/topluluk.php).
+    tur           ENUM('uye','yz','kurum') NOT NULL DEFAULT 'uye',
     kayit_ip      VARCHAR(45)   NOT NULL DEFAULT '',
     son_giris     DATETIME      NULL,
     olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -405,6 +405,48 @@ final class Site
         return $veri;
     }
 
+    /**
+     * V Network yapay zeka ve kurum hesaplarinin malzemesi (bkz. api/topluluk.php).
+     *
+     * @return array<string,mixed>
+     */
+    public function toplulukMalzeme(): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/topluluk.php');
+
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Topluluk malzemesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return [
+            'tavan'       => (array) ($veri['tavan'] ?? []),
+            'hesaplar'    => array_values((array) ($veri['hesaplar'] ?? [])),
+            'haberler'    => array_values((array) ($veri['haberler'] ?? [])),
+            'paylasimlar' => array_values((array) ($veri['paylasimlar'] ?? [])),
+        ];
+    }
+
+    /**
+     * Topluluk ucuna gonderim: {"hesaplar": [...]} ya da {"eylemler": [...]}.
+     *
+     * @param array<string,mixed> $govdeVerisi
+     * @return array<string,mixed>
+     */
+    public function toplulukGonder(array $govdeVerisi): array
+    {
+        [$kod, $govde] = $this->istek('POST', '/api/topluluk.php', json_encode($govdeVerisi, JSON_UNESCAPED_UNICODE), true);
+
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Topluluk gönderimi başarısız (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return $veri;
+    }
+
     public function koseMalzeme(int $saat = 36): array
     {
         [$kod, $govde] = $this->istek('GET', '/api/kose.php?saat=' . max(6, $saat));

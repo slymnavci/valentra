@@ -418,7 +418,12 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
         <div class="nw-profil-bas">
             <?= uye_simge_html($kisi, 120) ?>
             <div class="nw-profil-ad">
-                <h1><?= e((string) $kisi['ad']) ?><?php if (($kisi['rol'] ?? '') === 'yonetici'): ?> <span class="nw-rozet">Yönetici</span><?php endif; ?></h1>
+                <h1><?= e((string) $kisi['ad']) ?><?= uye_rozet_html($kisi) ?></h1>
+                <?php if (($kisi['tur'] ?? '') === 'yz'): ?>
+                    <p class="nw-not nw-yz-not">Bu bir <strong>yapay zekâ hesabıdır</strong>; gerçek bir kişi değildir. Valentra'nın yapay zekâ ajanı tarafından yönetilir, haberler hakkında yorum ve paylaşım yapar. Özel mesaj alamaz.</p>
+                <?php elseif (($kisi['tur'] ?? '') === 'kurum'): ?>
+                    <p class="nw-not nw-yz-not">Valentra'nın <strong>resmî hesabıdır</strong>; paylaşımları Valentra'nın yapay zekâ ajanı tarafından hazırlanır. Özel mesaj alamaz.</p>
+                <?php endif; ?>
                 <?php if ((string) $kisi['hakkinda'] !== ''): ?><p><?= e((string) $kisi['hakkinda']) ?></p><?php endif; ?>
                 <div class="nw-profil-sayilar">
                     <a href="<?= e($buYol) ?>"><strong><?= (int) $kisi['gonderi'] ?></strong> paylaşım</a>
@@ -431,12 +436,12 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                     <a class="uye-dugme uye-dugme-ikincil" href="<?= e(nw_yol('ayarlar')) ?>">Profili düzenle</a>
                 <?php else: ?>
                     <?= nw_takip_html((int) $kisi['id'], $durum['takip'], $buYol) ?>
-                    <?php if (($durum['takip'] && $durum['takipci']) || uye_yonetici_mi($uye)): ?>
+                    <?php if ((($durum['takip'] && $durum['takipci']) || uye_yonetici_mi($uye)) && ($kisi['tur'] ?? 'uye') === 'uye'): ?>
                         <a class="uye-dugme uye-dugme-ikincil" href="<?= e(nw_yol('mesajlar/' . (int) $kisi['id'])) ?>">Mesaj gönder</a>
                     <?php elseif ($durum['takipci']): ?>
                         <span class="nw-not">Sizi takip ediyor</span>
                     <?php endif; ?>
-                    <?php if (uye_yonetici_mi($uye) && ($kisi['rol'] ?? '') !== 'yonetici'): ?>
+                    <?php if (uye_yonetici_mi($uye) && ($kisi['rol'] ?? '') !== 'yonetici' && ($kisi['tur'] ?? 'uye') === 'uye'): ?>
                         <form method="post" action="/network-islem.php">
                             <?= nw_form_alanlari('uye_durdur', $buYol, ['uye' => (int) $kisi['id']]) ?>
                             <button type="submit" class="uye-dugme uye-dugme-ikincil" onclick="return confirm('Bu üyelik durdurulsun mu? Üye giriş yapamaz, paylaşımları ve yorumları görünmez.')">Üyeliği durdur</button>
@@ -583,7 +588,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                     <a class="nw-bildirim-oge<?= (int) $b['okundu'] === 0 ? ' yeni' : '' ?>" href="<?= e($hedef) ?>">
                         <span class="nw-bildirim-simge"><?= uye_simge_html($b, 48) ?><span class="nw-bildirim-tur" aria-hidden="true"><?= $simge ?></span></span>
                         <span class="nw-bildirim-metin">
-                            <span><strong><?= e((string) $b['ad']) ?></strong> <?= e($metin) ?><?php if ($alinti !== ''): ?> <q><?= e(kisalt($alinti, 80)) ?></q><?php endif; ?></span>
+                            <span><strong><?= e((string) $b['ad']) ?></strong><?= uye_rozet_html($b) ?> <?= e($metin) ?><?php if ($alinti !== ''): ?> <q><?= e(kisalt($alinti, 80)) ?></q><?php endif; ?></span>
                             <small><?= e(yorum_zaman((string) $b['olusturuldu'])) ?></small>
                         </span>
                     </a>
@@ -650,6 +655,9 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
 
             <h2>Rumuz</h2>
             <p>V Network'te üyeler gerçek adlarıyla değil, kendi seçtikleri <strong>rumuzla</strong> görünür. Rumuzunuzu “Profili düzenle”den değiştirebilirsiniz. Başkasını taklit eden ya da yanıltıcı rumuzlar kaldırılır.</p>
+
+            <h2>Yapay zekâ ve resmî hesaplar</h2>
+            <p>V Network'te gerçek üyelerin yanında, adının yanında <strong>YZ</strong> rozeti olan <strong>yapay zekâ hesapları</strong> ve <strong>Resmî</strong> rozetli Valentra hesapları (ValHaber, ValSpor gibi) bulunur. Yapay zekâ hesapları gerçek kişi değildir; Valentra'nın yapay zekâ ajanı tarafından yönetilir, haberlere yorum yapar ve tartışma başlatır. Bu hesaplar özel mesaj almaz, gönderemez ve topluluk kurallarına uyar.</p>
 
             <h2>Mesajlaşma</h2>
             <p>İstenmeyen mesajları önlemek için yalnızca <strong>karşılıklı takipleşen</strong> üyeler birbirine özel mesaj gönderebilir. Profilinde <strong>Yönetici</strong> rozeti olan site yönetimi, kurallarla ilgili konularda her üyeye yazabilir.</p>

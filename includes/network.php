@@ -171,7 +171,7 @@ function gonderi_fotolari(array $idler): array
 function gonderi_bul(int $id): ?array
 {
     $ifade = db()->prepare(
-        "SELECT g.*, u.ad, u.foto FROM gonderiler g JOIN uyeler u ON u.id = g.uye_id
+        "SELECT g.*, u.ad, u.foto, u.tur, u.rol FROM gonderiler g JOIN uyeler u ON u.id = g.uye_id
           WHERE g.id = :id AND g.durum = 'yayinda' AND u.durum = 'aktif'"
     );
     $ifade->execute(['id' => $id]);
@@ -271,7 +271,7 @@ function arkadas_mi(int $a, int $b): bool
 function nw_uye_bul(int $id): ?array
 {
     $ifade = db()->prepare(
-        "SELECT u.id, u.ad, u.hakkinda, u.foto, u.rol, u.olusturuldu,
+        "SELECT u.id, u.ad, u.hakkinda, u.foto, u.rol, u.tur, u.olusturuldu,
                 (SELECT COUNT(*) FROM takipler t WHERE t.takip_edilen = u.id) AS takipci,
                 (SELECT COUNT(*) FROM takipler t WHERE t.takip_eden = u.id) AS takip,
                 (SELECT COUNT(*) FROM gonderiler g WHERE g.uye_id = u.id AND g.durum = 'yayinda') AS gonderi
@@ -299,7 +299,7 @@ function nw_kisiler(string $ara, string $sira, int $limit = 60): array
     }
 
     $ifade = db()->prepare(
-        "SELECT u.id, u.ad, u.hakkinda, u.foto, u.olusturuldu,
+        "SELECT u.id, u.ad, u.hakkinda, u.foto, u.tur, u.rol, u.olusturuldu,
                 (SELECT COUNT(*) FROM takipler t WHERE t.takip_edilen = u.id) AS takipci
            FROM uyeler u WHERE $kosul
           ORDER BY " . ($sira === 'yeni' ? 'u.id DESC' : 'takipci DESC, u.id DESC') . '
@@ -314,7 +314,7 @@ function nw_kisiler(string $ara, string $sira, int $limit = 60): array
 function nw_takip_listesi(int $uyeId, bool $takipciler): array
 {
     $ifade = db()->prepare(
-        "SELECT u.id, u.ad, u.hakkinda, u.foto FROM takipler t
+        "SELECT u.id, u.ad, u.hakkinda, u.foto, u.tur, u.rol FROM takipler t
            JOIN uyeler u ON u.id = " . ($takipciler ? 't.takip_eden' : 't.takip_edilen') . "
           WHERE " . ($takipciler ? 't.takip_edilen' : 't.takip_eden') . " = :u AND u.durum = 'aktif'
           ORDER BY t.olusturuldu DESC LIMIT 300"
@@ -402,6 +402,10 @@ function mesaj_gonder(int $gonderen, int $alici, string $metin): int
 
     if ($gonderen === $alici || $karsi === null) {
         throw new InvalidArgumentException('Üye bulunamadı.');
+    }
+
+    if (($karsi['tur'] ?? 'uye') !== 'uye') {
+        throw new InvalidArgumentException('Yapay zekâ ve resmî hesaplara özel mesaj gönderilemez.');
     }
 
     // Yonetici herkese yazabiliyor; uyeler de yoneticiye (site yonetimine
@@ -532,7 +536,7 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
 
     try {
         $ifade = db()->prepare(
-            "SELECT g.id, g.uye_id, g.metin, g.video_url, g.olusturuldu, UNIX_TIMESTAMP(g.olusturuldu) AS zaman, u.ad, u.foto
+            "SELECT g.id, g.uye_id, g.metin, g.video_url, g.olusturuldu, UNIX_TIMESTAMP(g.olusturuldu) AS zaman, u.ad, u.foto, u.tur, u.rol
                FROM gonderiler g JOIN uyeler u ON u.id = g.uye_id
               WHERE g.durum = 'yayinda' AND u.durum = 'aktif' AND g.olusturuldu < FROM_UNIXTIME(:once) $kosul
               ORDER BY g.olusturuldu DESC, g.id DESC LIMIT " . (int) $adet
