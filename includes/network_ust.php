@@ -19,11 +19,15 @@ require_once __DIR__ . '/network.php';
 $nwUye     = aktif_uye();
 $nwAktif   = (string) ($nwAktif ?? 'akis');
 $nwMesajSayi = $nwUye !== null ? mesaj_okunmamis((int) $nwUye['id']) : 0;
+$nwBildirimSayi = $nwUye !== null && $nwAktif !== 'bildirimler' ? bildirim_okunmamis((int) $nwUye['id']) : 0;
 $nwBolumler = [
     'akis'    => ['Akış', nw_yol(), '<path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>'],
     'kisiler' => ['Kişiler', nw_yol('kisiler'), '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M16.5 14.6c2.6.2 4.4 1.9 5 5.4"/>'],
     'mesajlar' => ['Mesajlar', nw_yol('mesajlar'), '<path d="M4 5h16v11H8l-4 4z"/>'],
+    // Bildirimler (31.10.2026): takip, begeni, paylasima yorum.
+    'bildirimler' => ['Bildirimler', nw_yol('bildirimler'), '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/>'],
 ];
+$nwSayilar = ['mesajlar' => $nwMesajSayi, 'bildirimler' => $nwBildirimSayi];
 ?>
 <header class="nw-bant">
     <div class="nw-bant-ic">
@@ -35,7 +39,7 @@ $nwBolumler = [
                 <a href="<?= e($yol) ?>" class="<?= $nwAktif === $anahtar ? 'aktif' : '' ?>"<?= $nwAktif === $anahtar ? ' aria-current="page"' : '' ?>>
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><?= $simge ?></svg>
                     <span><?= e($ad) ?></span>
-                    <?php if ($anahtar === 'mesajlar' && $nwMesajSayi > 0): ?><b class="nw-rozet"><?= $nwMesajSayi > 99 ? '99+' : $nwMesajSayi ?></b><?php endif; ?>
+                    <?php if (($nwSayilar[$anahtar] ?? 0) > 0): ?><b class="nw-rozet"><?= $nwSayilar[$anahtar] > 99 ? '99+' : $nwSayilar[$anahtar] ?></b><?php endif; ?>
                 </a>
             <?php endforeach; ?>
         </nav>

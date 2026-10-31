@@ -27,6 +27,7 @@ declare(strict_types=1);
  *   /network/u/3                profil (?sekme=takipciler|takip)
  *   /network/kisiler            kisiler (?ara=, ?sira=yeni)
  *   /network/mesajlar[/3]       mesajlar (uye)
+ *   /network/bildirimler        bildirimler (uye): takip, begeni, paylasima yorum
  *   /network/ayarlar            profili duzenle (uye)
  *   /network/kurallar           topluluk kurallari
  *
@@ -100,7 +101,7 @@ if ($yol === '') {
 } elseif (preg_match('#^mesajlar(?:/(\d+))?$#', $yol, $e)) {
     $sayfa = 'mesajlar';
     $detayId = (int) ($e[1] ?? 0);
-} elseif (in_array($yol, ['kisiler', 'ayarlar', 'kurallar'], true)) {
+} elseif (in_array($yol, ['kisiler', 'ayarlar', 'kurallar', 'bildirimler'], true)) {
     $sayfa = $yol;
 } else {
     nw_bulunamadi();
@@ -219,6 +220,14 @@ switch ($sayfa) {
         $seoRobots = 'noindex, nofollow';
         break;
 
+    case 'bildirimler':
+        nw_giris_zorunlu(nw_yol('bildirimler'));
+        // Liste okunduktan sonra hepsi okundu isaretleniyor (bkz. bildirim_listesi).
+        $bildirimler = bildirim_listesi($uyeId);
+        $sayfaBasligi = 'Bildirimler — V Network';
+        $seoRobots = 'noindex, nofollow';
+        break;
+
     case 'ayarlar':
         nw_giris_zorunlu(nw_yol('ayarlar'));
         $ben = nw_uye_bul($uyeId);
@@ -256,6 +265,7 @@ $solKenar = static function () use ($uye): void {
         <a class="nw-sol-oge" href="<?= e(nw_yol('kisiler')) ?>"><span class="nw-sol-simge" aria-hidden="true">👥</span>Kişiler</a>
         <?php if ($uye !== null): ?>
             <a class="nw-sol-oge" href="<?= e(nw_yol('mesajlar')) ?>"><span class="nw-sol-simge" aria-hidden="true">💬</span>Mesajlar</a>
+            <a class="nw-sol-oge" href="<?= e(nw_yol('bildirimler')) ?>"><span class="nw-sol-simge" aria-hidden="true">🔔</span>Bildirimler</a>
             <a class="nw-sol-oge" href="<?= e(nw_yol('ayarlar')) ?>"><span class="nw-sol-simge" aria-hidden="true">⚙️</span>Profili düzenle</a>
         <?php endif; ?>
         <a class="nw-sol-oge" href="<?= e(nw_yol('kurallar')) ?>"><span class="nw-sol-simge" aria-hidden="true">📜</span>Topluluk Kuralları</a>
@@ -513,6 +523,37 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 <div class="bos-durum"><strong>Bir sohbet seçin.</strong> Karşılıklı takipleştiğiniz kişilere mesaj gönderebilirsiniz.</div>
             <?php endif; ?>
         </section>
+    </div>
+
+<?php elseif ($sayfa === 'bildirimler'): ?>
+    <div class="nw-tek">
+        <h1 class="nw-baslik">Bildirimler</h1>
+        <?php if ($bildirimler === []): ?>
+            <div class="bos-durum"><strong>Henüz bildirim yok.</strong> Biri sizi takip ettiğinde, paylaşımınızı beğendiğinde ya da yorum yaptığında burada görünür.</div>
+        <?php else: ?>
+            <div class="nw-bildirimler">
+                <?php foreach ($bildirimler as $b): ?>
+                    <?php
+                    $gid = (int) ($b['gonderi_id'] ?? 0);
+                    [$hedef, $metin] = match ((string) $b['tur']) {
+                        'takip'  => [nw_profil_yolu((int) $b['yapan_id']), 'seni takip etmeye başladı.'],
+                        'begeni' => [nw_gonderi_yolu($gid), 'paylaşımını beğendi.'],
+                        default  => [nw_gonderi_yolu($gid) . '#yorum-' . (int) $b['yorum_id'], 'paylaşımına yorum yaptı:'],
+                    };
+                    $alinti = (string) $b['tur'] === 'yorum' ? (string) ($b['yorum_metni'] ?? '')
+                        : ((string) $b['tur'] === 'begeni' ? (string) ($b['gonderi_metni'] ?? '') : '');
+                    $simge = ['takip' => '👤', 'begeni' => '👍', 'yorum' => '💬'][(string) $b['tur']] ?? '🔔';
+                    ?>
+                    <a class="nw-bildirim-oge<?= (int) $b['okundu'] === 0 ? ' yeni' : '' ?>" href="<?= e($hedef) ?>">
+                        <span class="nw-bildirim-simge"><?= uye_simge_html($b, 48) ?><span class="nw-bildirim-tur" aria-hidden="true"><?= $simge ?></span></span>
+                        <span class="nw-bildirim-metin">
+                            <span><strong><?= e((string) $b['ad']) ?></strong> <?= e($metin) ?><?php if ($alinti !== ''): ?> <q><?= e(kisalt($alinti, 80)) ?></q><?php endif; ?></span>
+                            <small><?= e(yorum_zaman((string) $b['olusturuldu'])) ?></small>
+                        </span>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </div>
 
 <?php elseif ($sayfa === 'ayarlar'): ?>

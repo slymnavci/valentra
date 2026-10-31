@@ -6012,6 +6012,23 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 .nw-mesaj-kapali { padding: 14px; border-top: 1px solid var(--cizgi); }
 .nw-sohbet-alani > .bos-durum { margin: auto; }
 
+/* Bildirimler (31.10.2026) */
+.nw-bildirimler { background: var(--kart); border-radius: var(--yuvarlak); box-shadow: var(--golge); padding: 8px; display: grid; gap: 2px; }
+.nw-bildirim-oge { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 8px; color: var(--metin); text-decoration: none; }
+.nw-bildirim-oge:hover { background: var(--zemin); }
+.nw-bildirim-oge.yeni { background: color-mix(in srgb, var(--altin) 7%, transparent); }
+.nw-bildirim-simge { position: relative; flex: none; }
+.nw-bildirim-tur {
+    position: absolute; right: -4px; bottom: -4px;
+    width: 24px; height: 24px; border-radius: 50%;
+    display: grid; place-items: center; font-size: .78rem;
+    background: var(--kart); box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
+}
+.nw-bildirim-metin { display: grid; gap: 2px; min-width: 0; }
+.nw-bildirim-metin q { color: var(--metin-soluk); }
+.nw-bildirim-metin small { color: var(--metin-soluk); font-size: .8rem; }
+.nw-bildirim-oge.yeni small { color: var(--altin); font-weight: 700; }
+
 /* Kurallar */
 .nw-kurallar-sayfa h1 { margin: 0 0 6px; font-size: 1.7rem; font-weight: 800; }
 .nw-kurallar-sayfa h2 { margin: 14px 0 0; font-size: 1.15rem; font-weight: 800; }
@@ -6039,7 +6056,7 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
         padding: 4px 6px calc(4px + env(safe-area-inset-bottom));
         justify-content: space-around;
     }
-    .nw-bant-menu a { flex-direction: column; gap: 2px; height: 54px; font-size: .74rem; flex: 1; padding: 0; }
+    .nw-bant-menu a { flex-direction: column; gap: 2px; height: 54px; font-size: .72rem; flex: 1; padding: 0; min-width: 0; }
     .nw-bant-menu a.aktif::after { top: 0; bottom: auto; }
     .nw-bant-menu .nw-rozet { top: 2px; right: calc(50% - 22px); }
     .nw-bant-uye span { display: none; }

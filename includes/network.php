@@ -24,6 +24,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/yorumlar.php';
 require_once __DIR__ . '/network_foto.php';
+require_once __DIR__ . '/bildirimler.php';
 
 const GONDERI_EN_FAZLA = 2000;
 const GONDERI_ARALIK   = 30;
@@ -225,14 +226,19 @@ function takip_et(int $eden, int $edilen): void
         throw new InvalidArgumentException('Üye bulunamadı.');
     }
 
-    db()->prepare('INSERT IGNORE INTO takipler (takip_eden, takip_edilen) VALUES (:a, :b)')
-        ->execute(['a' => $eden, 'b' => $edilen]);
+    $ekle = db()->prepare('INSERT IGNORE INTO takipler (takip_eden, takip_edilen) VALUES (:a, :b)');
+    $ekle->execute(['a' => $eden, 'b' => $edilen]);
+
+    if ($ekle->rowCount() > 0) {
+        bildirim_ekle($edilen, $eden, 'takip');
+    }
 }
 
 function takip_birak(int $eden, int $edilen): void
 {
     db()->prepare('DELETE FROM takipler WHERE takip_eden = :a AND takip_edilen = :b')
         ->execute(['a' => $eden, 'b' => $edilen]);
+    bildirim_sil($edilen, $eden, 'takip');
 }
 
 /** @return array{takip:bool, takipci:bool} a, b'yi takip ediyor mu; b, a'yi takip ediyor mu */
@@ -521,6 +527,10 @@ function begeni_degistir(string $tur, int $hedefId, int $uyeId): bool
     $sil->execute(['t' => $tur, 'h' => $hedefId, 'u' => $uyeId]);
 
     if ($sil->rowCount() > 0) {
+        if ($tur === 'gonderi') {
+            bildirim_sil(bildirim_gonderi_sahibi($hedefId), $uyeId, 'begeni', $hedefId);
+        }
+
         return false;
     }
 
@@ -535,6 +545,11 @@ function begeni_degistir(string $tur, int $hedefId, int $uyeId): bool
 
     db()->prepare('INSERT IGNORE INTO begeniler (hedef_tur, hedef_id, uye_id) VALUES (:t, :h, :u)')
         ->execute(['t' => $tur, 'h' => $hedefId, 'u' => $uyeId]);
+
+    // Paylasimin sahibine bildirim (haberin sahibi yok).
+    if ($tur === 'gonderi') {
+        bildirim_ekle(bildirim_gonderi_sahibi($hedefId), $uyeId, 'begeni', $hedefId);
+    }
 
     return true;
 }
