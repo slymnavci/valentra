@@ -233,6 +233,56 @@ function sema_yukselt(array &$hatalar = []): array
     $sutunEkle('haberler', 'derleme_kaynaklari', 'TEXT NULL');
 
     /*
+     * V Network sosyal alan (31.10.2026; bkz. includes/network.php):
+     * uyenin profil yazisi; yorumlar uye paylasimlarina da yapilabiliyor
+     * (gonderi_id), haber_id bu yuzden bos olabilir.
+     */
+    $sutunEkle('uyeler', 'hakkinda', "VARCHAR(300) NOT NULL DEFAULT '' AFTER ad");
+    $sutunEkle('uyeler', 'foto', "VARCHAR(64) NOT NULL DEFAULT '' AFTER hakkinda");
+    $sutunEkle('gonderiler', 'video_url', "VARCHAR(300) NOT NULL DEFAULT '' AFTER metin");
+    $sutunEkle('yorumlar', 'gonderi_id', 'INT UNSIGNED NULL AFTER haber_id');
+
+    $adim('yorumlar.haber_id bos olabilir', static function (): bool {
+        $ifade = db()->prepare(
+            "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
+              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'yorumlar' AND COLUMN_NAME = 'haber_id'"
+        );
+        $ifade->execute();
+
+        if ($ifade->fetchColumn() !== 'NO') {
+            return false;
+        }
+
+        db()->exec('ALTER TABLE yorumlar MODIFY haber_id INT UNSIGNED NULL');
+
+        return true;
+    });
+
+    $adim('yorum gonderi indeksi', static function (): bool {
+        if (!sema_sutun_var('yorumlar', 'gonderi_id') || sema_indeks_var('yorumlar', 'ix_yorum_gonderi')) {
+            return false;
+        }
+
+        db()->exec('ALTER TABLE yorumlar ADD INDEX ix_yorum_gonderi (gonderi_id, durum, olusturuldu)');
+
+        return true;
+    });
+
+    // Yabanci anahtar gonderiler tablosu kurulduktan sonra (tablolar once kuruluyor).
+    $adim('yorum gonderi yabanci anahtari', static function (): bool {
+        if (!sema_sutun_var('yorumlar', 'gonderi_id') || sema_kisit_var('yorumlar', 'fk_yorum_gonderi')) {
+            return false;
+        }
+
+        db()->exec(
+            'ALTER TABLE yorumlar ADD CONSTRAINT fk_yorum_gonderi
+             FOREIGN KEY (gonderi_id) REFERENCES gonderiler (id) ON DELETE CASCADE'
+        );
+
+        return true;
+    });
+
+    /*
      * Kopya denetimi alanlari.
      *
      * NULL birakiliyor: eski kayitlar icin deger PHP tarafinda

@@ -68,8 +68,11 @@ function yorum_uygunsuz_mu(string $metin): bool
  * Yorum ekler; yorumun kimligini dondurur. Kurala uymayan yorumda
  * InvalidArgumentException (ziyaretciye gosterilecek mesaj).
  */
-function yorum_ekle(int $haberId, int $uyeId, string $metin): int
+function yorum_ekle(int $haberId, int $uyeId, string $metin, string $tur = 'haber'): int
 {
+    // Uye paylasiminin yorumu (V Network, 31.10.2026): $haberId paylasimin kimligi.
+    $sutun = yorum_hedef_sutunu($tur);
+
     $metin = trim(preg_replace("/\r\n?/", "\n", $metin) ?? '');
     $metin = preg_replace("/\n{3,}/", "\n\n", $metin) ?? $metin;
     $uzunluk = mb_strlen($metin, 'UTF-8');
@@ -86,8 +89,10 @@ function yorum_ekle(int $haberId, int $uyeId, string $metin): int
         throw new InvalidArgumentException('Yorumunuz küfür ya da hakaret içerdiği için yayımlanmadı. Lütfen saygılı bir dille yeniden yazın.');
     }
 
-    $haber = db()->prepare('SELECT id FROM haberler WHERE id = :id AND durum = :d');
-    $haber->execute(['id' => $haberId, 'd' => HABER_YAYINDA]);
+    $haber = $tur === 'gonderi'
+        ? db()->prepare("SELECT id FROM gonderiler WHERE id = :id AND durum = :d")
+        : db()->prepare('SELECT id FROM haberler WHERE id = :id AND durum = :d');
+    $haber->execute(['id' => $haberId, 'd' => $tur === 'gonderi' ? 'yayinda' : HABER_YAYINDA]);
 
     if ($haber->fetchColumn() === false) {
         throw new InvalidArgumentException('Haber bulunamadı.');
@@ -103,7 +108,7 @@ function yorum_ekle(int $haberId, int $uyeId, string $metin): int
 
     $ip = function_exists('ziyaret_adresi') ? ziyaret_adresi() : (string) ($_SERVER['REMOTE_ADDR'] ?? '');
 
-    db()->prepare('INSERT INTO yorumlar (haber_id, uye_id, metin, ip) VALUES (:h, :u, :m, :ip)')
+    db()->prepare('INSERT INTO yorumlar (' . $sutun . ', uye_id, metin, ip) VALUES (:h, :u, :m, :ip)')
         ->execute(['h' => $haberId, 'u' => $uyeId, 'm' => $metin, 'ip' => mb_substr($ip, 0, 45)]);
 
     return (int) db()->lastInsertId();
@@ -114,14 +119,16 @@ function yorum_ekle(int $haberId, int $uyeId, string $metin): int
  *
  * @return list<array<string,mixed>>
  */
-function yorum_listesi(int $haberId, int $limit = 200): array
+function yorum_listesi(int $haberId, int $limit = 200, string $tur = 'haber'): array
 {
+    $sutun = yorum_hedef_sutunu($tur);
+
     try {
         $ifade = db()->prepare(
-            "SELECT y.id, y.uye_id, y.metin, y.olusturuldu, u.ad
+            "SELECT y.id, y.uye_id, y.metin, y.olusturuldu, u.ad, u.foto
                FROM yorumlar y
                JOIN uyeler u ON u.id = y.uye_id
-              WHERE y.haber_id = :h AND y.durum = 'yayinda' AND u.durum = 'aktif'
+              WHERE y.$sutun = :h AND y.durum = 'yayinda' AND u.durum = 'aktif'
               ORDER BY y.olusturuldu, y.id
               LIMIT :l"
         );
@@ -142,8 +149,9 @@ function yorum_listesi(int $haberId, int $limit = 200): array
  * @param list<int> $haberIdleri
  * @return array<int, array{sayi:int, son:list<array<string,mixed>>}>
  */
-function yorum_ozetleri(array $haberIdleri, int $sonAdet = 2): array
+function yorum_ozetleri(array $haberIdleri, int $sonAdet = 2, string $tur = 'haber'): array
 {
+    $sutun = yorum_hedef_sutunu($tur);
     $haberIdleri = array_values(array_unique(array_filter(array_map('intval', $haberIdleri))));
     $sonuc       = [];
 
@@ -159,31 +167,37 @@ function yorum_ozetleri(array $haberIdleri, int $sonAdet = 2): array
 
     try {
         foreach (db()->query(
-            "SELECT y.haber_id, COUNT(*) AS sayi
+            "SELECT y.$sutun AS hedef, COUNT(*) AS sayi
                FROM yorumlar y JOIN uyeler u ON u.id = y.uye_id
-              WHERE y.haber_id IN ($yer) AND y.durum = 'yayinda' AND u.durum = 'aktif'
-              GROUP BY y.haber_id"
+              WHERE y.$sutun IN ($yer) AND y.durum = 'yayinda' AND u.durum = 'aktif'
+              GROUP BY y.$sutun"
         ) as $s) {
-            $sonuc[(int) $s['haber_id']]['sayi'] = (int) $s['sayi'];
+            $sonuc[(int) $s['hedef']]['sayi'] = (int) $s['sayi'];
         }
 
         // Her haberin en yeni N yorumu (pencere fonksiyonu MariaDB 10.2+).
         foreach (db()->query(
             "SELECT * FROM (
-                SELECT y.id, y.haber_id, y.uye_id, y.metin, y.olusturuldu, u.ad,
-                       ROW_NUMBER() OVER (PARTITION BY y.haber_id ORDER BY y.olusturuldu DESC, y.id DESC) AS sira
+                SELECT y.id, y.$sutun AS hedef, y.uye_id, y.metin, y.olusturuldu, u.ad, u.foto,
+                       ROW_NUMBER() OVER (PARTITION BY y.$sutun ORDER BY y.olusturuldu DESC, y.id DESC) AS sira
                   FROM yorumlar y JOIN uyeler u ON u.id = y.uye_id
-                 WHERE y.haber_id IN ($yer) AND y.durum = 'yayinda' AND u.durum = 'aktif'
+                 WHERE y.$sutun IN ($yer) AND y.durum = 'yayinda' AND u.durum = 'aktif'
              ) t WHERE t.sira <= " . max(1, $sonAdet) . '
              ORDER BY t.olusturuldu, t.id'
         ) as $s) {
-            $sonuc[(int) $s['haber_id']]['son'][] = $s;
+            $sonuc[(int) $s['hedef']]['son'][] = $s;
         }
     } catch (PDOException $e) {
         // Tablo yoksa yorumsuz goster.
     }
 
     return $sonuc;
+}
+
+/** Yorumun bagli oldugu sutun: haber ya da uye paylasimi (sabit liste, SQL'e giriyor). */
+function yorum_hedef_sutunu(string $tur): string
+{
+    return $tur === 'gonderi' ? 'gonderi_id' : 'haber_id';
 }
 
 /** Sikayet; esige ulasan yorum gizleniyor. Ayni uye bir yorumu bir kez sikayet edebilir. */
@@ -278,6 +292,23 @@ function yorum_zaman(string $tarih): string
         $fark < 604800  => intdiv($fark, 86400) . ' g',
         default         => tarih_bicimle($tarih, false),
     };
+}
+
+/**
+ * Uyenin yuvarlak simgesi: profil resmi varsa resim, yoksa renkli zemin
+ * uzerinde adinin bas harfi.
+ */
+function uye_simge_html(array $uye, int $boyut = 34): string
+{
+    $ad   = (string) ($uye['ad'] ?? '');
+    $foto = function_exists('nw_foto_adresi') ? nw_foto_adresi((string) ($uye['foto'] ?? '')) : '';
+    $stil = 'width:' . $boyut . 'px;height:' . $boyut . 'px;font-size:' . round($boyut * .42) . 'px';
+
+    if ($foto !== '') {
+        return '<img class="uye-simge" src="' . e($foto) . '" alt="" width="' . $boyut . '" height="' . $boyut . '" loading="lazy" style="' . $stil . '">';
+    }
+
+    return '<span class="uye-simge" style="--uye-renk: ' . e(uye_renk($ad)) . ';' . $stil . '" aria-hidden="true">' . e(uye_bas_harf($ad)) . '</span>';
 }
 
 /** Uyenin bas harfi (yuvarlak simge icin). */

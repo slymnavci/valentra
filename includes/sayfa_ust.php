@@ -129,6 +129,13 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
 $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
 ?>
 <body<?= $govdeSinifi !== '' ? ' class="' . e($govdeSinifi) . '"' : '' ?>>
+<?php if (!empty($networkSayfasi)): ?>
+    <?php
+    /* V Network kendi ust bandiyla ayri bir alan (31.10.2026, site sahibi:
+       "buraya tikladigimizda farkli bir sayfaya gidecegiz"); bkz. includes/network_ust.php. */
+    require __DIR__ . '/network_ust.php';
+    ?>
+<?php else: ?>
     <?php
     /*
      * UST BOLUM (site sahibinin istegi, 24.10.2026: "menuleri daha kolay
@@ -423,5 +430,6 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
             </div>
         </div>
     <?php endif; ?>
+<?php endif; ?>
 
     <main class="sinirli">

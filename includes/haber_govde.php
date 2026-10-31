@@ -167,16 +167,28 @@ foreach (($govdeVeri ?? []) as $ad => $deger) {
     $videoMu   = $iframeUrl !== '' && haber_video_adresi($iframeUrl) !== '';
     ?>
     <?php if ($videoMu): ?>
+        <?php
+        // Ekrana gelince sessiz baslar, kaydirinca durur (site sahibi, 31.10.2026;
+        // bkz. nw_oto_oynat_betigi). Betik sayfada bir kez basiliyor.
+        require_once __DIR__ . '/network_gorunum.php';
+        $videoEk = str_contains($iframeUrl, 'youtube') ? '?enablejsapi=1&mute=1&playsinline=1&rel=0'
+            : (str_contains($iframeUrl, 'vimeo') ? '?muted=1&playsinline=1' : '?mute=1&api=postMessage');
+        ?>
         <div class="gomulu-icerik video">
             <iframe
-                src="<?= e($iframeUrl) ?>"
+                class="oto-oynat"
+                src="<?= e($iframeUrl . $videoEk) ?>"
                 title="<?= e($haber['baslik']) ?> — video"
                 loading="lazy"
                 referrerpolicy="strict-origin-when-cross-origin"
-                allow="fullscreen; encrypted-media; picture-in-picture"
+                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
                 allowfullscreen>
             </iframe>
         </div>
+        <?php if (empty($GLOBALS['oto_oynat_basildi'])): ?>
+            <?php $GLOBALS['oto_oynat_basildi'] = true; ?>
+            <?= nw_oto_oynat_betigi() ?>
+        <?php endif; ?>
     <?php endif; ?>
 
     <?php

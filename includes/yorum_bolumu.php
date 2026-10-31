@@ -2,9 +2,10 @@
 declare(strict_types=1);
 
 /**
- * Yorum bolumu: haber sayfasinda butun yorumlar, Valentra Network akisinda
- * yorum sayisi ve en yeni iki yorum. Ikisinde de altta yorum kutusu
- * (giris yapmamis ziyaretciye "Yorum yapmak icin giris yapin").
+ * Yorum bolumu: haber sayfasinda ve V Network'te. Butun yorumlar (haber /
+ * paylasim sayfasi) ya da akista yorum sayisi ve en yeni iki yorum.
+ * Altta yorum kutusu; giris yapmamis ziyaretciye "Yorum yapmak icin giris
+ * yapin". Yorumcunun adi ve resmi V Network profiline bagli.
  *
  * Onbellek: giris yapmamis ziyaretcinin sayfasi bir dakika onbellekte
  * (includes/sayfa_onbellek.php); o sayfada form jetonu YOK, yalnizca giris
@@ -12,29 +13,32 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/yorumlar.php';
+require_once __DIR__ . '/network.php';
 
 /**
- * @param array<string,mixed>                              $haber  id ve slug yeterli
+ * @param array<string,mixed>                                 $hedef  haber ya da paylasim (id yeterli)
  * @param array{sayi:int, son:list<array<string,mixed>>}|null $ozet   akista: sayi ve son yorumlar; null = butun yorumlar
- * @param string                                           $donus  gonderimden sonra donulecek site ici adres
+ * @param string                                              $donus  gonderimden sonra donulecek site ici adres
+ * @param string                                              $tur    'haber' ya da 'gonderi'
+ * @param string                                              $tumu   "tumunu gor" baglantisi (akista)
  */
-function yorum_bolumu_html(array $haber, ?array $ozet, string $donus): string
+function yorum_bolumu_html(array $hedef, ?array $ozet, string $donus, string $tur = 'haber', string $tumu = ''): string
 {
-    $haberId  = (int) $haber['id'];
+    $hedefId  = (int) $hedef['id'];
+    $anahtar  = ($tur === 'gonderi' ? 'g' : 'h') . $hedefId;
     $uye      = aktif_uye();
-    $yorumlar = $ozet === null ? yorum_listesi($haberId) : $ozet['son'];
+    $yorumlar = $ozet === null ? yorum_listesi($hedefId, 200, $tur) : $ozet['son'];
     $sayi     = $ozet === null ? count($yorumlar) : $ozet['sayi'];
-    $haberYol = haber_yolu((string) $haber['slug']);
     $jeton    = $uye !== null ? uye_form_jetonu() : '';
-    $sonuc    = (int) ($_GET['yh'] ?? 0) === $haberId ? yorum_sonuc_mesaji((string) ($_GET['yorum'] ?? '')) : null;
+    $sonuc    = (string) ($_GET['yh'] ?? '') === $anahtar ? yorum_sonuc_mesaji((string) ($_GET['yorum'] ?? '')) : null;
 
     ob_start();
     ?>
-    <section class="yorumlar<?= $ozet !== null ? ' yorumlar-ozet' : '' ?>" id="<?= $ozet === null ? 'yorumlar' : 'yorumlar-' . $haberId ?>" aria-label="Yorumlar">
+    <section class="yorumlar<?= $ozet !== null ? ' yorumlar-ozet' : '' ?>" id="<?= $ozet === null ? 'yorumlar' : 'yorumlar-' . e($anahtar) ?>" aria-label="Yorumlar">
         <?php if ($ozet === null): ?>
             <h2 class="yorum-baslik">Yorumlar<?= $sayi > 0 ? ' <span>(' . $sayi . ')</span>' : '' ?></h2>
-        <?php elseif ($sayi > count($yorumlar)): ?>
-            <a class="yorum-tumu" href="<?= e($haberYol) ?>#yorumlar"><?= $sayi ?> yorumun tümünü gör</a>
+        <?php elseif ($sayi > count($yorumlar) && $tumu !== ''): ?>
+            <a class="yorum-tumu" href="<?= e($tumu) ?>#yorumlar"><?= $sayi ?> yorumun tümünü gör</a>
         <?php endif; ?>
 
         <?php if ($sonuc !== null): ?>
@@ -45,10 +49,10 @@ function yorum_bolumu_html(array $haber, ?array $ozet, string $donus): string
             <ul class="yorum-listesi">
                 <?php foreach ($yorumlar as $y): ?>
                     <li class="yorum" id="yorum-<?= (int) $y['id'] ?>">
-                        <span class="uye-simge" style="--uye-renk: <?= e(uye_renk((string) $y['ad'])) ?>" aria-hidden="true"><?= e(uye_bas_harf((string) $y['ad'])) ?></span>
+                        <a href="<?= e(nw_profil_yolu((int) $y['uye_id'])) ?>" tabindex="-1" aria-hidden="true"><?= uye_simge_html($y) ?></a>
                         <div class="yorum-govde">
                             <div class="yorum-balon">
-                                <strong class="yorum-ad"><?= e((string) $y['ad']) ?></strong>
+                                <a class="yorum-ad" href="<?= e(nw_profil_yolu((int) $y['uye_id'])) ?>"><?= e((string) $y['ad']) ?></a>
                                 <p><?= yorum_metin_html((string) $y['metin']) ?></p>
                             </div>
                             <div class="yorum-alt">
@@ -57,7 +61,7 @@ function yorum_bolumu_html(array $haber, ?array $ozet, string $donus): string
                                     <form method="post" action="/yorum.php" class="yorum-islem">
                                         <input type="hidden" name="jeton" value="<?= e($jeton) ?>">
                                         <input type="hidden" name="yorum" value="<?= (int) $y['id'] ?>">
-                                        <input type="hidden" name="haber" value="<?= $haberId ?>">
+                                        <input type="hidden" name="hedef" value="<?= e($anahtar) ?>">
                                         <input type="hidden" name="donus" value="<?= e($donus) ?>">
                                         <?php if ((int) $y['uye_id'] === (int) $uye['id']): ?>
                                             <button type="submit" name="islem" value="sil" onclick="return confirm('Yorumunuz silinsin mi?')">Sil</button>
@@ -79,11 +83,11 @@ function yorum_bolumu_html(array $haber, ?array $ozet, string $donus): string
             <form method="post" action="/yorum.php" class="yorum-yaz">
                 <input type="hidden" name="jeton" value="<?= e($jeton) ?>">
                 <input type="hidden" name="islem" value="ekle">
-                <input type="hidden" name="haber" value="<?= $haberId ?>">
+                <input type="hidden" name="hedef" value="<?= e($anahtar) ?>">
                 <input type="hidden" name="donus" value="<?= e($donus) ?>">
-                <span class="uye-simge" style="--uye-renk: <?= e(uye_renk((string) $uye['ad'])) ?>" aria-hidden="true"><?= e(uye_bas_harf((string) $uye['ad'])) ?></span>
-                <label class="gizli-etiket" for="yorum-metin-<?= $haberId ?>">Yorumunuz</label>
-                <textarea id="yorum-metin-<?= $haberId ?>" name="metin" rows="1" maxlength="<?= YORUM_EN_FAZLA ?>" required
+                <?= uye_simge_html($uye) ?>
+                <label class="gizli-etiket" for="yorum-metin-<?= e($anahtar) ?>">Yorumunuz</label>
+                <textarea id="yorum-metin-<?= e($anahtar) ?>" name="metin" rows="1" maxlength="<?= YORUM_EN_FAZLA ?>" required
                           placeholder="Yorum yazın…"></textarea>
                 <button type="submit">Gönder</button>
             </form>
