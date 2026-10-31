@@ -15,6 +15,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/network.php';
+require_once __DIR__ . '/uye_eposta.php';
 
 $nwUye     = aktif_uye();
 $nwAktif   = (string) ($nwAktif ?? 'akis');
@@ -60,6 +61,15 @@ $nwSayilar = ['mesajlar' => $nwMesajSayi, 'bildirimler' => $nwBildirimSayi];
         </div>
     </div>
 </header>
+<?php if ($nwUye !== null && empty($nwUye['eposta_dogrulandi'])): ?>
+    <?php // E-posta dogrulanmamis uyeye hatirlatma (31.10.2026; bkz. includes/uye_eposta.php). ?>
+    <div class="nw-dogrula-serit">
+        <span><?= uye_dogrulama_zorunlu()
+            ? 'Yorum, paylaşım ve mesaj yazabilmek için e-posta adresinizi doğrulayın.'
+            : 'E-posta adresinizi doğrulayın; şifrenizi unutursanız hesabınıza bu adresle döneceksiniz.' ?></span>
+        <a href="/uye/dogrula">Doğrulama bağlantısı gönder</a>
+    </div>
+<?php endif; ?>
 <script>
 (function () {
     // Gece/gunduz dugmesi: sitenin tema tercihiyle ayni anahtar (bkz. sayfa_ust.php).

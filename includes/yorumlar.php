@@ -244,6 +244,7 @@ const YORUM_SONUCLARI = [
     'silindi'    => ['bilgi',  'Yorumunuz silindi.'],
     'bildirildi' => ['bilgi',  'Bildiriminiz alındı, teşekkürler. Yorum site yönetimince incelenecek.'],
     'jeton'      => ['hata',   'Sayfanın süresi doldu; lütfen yeniden deneyin.'],
+    'dogrula'    => ['hata',   'Yorum yazabilmek için önce e-posta adresinizi doğrulayın (bağlantı e-posta kutunuzda; gelmediyse V Network\'ün üstündeki şeritten yeniden isteyin).'],
 ];
 
 const YORUM_HATALARI = [

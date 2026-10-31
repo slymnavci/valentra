@@ -6110,3 +6110,21 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
     .nw-profil-sayilar, .nw-profil-dugmeler { justify-content: center; }
     .nw-baloncuk { max-width: 85%; }
 }
+
+/* E-posta dogrulama hatirlatmasi (31.10.2026) */
+.nw-dogrula-serit {
+    display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 8px 16px; font-size: .88rem; text-align: center;
+    background: color-mix(in srgb, #f59e0b 16%, var(--kart)); color: var(--metin);
+}
+.nw-dogrula-serit a { color: var(--altin); font-weight: 800; }
+
+/* Akista "yeni paylasim" dugmesi (X'teki gibi, 31.10.2026; bkz. assets/network-akis.js) */
+.nw-yeni-dugme {
+    position: fixed; top: 74px; left: 50%; transform: translateX(-50%); z-index: 41;
+    padding: 9px 18px; border: none; border-radius: 22px;
+    background: var(--altin); color: #fff; font: inherit; font-weight: 800; font-size: .92rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .22); cursor: pointer;
+}
+.nw-yeni-dugme:hover { background: var(--vurgu); }
+.nw-yeni-dugme[hidden] { display: none; }
