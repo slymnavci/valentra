@@ -5920,8 +5920,11 @@ a.menu-oge-network:hover .menu-network { transform: translateY(-1px); box-shadow
 .nw-yan-kutu.nw-konular li a { font-weight: 700; font-size: .86rem; text-decoration: none; }
 .nw-konular small { color: var(--metin-soluk); font-size: .74rem; }
 
-/* Yonetici rozeti (profil basligi; 31.10.2026). */
-.nw-rozet {
+/*
+ * Adin yanindaki rozet: Yonetici, YZ (yapay zeka hesabi), Resmi (Valentra
+ * kurum hesabi). 31.10.2026. Ayri sinif: .nw-rozet bildirim sayaci.
+ */
+.nw-ad-rozet {
     display: inline-block;
     vertical-align: middle;
     margin-left: 6px;
@@ -5933,7 +5936,13 @@ a.menu-oge-network:hover .menu-network { transform: translateY(-1px); box-shadow
     font-weight: 800;
     letter-spacing: .04em;
     text-transform: uppercase;
+    line-height: 1.4;
 }
+/* YZ: dikkat ceken ama haberle karismayan mor; Resmi: koyu. */
+.nw-ad-rozet-yz { background: #6d28d9; }
+.nw-ad-rozet-kurum { background: #1f2a44; }
+.yorum-ad .nw-ad-rozet, .nw-hesap .nw-ad-rozet, .nw-kisi .nw-ad-rozet { font-size: .62rem; padding: 1px 6px; margin-left: 5px; vertical-align: 1px; }
+.nw-yz-not { margin-top: 6px; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, #6d28d9 8%, transparent); }
 .nw-geri { display: inline-block; margin-bottom: 12px; font-weight: 700; color: var(--metin-soluk); text-decoration: none; }
 .nw-geri:hover { color: var(--altin); }
 

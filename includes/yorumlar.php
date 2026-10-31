@@ -132,7 +132,7 @@ function yorum_listesi(int $haberId, int $limit = 200, string $tur = 'haber'): a
 
     try {
         $ifade = db()->prepare(
-            "SELECT y.id, y.uye_id, y.metin, y.olusturuldu, u.ad, u.foto
+            "SELECT y.id, y.uye_id, y.metin, y.olusturuldu, u.ad, u.foto, u.tur, u.rol
                FROM yorumlar y
                JOIN uyeler u ON u.id = y.uye_id
               WHERE y.$sutun = :h AND y.durum = 'yayinda' AND u.durum = 'aktif'
@@ -185,7 +185,7 @@ function yorum_ozetleri(array $haberIdleri, int $sonAdet = 2, string $tur = 'hab
         // Her haberin en yeni N yorumu (pencere fonksiyonu MariaDB 10.2+).
         foreach (db()->query(
             "SELECT * FROM (
-                SELECT y.id, y.$sutun AS hedef, y.uye_id, y.metin, y.olusturuldu, u.ad, u.foto,
+                SELECT y.id, y.$sutun AS hedef, y.uye_id, y.metin, y.olusturuldu, u.ad, u.foto, u.tur, u.rol,
                        ROW_NUMBER() OVER (PARTITION BY y.$sutun ORDER BY y.olusturuldu DESC, y.id DESC) AS sira
                   FROM yorumlar y JOIN uyeler u ON u.id = y.uye_id
                  WHERE y.$sutun IN ($yer) AND y.durum = 'yayinda' AND u.durum = 'aktif'
@@ -299,6 +299,21 @@ function yorum_zaman(string $tarih): string
         $fark < 86400   => intdiv($fark, 3600) . ' sa',
         $fark < 604800  => intdiv($fark, 86400) . ' g',
         default         => tarih_bicimle($tarih, false),
+    };
+}
+
+/**
+ * Adin yanindaki rozet: yapay zeka hesabi, Valentra kurum hesabi ya da
+ * yonetici (31.10.2026). Yapay zeka hesaplari her yerde isaretli; ziyaretci
+ * onlari gercek uye sanmasin (bkz. includes/topluluk.php).
+ */
+function uye_rozet_html(array $uye): string
+{
+    return match (true) {
+        ($uye['tur'] ?? '') === 'yz'       => ' <span class="nw-ad-rozet nw-ad-rozet-yz" title="Yapay zekâ hesabı: gerçek bir kişi değildir">YZ</span>',
+        ($uye['tur'] ?? '') === 'kurum'    => ' <span class="nw-ad-rozet nw-ad-rozet-kurum" title="Valentra\'nın resmî hesabı">Resmî</span>',
+        ($uye['rol'] ?? '') === 'yonetici' => ' <span class="nw-ad-rozet">Yönetici</span>',
+        default                            => '',
     };
 }
 

@@ -16,6 +16,10 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/uyelik.php';
+require_once __DIR__ . '/includes/topluluk.php';
+
+// Acik akis sekmeleri birkac dakikada bir soruyor: YZ begenileri de buradan ilerliyor.
+topluluk_begeni_zamanla();
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
