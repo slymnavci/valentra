@@ -228,8 +228,16 @@ function haber_gorsel_indir(string $url): string
  * duruyor (Google Discover buyuk gorsel istiyor).
  * --------------------------------------------------------------------- */
 
-/** Uretilen genislikler. */
-const HABER_GORSEL_GENISLIKLER = [480, 960];
+/**
+ * Uretilen genislikler.
+ *
+ * 1440 yalnizca ana sayfa kaydiraginda (30.10.2026): gorsel artik kutuyu
+ * dolduruyor ve 1366'lik ekranda ~1320 piksel genislikte gorunuyor; 960
+ * buyutulunce bulaniklasiyordu. Kartlarin srcset'i 480/960'ta kaldi.
+ * Kaynak gorsel daha darsa kopya buyutulmuyor (haber_gorsel_kopya_uret).
+ */
+const HABER_GORSEL_GENISLIKLER = [480, 960, 1440];
+const HABER_GORSEL_KART_GENISLIKLERI = [480, 960];
 
 /** Bundan cok pikselli asil gorsel kucultulmuyor (GD bellegi). */
 const HABER_GORSEL_EN_COK_PIKSEL = 24_000_000;
@@ -273,12 +281,16 @@ function haber_gorsel_kucuk(array $haber, int $genislik): string
     return $kopya !== '' ? $kopya : '/gorsel.php?id=' . $id . '&g=' . $genislik;
 }
 
-/** srcset degeri (480w, 960w); kucuk kopya uretilemiyorsa bos. */
-function haber_gorsel_srcset(array $haber): string
+/**
+ * srcset degeri (varsayilan 480w, 960w); kucuk kopya uretilemiyorsa bos.
+ *
+ * @param list<int> $genislikler HABER_GORSEL_GENISLIKLER icinden
+ */
+function haber_gorsel_srcset(array $haber, array $genislikler = HABER_GORSEL_KART_GENISLIKLERI): string
 {
     $parcalar = [];
 
-    foreach (HABER_GORSEL_GENISLIKLER as $g) {
+    foreach ($genislikler as $g) {
         $adres = haber_gorsel_kucuk($haber, $g);
 
         if ($adres === haber_gorsel($haber)) {
