@@ -227,8 +227,12 @@ final class Yazar implements SemaliIstemci
              kaynakta olmayan bilgi ekleme. İlk paragraf haberin özünü
              tek başına versin: ne oldu, kim, nerede, ne zaman.
            - EK KAYNAKLAR: adayda "Ek kaynaklar" varsa bunlar aynı olayı
-             veren başka yayıncılardır. Haberi hepsini birlikte okuyarak
-             yaz; birinde olmayan ayrıntıyı ötekinden al. Kaynaklar bir
+             veren başka yayıncılardır. Bu durumda haber TEK BİR KAYNAĞIN
+             yeniden anlatımı değil, Valentra'nın kendi haberidir: bütün
+             kaynakları okuyup olayı kendin kur; anlatımı, sıralamayı ve
+             girişi hiçbir kaynağınkine dayandırma. Birinde olmayan
+             ayrıntıyı ötekinden al; hepsindeki bilgileri tek metinde
+             birleştir. Sayfada bütün kaynaklar listelenir. Kaynaklar bir
              rakamda ya da olguda çelişiyorsa resmî/ajans kaynağını
              esas al ya da farkı açıkça belirt ("X'e göre ..., Y ise ...
              bildirdi") ve ajan notuna yaz. Yalnızca BİR kaynakta geçen
