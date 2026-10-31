@@ -316,4 +316,11 @@ foreach (($govdeVeri ?? []) as $ad => $deger) {
         <p class="kaynak-satiri"><?= $kaynakEtiketi ?>: <?= $kaynakSatiri ?></p>
     <?php endif; ?>
 
+    <?php
+    /* Yorumlar (Valentra Network, 31.10.2026; bkz. includes/yorum_bolumu.php).
+       Kaydirma akisinda gelen her haberin de kendi yorumlari var. */
+    require_once __DIR__ . '/yorum_bolumu.php';
+    echo yorum_bolumu_html($haber, null, haber_yolu((string) $haber['slug']) . '#yorumlar');
+    ?>
+
 </article>

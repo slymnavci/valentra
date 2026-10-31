@@ -327,7 +327,7 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
 
                 <?php foreach ($menu as $oge): ?>
                     <?php if ($oge['href'] !== null): ?>
-                        <a class="menu-oge <?= site_menu_aktif($oge, $aktifKategori) ? 'aktif' : '' ?>"
+                        <a class="menu-oge <?= site_menu_aktif($oge, $aktifKategori) ? 'aktif' : '' ?><?= !empty($oge['network']) ? ' menu-oge-network' : '' ?>"
                            href="<?= e($oge['href']) ?>"><?= site_menu_adi_html($oge) ?></a>
                     <?php else: ?>
                         <div class="menu-grup <?= site_menu_aktif($oge, $aktifKategori) ? 'aktif' : '' ?>">

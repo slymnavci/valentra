@@ -60,6 +60,15 @@ function site_menusu(): array
 
     $menu[] = gazete_menu_ogesi('valmagazin', ['kultur-sanat', 'magazin', 'yemek-tarifleri', 'burc', 'burclar']);
 
+    /*
+     * VALENTRA NETWORK (31.10.2026, site sahibi: "ust menude en sagda
+     * VALENTRA Network yazsin ve buradan giris yapalim"). Haber akisi ve
+     * yorumlar; giris/uyelik akisin yan kutusunda. Menu onbellekteki
+     * sayfalarda da ayni oldugu icin uyenin adi burada yazmiyor.
+     */
+    require_once __DIR__ . '/uyelik.php';
+    $menu[] = ['ad' => 'VALENTRA Network', 'anahtar' => 'network', 'href' => network_yolu(), 'altlar' => [], 'network' => true];
+
     return $menu;
 }
 
@@ -95,6 +104,12 @@ function gazete_menu_ogesi(string $gazete, array $onekler): array
  */
 function site_menu_adi_html(array $oge): string
 {
+    if (!empty($oge['network'])) {
+        // Yazi olarak: logonun el yazisi menu yuksekliginde okunmuyor
+        // (31.10.2026 olcumu); logo Network sayfasinda ve uyelik ekraninda.
+        return '<span class="menu-network"><span class="nw-val">VALENTRA</span> Network</span>';
+    }
+
     $g = isset($oge['gazete']) ? gazete_bul((string) $oge['gazete']) : null;
 
     if ($g === null) {

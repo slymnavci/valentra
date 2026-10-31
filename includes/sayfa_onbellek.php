@@ -21,8 +21,9 @@ declare(strict_types=1);
  * dogrulama betigi isteğe ozel olarak yerine konuyor. Sayfada kisiye
  * ozel baska bir sey yok (tema secimi ve cerez onayi tarayicida).
  *
- * Onbellek YOK: yonetici cerezi olan tarayicilar (yonetici her zaman
- * guncel sayfayi gormeli), GET/HEAD disi istekler, 200 disi yanitlar ve
+ * Onbellek YOK: yonetici ve uye cerezi olan tarayicilar (yonetici her
+ * zaman guncel sayfayi gormeli, uyeye kendi adi ve yorum kutusu),
+ * GET/HEAD disi istekler, 200 disi yanitlar ve
  * sayfanin tanimadigi sorgu parametreleri (sinirsiz dosya uretilmesin).
  * Klasor yazilamazsa sayfa eskisi gibi her istekte uretiliyor.
  */
@@ -45,7 +46,10 @@ function sayfa_onbellek(array $parametreler): void
 {
     $yontem = (string) ($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
-    if (($yontem !== 'GET' && $yontem !== 'HEAD') || isset($_COOKIE['valentra_admin']) || PHP_SAPI === 'cli') {
+    // Uye cerezi (Valentra Network, 31.10.2026): uyeye kendi adi ve yorum
+    // kutusu gorunuyor, sayfasi herkese ait kopyaya girmemeli.
+    if (($yontem !== 'GET' && $yontem !== 'HEAD') || isset($_COOKIE['valentra_admin'])
+        || isset($_COOKIE['valentra_uye']) || PHP_SAPI === 'cli') {
         return;
     }
 
