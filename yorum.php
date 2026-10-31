@@ -67,7 +67,7 @@ try {
         $id = yorum_ekle($hedefId, (int) $uye['id'], (string) ($_POST['metin'] ?? ''), $tur);
         header('Location: ' . yorum_donus($donus, 'eklendi', $hedef, 'yorum-' . $id), true, 303);
     } elseif ($islem === 'sil') {
-        yorum_kendi_sil((int) ($_POST['yorum'] ?? 0), (int) $uye['id']);
+        yorum_kendi_sil((int) ($_POST['yorum'] ?? 0), uye_yonetici_mi($uye) ? null : (int) $uye['id']);
         header('Location: ' . yorum_donus($donus, 'silindi', $hedef), true, 303);
     } elseif ($islem === 'sikayet') {
         yorum_sikayet((int) ($_POST['yorum'] ?? 0), (int) $uye['id']);

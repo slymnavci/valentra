@@ -183,9 +183,9 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
                 </div>
                 <?php if ($uye !== null): ?>
                     <form method="post" action="/network-islem.php" class="nw-gonderi-islem">
-                        <?php if ((int) $v['uye_id'] === (int) $uye['id']): ?>
+                        <?php if ((int) $v['uye_id'] === (int) $uye['id'] || uye_yonetici_mi($uye)): ?>
                             <?= nw_form_alanlari('gonderi_sil', $detay ? nw_yol() : $donus, ['gonderi' => $id]) ?>
-                            <button type="submit" onclick="return confirm('Paylaşımınız silinsin mi?')" title="Paylaşımı sil">Sil</button>
+                            <button type="submit" onclick="return confirm('Paylaşım silinsin mi?')" title="Paylaşımı sil">Sil</button>
                         <?php else: ?>
                             <?= nw_form_alanlari('gonderi_sikayet', $donus, ['gonderi' => $id]) ?>
                             <button type="submit" onclick="return confirm('Bu paylaşımı uygunsuz diye bildirmek istiyor musunuz?')" title="Şikâyet et">Şikâyet et</button>

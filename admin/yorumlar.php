@@ -9,7 +9,9 @@ declare(strict_types=1);
  *   - Son yorumlar: yayindakiler, en yeni ustte; gizle ya da sil.
  *   - Gizli: uc sikayetle kendiliginden gizlenenler ve elle gizlenenler;
  *     yeniden yayinla ya da sil.
- *   - Uyeler: engelle (giris yapamaz, yorumlari gorunmez) ya da engeli kaldir.
+ *   - Uyeler: engelle (giris yapamaz, yorumlari gorunmez) ya da engeli kaldir;
+ *     V Network yoneticisi yap ya da yoneticiligi al; yonetici hesabi olustur
+ *     (31.10.2026: sifre depoya yazilmasin diye hesap buradan aciliyor).
  */
 
 require_once __DIR__ . '/../includes/bootstrap.php';
@@ -54,6 +56,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($dosyalar as $dosya) {
             nw_foto_sil((string) $dosya);
         }
+    } elseif ($islem === 'yonetici_hesap') {
+        try {
+            uye_yonetici_kaydet((string) ($_POST['rumuz'] ?? ''), (string) ($_POST['sifre'] ?? ''));
+        } catch (InvalidArgumentException $e) {
+            yonlendir('yorumlar.php?sekme=uyeler&hata=' . rawurlencode($e->getMessage()));
+        }
+    } elseif ($islem === 'rol_yonetici' || $islem === 'rol_uye') {
+        db()->prepare('UPDATE uyeler SET rol = :r WHERE id = :id')
+            ->execute(['r' => $islem === 'rol_yonetici' ? 'yonetici' : 'uye', 'id' => $id]);
     } elseif ($islem === 'engelle' || $islem === 'engel_kaldir') {
         db()->prepare('UPDATE uyeler SET durum = :d WHERE id = :id')
             ->execute(['d' => $islem === 'engelle' ? 'engelli' : 'aktif', 'id' => $id]);
@@ -90,7 +101,7 @@ try {
         $fotolar = gonderi_fotolari(array_map(static fn (array $g): int => (int) $g['id'], $satirlar));
     } elseif ($sekme === 'uyeler') {
         $satirlar = db()->query(
-            'SELECT u.id, u.ad, u.eposta, u.durum, u.olusturuldu, u.son_giris,
+            'SELECT u.id, u.ad, u.eposta, u.durum, u.rol, u.olusturuldu, u.son_giris,
                     (SELECT COUNT(*) FROM yorumlar y WHERE y.uye_id = u.id) AS yorum_sayisi
                FROM uyeler u ORDER BY u.id DESC LIMIT 300'
         )->fetchAll();
@@ -119,6 +130,9 @@ require __DIR__ . '/ust.php';
 
 <?php if (isset($_GET['bildirim'])): ?>
     <div class="uyari uyari-basari" style="margin-top:20px;">İşlem tamamlandı.</div>
+<?php endif; ?>
+<?php if (isset($_GET['hata'])): ?>
+    <div class="uyari uyari-hata" style="margin-top:20px;"><?= e((string) $_GET['hata']) ?></div>
 <?php endif; ?>
 
 <div class="kutu" style="margin-top:20px;">
@@ -181,13 +195,29 @@ require __DIR__ . '/ust.php';
         </div>
     <?php endforeach; ?>
 <?php elseif ($sekme === 'uyeler'): ?>
+    <div class="kutu" style="margin-top:16px;">
+        <strong>V Network yönetici hesabı</strong>
+        <p class="ipucu" style="margin:4px 0 10px;">
+            Yönetici V Network'te her paylaşımı ve yorumu silebilir, üyelik durdurabilir, herkese mesaj
+            yazabilir; profilinde “Yönetici” rozeti görünür. Girişi <a href="/uye/giris" target="_blank" rel="noopener">/uye/giris</a>
+            sayfasından rumuz ve şifreyle. Bu rumuzla bir hesap varsa şifresi yenilenir ve yönetici yapılır.
+        </p>
+        <form method="post" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:0;">
+            <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+            <input type="hidden" name="islem" value="yonetici_hesap">
+            <label>Rumuz<br><input type="text" name="rumuz" value="admin" required maxlength="<?= UYE_AD_EN_FAZLA ?>" autocomplete="off"></label>
+            <label>Şifre (en az <?= UYE_SIFRE_EN_AZ ?> karakter)<br><input type="password" name="sifre" required minlength="<?= UYE_SIFRE_EN_AZ ?>" autocomplete="new-password"></label>
+            <button type="submit" class="dugme dugme-ana">Kaydet</button>
+        </form>
+    </div>
+
     <div class="kutu" style="margin-top:16px;overflow-x:auto;">
         <table class="liste-tablo">
-            <thead><tr><th>Ad</th><th>E-posta</th><th>Yorum</th><th>Kayıt</th><th>Son giriş</th><th>Durum</th><th></th></tr></thead>
+            <thead><tr><th>Rumuz</th><th>E-posta</th><th>Yorum</th><th>Kayıt</th><th>Son giriş</th><th>Durum</th><th></th></tr></thead>
             <tbody>
                 <?php foreach ($satirlar as $u): ?>
                     <tr>
-                        <td><?= e((string) $u['ad']) ?></td>
+                        <td><?= e((string) $u['ad']) ?><?= ($u['rol'] ?? '') === 'yonetici' ? ' <strong style="color:#c0121b">(yönetici)</strong>' : '' ?></td>
                         <td><?= e((string) $u['eposta']) ?></td>
                         <td><?= (int) $u['yorum_sayisi'] ?></td>
                         <td><?= e(tarih_bicimle((string) $u['olusturuldu'])) ?></td>
@@ -201,6 +231,11 @@ require __DIR__ . '/ust.php';
                                     <button type="submit" name="islem" value="engelle" class="dugme" onclick="return confirm('Üye engellensin mi? Yorumları sitede görünmez olur.')">Engelle</button>
                                 <?php else: ?>
                                     <button type="submit" name="islem" value="engel_kaldir" class="dugme">Engeli kaldır</button>
+                                <?php endif; ?>
+                                <?php if (($u['rol'] ?? '') === 'yonetici'): ?>
+                                    <button type="submit" name="islem" value="rol_uye" class="dugme" onclick="return confirm('Yöneticilik alınsın mı?')">Yöneticiliği al</button>
+                                <?php else: ?>
+                                    <button type="submit" name="islem" value="rol_yonetici" class="dugme" onclick="return confirm('Bu üye V Network yöneticisi yapılsın mı? Her paylaşımı ve yorumu silebilir, üyelik durdurabilir.')">Yönetici yap</button>
                                 <?php endif; ?>
                             </form>
                         </td>
