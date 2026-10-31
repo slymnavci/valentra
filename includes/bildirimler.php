@@ -75,7 +75,7 @@ function bildirim_listesi(int $uyeId, int $limit = 100): array
             "SELECT b.id, b.tur, b.gonderi_id, b.yorum_id, b.okundu, b.olusturuldu,
                     u.id AS yapan_id, u.ad, u.foto, u.tur, u.rol, y.metin AS yorum_metni, g.metin AS gonderi_metni
                FROM bildirimler b
-               JOIN uyeler u ON u.id = b.yapan_id AND u.durum = 'aktif'
+               JOIN uyeler u ON u.id = b.yapan_id AND u.durum = 'aktif' AND u.tur <> 'yz'
                LEFT JOIN yorumlar y ON y.id = b.yorum_id
                LEFT JOIN gonderiler g ON g.id = b.gonderi_id
               WHERE b.uye_id = :u

@@ -24,6 +24,7 @@ if ($anahtarId === null) {
 $yontem = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if ($yontem === 'GET') {
+    topluluk_begeni_zamanla();
     ajan_json(200, topluluk_malzeme());
 }
 

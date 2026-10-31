@@ -6,19 +6,19 @@ declare(strict_types=1);
  *
  * Site sahibinin istegi: "V Network'te 100 uye yapalim, biraz kalabalik
  * gorunsun". Gercek kisi gibi gorunen sahte hesap acilmadi: ziyaretci
- * onlari takip eder, tanismaya calisir. Bunun yerine ACIKCA ISARETLI
- * hesaplar (site sahibinin onayi, ayni gun):
+ * onlari takip eder, tanismaya calisir. Bunun yerine:
  *
- *   - yz:    100 yapay zeka hesabi (50 kadin, 50 erkek rumuz ve kisilik;
- *            ajan/veri/topluluk_hesaplari.json). Adlarinin yaninda her
- *            yerde "YZ" rozeti, profilinde "gercek bir kisi degildir" notu.
- *   - kurum: ValHaber, ValSpor gibi Valentra hesaplari ("Resmi" rozeti).
+ *   - yz:    100 yapay zeka hesabi (ajan/veri/topluluk_hesaplari.json).
+ *            Sitede hicbir yerde gorunmuyor (profil, Kisiler, bildirim
+ *            yok); yalnizca begeni birakiyor (topluluk_begeni_dagit).
+ *            Topluluk Kurallari'nda begeni sayilarina dahil oldugu yaziyor.
+ *   - kurum: ValHaber, ValSpor gibi Valentra hesaplari ("Resmi" rozeti);
+ *            paylasim ve yorumlarini ajan yaziyor (ajan/topluluk.php).
  *
  * Ikisi de giris yapamaz (sifreleri kimsenin bilmedigi rastgele bir
  * degerin ozeti), ozel mesaj alip gonderemez, gercek uyeleri takip etmez.
- * Paylasim, yorum ve begenileri ajan yapiyor (ajan/topluluk.php,
- * api/topluluk.php); her eylem gercek uyelerle ayni kurallardan (kufur
- * filtresi, siklik siniri) geciyor.
+ * Kurum eylemleri gercek uyelerle ayni kurallardan (kufur filtresi,
+ * siklik siniri) geciyor.
  */
 
 require_once __DIR__ . '/network.php';
@@ -132,7 +132,134 @@ function topluluk_malzeme(): array
 }
 
 /**
- * Ajanin eylemlerini uygular. Her eylem gercek uyelerinkiyle ayni
+ * YZ hesaplarinin begenileri (site sahibinin karari, 31.10.2026: "yapay
+ * zeka hesaplari gorunmesin, sadece begeni atsinlar").
+ *
+ * YZ hesaplari sitede hicbir yerde gorunmuyor (profil, Kisiler, bildirim
+ * yok); yalnizca begeni sayilarina katiliyorlar. Topluluk Kurallari'nda
+ * beğeni sayilarina YZ begenilerinin dahil oldugu yaziyor.
+ *
+ * Her icerigin bir hedefi var (id'den turetilen sabit sayi) ve begeniler
+ * zamana yayiliyor: uye paylasimi ilk saatte 3-8, haber alti saatte 5-24
+ * (onemli haber daha cok). Bildirim gitmiyor. Model kullanilmiyor.
+ *
+ * @return array{gonderi:int,haber:int}
+ */
+function topluluk_begeni_dagit(): array
+{
+    $sonuc = ['gonderi' => 0, 'haber' => 0];
+    $yzler = array_map('intval', db()->query(
+        "SELECT id FROM uyeler WHERE tur = 'yz' AND durum = 'aktif'"
+    )->fetchAll(PDO::FETCH_COLUMN));
+
+    if ($yzler === []) {
+        return $sonuc;
+    }
+
+    $gonderiler = db()->query(
+        "SELECT g.id, TIMESTAMPDIFF(MINUTE, g.olusturuldu, NOW()) AS dk, 0 AS onem
+           FROM gonderiler g JOIN uyeler u ON u.id = g.uye_id
+          WHERE g.durum = 'yayinda' AND u.durum = 'aktif' AND u.tur <> 'yz'
+            AND g.olusturuldu >= NOW() - INTERVAL 2 DAY
+          ORDER BY g.id DESC LIMIT 80"
+    )->fetchAll();
+
+    $haberler = db()->prepare(
+        "SELECT h.id, TIMESTAMPDIFF(MINUTE, h.yayin_tarihi, NOW()) AS dk, h.onem
+           FROM haberler h
+          WHERE h.durum = :d AND h.yayin_tarihi <= NOW() AND h.yayin_tarihi >= NOW() - INTERVAL 1 DAY
+          ORDER BY h.id DESC LIMIT 150"
+    );
+    $haberler->execute(['d' => HABER_YAYINDA]);
+
+    $mevcut = db()->prepare(
+        'SELECT b.uye_id FROM begeniler b JOIN uyeler u ON u.id = b.uye_id
+          WHERE b.hedef_tur = :t AND b.hedef_id = :h AND u.tur = \'yz\''
+    );
+    $ekle  = db()->prepare('INSERT IGNORE INTO begeniler (hedef_tur, hedef_id, uye_id) VALUES (:t, :h, :u)');
+    $kalan = 400; // tek calismada en fazla begeni
+
+    foreach (['gonderi' => $gonderiler, 'haber' => $haberler->fetchAll()] as $tur => $liste) {
+        foreach ($liste as $oge) {
+            $id   = (int) $oge['id'];
+            $tohum = crc32($tur . $id);
+
+            if ($tur === 'gonderi') {
+                $hedef = 3 + $tohum % 6;                                         // 3-8
+                $oran  = ((int) $oge['dk'] - 8) / 50;                            // 8. dk - 1. saat
+            } else {
+                $hedef = 5 + $tohum % 13 + intdiv(max(0, (int) $oge['onem'] - 50), 7); // 5-24
+                $oran  = ((int) $oge['dk'] - 10) / 350;                          // 10. dk - 6. saat
+            }
+
+            $istenen = (int) round($hedef * max(0, min(1, $oran)));
+
+            if ($istenen <= 0) {
+                continue;
+            }
+
+            $mevcut->execute(['t' => $tur, 'h' => $id]);
+            $begenenler = array_map('intval', $mevcut->fetchAll(PDO::FETCH_COLUMN));
+            $eksik      = min($kalan, $istenen - count($begenenler));
+
+            if ($eksik <= 0) {
+                continue;
+            }
+
+            $adaylar = array_values(array_diff($yzler, $begenenler));
+            shuffle($adaylar);
+
+            foreach (array_slice($adaylar, 0, $eksik) as $uyeId) {
+                $ekle->execute(['t' => $tur, 'h' => $id, 'u' => $uyeId]);
+                $sonuc[$tur] += $ekle->rowCount();
+                $kalan--;
+            }
+
+            if ($kalan <= 0) {
+                return $sonuc;
+            }
+        }
+    }
+
+    return $sonuc;
+}
+
+/**
+ * Begeni dagitimini sayfa isteginin sonunda calistirir; en fazla bes
+ * dakikada bir (ayni anda gelen iki istekten yalnizca biri kazaniyor).
+ * Hata sayfayi etkilemez.
+ */
+function topluluk_begeni_zamanla(): void
+{
+    // Onbellekten donen isteklerde veritabanina gitmemek icin once dosya saati.
+    $isaret = __DIR__ . '/../onbellek/topluluk_begeni.zaman';
+
+    if (is_file($isaret) && filemtime($isaret) > time() - 300) {
+        return;
+    }
+
+    register_shutdown_function(static function () use ($isaret): void {
+        @touch($isaret);
+
+        try {
+            db()->exec("INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('topluluk_begeni_son', '0')");
+            $al = db()->prepare(
+                "UPDATE ayarlar SET deger = :simdi
+                  WHERE anahtar = 'topluluk_begeni_son' AND CAST(deger AS UNSIGNED) < :esik"
+            );
+            $al->execute(['simdi' => (string) time(), 'esik' => time() - 300]);
+
+            if ($al->rowCount() === 1) {
+                topluluk_begeni_dagit();
+            }
+        } catch (Throwable $e) {
+            error_log('topluluk_begeni_dagit: ' . $e->getMessage());
+        }
+    });
+}
+
+/**
+ * Kurum hesaplarinin (ValHaber...) eylemlerini uygular. Her eylem gercek uyelerinkiyle ayni
  * islevlerden geciyor (kufur filtresi, siklik siniri, bildirim).
  *
  * Eylem: {"hesap": rumuz, "tur": "paylasim"|"yorum"|"begeni",
@@ -148,7 +275,7 @@ function topluluk_uygula(array $eylemler): array
         "SELECT u.id,
                 (SELECT COUNT(*) FROM gonderiler g WHERE g.uye_id = u.id AND g.olusturuldu >= CURDATE())
               + (SELECT COUNT(*) FROM yorumlar y WHERE y.uye_id = u.id AND y.olusturuldu >= CURDATE()) AS bugun
-           FROM uyeler u WHERE u.ad = :r AND u.tur IN ('yz','kurum') AND u.durum = 'aktif'"
+           FROM uyeler u WHERE u.ad = :r AND u.tur = 'kurum' AND u.durum = 'aktif'"
     );
 
     foreach (array_slice($eylemler, 0, TOPLULUK_ISTEK_TAVANI) as $e) {
@@ -161,7 +288,8 @@ function topluluk_uygula(array $eylemler): array
         $h = $hesap->fetch();
 
         if (!is_array($h)) {
-            $sonuc['hatalar'][] = $rumuz . ': yapay zekâ ya da kurum hesabı değil';
+            // YZ hesaplari yalnizca begeni birakiyor (topluluk_begeni_dagit).
+            $sonuc['hatalar'][] = $rumuz . ': kurum hesabı değil';
             continue;
         }
 

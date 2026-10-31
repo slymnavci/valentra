@@ -4,16 +4,16 @@ declare(strict_types=1);
 /**
  * V Network yapay zeka ve kurum hesaplari ajani (31.10.2026).
  *
- * Hesaplar ajan/veri/topluluk_hesaplari.json'da (100 YZ hesabi: 50 kadin,
- * 50 erkek kurgusal kisilik; 5 Valentra kurum hesabi). Sitede YZ/Resmi
- * rozetiyle isaretliler (bkz. includes/topluluk.php).
+ * Hesaplar ajan/veri/topluluk_hesaplari.json'da (100 YZ hesabi, 5 Valentra
+ * kurum hesabi; bkz. includes/topluluk.php).
  *
- * Her calismada: eksik hesaplar acilir, gunluk tavani dolmamis hesaplardan
- * birkaci secilir, model her biri icin kisa yorum/paylasim/begeni yazar,
- * site gercek uyelerin kurallariyla uygular.
+ * Her calismada: eksik hesaplar acilir; gunluk tavani dolmamis kurum
+ * hesaplarindan biri ya da ikisi secilir, model paylasim/yorum yazar, site
+ * gercek uyelerin kurallariyla uygular. YZ hesaplari yalnizca begeni
+ * birakiyor; onu site kendisi dagitiyor (topluluk_begeni_dagit), model yok.
  *
  * Calistirma:
- *   php ajan/topluluk.php [--kuru] [--sure=4] [--hesap=12]
+ *   php ajan/topluluk.php [--kuru] [--sure=4] [--hesap=2]
  */
 
 if (PHP_SAPI !== 'cli') {
@@ -41,8 +41,8 @@ mb_internal_encoding('UTF-8');
 $secenekler = getopt('', ['kuru', 'sure::', 'hesap::']);
 $kuru       = isset($secenekler['kuru']);
 $bitis      = time() + max(2, (int) ($secenekler['sure'] ?? 4)) * 60;
-// Calisma basina YZ hesabi (iki saatte bir: gunde ~12 calisma).
-$hesapAdedi = max(2, min(20, (int) ($secenekler['hesap'] ?? 10)));
+// Calisma basina kurum hesabi (iki saatte bir: gunde ~12 calisma).
+$hesapAdedi = max(1, min(5, (int) ($secenekler['hesap'] ?? 2)));
 
 function gunluk(string $mesaj): void
 {
@@ -100,7 +100,7 @@ if ($malzeme['haberler'] === []) {
     exit(0);
 }
 
-// Gunluk tavani dolmamis hesaplar; YZ'den rastgele, kurumdan bir tane (sirayla).
+// Gunluk tavani dolmamis kurum hesaplari, saate gore sirayla.
 $tavan  = (int) ($malzeme['tavan']['gunluk'] ?? 8);
 $bugun  = [];
 
@@ -113,13 +113,11 @@ $uygun = static fn (string $tur): array => array_values(array_filter(
     static fn (array $k): bool => $k['tur'] === $tur && isset($bugun[$k['rumuz']]) && $bugun[$k['rumuz']] < $tavan - 1
 ));
 
-$yzler = $uygun('yz');
-shuffle($yzler);
 $kurumlar = $uygun('kurum');
-$secilen  = array_slice($yzler, 0, $hesapAdedi);
+$secilen  = [];
 
-if ($kurumlar !== []) {
-    $secilen[] = $kurumlar[(int) date('G') % count($kurumlar)];
+for ($i = 0; $i < min($hesapAdedi, count($kurumlar)); $i++) {
+    $secilen[] = $kurumlar[((int) date('G') + $i) % count($kurumlar)];
 }
 
 if ($secilen === []) {

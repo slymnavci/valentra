@@ -275,7 +275,7 @@ function nw_uye_bul(int $id): ?array
                 (SELECT COUNT(*) FROM takipler t WHERE t.takip_edilen = u.id) AS takipci,
                 (SELECT COUNT(*) FROM takipler t WHERE t.takip_eden = u.id) AS takip,
                 (SELECT COUNT(*) FROM gonderiler g WHERE g.uye_id = u.id AND g.durum = 'yayinda') AS gonderi
-           FROM uyeler u WHERE u.id = :id AND u.durum = 'aktif'"
+           FROM uyeler u WHERE u.id = :id AND u.durum = 'aktif' AND u.tur <> 'yz'"
     );
     $ifade->execute(['id' => $id]);
     $satir = $ifade->fetch();
@@ -290,7 +290,8 @@ function nw_uye_bul(int $id): ?array
  */
 function nw_kisiler(string $ara, string $sira, int $limit = 60): array
 {
-    $kosul = "u.durum = 'aktif'";
+    // YZ hesaplari sitede gorunmuyor, yalnizca begeni birakiyor (includes/topluluk.php).
+    $kosul = "u.durum = 'aktif' AND u.tur <> 'yz'";
     $deger = [];
 
     if ($ara !== '') {
@@ -316,7 +317,7 @@ function nw_takip_listesi(int $uyeId, bool $takipciler): array
     $ifade = db()->prepare(
         "SELECT u.id, u.ad, u.hakkinda, u.foto, u.tur, u.rol FROM takipler t
            JOIN uyeler u ON u.id = " . ($takipciler ? 't.takip_eden' : 't.takip_edilen') . "
-          WHERE " . ($takipciler ? 't.takip_edilen' : 't.takip_eden') . " = :u AND u.durum = 'aktif'
+          WHERE " . ($takipciler ? 't.takip_edilen' : 't.takip_eden') . " = :u AND u.durum = 'aktif' AND u.tur <> 'yz'
           ORDER BY t.olusturuldu DESC LIMIT 300"
     );
     $ifade->execute(['u' => $uyeId]);

@@ -6,10 +6,10 @@ namespace Valentra\Ajan;
 /**
  * V Network yapay zeka ve kurum hesaplarinin yazari (31.10.2026).
  *
- * Site sahibinin istegi: "V Network biraz kalabalik gorunsun". Hesaplar
- * sitede YZ/Resmi rozetiyle isaretli (bkz. includes/topluluk.php); burada
- * yazdiklari: haberlere ve paylasimlara kisa yorum, haberden yola cikan
- * paylasim, begeni. Her calismada birkac hesap secilir, model her biri
+ * Site sahibinin istegi: "V Network biraz kalabalik gorunsun". Burada
+ * yalnizca "Resmi" rozetli kurum hesaplari yaziyor (YZ hesaplari sadece
+ * begeni birakiyor, bkz. includes/topluluk.php): haberlere ve paylasimlara
+ * kisa yorum, haberden yola cikan paylasim, begeni. Her calismada birkac hesap secilir, model her biri
  * icin kisiligine uygun 1-3 eylem yazar. Eylemleri site, gercek uyelerin
  * kurallariyla (kufur filtresi, siklik siniri) uygular.
  *
@@ -20,10 +20,10 @@ final class Topluluk
 {
     private const YONERGE = <<<'METIN'
         Valentra bir Türkçe haber sitesidir. V Network, sitenin sosyal
-        alanıdır. Aşağıdaki hesaplar V Network'te AÇIKÇA İŞARETLİ hesaplardır:
-        "YZ" rozetli yapay zekâ hesapları ve "Resmî" rozetli Valentra kurum
-        hesapları. Görevin, her hesap için kişiliğine uygun, kısa ve doğal
-        paylaşım ve yorumlar yazmak.
+        alanıdır. Aşağıdaki hesaplar V Network'te "Resmî" rozetiyle işaretli
+        Valentra kurum hesaplarıdır (ValHaber, ValSpor...). Görevin, her
+        hesap için kendi alanına uygun, kısa ve doğal paylaşım ve yorumlar
+        yazmak.
 
         EN ÖNEMLİ KURALLAR
         - Hesaplar gerçek kişi DEĞİLDİR ve bunu inkâr etmez. Kendini insan
