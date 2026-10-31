@@ -803,9 +803,11 @@ summary.cekmece-oge::after {
     margin: 28px 0;
 }
 
+/* Baslik bir punto buyuk (31.10.2026, site sahibi: "basliklar da bir
+   font buyusun", metinle birlikte): 25,6-40px yerine 28-44px. */
 .detay h1 {
     margin: 0 0 14px;
-    font-size: clamp(1.6rem, 4vw, 2.5rem);
+    font-size: clamp(1.75rem, 4.4vw, 2.75rem);
     font-weight: 800;
     line-height: 1.2;
     letter-spacing: -.015em;
@@ -3506,7 +3508,7 @@ a.rg-madde:hover { color: var(--vurgu); }
 .kose-detay .icerik h2,
 .detay-derleme .icerik h2 {
     margin: 1.6em 0 .6em;
-    font-size: 1.25rem;
+    font-size: 1.36rem;
     font-weight: 800;
     line-height: 1.3;
 }
@@ -5356,7 +5358,7 @@ a.bulut-etiket:hover,
 }
 
 /* Haber metninde ara baslik ve madde listesi (ozgun veri haberleri, 28.10.2026). */
-.detay .icerik h2 { margin: 1.5em 0 .55em; font-size: 1.2rem; font-weight: 800; line-height: 1.3; }
+.detay .icerik h2 { margin: 1.5em 0 .55em; font-size: 1.32rem; font-weight: 800; line-height: 1.3; }
 .detay .icerik ul { margin: 0 0 1.05em; padding-left: 1.3em; }
 .detay .icerik li { margin-bottom: .35em; }
 
