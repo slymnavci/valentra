@@ -110,9 +110,23 @@ function dosya_firsatlari(int $adet = 8): array
         $kosul = [];
         $par   = ['d' => HABER_YAYINDA];
 
+        /*
+         * Her alan icin ayri parametre adi (31.10.2026). Ayni ad (:k0) bir
+         * sorguda uc kez geciyordu; gercek hazirlanmis ifadede (EMULATE_PREPARES
+         * kapali) PDO bunu kabul etmiyor: "SQLSTATE[HY093]: Invalid parameter
+         * number". Aciklayici yazi ajani bu yuzden her calismada HTTP 500
+         * aliyordu (#200'den sonra gunlukte gorundu).
+         */
         foreach (array_slice($kelimeler, 0, 4) as $i => $k) {
-            $kosul[] = '(h.baslik LIKE :k' . $i . ' OR h.ozet LIKE :k' . $i . ' OR h.etiketler LIKE :k' . $i . ')';
-            $par['k' . $i] = '%' . $k . '%';
+            $alanlar = [];
+
+            foreach (['baslik', 'ozet', 'etiketler'] as $alan) {
+                $ad        = 'k' . $i . $alan;
+                $alanlar[] = 'h.' . $alan . ' LIKE :' . $ad;
+                $par[$ad]  = '%' . $k . '%';
+            }
+
+            $kosul[] = '(' . implode(' OR ', $alanlar) . ')';
         }
 
         $ifade = db()->prepare(
