@@ -239,6 +239,8 @@ function sema_yukselt(array &$hatalar = []): array
      */
     $sutunEkle('uyeler', 'hakkinda', "VARCHAR(300) NOT NULL DEFAULT '' AFTER ad");
     $sutunEkle('uyeler', 'foto', "VARCHAR(64) NOT NULL DEFAULT '' AFTER hakkinda");
+    // E-posta dogrulamasi (31.10.2026; bkz. includes/uye_eposta.php).
+    $sutunEkle('uyeler', 'eposta_dogrulandi', 'DATETIME NULL AFTER eposta');
     $sutunEkle('gonderiler', 'video_url', "VARCHAR(300) NOT NULL DEFAULT '' AFTER metin");
     $sutunEkle('yorumlar', 'gonderi_id', 'INT UNSIGNED NULL AFTER haber_id');
 

@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/yorumlar.php';
+require_once __DIR__ . '/includes/uye_eposta.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     http_response_code(405);
@@ -54,6 +55,12 @@ if (!uye_form_dogrula($_POST['jeton'] ?? null)) {
 }
 
 $islem = (string) ($_POST['islem'] ?? '');
+
+// E-posta dogrulamasi zorunluysa dogrulanmamis uye yorum yazamaz (31.10.2026).
+if ($islem === 'ekle' && uye_yazma_engeli($uye) !== null) {
+    header('Location: ' . yorum_donus($donus, 'dogrula', $hedef), true, 303);
+    exit;
+}
 
 try {
     if ($islem === 'ekle') {

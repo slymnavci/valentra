@@ -2196,6 +2196,8 @@ CREATE TABLE IF NOT EXISTS uyeler (
     hakkinda      VARCHAR(300)  NOT NULL DEFAULT '',
     foto          VARCHAR(64)   NOT NULL DEFAULT '',
     eposta        VARCHAR(190)  NOT NULL,
+    -- E-posta dogrulandigi an; bos = dogrulanmamis (31.10.2026, includes/uye_eposta.php).
+    eposta_dogrulandi DATETIME  NULL,
     sifre         VARCHAR(255)  NOT NULL,
     durum         ENUM('aktif','engelli') NOT NULL DEFAULT 'aktif',
     kayit_ip      VARCHAR(45)   NOT NULL DEFAULT '',
@@ -2372,4 +2374,18 @@ CREATE TABLE IF NOT EXISTS bildirimler (
     CONSTRAINT fk_bildirim_uye FOREIGN KEY (uye_id) REFERENCES uyeler (id) ON DELETE CASCADE,
     CONSTRAINT fk_bildirim_yapan FOREIGN KEY (yapan_id) REFERENCES uyeler (id) ON DELETE CASCADE,
     CONSTRAINT fk_bildirim_gonderi FOREIGN KEY (gonderi_id) REFERENCES gonderiler (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Uyelik e-posta baglantilari (31.10.2026): dogrulama ve sifre yenileme.
+-- Yalnizca anahtarin SHA-256 ozeti; tek kullanimlik, sureli.
+CREATE TABLE IF NOT EXISTS uye_jetonlari (
+    anahtar       CHAR(64)      NOT NULL,
+    uye_id        INT UNSIGNED  NOT NULL,
+    tur           ENUM('dogrulama','sifre') NOT NULL,
+    bitis         DATETIME      NOT NULL,
+    olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (anahtar),
+    KEY ix_uye_jeton_uye (uye_id, olusturuldu),
+    CONSTRAINT fk_uye_jeton_uye FOREIGN KEY (uye_id) REFERENCES uyeler (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

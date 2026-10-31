@@ -15,6 +15,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/seo.php';
 require_once __DIR__ . '/includes/yorumlar.php';
+require_once __DIR__ . '/includes/uye_eposta.php';
 
 $islem = (string) ($_GET['islem'] ?? 'giris');
 $islem = in_array($islem, ['giris', 'kayit', 'cikis'], true) ? $islem : 'giris';
@@ -58,7 +59,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             $hata = 'Şifreler birbirini tutmuyor.';
         } else {
             try {
-                uye_oturum_ac(uye_kaydet($ad, $eposta, $sifre));
+                $yeniId = uye_kaydet($ad, $eposta, $sifre);
+                uye_oturum_ac($yeniId);
+
+                // Dogrulama e-postasi (31.10.2026). Gonderilemezse kayit yine
+                // tamam; uye sonradan /uye/dogrula'dan yeniden isteyebilir.
+                try {
+                    uye_dogrulama_gonder($yeniId);
+                } catch (Throwable $e) {
+                    error_log('[valentra] dogrulama e-postasi gonderilemedi: ' . $e->getMessage());
+                }
+
                 header('Location: ' . $donus, true, 303);
                 exit;
             } catch (InvalidArgumentException $e) {
@@ -148,6 +159,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <?php if ($kayit): ?>
                 Zaten üye misiniz? <a href="<?= e(uye_yolu('giris', $donus)) ?>">Giriş yapın</a>
             <?php else: ?>
+                <a href="/uye/sifre">Şifremi unuttum</a><br>
                 Hesabınız yok mu? <a href="<?= e(uye_yolu('kayit', $donus)) ?>">Ücretsiz üye olun</a>
             <?php endif; ?>
         </p>

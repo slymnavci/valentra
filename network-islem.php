@@ -17,6 +17,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/network.php';
+require_once __DIR__ . '/includes/uye_eposta.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     http_response_code(405);
@@ -45,6 +46,11 @@ if (!uye_form_dogrula($_POST['jeton'] ?? null)) {
 
 $uyeId = (int) $uye['id'];
 $islem = (string) ($_POST['islem'] ?? '');
+
+// E-posta dogrulamasi zorunluysa dogrulanmamis uye paylasim ve mesaj yazamaz (31.10.2026).
+if (in_array($islem, ['gonderi', 'mesaj'], true) && ($engel = uye_yazma_engeli($uye)) !== null) {
+    nw_bitir($donus, 'hata', $engel);
+}
 
 try {
     switch ($islem) {
