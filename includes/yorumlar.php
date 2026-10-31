@@ -110,8 +110,15 @@ function yorum_ekle(int $haberId, int $uyeId, string $metin, string $tur = 'habe
 
     db()->prepare('INSERT INTO yorumlar (' . $sutun . ', uye_id, metin, ip) VALUES (:h, :u, :m, :ip)')
         ->execute(['h' => $haberId, 'u' => $uyeId, 'm' => $metin, 'ip' => mb_substr($ip, 0, 45)]);
+    $yorumId = (int) db()->lastInsertId();
 
-    return (int) db()->lastInsertId();
+    // Paylasimin sahibine bildirim (V Network, 31.10.2026).
+    if ($tur === 'gonderi') {
+        require_once __DIR__ . '/bildirimler.php';
+        bildirim_ekle(bildirim_gonderi_sahibi($haberId), $uyeId, 'yorum', $haberId, $yorumId);
+    }
+
+    return $yorumId;
 }
 
 /**
@@ -305,7 +312,7 @@ function uye_simge_html(array $uye, int $boyut = 34): string
     $stil = 'width:' . $boyut . 'px;height:' . $boyut . 'px;font-size:' . round($boyut * .42) . 'px';
 
     if ($foto !== '') {
-        return '<img class="uye-simge" src="' . e($foto) . '" alt="" width="' . $boyut . '" height="' . $boyut . '" loading="lazy" style="' . $stil . '">';
+        return '<img class="uye-simge" src="' . e($foto) . '" alt="" width="' . $boyut . '" height="' . $boyut . '" loading="lazy" style="' . $stil . '" onerror="this.removeAttribute(\'src\')">';
     }
 
     return '<span class="uye-simge" style="--uye-renk: ' . e(uye_renk($ad)) . ';' . $stil . '" aria-hidden="true">' . e(uye_bas_harf($ad)) . '</span>';
