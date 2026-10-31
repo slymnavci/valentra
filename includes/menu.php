@@ -105,9 +105,13 @@ function gazete_menu_ogesi(string $gazete, array $onekler): array
 function site_menu_adi_html(array $oge): string
 {
     if (!empty($oge['network'])) {
-        // Yazi olarak: logonun el yazisi menu yuksekliginde okunmuyor
-        // (31.10.2026 olcumu); logo Network sayfasinda ve uyelik ekraninda.
-        return '<span class="menu-network"><span class="nw-val">VALENTRA</span> Network</span>';
+        // Belirgin dugme (31.10.2026, site sahibi: "ana sayfadaki VALENTRA
+        // Network yazisini daha belirgin yapalim, insanlar farkli oldugunu
+        // hissetsin"): kirmizi hap, beyaz V simgesi, "YENI" rozeti.
+        return '<span class="menu-network">'
+             . '<svg class="menu-network-v" viewBox="0 0 24 20" width="16" height="13" aria-hidden="true"><path d="M1 1.5 9.5 4.6 12 9 15.4 3.8 23 1 12.6 19z" fill="currentColor"/></svg>'
+             . '<span><span class="nw-val">VALENTRA</span> Network</span>'
+             . '<b class="menu-network-yeni">YENİ</b></span>';
     }
 
     $g = isset($oge['gazete']) ? gazete_bul((string) $oge['gazete']) : null;

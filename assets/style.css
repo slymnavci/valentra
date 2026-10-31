@@ -5648,16 +5648,55 @@ a.bulut-etiket:hover,
 :where(:root[data-tema="koyu"]) .nw-logo-acik { display: none; }
 :where(:root[data-tema="koyu"]) .nw-logo-koyu { display: block; }
 
-/* Menude en sagda (yazi; logo Network sayfasinda). */
+/*
+ * Menude en sagda, BELIRGIN DUGME (31.10.2026, site sahibi: "VALENTRA
+ * Network yazisini daha belirgin yapalim, insanlar farkli oldugunu
+ * hissetsin"): diger menu ogelerinden farkli olarak kirmizi zeminli hap,
+ * beyaz yazi, V simgesi, "YENI" rozeti ve hafif parlama. Alt cizgi yok.
+ */
 .menu-oge-network { margin-left: auto; }
-.menu-network { font-weight: 800; }
-.menu-network .nw-val { font-size: .92em; }
+.menu-oge-network::after { display: none; }
+.menu-network {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 12px 7px 11px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #e3141e 0%, #b30d15 100%);
+    color: #fff;
+    font-weight: 800; letter-spacing: .01em;
+    box-shadow: 0 2px 8px rgba(215, 22, 31, .35);
+    transition: transform .15s ease, box-shadow .15s ease;
+    position: relative; overflow: hidden;
+}
+.menu-network .nw-val { color: #fff; font-size: .92em; }
+.menu-network-v { flex: none; }
+.menu-network-yeni {
+    padding: 2px 6px; border-radius: 6px;
+    background: #fff; color: #c0121b;
+    font-size: .62rem; font-weight: 900; letter-spacing: .04em; line-height: 1.2;
+}
+/* Parlama: birkac saniyede bir uzerinden gecen isik (hareket azaltma tercihinde yok). */
+.menu-network::before {
+    content: ""; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .35), transparent);
+    transform: skewX(-20deg);
+    animation: menu-network-parla 5s ease-in-out 1.5s infinite;
+}
+@keyframes menu-network-parla { 0%, 70% { left: -40%; } 100% { left: 130%; } }
+@media (prefers-reduced-motion: reduce) { .menu-network::before { animation: none; display: none; } }
+a.menu-oge-network:hover, a.menu-oge-network.aktif { color: inherit; }
+a.menu-oge-network:hover .menu-network { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(215, 22, 31, .45); }
+/* Cekmece menude de ayni dugme, sola yasli. */
+.cekmece-oge .menu-network { margin: 2px 0; }
 /* Tablet genisliginde menu tek satira sigsin: "VALENTRA" kalkiyor, "Network" kaliyor. */
-@media (min-width: 721px) and (max-width: 1180px) {
+@media (min-width: 721px) and (max-width: 1279px) {
     .menu-network .nw-val { display: none; }
+    .menu-network { padding: 6px 10px; gap: 6px; }
+}
+@media (min-width: 721px) and (max-width: 1000px) {
+    .menu-network-yeni { display: none; }
 }
 /* Daha darda yer yok: Network cekmece menude (sol ustteki dugme). */
-@media (min-width: 721px) and (max-width: 880px) {
+@media (min-width: 721px) and (max-width: 930px) {
     .menu-oge-network { display: none; }
 }
 .uye-kutu .nw-logo { height: 64px; }
