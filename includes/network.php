@@ -179,14 +179,18 @@ function gonderi_bul(int $id): ?array
     return is_array($satir) ? $satir : null;
 }
 
-function gonderi_kendi_sil(int $id, int $uyeId): bool
+/** Uye kendi paylasimini siler; $uyeId null ise yonetici (herkesinkini). */
+function gonderi_kendi_sil(int $id, ?int $uyeId): bool
 {
-    $fotolar = db()->prepare('SELECT f.dosya FROM gonderi_fotolari f JOIN gonderiler g ON g.id = f.gonderi_id WHERE g.id = :id AND g.uye_id = :u');
-    $fotolar->execute(['id' => $id, 'u' => $uyeId]);
+    $sahip = $uyeId !== null ? ' AND g.uye_id = :u' : '';
+    $deger = $uyeId !== null ? ['id' => $id, 'u' => $uyeId] : ['id' => $id];
+
+    $fotolar = db()->prepare('SELECT f.dosya FROM gonderi_fotolari f JOIN gonderiler g ON g.id = f.gonderi_id WHERE g.id = :id' . $sahip);
+    $fotolar->execute($deger);
     $dosyalar = $fotolar->fetchAll(PDO::FETCH_COLUMN);
 
-    $ifade = db()->prepare('DELETE FROM gonderiler WHERE id = :id AND uye_id = :u');
-    $ifade->execute(['id' => $id, 'u' => $uyeId]);
+    $ifade = db()->prepare('DELETE g FROM gonderiler g WHERE g.id = :id' . $sahip);
+    $ifade->execute($deger);
 
     if ($ifade->rowCount() === 0) {
         return false;
@@ -261,7 +265,7 @@ function arkadas_mi(int $a, int $b): bool
 function nw_uye_bul(int $id): ?array
 {
     $ifade = db()->prepare(
-        "SELECT u.id, u.ad, u.hakkinda, u.foto, u.olusturuldu,
+        "SELECT u.id, u.ad, u.hakkinda, u.foto, u.rol, u.olusturuldu,
                 (SELECT COUNT(*) FROM takipler t WHERE t.takip_edilen = u.id) AS takipci,
                 (SELECT COUNT(*) FROM takipler t WHERE t.takip_eden = u.id) AS takip,
                 (SELECT COUNT(*) FROM gonderiler g WHERE g.uye_id = u.id AND g.durum = 'yayinda') AS gonderi
@@ -325,11 +329,16 @@ function nw_takip_edilenler(int $uyeId): array
 
 function nw_profil_kaydet(int $uyeId, string $ad, string $hakkinda): void
 {
-    $ad = trim(preg_replace('/\s+/u', ' ', $ad) ?? '');
-    $uzunluk = mb_strlen($ad, 'UTF-8');
+    $simdiki = db()->prepare('SELECT ad, rol FROM uyeler WHERE id = :id');
+    $simdiki->execute(['id' => $uyeId]);
+    $simdiki = $simdiki->fetch() ?: ['ad' => '', 'rol' => 'uye'];
 
-    if ($uzunluk < UYE_AD_EN_AZ || $uzunluk > UYE_AD_EN_FAZLA || !preg_match('/^[\p{L}\p{M}0-9 ._\'-]+$/u', $ad) || yorum_uygunsuz_mu($ad)) {
-        throw new InvalidArgumentException('Ad ' . UYE_AD_EN_AZ . '-' . UYE_AD_EN_FAZLA . ' karakter olmalı; harf, rakam, boşluk, nokta ve tire kullanabilirsiniz.');
+    // Rumuz yalnizca degistiyse sinaniyor: kurallardan (31.10.2026) once
+    // alinmis bosluklu adlar degistirilmeden kaydedilebilsin.
+    $ad = trim($ad);
+
+    if ($ad !== (string) $simdiki['ad']) {
+        $ad = uye_rumuz_sina($ad, $uyeId, $simdiki['rol'] === 'yonetici');
     }
 
     $hakkinda = trim(preg_replace('/\s+/u', ' ', $hakkinda) ?? '');
@@ -361,11 +370,41 @@ function nw_profil_foto(int $uyeId, string $veri): void
     }
 }
 
+/** Yonetici: uyeligi durdurur (giris yapamaz, icerigi gorunmez) ya da acar. */
+function nw_uye_durum_degistir(int $uyeId, bool $durdur): void
+{
+    $hedef = db()->prepare('SELECT rol FROM uyeler WHERE id = :id');
+    $hedef->execute(['id' => $uyeId]);
+
+    if ($hedef->fetchColumn() === 'yonetici') {
+        throw new InvalidArgumentException('Yönetici hesabı buradan durdurulamaz.');
+    }
+
+    db()->prepare('UPDATE uyeler SET durum = :d WHERE id = :id')
+        ->execute(['d' => $durdur ? 'engelli' : 'aktif', 'id' => $uyeId]);
+
+    if ($durdur) {
+        db()->prepare('DELETE FROM uye_oturumlari WHERE uye_id = :id')->execute(['id' => $uyeId]);
+    }
+}
+
 /* --- Mesajlar ------------------------------------------------------------ */
 
 function mesaj_gonder(int $gonderen, int $alici, string $metin): int
 {
-    if (!arkadas_mi($gonderen, $alici)) {
+    $karsi = nw_uye_bul($alici);
+
+    if ($gonderen === $alici || $karsi === null) {
+        throw new InvalidArgumentException('Üye bulunamadı.');
+    }
+
+    // Yonetici herkese yazabiliyor; uyeler de yoneticiye (site yonetimine
+    // ulasmak ve yoneticinin mesajina cevap vermek icin). Takiplesme sarti yok.
+    $ben      = aktif_uye();
+    $yonetici = ($karsi['rol'] ?? '') === 'yonetici'
+        || ((int) ($ben['id'] ?? 0) === $gonderen && uye_yonetici_mi($ben));
+
+    if (!$yonetici && !arkadas_mi($gonderen, $alici)) {
         throw new InvalidArgumentException('Yalnızca karşılıklı takipleştiğiniz üyelerle mesajlaşabilirsiniz.');
     }
 
@@ -506,6 +545,83 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
     $son    = $ogeler !== [] ? end($ogeler)['zaman'] : 0;
 
     return ['ogeler' => $ogeler, 'sonraki' => count($ogeler) === $adet ? $son : 0];
+}
+
+/* --- Sag kenar: gundem -------------------------------------------------- */
+
+/*
+ * Site sahibinin istegi (31.10.2026): "sagda en populer konular, en cok
+ * etkilesim alan haberler gibi basliklar olsun". Ikisi de gercek veriden:
+ * son iki gunun haber etiketleri ve haberlerin okuyucu, begeni ve yorum
+ * sayilari. Veri yoksa kutu cizilmiyor.
+ */
+
+/**
+ * Son iki gunun en cok haberde gecen etiketleri.
+ *
+ * @return list<array{etiket:string,adet:int}>
+ */
+function nw_populer_konular(int $limit = 10): array
+{
+    try {
+        $ifade = db()->prepare(
+            'SELECT etiketler FROM haberler WHERE durum = :d AND yayin_tarihi >= NOW() - INTERVAL 2 DAY'
+        );
+        $ifade->execute(['d' => HABER_YAYINDA]);
+    } catch (PDOException $e) {
+        return [];
+    }
+
+    $sayim = [];
+
+    foreach ($ifade->fetchAll(PDO::FETCH_COLUMN) as $ham) {
+        foreach (etiketleri_coz((string) $ham) as $etiket) {
+            $anahtar = mb_strtolower($etiket, 'UTF-8');
+            $sayim[$anahtar] ??= ['etiket' => $etiket, 'adet' => 0];
+            $sayim[$anahtar]['adet']++;
+        }
+    }
+
+    // Tek haberde gecen etiket "populer" degil.
+    $sayim = array_filter($sayim, static fn (array $s): bool => $s['adet'] >= 2);
+    usort($sayim, static fn (array $a, array $b): int => $b['adet'] <=> $a['adet']);
+
+    return array_slice($sayim, 0, $limit);
+}
+
+/**
+ * Son iki gunun en cok etkilesim alan haberleri.
+ *
+ * Puan: son 24 saatin farkli okuyucusu + 5 x begeni + 10 x yorum (yorum
+ * en zahmetli etkilesim). Okuyucu sayisi ana sayfanin kullandigi
+ * onbellekten (haber_okunma_birlesimi), her istekte ziyaretler sayilmiyor.
+ *
+ * @return list<array<string,mixed>>
+ */
+function nw_etkilesim_haberleri(int $limit = 6): array
+{
+    // Siralamada "okuyucu" takma adi yazilmiyor: ORDER BY'da zo.okuyucu
+    // sutununa cozuluyor (okunmamis haberde NULL) ve sira bozuluyordu.
+    try {
+        $ifade = db()->prepare(
+            "SELECT h.id, h.baslik, h.slug,
+                    COALESCE(zo.okuyucu, 0) AS okuyucu,
+                    (SELECT COUNT(*) FROM begeniler b WHERE b.hedef_tur = 'haber' AND b.hedef_id = h.id) AS begeni,
+                    (SELECT COUNT(*) FROM yorumlar y WHERE y.haber_id = h.id AND y.durum = 'yayinda') AS yorum
+               FROM haberler h " . haber_okunma_birlesimi() . "
+              WHERE h.durum = :d AND h.yayin_tarihi >= NOW() - INTERVAL 2 DAY
+              ORDER BY (COALESCE(zo.okuyucu, 0) + 5 * begeni + 10 * yorum) DESC, h.yayin_tarihi DESC
+              LIMIT " . max(1, min(20, $limit))
+        );
+        $ifade->execute(['d' => HABER_YAYINDA]);
+
+        return array_values(array_filter(
+            $ifade->fetchAll(),
+            static fn (array $h): bool => (int) $h['okuyucu'] + (int) $h['begeni'] + (int) $h['yorum'] > 0
+        ));
+    } catch (PDOException $e) {
+        return [];
+    }
 }
 
 /* --- Begeni ve okunma ---------------------------------------------------- */

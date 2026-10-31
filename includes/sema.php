@@ -239,6 +239,8 @@ function sema_yukselt(array &$hatalar = []): array
      */
     $sutunEkle('uyeler', 'hakkinda', "VARCHAR(300) NOT NULL DEFAULT '' AFTER ad");
     $sutunEkle('uyeler', 'foto', "VARCHAR(64) NOT NULL DEFAULT '' AFTER hakkinda");
+    // V Network yoneticisi (31.10.2026; bkz. includes/uyelik.php).
+    $sutunEkle('uyeler', 'rol', "ENUM('uye','yonetici') NOT NULL DEFAULT 'uye' AFTER durum");
     $sutunEkle('gonderiler', 'video_url', "VARCHAR(300) NOT NULL DEFAULT '' AFTER metin");
     $sutunEkle('yorumlar', 'gonderi_id', 'INT UNSIGNED NULL AFTER haber_id');
 
@@ -638,6 +640,8 @@ function sema_guncel_mi(): bool
             // grafik sayfasi calismaz; ana sayfa ise bolumu atlar.
             ['grafikler', 'seri'],
             ['resmi_gazete', 'url'],
+            // aktif_uye() bu sutunu sorguluyor; yoksa uyeler oturum acamaz.
+            ['uyeler', 'rol'],
             ['kose_yazilari', 'parmak'],
             // haber_taslak_ekle() bu sutunlara yaziyor.
             ['haberler', 'isletme_etkisi'],

@@ -67,6 +67,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         }
     } else {
         try {
+            // Alan adi "eposta" kaldi; rumuz da yazilabiliyor.
             $uyeId = uye_dogrula($eposta, $sifre);
 
             if ($uyeId !== null) {
@@ -77,7 +78,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 
             // Kaba kuvvet denemelerini yavaslat.
             usleep(600000);
-            $hata = 'E-posta ya da şifre hatalı.';
+            $hata = 'E-posta/rumuz ya da şifre hatalı.';
         } catch (InvalidArgumentException $e) {
             $hata = $e->getMessage();
         }
@@ -113,14 +114,21 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <div class="bal-kupu" aria-hidden="true"><label>Web sitesi <input type="text" name="web" tabindex="-1" autocomplete="off"></label></div>
 
             <?php if ($kayit): ?>
-                <label>Adınız (yorumlarda görünür)
-                    <input type="text" name="ad" value="<?= e($ad) ?>" required minlength="<?= UYE_AD_EN_AZ ?>" maxlength="<?= UYE_AD_EN_FAZLA ?>" autocomplete="nickname">
+                <label>Rumuz (sitede adınız yerine bu görünür)
+                    <input type="text" name="ad" value="<?= e($ad) ?>" required minlength="<?= UYE_AD_EN_AZ ?>" maxlength="<?= UYE_AD_EN_FAZLA ?>" pattern="[^\s]+" autocomplete="nickname" placeholder="ör. gezgin_kedi">
+                    <small class="nw-not">Boşluksuz <?= UYE_AD_EN_AZ ?>-<?= UYE_AD_EN_FAZLA ?> karakter. Gerçek adınızı yazmanıza gerek yok.</small>
                 </label>
             <?php endif; ?>
 
-            <label>E-posta
-                <input type="email" name="eposta" value="<?= e($eposta) ?>" required maxlength="190" autocomplete="email">
-            </label>
+            <?php if ($kayit): ?>
+                <label>E-posta (görünmez, yalnızca giriş için)
+                    <input type="email" name="eposta" value="<?= e($eposta) ?>" required maxlength="190" autocomplete="email">
+                </label>
+            <?php else: ?>
+                <label>E-posta ya da rumuz
+                    <input type="text" name="eposta" value="<?= e($eposta) ?>" required maxlength="190" autocomplete="username">
+                </label>
+            <?php endif; ?>
 
             <label>Şifre<?= $kayit ? ' (en az ' . UYE_SIFRE_EN_AZ . ' karakter)' : '' ?>
                 <input type="password" name="sifre" required <?= $kayit ? 'minlength="' . UYE_SIFRE_EN_AZ . '" autocomplete="new-password"' : 'autocomplete="current-password"' ?>>
@@ -136,7 +144,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
                     <span>
                         Yorumlarımda küfür, hakaret, suçlama ve nefret söylemi kullanmayacağımı;
                         kurallara uymayan yorumların kaldırılabileceğini ve üyeliğimin durdurulabileceğini kabul ediyorum.
-                        Kişisel verilerim (ad, e-posta, IP adresi) yalnızca üyelik ve yasal yükümlülükler için saklanır.
+                        Kişisel verilerim (rumuz, e-posta, IP adresi) yalnızca üyelik ve yasal yükümlülükler için saklanır.
                     </span>
                 </label>
             <?php endif; ?>

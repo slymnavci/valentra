@@ -218,11 +218,11 @@ function yorum_sikayet(int $yorumId, int $uyeId): void
     )->execute(['y' => $yorumId, 'esik' => YORUM_GIZLEME_ESIGI]);
 }
 
-/** Uye kendi yorumunu siler. */
-function yorum_kendi_sil(int $yorumId, int $uyeId): bool
+/** Uye kendi yorumunu siler; $uyeId null ise yonetici (herkesinkini). */
+function yorum_kendi_sil(int $yorumId, ?int $uyeId): bool
 {
-    $ifade = db()->prepare('DELETE FROM yorumlar WHERE id = :y AND uye_id = :u');
-    $ifade->execute(['y' => $yorumId, 'u' => $uyeId]);
+    $ifade = db()->prepare('DELETE FROM yorumlar WHERE id = :y' . ($uyeId !== null ? ' AND uye_id = :u' : ''));
+    $ifade->execute($uyeId !== null ? ['y' => $yorumId, 'u' => $uyeId] : ['y' => $yorumId]);
 
     return $ifade->rowCount() > 0;
 }

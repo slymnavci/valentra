@@ -5860,6 +5860,33 @@ a.bulut-etiket:hover,
 .nw-tek.nw-genis { max-width: 980px; }
 .nw-baslik { margin: 0 0 14px; font-size: 1.5rem; font-weight: 800; }
 .nw-not { color: var(--metin-soluk); font-size: .9rem; margin: 0; }
+
+/* Sag kenar gundem kutulari (31.10.2026). */
+.nw-gundem ol { margin: 8px 0 0; padding: 0; list-style: none; counter-reset: gundem; }
+.nw-gundem li { counter-increment: gundem; display: grid; grid-template-columns: 22px 1fr; column-gap: 6px; padding: 8px 0; border-top: 1px solid var(--cizgi); }
+.nw-gundem li:first-child { border-top: none; }
+.nw-gundem li::before { content: counter(gundem); grid-row: span 2; font-weight: 800; color: var(--altin); font-size: 1.05rem; line-height: 1.3; }
+.nw-yan-kutu.nw-gundem li a { font-weight: 650; font-size: .92rem; line-height: 1.35; text-decoration: none; }
+.nw-gundem small { display: flex; gap: 10px; color: var(--metin-soluk); font-size: .78rem; margin-top: 3px; }
+.nw-konular ul { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+.nw-konular li { display: inline-flex; align-items: baseline; gap: 4px; padding: 4px 10px; border-radius: 999px; background: var(--zemin); border: 1px solid var(--cizgi); }
+.nw-yan-kutu.nw-konular li a { font-weight: 700; font-size: .86rem; text-decoration: none; }
+.nw-konular small { color: var(--metin-soluk); font-size: .74rem; }
+
+/* Yonetici rozeti (profil basligi; 31.10.2026). */
+.nw-rozet {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--altin);
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
 .nw-geri { display: inline-block; margin-bottom: 12px; font-weight: 700; color: var(--metin-soluk); text-decoration: none; }
 .nw-geri:hover { color: var(--altin); }
 

@@ -63,8 +63,8 @@ function yorum_bolumu_html(array $hedef, ?array $ozet, string $donus, string $tu
                                         <input type="hidden" name="yorum" value="<?= (int) $y['id'] ?>">
                                         <input type="hidden" name="hedef" value="<?= e($anahtar) ?>">
                                         <input type="hidden" name="donus" value="<?= e($donus) ?>">
-                                        <?php if ((int) $y['uye_id'] === (int) $uye['id']): ?>
-                                            <button type="submit" name="islem" value="sil" onclick="return confirm('Yorumunuz silinsin mi?')">Sil</button>
+                                        <?php if ((int) $y['uye_id'] === (int) $uye['id'] || uye_yonetici_mi($uye)): ?>
+                                            <button type="submit" name="islem" value="sil" onclick="return confirm('Yorum silinsin mi?')">Sil</button>
                                         <?php else: ?>
                                             <button type="submit" name="islem" value="sikayet" onclick="return confirm('Bu yorumu uygunsuz diye bildirmek istiyor musunuz?')">Şikâyet et</button>
                                         <?php endif; ?>

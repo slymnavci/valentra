@@ -22,14 +22,32 @@ declare(strict_types=1);
  * E-posta dogrulamasi simdilik yok (site e-posta gondermiyor). Sifresini
  * unutan uyenin sifresi panelden sifirlanmiyor; yeni hesap acabilir ya da
  * site yonetimine yazar. Dogrulama eklenince burada.
+ *
+ * RUMUZ (31.10.2026, site sahibi: "uyelerin isimleri yerine rumuzlari
+ * gorunsun"): uyeler.ad sutunu artik rumuz; sitede her yerde gorunen tek
+ * ad o. Bosluksuz, 3-20 karakter, buyuk-kucuk harf farki gozetmeden
+ * benzersiz; giris e-posta ya da rumuzla. Bazi rumuzlar (admin, yonetici,
+ * valentra...) uyelere kapali, yalnizca panelden yonetici hesabina.
+ *
+ * YONETICI (uyeler.rol = 'yonetici'): V Network'te her paylasimi ve yorumu
+ * silebilir, uye durdurabilir, takiplesme sarti olmadan herkese mesaj
+ * yazabilir; profilinde "Yonetici" rozeti var. Panelden atanir
+ * (admin/yorumlar.php, Uyeler sekmesi); sifre depoda tutulmuyor.
  */
 
 const UYE_CEREZI        = 'valentra_uye';
 const UYE_ON_CEREZI     = 'valentra_uye_on';
 const UYE_OTURUM_GUN    = 60;
 const UYE_SIFRE_EN_AZ   = 8;
-const UYE_AD_EN_AZ      = 2;
-const UYE_AD_EN_FAZLA   = 40;
+/** Rumuz uzunlugu (uyeler.ad; bkz. dosya basi). */
+const UYE_AD_EN_AZ      = 3;
+const UYE_AD_EN_FAZLA   = 20;
+/** Uyelerin alamadigi rumuzlar (kucuk harfle); yonetici hesabi panelden alabilir. */
+const UYE_AYRILMIS_RUMUZLAR = [
+    'admin', 'administrator', 'yonetici', 'yönetici', 'moderator', 'moderatör',
+    'valentra', 'valhaber', 'valspor', 'valpapel', 'valmagazin', 'vnetwork',
+    'destek', 'iletisim', 'site', 'sistem', 'root',
+];
 /** Ayni IP adresinden bir saatte en fazla bu kadar kayit (bot korumasi). */
 const UYE_SAATLIK_KAYIT = 5;
 
@@ -59,7 +77,7 @@ function aktif_uye(): ?array
 
     try {
         $ifade = db()->prepare(
-            "SELECT u.id, u.ad, u.eposta, u.durum, u.foto
+            "SELECT u.id, u.ad, u.eposta, u.durum, u.rol, u.foto
                FROM uye_oturumlari o
                JOIN uyeler u ON u.id = o.uye_id
               WHERE o.anahtar = :a AND o.bitis > NOW() AND u.durum = 'aktif'"
@@ -147,23 +165,53 @@ function uye_gizli_tuz(): string
     return $tuz;
 }
 
+/** Giris yapmis uye (ya da verilen satir) V Network yoneticisi mi? */
+function uye_yonetici_mi(?array $uye = null): bool
+{
+    $uye ??= aktif_uye();
+
+    return ($uye['rol'] ?? '') === 'yonetici';
+}
+
+/**
+ * Rumuzu sinar; temiz rumuzu dondurur ya da InvalidArgumentException.
+ *
+ * $haricId: profilini duzenleyen uyenin kendi kaydi (kendi rumuzuyla
+ * cakismasin). $yonetici: ayrilmis rumuzlar serbest (panelden).
+ */
+function uye_rumuz_sina(string $rumuz, int $haricId = 0, bool $yonetici = false): string
+{
+    $rumuz   = trim($rumuz);
+    $uzunluk = mb_strlen($rumuz, 'UTF-8');
+
+    if ($uzunluk < UYE_AD_EN_AZ || $uzunluk > UYE_AD_EN_FAZLA || !preg_match('/^[\p{L}\p{M}0-9._-]+$/u', $rumuz)) {
+        throw new InvalidArgumentException('Rumuz ' . UYE_AD_EN_AZ . '-' . UYE_AD_EN_FAZLA . ' karakter olmalı; boşluksuz, harf, rakam, nokta, alt çizgi ve tire kullanabilirsiniz.');
+    }
+
+    if (yorum_uygunsuz_mu($rumuz)
+        || (!$yonetici && in_array(mb_strtolower($rumuz, 'UTF-8'), UYE_AYRILMIS_RUMUZLAR, true))) {
+        throw new InvalidArgumentException('Bu rumuz kullanılamıyor; başka bir rumuz seçin.');
+    }
+
+    // Harmanlama (utf8mb4_unicode_ci) buyuk-kucuk harfi ayirmiyor: "Deniz" ile "deniz" ayni.
+    $var = db()->prepare('SELECT 1 FROM uyeler WHERE ad = :ad AND id <> :id LIMIT 1');
+    $var->execute(['ad' => $rumuz, 'id' => $haricId]);
+
+    if ($var->fetchColumn()) {
+        throw new InvalidArgumentException('Bu rumuz başka bir üyede; başka bir rumuz seçin.');
+    }
+
+    return $rumuz;
+}
+
 /**
  * Yeni uye. Basariliysa uye kimligi; degilse InvalidArgumentException
- * (mesaj ziyaretciye gosterilecek Turkce aciklama).
+ * (mesaj ziyaretciye gosterilecek Turkce aciklama). $ad rumuz.
  */
 function uye_kaydet(string $ad, string $eposta, string $sifre): int
 {
-    $ad     = trim(preg_replace('/\s+/u', ' ', $ad) ?? '');
     $eposta = mb_strtolower(trim($eposta), 'UTF-8');
-    $uzunluk = mb_strlen($ad, 'UTF-8');
-
-    if ($uzunluk < UYE_AD_EN_AZ || $uzunluk > UYE_AD_EN_FAZLA || !preg_match('/^[\p{L}\p{M}0-9 ._\'-]+$/u', $ad)) {
-        throw new InvalidArgumentException('Ad ' . UYE_AD_EN_AZ . '-' . UYE_AD_EN_FAZLA . ' karakter olmalı; harf, rakam, boşluk, nokta ve tire kullanabilirsiniz.');
-    }
-
-    if (yorum_uygunsuz_mu($ad)) {
-        throw new InvalidArgumentException('Bu ad kullanılamıyor.');
-    }
+    $ad     = uye_rumuz_sina($ad);
 
     if (!filter_var($eposta, FILTER_VALIDATE_EMAIL) || strlen($eposta) > 190) {
         throw new InvalidArgumentException('Geçerli bir e-posta adresi yazın.');
@@ -195,14 +243,27 @@ function uye_kaydet(string $ad, string $eposta, string $sifre): int
     return (int) db()->lastInsertId();
 }
 
-/** E-posta ve sifre dogruysa uye kimligi; degilse null. */
-function uye_dogrula(string $eposta, string $sifre): ?int
+/**
+ * E-posta ya da rumuz ve sifre dogruysa uye kimligi; degilse null.
+ *
+ * Rumuz benzersizligi 31.10.2026'dan once yoktu; ayni ada sahip birden cok
+ * eski hesap olabilir, sifresi tutan aliniyor.
+ */
+function uye_dogrula(string $giris, string $sifre): ?int
 {
-    $ifade = db()->prepare('SELECT id, sifre, durum FROM uyeler WHERE eposta = :e');
-    $ifade->execute(['e' => mb_strtolower(trim($eposta), 'UTF-8')]);
-    $uye = $ifade->fetch();
+    $giris = trim($giris);
+    $ifade = db()->prepare('SELECT id, sifre, durum FROM uyeler WHERE eposta = :e OR ad = :r ORDER BY id');
+    $ifade->execute(['e' => mb_strtolower($giris, 'UTF-8'), 'r' => $giris]);
+    $uye = null;
 
-    if (!is_array($uye) || !password_verify($sifre, (string) $uye['sifre'])) {
+    foreach ($ifade->fetchAll() as $aday) {
+        if (password_verify($sifre, (string) $aday['sifre'])) {
+            $uye = $aday;
+            break;
+        }
+    }
+
+    if ($uye === null) {
         return null;
     }
 
@@ -219,6 +280,44 @@ function uye_dogrula(string $eposta, string $sifre): ?int
 }
 
 /** Uyelik sayfasinin adresi; donus adresi yalnizca site ici yol. */
+/**
+ * V Network yonetici hesabini olusturur ya da gunceller (yalnizca panelden).
+ *
+ * Sifre depoya yazilmiyor: panelde giris yapmis site yoneticisi formdan
+ * giriyor, veritabaninda yalnizca ozeti duruyor. Ayni rumuzlu hesap varsa
+ * sifresi ve rolu guncelleniyor. Giris rumuzla; e-posta alani benzersiz
+ * olmak zorunda oldugu icin site icinde kullanilmayan bir adres.
+ */
+function uye_yonetici_kaydet(string $rumuz, string $sifre): int
+{
+    $rumuz = trim($rumuz);
+
+    if (mb_strlen($sifre, 'UTF-8') < UYE_SIFRE_EN_AZ) {
+        throw new InvalidArgumentException('Şifre en az ' . UYE_SIFRE_EN_AZ . ' karakter olmalı.');
+    }
+
+    $var = db()->prepare('SELECT id FROM uyeler WHERE ad = :ad ORDER BY id LIMIT 1');
+    $var->execute(['ad' => $rumuz]);
+    $id = (int) $var->fetchColumn();
+    $ozet = password_hash($sifre, PASSWORD_DEFAULT);
+
+    if ($id > 0) {
+        db()->prepare("UPDATE uyeler SET sifre = :s, rol = 'yonetici', durum = 'aktif' WHERE id = :id")
+            ->execute(['s' => $ozet, 'id' => $id]);
+        // Eski oturumlar kapansin: sifre degisti.
+        db()->prepare('DELETE FROM uye_oturumlari WHERE uye_id = :id')->execute(['id' => $id]);
+
+        return $id;
+    }
+
+    $rumuz = uye_rumuz_sina($rumuz, 0, true);
+
+    db()->prepare("INSERT INTO uyeler (ad, eposta, sifre, rol, kayit_ip) VALUES (:ad, :e, :s, 'yonetici', 'panel')")
+        ->execute(['ad' => $rumuz, 'e' => 'yonetici-' . bin2hex(random_bytes(6)) . '@uye.valentra.invalid', 's' => $ozet]);
+
+    return (int) db()->lastInsertId();
+}
+
 function uye_yolu(string $islem = 'giris', string $donus = ''): string
 {
     $donus = uye_guvenli_donus($donus);
