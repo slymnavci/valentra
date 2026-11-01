@@ -127,9 +127,12 @@ function topluluk_malzeme(): array
  * sahibi: "begenileri artir") bugunku degerler; sayilar arttikca suresi
  * de uzatildi ki ani sicrama olmasin. Bildirim gitmiyor. Model kullanilmiyor.
  *
+ * $hemen: yoneticinin "Begeni dalgasi" dugmesi (01.11.2026): zamana
+ * yayma beklenmeden her icerik hedefine hemen ulasir.
+ *
  * @return array{gonderi:int,haber:int}
  */
-function topluluk_begeni_dagit(): array
+function topluluk_begeni_dagit(bool $hemen = false): array
 {
     $sonuc = ['gonderi' => 0, 'haber' => 0];
     $yzler = array_map('intval', db()->query(
@@ -176,7 +179,7 @@ function topluluk_begeni_dagit(): array
                 $oran  = ((int) $oge['dk'] - 10) / 710;                          // 10. dk - 12. saat
             }
 
-            $istenen = (int) round($hedef * max(0, min(1, $oran)));
+            $istenen = (int) round($hedef * ($hemen ? 1 : max(0, min(1, $oran))));
 
             if ($istenen <= 0) {
                 continue;
@@ -206,6 +209,48 @@ function topluluk_begeni_dagit(): array
     }
 
     return $sonuc;
+}
+
+/**
+ * Yoneticinin "Beğeni gönder" dugmesi (site sahibinin istegi, 01.11.2026:
+ * "begenileri artirmak icin bir buton koyalim; bastigimizda kullanicilar
+ * gelsin ve begeni yapsinlar"): tek bir habere ya da paylasima, henuz
+ * begenmemis YZ hesaplarindan $adet begeni. Bildirim gitmiyor.
+ *
+ * @return int eklenen begeni
+ */
+function topluluk_begeni_ekle(string $tur, int $hedefId, int $adet): int
+{
+    if (!in_array($tur, ['haber', 'gonderi'], true) || $hedefId <= 0 || $adet <= 0) {
+        throw new InvalidArgumentException('Geçersiz işlem.');
+    }
+
+    $var = $tur === 'haber'
+        ? db()->prepare('SELECT 1 FROM haberler WHERE id = :id AND durum = ' . db()->quote(HABER_YAYINDA))
+        : db()->prepare("SELECT 1 FROM gonderiler WHERE id = :id AND durum = 'yayinda'");
+    $var->execute(['id' => $hedefId]);
+
+    if ($var->fetchColumn() === false) {
+        throw new InvalidArgumentException('İçerik bulunamadı.');
+    }
+
+    $adaylar = db()->prepare(
+        "SELECT u.id FROM uyeler u
+          WHERE u.tur = 'yz' AND u.durum = 'aktif'
+            AND NOT EXISTS (SELECT 1 FROM begeniler b WHERE b.hedef_tur = :t AND b.hedef_id = :h AND b.uye_id = u.id)
+          ORDER BY RAND() LIMIT " . min(500, $adet)
+    );
+    $adaylar->execute(['t' => $tur, 'h' => $hedefId]);
+
+    $ekle  = db()->prepare('INSERT IGNORE INTO begeniler (hedef_tur, hedef_id, uye_id) VALUES (:t, :h, :u)');
+    $sayi  = 0;
+
+    foreach ($adaylar->fetchAll(PDO::FETCH_COLUMN) as $uyeId) {
+        $ekle->execute(['t' => $tur, 'h' => $hedefId, 'u' => (int) $uyeId]);
+        $sayi += $ekle->rowCount();
+    }
+
+    return $sayi;
 }
 
 /**

@@ -362,6 +362,14 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
         <?php $solKenar(); ?>
         <div class="nw-orta">
             <?php $paylasimKutusu(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : ''])); ?>
+            <?php if (uye_yonetici_mi($uye)): ?>
+                <?php // Yalnizca yonetici gorur (01.11.2026): son haber ve paylasimlarin hepsi YZ begeni hedefine hemen ulasir. ?>
+                <form method="post" action="/network-islem.php" class="nw-yz-dalga">
+                    <?= nw_form_alanlari('yz_begeni_dalga', $buYol) ?>
+                    <button type="submit" class="uye-dugme kucuk">⚡ Beğeni dalgası</button>
+                    <small>Son 24 saatin haberleri ve 2 günün paylaşımları, beğeni hedeflerine hemen ulaşır. Yalnızca siz görürsünüz.</small>
+                </form>
+            <?php endif; ?>
             <?php if ($uyeId !== null): ?>
                 <nav class="nw-sekmeler" aria-label="Akış">
                     <a href="<?= e(nw_yol()) ?>" class="<?= $sekme === 'herkes' ? 'aktif' : '' ?>">Herkes</a>

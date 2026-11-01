@@ -6201,3 +6201,17 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 .nw-alinti small b { color: var(--altin); }
 .nw-alinti strong { font-size: .96rem; line-height: 1.35; overflow-wrap: anywhere; }
 .nw-alinti:hover strong { color: var(--altin); }
+
+/* Yonetici: YZ begeni dugmeleri (01.11.2026); yalnizca yonetici gorur. */
+.nw-yz-begeni { display: inline; margin-left: 8px; }
+.nw-yz-begeni button {
+    border: 1px dashed var(--cizgi); background: transparent; color: var(--metin-soluk);
+    border-radius: 999px; padding: 1px 8px; font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer;
+}
+.nw-yz-begeni button:hover { color: var(--altin); border-color: var(--altin); }
+.nw-yz-dalga {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
+    margin: 0 0 14px; padding: 10px 14px;
+    border: 1px dashed var(--cizgi); border-radius: var(--yuvarlak); background: var(--kart);
+}
+.nw-yz-dalga small { color: var(--metin-soluk); font-size: .82rem; flex: 1 1 220px; }
