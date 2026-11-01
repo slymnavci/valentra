@@ -1,5 +1,5 @@
 {
- "aciklama": "V Network yapay zeka (yz) ve kurum hesaplari; bkz. includes/topluluk.php. YZ hesaplari sitede gorunmuyor, yalnizca begeni birakiyor (150 hesap: 31.10.2026'da 100, 01.11.2026'da 50 daha). Kurum hesaplari Resmi rozetli.",
+ "aciklama": "V Network yapay zeka (yz) ve kurum hesaplari; bkz. includes/topluluk.php. YZ hesaplari sitede gorunmuyor, yalnizca begeni birakiyor (31.10.2026'da 100, 01.11.2026'da 50 ve 300 daha: 450). Kurum hesaplari Resmi rozetli.",
  "hesaplar": [
   {
    "rumuz": "lale_bahcesi",
@@ -1650,6 +1650,3306 @@
     "eğitim"
    ],
    "hakkinda": "Yapay zekâ hesabı · Sağlık ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "dağ.gül",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "deniz.lale",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "tatlı.serçe34",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "aykuğu",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "bahar.martı_07",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "gündem",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Gündem ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "baharyasemin36",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "morzambak_06",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "sağlık"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve sağlık haberlerini beğenir."
+  },
+  {
+   "rumuz": "güzel_yıldız",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "mor.menekşe",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "gizli_dut03",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "minik_kelebek",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "yaz_martı_65",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessiz_inci",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "deniz_inci16",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "güzel_çiğdem08",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "gümüş_gül",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "gizli.nergis",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "kış.inci",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "sağlık"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve sağlık haberlerini beğenir."
+  },
+  {
+   "rumuz": "gece_lale",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "neşeli_kiraz",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "kış.gül50",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "bahar_kuğu",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "gündem",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Gündem ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessiz.ayva",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "güzel.serçe42",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "mor.badem",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "gizlibadem06",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "güzelkelebek_96",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "gümüş.yıldız_06",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "orman_inci_35",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "kış_nar93",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "ay.çiğdem",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "altın_yaprak",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "beyazyasemin_07",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "gümüş_nergis",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessiz_inci34",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "maviayva",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "ormançiğdem_11",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "mor.çiğdem_06",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "mor.inci",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "bahar_inci",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "beyaz_nergis",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "pembedut",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "kışbadem",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "ay.kelebek61",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "kış_gül",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "yeşil_martı_41",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "ay_nergis",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "yeşil_leylak",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "bahar_dut",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "mavi_papatya_35",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "minik_serçe41",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "altınkumru_68",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "altın_papatya",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "neşelizambak06",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "gündem",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Gündem ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "minikkumru06",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "serinmartı",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "gizli_badem_50",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "sağlık"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve sağlık haberlerini beğenir."
+  },
+  {
+   "rumuz": "kış_leylak",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "pembe_lale",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "sıcak_yıldız",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "deniz_kelebek64",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "kış_leylak07",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "çiçek_dut79",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "pembe.ayva61",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "ay_fesleğen_65",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "yeşil_dut",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "gündem",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Gündem ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "beyaz.inci38",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "sıcak_kuğu_33",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessiz_çiğdem_26",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "ay_kiraz41",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "çiçek.yasemin35",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "beyaz_papatya30",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "çiçek_serçe_37",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "pembe.fesleğen",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "dağ.dut",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "kış.kumru35",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "sıcak_serçe_25",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "gündem",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Gündem ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "mor.papatya",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "pembe.gül",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "gündem",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Gündem ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessiz.yaprak_84",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "mor.zambak06",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "aykelebek",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "gizli_ayva",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "beyazmenekşe",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "dağ_lale26",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "serinmenekşe_35",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "gizli.kumru_71",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "tatlı_bulut",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "morleylak",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "gündem",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Gündem ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "yaz_martı",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "denizbadem",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessiz_martı",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "gece_lale_38",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "deniz_kelebek",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "geceayva68",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "gündem",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Gündem ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "deniz_gül",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "gizli_yasemin",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "kışkelebek",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "sıcak.martı31",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "beyaz_kuğu_66",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessiz_yaprak34",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "bahar_kumru_35",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "neşeli_kiraz_69",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "neşeli_serçe47",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "sıcak_kumru14",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "mavi_ayva",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "pembeyıldız_07",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "sıcaknar27",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "mor.yasemin_42",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "beyaz.kelebek_94",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "sağlık"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve sağlık haberlerini beğenir."
+  },
+  {
+   "rumuz": "orman.nergis",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "yeşilyaprak95",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "minikmartı",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "baharnar_04",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "gizli_serçe",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "sıcakyıldız_66",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "çiçek_lale",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "mor.menekşe42",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "mor.lale29",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "gündem",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Gündem ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "beyaz_gül_89",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "morzambak",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "sağlık"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve sağlık haberlerini beğenir."
+  },
+  {
+   "rumuz": "dağ_çiğdem",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "gizli_yasemin42",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "gizli.zambak",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessiz_kuğu34",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "gece_zambak",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "mavi.gül_42",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "yazinci06",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "mor.bulut",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "neşeli_nergis",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "ayçiğdem72",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "yazfesleğen_07",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "sağlık"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve sağlık haberlerini beğenir."
+  },
+  {
+   "rumuz": "dağ.serçe42",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "serin.papatya61",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "pembe_ayva07",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "gecegül35",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessizkuğu_72",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "gündem",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Gündem ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "orman_kumru_27",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "orman_yıldız03",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "yaz_gül",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "gümüş.leylak",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "kış_yıldız",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "sağlık"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve sağlık haberlerini beğenir."
+  },
+  {
+   "rumuz": "altınfesleğen_06",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "bahar.ayva",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "çiçek.gül",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "gündem",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Gündem ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "tatlı.fesleğen",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "sabahkuğu41",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "gündem",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Gündem ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "dağ.martı_79",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "tatlızambak_06",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "ay_menekşe42",
+   "tur": "yz",
+   "cinsiyet": "kadin",
+   "kisilik": "",
+   "ilgi": [
+    "gündem",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Gündem ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "ege_usta",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "sabah_gezgin_16",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "bozkır_kalem_34",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "yeşil_atlı16",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessiz_avcı",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "dağ_ozan_42",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "orman.çoban_06",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "kuzey_ozan",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "denizyolcu_61",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "deniz_atlı",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "bozkır_pusula86",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "sağlık"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve sağlık haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessiz.dervis_42",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "sabah_kaptan61",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "yol_balıkçı_93",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "sağlık"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve sağlık haberlerini beğenir."
+  },
+  {
+   "rumuz": "ak.kartal35",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "yolşahin",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "güney_sahaf14",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "dağkartal35",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "kumkurt_61",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "kum_atlı92",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "taş.yolcu_34",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "yaşlı_şahin",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessiz_balıkçı",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "rüzgar_aslan_34",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "şimşek.kartal",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "yaşlı.kurt",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessiz_çoban_80",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "yaşlıkalem_06",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "şimşek_köprü26",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessizkartal34",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "sabahkartal",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "deniz_kartal_42",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "toros_kalem23",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "demir_yolcu_66",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "bozkır_kurt51",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "rüzgarşahin35",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "genç_usta",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "akozan",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "taşozan_35",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "ege_fener34",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "şimşek_şahin_35",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "sağlık"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve sağlık haberlerini beğenir."
+  },
+  {
+   "rumuz": "demir.usta",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessizbalıkçı34",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "kara.aslan",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "ak_reis",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "demir_köprü06",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "ak_kamp68",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "demir.dervis24",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "bozkır_gezgin06",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "genç.kamp42",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "rüzgar.çoban16",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "bozkır_usta_45",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "sağlık"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve sağlık haberlerini beğenir."
+  },
+  {
+   "rumuz": "denizusta",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "gündem",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Gündem ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "dağavcı07",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "sabah.kurt",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "yaşlı_sahaf",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "ege_yolcu53",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "toros_bekçi",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "gündem",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Gündem ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "şimşekreis_42",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "gençşahin",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "deniz_kurt86",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "sabahsahaf41",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "demir_kartal60",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "rüzgargezgin28",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "şimşek.kamp",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "ırmak_kaptan35",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "sabah.sahaf_07",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessiz_atlı",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "kara_atlı",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "güneyyolcu06",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "yol_şahin",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "kuzeyköprü_71",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "yol.reis",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "demir_şahin",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "deniz_kamp",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "şimşek_liman",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "yaşlıozan_80",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "yeşil_çoban",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "demirkaptan07",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "gece.kaptan97",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "kuzey_fener_11",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "kuzeypusula_34",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "dağ_reis07",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "yaşlı_aslan",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "gece.dervis_08",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessiz.çoban_42",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "şimşek_avcı27",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "dağaslan_06",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "çınar_köprü_66",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "toros.kaptan02",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessizyolcu_21",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "yaşlı_balıkçı_07",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "denizkurt49",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "gündem",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Gündem ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "dağreis",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "çınarkamp",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "güney.çoban",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "güney_gezgin_61",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "deniz_dervis",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "kuzey_fener85",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "orman_pusula",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "kumavcı_06",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "taş_sahaf42",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "sabah.ozan_61",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "ırmak_aslan79",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "güneyçoban_80",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "sağlık"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve sağlık haberlerini beğenir."
+  },
+  {
+   "rumuz": "taşyolcu61",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "dağ_usta_16",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "yol_kurt",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "sağlık"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve sağlık haberlerini beğenir."
+  },
+  {
+   "rumuz": "yeşil_reis_34",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "karasahaf68",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "ege.aslan",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "bozkır_pusula",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "rüzgar_yolcu",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "ak_çoban61",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "demir_fener06",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "sabah_kamp",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "ırmak_kalem_61",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "gecekaptan",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "toros.pusula_61",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "sağlık",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Sağlık ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "güney.kaptan",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "magazin",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Magazin ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "ege.balıkçı",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "dağavcı34",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "genç_bekçi_42",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve çevre haberlerini beğenir."
+  },
+  {
+   "rumuz": "ak.reis42",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "yeşil.atlı_07",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "yolkervan_61",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "gençbalıkçı_29",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "yaşlı.kaptan_61",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "çınar_kervan_34",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "sağlık"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve sağlık haberlerini beğenir."
+  },
+  {
+   "rumuz": "denizusta51",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "çevre",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Çevre ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "yeşil.kalem",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "kumçoban87",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "ırmakköprü94",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "ekonomi"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve ekonomi haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessiz.pusula",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessiz.reis_65",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "kumbalıkçı",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "sabah_çoban",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "sessizkaptan16",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "dünya",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Dünya ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "demir_yolcu41",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "kara.kalem_42",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "kültür-sanat"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve kültür-sanat haberlerini beğenir."
+  },
+  {
+   "rumuz": "ege_avcı96",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "magazin"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve magazin haberlerini beğenir."
+  },
+  {
+   "rumuz": "kuzey_kamp15",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "spor",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Spor ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "bozkır_köprü_18",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "ekonomi",
+    "eğitim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Ekonomi ve eğitim haberlerini beğenir."
+  },
+  {
+   "rumuz": "akbekçi",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "bilim"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve bilim haberlerini beğenir."
+  },
+  {
+   "rumuz": "şimşekavcı",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "yemek tarifleri",
+    "teknoloji"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Yemek tarifleri ve teknoloji haberlerini beğenir."
+  },
+  {
+   "rumuz": "kuzey.gezgin",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "teknoloji",
+    "dünya"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Teknoloji ve dünya haberlerini beğenir."
+  },
+  {
+   "rumuz": "kumkamp",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "gündem",
+    "spor"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Gündem ve spor haberlerini beğenir."
+  },
+  {
+   "rumuz": "orman_kartal",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "kültür-sanat",
+    "gündem"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Kültür-sanat ve gündem haberlerini beğenir."
+  },
+  {
+   "rumuz": "demir_pusula48",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "eğitim",
+    "yemek tarifleri"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Eğitim ve yemek tarifleri haberlerini beğenir."
+  },
+  {
+   "rumuz": "dağ_gezgin41",
+   "tur": "yz",
+   "cinsiyet": "erkek",
+   "kisilik": "",
+   "ilgi": [
+    "bilim",
+    "çevre"
+   ],
+   "hakkinda": "Yapay zekâ hesabı · Bilim ve çevre haberlerini beğenir."
   },
   {
    "rumuz": "ValHaber",

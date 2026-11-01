@@ -43,8 +43,12 @@ function topluluk_hesaplari_esitle(array $hesaplar): array
 {
     $sonuc = ['eklenen' => 0, 'guncellenen' => 0, 'hatalar' => []];
     $bul   = db()->prepare('SELECT id, tur FROM uyeler WHERE eposta = :e');
+    // Kimsenin bilmedigi bir sifrenin ozeti: bu hesaplarla giris yapilamaz.
+    // Istek basina bir kez (yuzlerce hesapta her biri icin ayri ozet
+    // paylasimli sunucuda zaman asimina yol aciyordu).
+    $sifre = null;
 
-    foreach (array_slice($hesaplar, 0, 200) as $h) {
+    foreach (array_slice($hesaplar, 0, 1000) as $h) {
         $rumuz    = trim((string) ($h['rumuz'] ?? ''));
         $tur      = (string) ($h['tur'] ?? '');
         $hakkinda = mb_substr(trim((string) ($h['hakkinda'] ?? '')), 0, HAKKINDA_EN_FAZLA, 'UTF-8');
@@ -79,8 +83,7 @@ function topluluk_hesaplari_esitle(array $hesaplar): array
             'ad' => $rumuz,
             'h'  => $hakkinda,
             'e'  => $eposta,
-            // Kimsenin bilmedigi bir sifrenin ozeti: bu hesaplarla giris yapilamaz.
-            's'  => password_hash(bin2hex(random_bytes(32)), PASSWORD_DEFAULT),
+            's'  => $sifre ??= password_hash(bin2hex(random_bytes(32)), PASSWORD_DEFAULT),
             't'  => $tur,
         ]);
         $sonuc['eklenen']++;
