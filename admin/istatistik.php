@@ -214,6 +214,10 @@ $gsKutular = [
      'degisim' => $degisim($olcu['haber_goruntulenme'], $onceki['haber_goruntulenme']), 'seri' => array_column($gsSeri, 'haber_okunma')],
     ['ad' => 'Okunan haber', 'alt' => 'farklı haber adedi', 'deger' => $sayi($gsOzet['okunan_haber']),
      'degisim' => $degisim($gsOzet['okunan_haber'], $gsOnceki['okunan_haber']), 'seri' => array_column($gsSeri, 'okunan_haber')],
+    // V Network akisinda okunan kartlar ayri (01.11.2026): sayfa goruntulenmesine
+    // dahil ama sitedeki sayfa acilislarindan farkli; bir sicramanin kaynagi gorunsun.
+    ['ad' => 'V Network okuma', 'alt' => 'akışta okunan kart', 'deger' => $sayi($olcu['akis_kart']),
+     'degisim' => $degisim($olcu['akis_kart'], $onceki['akis_kart']), 'seri' => []],
 ];
 
 /** Kucuk egilim cizgisi: son nokta vurgulu. */
@@ -446,6 +450,9 @@ $gsHaberEnCok = max(1, (int) ($gsHaberler[0]['okuyucu'] ?? 1));
         <span class="olcum-sayi"><?= $sayi($olcu['goruntulenme']) ?></span>
         <span class="olcum-ad">sayfa görüntülenme</span>
         <?= $degisim($olcu['goruntulenme'], $onceki['goruntulenme']) ?>
+        <?php if ($olcu['akis_kart'] > 0): ?>
+            <span class="olcum-alt">sitede <?= $sayi($olcu['goruntulenme'] - $olcu['akis_kart']) ?> · V Network akışında okunan kart <?= $sayi($olcu['akis_kart']) ?></span>
+        <?php endif; ?>
     </div>
     <div class="olcum">
         <span class="olcum-sayi"><?= $sayi($olcu['haber_goruntulenme']) ?></span>
