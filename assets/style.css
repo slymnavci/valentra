@@ -6175,3 +6175,17 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 }
 .nw-yeni-dugme:hover { background: var(--vurgu); }
 .nw-yeni-dugme[hidden] { display: none; }
+
+/* Akista haber yorumu karti (01.11.2026): yorum + yorumlanan haberin onizlemesi. */
+.nw-alinti {
+    display: flex; gap: 12px; align-items: center;
+    margin: 0 16px 12px; padding: 10px;
+    border: 1px solid var(--cizgi); border-radius: 10px;
+    color: inherit; text-decoration: none; background: var(--zemin);
+}
+.nw-alinti img { width: 96px; height: 64px; flex: none; object-fit: cover; border-radius: 6px; background: var(--kart); }
+.nw-alinti span { display: grid; gap: 3px; min-width: 0; }
+.nw-alinti small { font-size: .78rem; color: var(--metin-soluk); font-weight: 700; }
+.nw-alinti small b { color: var(--altin); }
+.nw-alinti strong { font-size: .96rem; line-height: 1.35; overflow-wrap: anywhere; }
+.nw-alinti:hover strong { color: var(--altin); }

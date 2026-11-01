@@ -151,6 +151,10 @@ function nw_takip_html(int $kisiId, bool $takipte, string $donus, bool $kucuk = 
  */
 function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = false): string
 {
+    if ($oge['tur'] === 'yorum') {
+        return nw_yorum_kart_html($oge);
+    }
+
     $v     = $oge['veri'];
     $id    = (int) $v['id'];
     $haber = $oge['tur'] === 'haber';
@@ -242,6 +246,55 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
 }
 
 /**
+ * Haber yorumu karti (01.11.2026): yorumu yazan uye, yorum, altinda
+ * yorumlanan haberin kucuk onizlemesi. Tiklayinca V Network'teki haber
+ * sayfasinda o yoruma gidiliyor; yanit ve begeni orada.
+ *
+ * @param array{tur:string, zaman?:int, veri:array<string,mixed>} $oge
+ */
+function nw_yorum_kart_html(array $oge): string
+{
+    $v        = $oge['veri'];
+    $haberId  = (int) $v['haber_id'];
+    $detay    = nw_yol('h/' . $haberId);
+    $yorumYol = $detay . '#yorum-' . (int) $v['id'];
+    $zaman    = (string) $v['olusturuldu'];
+    $gorsel   = haber_gorsel_kucuk(['id' => $haberId, 'gorsel_url' => (string) ($v['gorsel_url'] ?? '')], 480);
+
+    ob_start();
+    ?>
+    <article class="nw-gonderi nw-yorum-kart" id="y<?= (int) $v['id'] ?>"<?= !empty($oge['zaman']) ? ' data-zaman="' . (int) $oge['zaman'] . '"' : '' ?>>
+        <header class="nw-gonderi-ust">
+            <a href="<?= e(nw_profil_yolu((int) $v['uye_id'])) ?>" tabindex="-1" aria-hidden="true"><?= uye_simge_html($v, 40) ?></a>
+            <div>
+                <a class="nw-hesap" href="<?= e(nw_profil_yolu((int) $v['uye_id'])) ?>"><?= e((string) $v['ad']) ?><?= uye_rozet_html($v) ?></a>
+                <span class="nw-meta">bir haberi yorumladı · <a href="<?= e($yorumYol) ?>"><time datetime="<?= e(date('c', (int) strtotime($zaman))) ?>"><?= e(yorum_zaman($zaman)) ?></time></a></span>
+            </div>
+        </header>
+
+        <div class="nw-metin"><?= yorum_metin_html((string) $v['metin']) ?></div>
+
+        <a class="nw-alinti" href="<?= e($detay) ?>">
+            <?php if ($gorsel !== ''): ?>
+                <img src="<?= e($gorsel) ?>" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">
+            <?php endif; ?>
+            <span>
+                <small>Val<b>Haber</b><?php if (!empty($v['kategori_adi'])): ?> · <?= e((string) $v['kategori_adi']) ?><?php endif; ?></small>
+                <strong><?= e((string) $v['baslik']) ?></strong>
+            </span>
+        </a>
+
+        <div class="nw-eylemler">
+            <a class="nw-eylem" href="<?= e($yorumYol) ?>"><span class="nw-simge" aria-hidden="true">💬</span> Tartışmaya katıl</a>
+            <a class="nw-eylem" href="<?= e($detay) ?>"><span class="nw-simge" aria-hidden="true">📰</span> Habere git</a>
+        </div>
+    </article>
+    <?php
+
+    return (string) ob_get_clean();
+}
+
+/**
  * Akis kartlarinin topluca sorgulanan bilgileri (sayfa basina birkac sorgu).
  *
  * @param list<array{tur:string, veri:array<string,mixed>}> $ogeler
@@ -251,6 +304,10 @@ function nw_baglam(array $ogeler): array
     $haberler = $gonderiler = [];
 
     foreach ($ogeler as $o) {
+        if ($o['tur'] === 'yorum') {
+            continue; // yorum karti kendi verisiyle ciziliyor
+        }
+
         if ($o['tur'] === 'haber') {
             $haberler[] = (int) $o['veri']['id'];
         } else {
