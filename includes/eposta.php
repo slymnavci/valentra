@@ -89,13 +89,16 @@ function eposta_gonder(string $kime, string $konu, string $duzMetin, string $htm
  *
  * @param list<string> $uyarilar Yakalanan PHP uyarilari (OpenSSL mesajlari)
  */
-function eposta_tls_ayrinti(string $hata, array $uyarilar): string
+function eposta_tls_ayrinti(string $hata, array $uyarilar, array $sertifikaAdlari = []): string
 {
     $temiz   = array_map(static fn (string $u): string => preg_replace('/^stream_[a-z_]+\(\):\s*/', '', $u) ?? $u, $uyarilar);
     $ayrinti = trim($hata . ' ' . implode(' ', array_unique($temiz)));
     $ipucu   = '';
 
-    if (stripos($ayrinti, 'did not match') !== false || stripos($ayrinti, 'peer_name') !== false) {
+    if (eposta_ad_uyusmazligi_mi($ayrinti) && $sertifikaAdlari !== []) {
+        $ipucu = ' Sunucunun sertifikası şu adlara ait: ' . implode(', ', array_slice($sertifikaAdlari, 0, 5))
+               . '. SMTP sunucusu alanına bunlardan birini yazın (ör. ' . $sertifikaAdlari[0] . ').';
+    } elseif (eposta_ad_uyusmazligi_mi($ayrinti)) {
         $ipucu = ' Sunucunun sertifikası bu adla eşleşmiyor: SMTP sunucusuna IHS panelindeki e-posta '
                . 'ayarlarında yazan sunucu adını (ör. sunucunun kendi adı) yazın.';
     } elseif (stripos($ayrinti, 'certificate verify failed') !== false) {
@@ -105,6 +108,93 @@ function eposta_tls_ayrinti(string $hata, array $uyarilar): string
     }
 
     return ($ayrinti !== '' ? mb_substr($ayrinti, 0, 300) : 'sebep bildirilmedi') . '.' . $ipucu;
+}
+
+function eposta_ad_uyusmazligi_mi(string $ayrinti): bool
+{
+    return stripos($ayrinti, 'did not match') !== false || stripos($ayrinti, 'peer_name') !== false;
+}
+
+/**
+ * Sunucunun sertifikasının ait olduğu adlar (ad uyuşmazlığında ipucu için).
+ *
+ * 01.11.2026: mail.valentra.com.tr'nin sertifikasi barindiricinin sunucu
+ * adina ve IHS panelinde o ad gorunmuyor. Hata aninda sertifika ayrica
+ * okunup adlari mesaja yaziliyor. Yalnizca sertifika okunuyor: kullanici
+ * adi ve sifre gonderilmiyor, baglanti hemen kapaniyor; bu yuzden bu tek
+ * okumada dogrulama gevsek. Okunamazsa bos liste.
+ *
+ * @param array{host:string,port:int,guvenlik:string} $a
+ * @return list<string>
+ */
+function eposta_sertifika_adlari(array $a): array
+{
+    $baglam = stream_context_create(['ssl' => [
+        'verify_peer' => false, 'verify_peer_name' => false, 'SNI_enabled' => true, 'capture_peer_cert' => true,
+    ]]);
+    $adres  = ($a['guvenlik'] === 'ssl' ? 'ssl://' : 'tcp://') . $a['host'] . ':' . $a['port'];
+    $soket  = @stream_socket_client($adres, $no, $hata, 10, STREAM_CLIENT_CONNECT, $baglam);
+
+    if ($soket === false) {
+        return [];
+    }
+
+    try {
+        stream_set_timeout($soket, 10);
+
+        if ($a['guvenlik'] === 'tls') {
+            $satir = static function () use ($soket): string {
+                $metin = '';
+
+                while (($s = fgets($soket, 1024)) !== false) {
+                    $metin .= $s;
+
+                    if (strlen($s) < 4 || $s[3] !== '-') {
+                        break;
+                    }
+                }
+
+                return $metin;
+            };
+
+            $satir();
+            fwrite($soket, "EHLO valentra.com.tr\r\n");
+            $satir();
+            fwrite($soket, "STARTTLS\r\n");
+
+            if (strncmp($satir(), '220', 3) !== 0
+                || @stream_socket_enable_crypto($soket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT
+                    | (defined('STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT') ? STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT : 0)) !== true) {
+                return [];
+            }
+        }
+
+        $sertifika = stream_context_get_params($soket)['options']['ssl']['peer_certificate'] ?? null;
+        $bilgi     = $sertifika !== null ? openssl_x509_parse($sertifika) : false;
+    } finally {
+        fclose($soket);
+    }
+
+    if (!is_array($bilgi)) {
+        return [];
+    }
+
+    $adlar = [];
+
+    foreach (explode(',', (string) ($bilgi['extensions']['subjectAltName'] ?? '')) as $parca) {
+        if (preg_match('/^\s*DNS:(\S+)$/', $parca, $e) === 1) {
+            $adlar[] = $e[1];
+        }
+    }
+
+    if ($adlar === [] && isset($bilgi['subject']['CN'])) {
+        $adlar[] = (string) $bilgi['subject']['CN'];
+    }
+
+    // Joker adlar (*.ornek.com) dogrudan yazilamaz; somut adlar once.
+    usort($adlar, static fn (string $x, string $y): int => (int) str_starts_with($x, '*') <=> (int) str_starts_with($y, '*'));
+
+    return array_values(array_unique($adlar));
 }
 
 /** @param array{gonderen:string,host:string,port:int,guvenlik:string,kullanici:string,sifre:string} $a */
@@ -142,8 +232,10 @@ function eposta_smtp(array $a, string $kime, string $ileti): void
     }
 
     if ($soket === false) {
+        $ayrinti = $hata . ' ' . implode(' ', $uyarilar);
+
         throw new RuntimeException('SMTP sunucusuna bağlanılamadı (' . $a['host'] . ':' . $a['port'] . '): '
-            . eposta_tls_ayrinti($hata, $uyarilar));
+            . eposta_tls_ayrinti($hata, $uyarilar, eposta_ad_uyusmazligi_mi($ayrinti) ? eposta_sertifika_adlari($a) : []));
     }
 
     stream_set_timeout($soket, EPOSTA_ZAMAN_ASIMI);
@@ -204,7 +296,7 @@ function eposta_smtp(array $a, string $kime, string $ileti): void
 
             if ($sifreli !== true) {
                 throw new RuntimeException('STARTTLS ile şifreli bağlantı kurulamadı (' . $a['host'] . ':' . $a['port'] . '): '
-                    . eposta_tls_ayrinti('', $uyarilar));
+                    . eposta_tls_ayrinti('', $uyarilar, eposta_ad_uyusmazligi_mi(implode(' ', $uyarilar)) ? eposta_sertifika_adlari($a) : []));
             }
 
             $komut('EHLO ' . $ben, [250]);
