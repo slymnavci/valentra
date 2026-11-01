@@ -532,18 +532,13 @@ jobs:
       # gunde en fazla 8 paylasim/yorum. Ilk calisma eksik hesaplari acar.
       - name: Topluluk hesaplari
         if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'topla' || inputs.mod == 'gunluk' || inputs.mod == 'topluluk') }}
-        timeout-minutes: 8
+        # Yalnizca hesap esitleme ve YZ begeni dagitimi; model yok (01.11.2026).
+        timeout-minutes: 3
         working-directory: ajan
         env:
-          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
-          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
-          CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
-          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
-        run: php topluluk.php --sure=5 ${{ inputs.kuru && '--kuru' || '' }} || true
+        run: php topluluk.php ${{ inputs.kuru && '--kuru' || '' }} || true
 
       # Sayfalardaki canli veri (23.10.2026, site sahibi: "haberleri ceken
       # robot borsa grafiklerini, mac sonuclarini da ceksin; eski bilgi

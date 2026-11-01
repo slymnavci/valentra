@@ -406,7 +406,7 @@ final class Site
     }
 
     /**
-     * V Network yapay zeka ve kurum hesaplarinin malzemesi (bkz. api/topluluk.php).
+     * V Network yapay zeka ve kurum hesaplari (bkz. api/topluluk.php).
      *
      * @return array<string,mixed>
      */
@@ -421,15 +421,13 @@ final class Site
         }
 
         return [
-            'tavan'       => (array) ($veri['tavan'] ?? []),
-            'hesaplar'    => array_values((array) ($veri['hesaplar'] ?? [])),
-            'haberler'    => array_values((array) ($veri['haberler'] ?? [])),
-            'paylasimlar' => array_values((array) ($veri['paylasimlar'] ?? [])),
+            'hesaplar'     => array_values((array) ($veri['hesaplar'] ?? [])),
+            'begeni_bugun' => (int) ($veri['begeni_bugun'] ?? 0),
         ];
     }
 
     /**
-     * Topluluk ucuna gonderim: {"hesaplar": [...]} ya da {"eylemler": [...]}.
+     * Topluluk ucuna gonderim: {"hesaplar": [...]} (hesaplari esitle).
      *
      * @param array<string,mixed> $govdeVerisi
      * @return array<string,mixed>

@@ -2,18 +2,21 @@
 declare(strict_types=1);
 
 /**
- * V Network yapay zeka ve kurum hesaplari ajani (31.10.2026).
+ * V Network yapay zeka ve kurum hesaplari (31.10.2026; 01.11.2026'dan beri
+ * model yok).
  *
  * Hesaplar ajan/veri/topluluk_hesaplari.json'da (100 YZ hesabi, 5 Valentra
- * kurum hesabi; bkz. includes/topluluk.php).
+ * kurum hesabi; bkz. includes/topluluk.php). Yapay zekanin yazdigi
+ * paylasim ve yorumlar kapatildi (site sahibi: "yapay zeka yorumlarini
+ * kapatalim, sadece begeni artirsin yeter"). Bu betik yalnizca:
  *
- * Her calismada: eksik hesaplar acilir; gunluk tavani dolmamis kurum
- * hesaplarindan biri ya da ikisi secilir, model paylasim/yorum yazar, site
- * gercek uyelerin kurallariyla uygular. YZ hesaplari yalnizca begeni
- * birakiyor; onu site kendisi dagitiyor (topluluk_begeni_dagit), model yok.
+ *   - sitede eksik hesap varsa acar,
+ *   - siteyi durter: YZ begenilerini site kendisi dagitiyor
+ *     (topluluk_begeni_dagit); az ziyaretli saatlerde de ilerlesin diye
+ *     her ajan calismasinda bir istek.
  *
  * Calistirma:
- *   php ajan/topluluk.php [--kuru] [--sure=4] [--hesap=2]
+ *   php ajan/topluluk.php [--kuru]
  */
 
 if (PHP_SAPI !== 'cli') {
@@ -26,23 +29,13 @@ require_once __DIR__ . '/src/Indirici.php';
 require_once __DIR__ . '/src/Http.php';
 require_once __DIR__ . '/src/Kodlama.php';
 require_once __DIR__ . '/src/Site.php';
-require_once __DIR__ . '/src/KotaBittiException.php';
-require_once __DIR__ . '/src/ModelErisimYokException.php';
-require_once __DIR__ . '/src/SemaliIstemci.php';
-require_once __DIR__ . '/src/Yazar.php';
-require_once __DIR__ . '/src/Topluluk.php';
-require_once __DIR__ . '/src/Bildirim.php';
 
-use Valentra\Ajan\{Bildirim, KotaBittiException, ModelErisimYokException, Site, Topluluk, Yazar};
+use Valentra\Ajan\Site;
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
-$secenekler = getopt('', ['kuru', 'sure::', 'hesap::']);
-$kuru       = isset($secenekler['kuru']);
-$bitis      = time() + max(2, (int) ($secenekler['sure'] ?? 4)) * 60;
-// Calisma basina kurum hesabi (iki saatte bir: gunde ~12 calisma).
-$hesapAdedi = max(1, min(5, (int) ($secenekler['hesap'] ?? 2)));
+$kuru = isset(getopt('', ['kuru'])['kuru']);
 
 function gunluk(string $mesaj): void
 {
@@ -61,138 +54,23 @@ function ayar(string $ad): string
     return trim($deger);
 }
 
-$dosya = json_decode((string) file_get_contents(__DIR__ . '/veri/topluluk_hesaplari.json'), true);
+$dosya   = json_decode((string) file_get_contents(__DIR__ . '/veri/topluluk_hesaplari.json'), true);
 $kisiler = is_array($dosya['hesaplar'] ?? null) ? $dosya['hesaplar'] : [];
-
-if ($kisiler === []) {
-    gunluk('Kişilik dosyası okunamadı.');
-    exit(1);
-}
-
-$site = new Site(ayar('VALENTRA_SITE_URL'), ayar('VALENTRA_AGENT_KEY'));
+$site    = new Site(ayar('VALENTRA_SITE_URL'), ayar('VALENTRA_AGENT_KEY'));
 
 try {
-    $malzeme = $site->toplulukMalzeme();
+    $durum = $site->toplulukMalzeme();
 
-    // Sitede eksik hesap varsa ac (ilk calisma ya da dosyaya yeni kisi eklendi).
-    if (!$kuru && count($malzeme['hesaplar']) < count($kisiler)) {
+    if (!$kuru && $kisiler !== [] && count($durum['hesaplar']) < count($kisiler)) {
         $esit = $site->toplulukGonder(['hesaplar' => array_map(
             static fn (array $k): array => ['rumuz' => $k['rumuz'], 'tur' => $k['tur'], 'hakkinda' => $k['hakkinda']],
             $kisiler
         )]);
         gunluk(sprintf('Hesaplar eşitlendi: %d yeni, %d güncel, %d hata.',
             (int) ($esit['eklenen'] ?? 0), (int) ($esit['guncellenen'] ?? 0), count((array) ($esit['hatalar'] ?? []))));
-
-        foreach (array_slice((array) ($esit['hatalar'] ?? []), 0, 5) as $h) {
-            gunluk('  ' . $h);
-        }
-
-        $malzeme = $site->toplulukMalzeme();
     }
+
+    gunluk(sprintf('%d hesap; YZ hesaplarının bugünkü beğenisi: %d.', count($durum['hesaplar']), $durum['begeni_bugun']));
 } catch (Throwable $e) {
-    gunluk('Malzeme alınamadı: ' . $e->getMessage());
-    Bildirim::uyari('Topluluk ajanı siteye ulaşamadı; bu çalışmada paylaşım yapılmadı. Teknik ayrıntı: ' . $e->getMessage());
-    exit(0);
-}
-
-if ($malzeme['haberler'] === []) {
-    gunluk('Son saatlerde yayımlanmış haber yok; topluluk eylemi yapılmadı.');
-    exit(0);
-}
-
-// Gunluk tavani dolmamis kurum hesaplari, saate gore sirayla.
-$tavan  = (int) ($malzeme['tavan']['gunluk'] ?? 8);
-$bugun  = [];
-
-foreach ($malzeme['hesaplar'] as $h) {
-    $bugun[(string) $h['rumuz']] = (int) $h['bugun'];
-}
-
-$uygun = static fn (string $tur): array => array_values(array_filter(
-    $kisiler,
-    static fn (array $k): bool => $k['tur'] === $tur && isset($bugun[$k['rumuz']]) && $bugun[$k['rumuz']] < $tavan - 1
-));
-
-$kurumlar = $uygun('kurum');
-$secilen  = [];
-
-for ($i = 0; $i < min($hesapAdedi, count($kurumlar)); $i++) {
-    $secilen[] = $kurumlar[((int) date('G') + $i) % count($kurumlar)];
-}
-
-if ($secilen === []) {
-    gunluk('Bütün hesapların bugünkü tavanı dolu.');
-    exit(0);
-}
-
-$yazar = new Yazar(ayar('GEMINI_API_KEY'), Yazar::haberModeli(), trim((string) getenv('OPENAI_API_KEY')), trim((string) getenv('ANTHROPIC_API_KEY')));
-$yazar->sureSiniri(150, [10], $bitis);
-
-gunluk(sprintf('%d hesap seçildi (%s); %d haber, %d paylaşım.', count($secilen),
-    implode(', ', array_column($secilen, 'rumuz')), count($malzeme['haberler']), count($malzeme['paylasimlar'])));
-
-try {
-    $eylemler = (new Topluluk($yazar))->eylemleriYaz($secilen, $malzeme['haberler'], $malzeme['paylasimlar']);
-} catch (ModelErisimYokException | KotaBittiException $e) {
-    gunluk('Model kullanılamıyor: ' . $e->getMessage());
-    exit(0);
-} catch (Throwable $e) {
-    gunluk('Eylemler yazılamadı: ' . $e->getMessage());
-    exit(0);
-}
-
-gunluk(sprintf('%d eylem yazıldı (model: %s).', count($eylemler), $yazar->sonYanitlayan()));
-
-if ($kuru || $eylemler === []) {
-    foreach ($eylemler as $e) {
-        echo '- ' . $e['hesap'] . ' [' . $e['tur'] . ($e['hedef'] !== '' ? ' ' . $e['hedef'] : '') . '] ' . $e['metin'] . PHP_EOL;
-    }
-
-    exit(0);
-}
-
-// Ayni hesabin iki yorumu arka arkaya gitmesin (sitede siklik siniri):
-// once herkesin ilk eylemi, sonra ikincisi.
-$siradaki = [];
-
-foreach ($eylemler as $e) {
-    $siradaki[$e['hesap']][] = $e;
-}
-
-$dalgalar = [];
-
-foreach ($siradaki as $liste) {
-    foreach ($liste as $i => $e) {
-        $dalgalar[$i][] = $e;
-    }
-}
-
-$toplam = ['paylasim' => 0, 'yorum' => 0, 'begeni' => 0];
-$hatalar = [];
-
-foreach ($dalgalar as $i => $dalga) {
-    if ($i > 0) {
-        // Sitedeki paylasim araligi 30 sn; ikinci dalga ondan sonra.
-        sleep(35);
-    }
-
-    try {
-        $sonuc = $site->toplulukGonder(['eylemler' => $dalga]);
-    } catch (Throwable $e) {
-        gunluk('Gönderim başarısız: ' . $e->getMessage());
-        break;
-    }
-
-    foreach ((array) ($sonuc['yapilan'] ?? []) as $tur => $n) {
-        $toplam[$tur] = ($toplam[$tur] ?? 0) + (int) $n;
-    }
-
-    $hatalar = array_merge($hatalar, (array) ($sonuc['hatalar'] ?? []));
-}
-
-gunluk(sprintf('Sitede: %d paylaşım, %d yorum, %d beğeni; %d eylem yapılamadı.',
-    $toplam['paylasim'], $toplam['yorum'], $toplam['begeni'], count($hatalar)));
-
-foreach (array_slice($hatalar, 0, 8) as $h) {
-    gunluk('  ' . $h);
+    gunluk('Siteye ulaşılamadı: ' . $e->getMessage());
 }
