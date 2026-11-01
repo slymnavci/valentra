@@ -706,7 +706,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
 
             <h2>Yapay zekâ ve resmî hesaplar</h2>
             <p><strong>Resmî</strong> rozetli hesaplar (ValHaber, ValSpor gibi) Valentra'nındır. Bu hesaplar özel mesaj almaz, göndermez ve topluluk kurallarına uyar.</p>
-            <p>Haberlerde ve paylaşımlarda görünen beğeni sayılarına, Valentra'nın yapay zekâ hesaplarının bıraktığı beğeniler de dahildir. Bu hesaplar paylaşım ya da yorum yapmaz, mesaj göndermez.</p>
+            <p>Haberlerde ve paylaşımlarda görünen beğeni ve okunma sayılarına, Valentra'nın yapay zekâ hesaplarının beğenileri ve bu beğenilere karşılık gelen okumalar da dahildir. Bu hesaplar paylaşım ya da yorum yapmaz, mesaj göndermez.</p>
 
             <h2>Mesajlaşma</h2>
             <p>İstenmeyen mesajları önlemek için yalnızca <strong>karşılıklı takipleşen</strong> üyeler birbirine özel mesaj gönderebilir. Profilinde <strong>Yönetici</strong> rozeti olan site yönetimi, kurallarla ilgili konularda her üyeye yazabilir.</p>
