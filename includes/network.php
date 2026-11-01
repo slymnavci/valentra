@@ -377,6 +377,90 @@ function nw_profil_foto(int $uyeId, string $veri): void
     }
 }
 
+/**
+ * Site yoneticisi panelden uyeyi duzenler (01.11.2026, site sahibi: "admin
+ * panelinden vnetwork kullanicilarini duzenle yetkisi ver"; bkz.
+ * admin/yorumlar.php?sekme=uyeler&duzenle=ID).
+ *
+ * Rumuz yalnizca degistiyse sinaniyor (ayrilmis rumuzlar panelde serbest).
+ * Sifre bos birakilirsa degismiyor; yeni sifre ya da durdurma acik
+ * oturumlari kapatiyor. Hatalar InvalidArgumentException (Turkce mesaj).
+ *
+ * @param array<string,mixed> $veri ad, eposta, hakkinda, sifre, durum, rol, dogrulandi, foto_kaldir
+ */
+function nw_panel_uye_guncelle(int $uyeId, array $veri): void
+{
+    $simdiki = db()->prepare('SELECT ad, eposta, foto, eposta_dogrulandi FROM uyeler WHERE id = :id');
+    $simdiki->execute(['id' => $uyeId]);
+    $simdiki = $simdiki->fetch();
+
+    if (!$simdiki) {
+        throw new InvalidArgumentException('Üye bulunamadı.');
+    }
+
+    $ad = trim((string) ($veri['ad'] ?? ''));
+
+    if ($ad !== (string) $simdiki['ad']) {
+        $ad = uye_rumuz_sina($ad, $uyeId, true);
+    }
+
+    $eposta = mb_strtolower(trim((string) ($veri['eposta'] ?? '')), 'UTF-8');
+
+    if (!filter_var($eposta, FILTER_VALIDATE_EMAIL) || strlen($eposta) > 190) {
+        throw new InvalidArgumentException('Geçerli bir e-posta adresi yazın.');
+    }
+
+    $hakkinda = trim(preg_replace('/\s+/u', ' ', (string) ($veri['hakkinda'] ?? '')) ?? '');
+
+    if (mb_strlen($hakkinda, 'UTF-8') > HAKKINDA_EN_FAZLA) {
+        throw new InvalidArgumentException('Tanıtım yazısı en fazla ' . HAKKINDA_EN_FAZLA . ' karakter olabilir.');
+    }
+
+    $sifre = (string) ($veri['sifre'] ?? '');
+
+    if ($sifre !== '' && mb_strlen($sifre, 'UTF-8') < UYE_SIFRE_EN_AZ) {
+        throw new InvalidArgumentException('Yeni şifre en az ' . UYE_SIFRE_EN_AZ . ' karakter olmalı.');
+    }
+
+    $durum = ($veri['durum'] ?? '') === 'engelli' ? 'engelli' : 'aktif';
+    $rol   = ($veri['rol'] ?? '') === 'yonetici' ? 'yonetici' : 'uye';
+
+    // E-posta degistiyse eski dogrulama yeni adres icin gecerli degil;
+    // kutu isaretliyse yonetici yeni adresi de dogrulanmis sayiyor.
+    $dogrulandi = !empty($veri['dogrulandi']);
+    $dogrulamaSql = $dogrulandi
+        ? ($eposta === (string) $simdiki['eposta'] ? 'COALESCE(eposta_dogrulandi, NOW())' : 'NOW()')
+        : 'NULL';
+
+    $alanlar = ['ad' => $ad, 'e' => $eposta, 'h' => $hakkinda, 'd' => $durum, 'r' => $rol, 'id' => $uyeId];
+    $sifreSql = '';
+
+    if ($sifre !== '') {
+        $sifreSql = ', sifre = :s';
+        $alanlar['s'] = password_hash($sifre, PASSWORD_DEFAULT);
+    }
+
+    try {
+        db()->prepare("UPDATE uyeler SET ad = :ad, eposta = :e, hakkinda = :h, durum = :d, rol = :r,
+                              eposta_dogrulandi = $dogrulamaSql$sifreSql WHERE id = :id")
+            ->execute($alanlar);
+    } catch (PDOException $e) {
+        if ((string) $e->getCode() === '23000') {
+            throw new InvalidArgumentException('Bu e-posta adresi başka bir üyede.');
+        }
+
+        throw $e;
+    }
+
+    if ($sifre !== '' || $durum === 'engelli') {
+        db()->prepare('DELETE FROM uye_oturumlari WHERE uye_id = :id')->execute(['id' => $uyeId]);
+    }
+
+    if (!empty($veri['foto_kaldir']) && (string) $simdiki['foto'] !== '') {
+        nw_profil_foto($uyeId, '');
+    }
+}
+
 /** Yonetici: uyeligi durdurur (giris yapamaz, icerigi gorunmez) ya da acar. */
 function nw_uye_durum_degistir(int $uyeId, bool $durdur): void
 {
