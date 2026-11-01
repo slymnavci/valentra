@@ -89,6 +89,48 @@ function nw_oto_oynat_betigi(): string
 HTML;
 }
 
+/**
+ * Akista okunan kart = bir sayfa goruntulenmesi (01.11.2026, site sahibi:
+ * "network'te her okunan haber bir sayfa gibi gorunsun; asagi kaydirdikca
+ * okunan sayfa sayisi da degissin"). Kart en az yarisi ekranda 1,5 saniye
+ * kalinca network-okundu.php'ye bir kez bildiriliyor; tarayici anahtari
+ * sitenin ziyaret betigiyle ayni (vz_k), ayni kisi iki kisi sayilmasin.
+ */
+function nw_okuma_betigi(): string
+{
+    return <<<'HTML'
+<script>
+(function () {
+    if (!('IntersectionObserver' in window)) { return; }
+    var gonderilen = {}, sayaclar = {}, anahtar = '';
+    try { anahtar = localStorage.getItem('vz_k') || ''; } catch (e) {}
+    function gonder(id) {
+        if (gonderilen[id]) { return; }
+        gonderilen[id] = true;
+        var d = new URLSearchParams();
+        d.append('hedef', id);
+        d.append('k', anahtar);
+        if (navigator.sendBeacon) { navigator.sendBeacon('/network-okundu.php', d); }
+        else { fetch('/network-okundu.php', { method: 'POST', body: d, keepalive: true, credentials: 'same-origin' }).catch(function () {}); }
+    }
+    var gozcu = new IntersectionObserver(function (olaylar) {
+        olaylar.forEach(function (o) {
+            var id = o.target.id;
+            if (!/^[hg]\d+$/.test(id) || gonderilen[id]) { return; }
+            if (o.intersectionRatio >= 0.5 && !document.hidden) {
+                if (!sayaclar[id]) { sayaclar[id] = setTimeout(function () { gonder(id); gozcu.unobserve(o.target); }, 1500); }
+            } else if (sayaclar[id]) {
+                clearTimeout(sayaclar[id]);
+                delete sayaclar[id];
+            }
+        });
+    }, { threshold: [0, 0.5] });
+    document.querySelectorAll('.nw-orta .nw-gonderi, .nw-profil .nw-gonderi').forEach(function (k) { gozcu.observe(k); });
+})();
+</script>
+HTML;
+}
+
 /** @param list<array{dosya:string,genislik:int,yukseklik:int}> $fotolar */
 function nw_foto_izgara_html(array $fotolar): string
 {
