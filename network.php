@@ -683,6 +683,10 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
 <?php if (in_array($sayfa, ['akis', 'haber', 'gonderi', 'profil'], true)): ?>
     <?= nw_oto_oynat_betigi() ?>
 <?php endif; ?>
+<?php if (in_array($sayfa, ['akis', 'profil'], true)): ?>
+    <?php // Akista okunan her kart bir sayfa goruntulenmesi (01.11.2026; bkz. network-okundu.php). ?>
+    <?= nw_okuma_betigi() ?>
+<?php endif; ?>
 <?php if ($sayfa === 'akis'): ?>
     <?php // X'teki gibi: geri donunce kalinan kart, ustte "yeni paylasim" dugmesi (31.10.2026). ?>
     <script src="<?= e(varlik('/assets/network-akis.js')) ?>" defer></script>
