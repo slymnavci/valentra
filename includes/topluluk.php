@@ -118,8 +118,9 @@ function topluluk_malzeme(): array
  * beğeni sayilarina YZ begenilerinin dahil oldugu yaziyor.
  *
  * Her icerigin bir hedefi var (id'den turetilen sabit sayi) ve begeniler
- * zamana yayiliyor: uye paylasimi ilk saatte 3-8, haber alti saatte 5-24
- * (onemli haber daha cok). Bildirim gitmiyor. Model kullanilmiyor.
+ * zamana yayiliyor: uye paylasimi ilk saatte 4-12, haber alti saatte 8-36
+ * (onemli haber daha cok; 01.11.2026'da hesaplar 150'ye cikinca hedefler
+ * de 1,5 katina cikti). Bildirim gitmiyor. Model kullanilmiyor.
  *
  * @return array{gonderi:int,haber:int}
  */
@@ -155,7 +156,7 @@ function topluluk_begeni_dagit(): array
           WHERE b.hedef_tur = :t AND b.hedef_id = :h AND u.tur = \'yz\''
     );
     $ekle  = db()->prepare('INSERT IGNORE INTO begeniler (hedef_tur, hedef_id, uye_id) VALUES (:t, :h, :u)');
-    $kalan = 400; // tek calismada en fazla begeni
+    $kalan = 600; // tek calismada en fazla begeni
 
     foreach (['gonderi' => $gonderiler, 'haber' => $haberler->fetchAll()] as $tur => $liste) {
         foreach ($liste as $oge) {
@@ -163,10 +164,10 @@ function topluluk_begeni_dagit(): array
             $tohum = crc32($tur . $id);
 
             if ($tur === 'gonderi') {
-                $hedef = 3 + $tohum % 6;                                         // 3-8
+                $hedef = 4 + $tohum % 9;                                         // 4-12
                 $oran  = ((int) $oge['dk'] - 8) / 50;                            // 8. dk - 1. saat
             } else {
-                $hedef = 5 + $tohum % 13 + intdiv(max(0, (int) $oge['onem'] - 50), 7); // 5-24
+                $hedef = 8 + $tohum % 19 + intdiv(max(0, (int) $oge['onem'] - 50), 5); // 8-36
                 $oran  = ((int) $oge['dk'] - 10) / 350;                          // 10. dk - 6. saat
             }
 
