@@ -11,7 +11,9 @@ declare(strict_types=1);
  *     yeniden yayinla ya da sil.
  *   - Uyeler: engelle (giris yapamaz, yorumlari gorunmez) ya da engeli kaldir;
  *     V Network yoneticisi yap ya da yoneticiligi al; yonetici hesabi olustur
- *     (31.10.2026: sifre depoya yazilmasin diye hesap buradan aciliyor).
+ *     (31.10.2026: sifre depoya yazilmasin diye hesap buradan aciliyor);
+ *     uyeyi duzenle (01.11.2026): rumuz, e-posta, tanitim, yeni sifre,
+ *     dogrulama, durum, rol, profil resmini kaldir; rumuz/e-postayla ara.
  */
 
 require_once __DIR__ . '/../includes/bootstrap.php';
@@ -62,6 +64,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (InvalidArgumentException $e) {
             yonlendir('yorumlar.php?sekme=uyeler&hata=' . rawurlencode($e->getMessage()));
         }
+    } elseif ($islem === 'uye_duzenle') {
+        try {
+            nw_panel_uye_guncelle($id, [
+                'ad'          => (string) ($_POST['ad'] ?? ''),
+                'eposta'      => (string) ($_POST['eposta'] ?? ''),
+                'hakkinda'    => (string) ($_POST['hakkinda'] ?? ''),
+                'sifre'       => (string) ($_POST['sifre'] ?? ''),
+                'durum'       => (string) ($_POST['durum'] ?? ''),
+                'rol'         => (string) ($_POST['rol'] ?? ''),
+                'dogrulandi'  => !empty($_POST['dogrulandi']),
+                'foto_kaldir' => !empty($_POST['foto_kaldir']),
+            ]);
+        } catch (InvalidArgumentException $e) {
+            yonlendir('yorumlar.php?sekme=uyeler&duzenle=' . $id . '&hata=' . rawurlencode($e->getMessage()));
+        }
     } elseif ($islem === 'rol_yonetici' || $islem === 'rol_uye') {
         db()->prepare('UPDATE uyeler SET rol = :r WHERE id = :id')
             ->execute(['r' => $islem === 'rol_yonetici' ? 'yonetici' : 'uye', 'id' => $id]);
@@ -100,11 +117,25 @@ try {
         )->fetchAll();
         $fotolar = gonderi_fotolari(array_map(static fn (array $g): int => (int) $g['id'], $satirlar));
     } elseif ($sekme === 'uyeler') {
-        $satirlar = db()->query(
-            'SELECT u.id, u.ad, u.eposta, u.durum, u.rol, u.olusturuldu, u.son_giris,
+        $ara = trim((string) ($_GET['ara'] ?? ''));
+        $ifade = db()->prepare(
+            'SELECT u.id, u.ad, u.eposta, u.durum, u.rol, u.tur, u.olusturuldu, u.son_giris,
                     (SELECT COUNT(*) FROM yorumlar y WHERE y.uye_id = u.id) AS yorum_sayisi
-               FROM uyeler u ORDER BY u.id DESC LIMIT 300'
-        )->fetchAll();
+               FROM uyeler u' . ($ara !== '' ? ' WHERE u.ad LIKE :a1 OR u.eposta LIKE :a2' : '') . '
+              ORDER BY u.id DESC LIMIT 300'
+        );
+        $desen = '%' . addcslashes($ara, '%_\\') . '%';
+        $ifade->execute($ara !== '' ? ['a1' => $desen, 'a2' => $desen] : []);
+        $satirlar = $ifade->fetchAll();
+
+        $duzenlenen = null;
+        $duzenleId  = (int) ($_GET['duzenle'] ?? 0);
+
+        if ($duzenleId > 0) {
+            $d = db()->prepare('SELECT id, ad, eposta, eposta_dogrulandi, hakkinda, foto, durum, rol, tur, kayit_ip, olusturuldu, son_giris FROM uyeler WHERE id = :id');
+            $d->execute(['id' => $duzenleId]);
+            $duzenlenen = $d->fetch() ?: null;
+        }
     } else {
         $ifade = db()->prepare(
             'SELECT y.id, y.metin, y.durum, y.sikayet, y.olusturuldu, y.ip,
@@ -195,6 +226,56 @@ require __DIR__ . '/ust.php';
         </div>
     <?php endforeach; ?>
 <?php elseif ($sekme === 'uyeler'): ?>
+    <?php if (!empty($duzenlenen)): ?>
+        <?php $du = $duzenlenen; ?>
+        <div class="kutu" id="uye-duzenle" style="margin-top:16px;border:2px solid #c0121b;">
+            <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;">
+                <strong>Üyeyi düzenle: <?= e((string) $du['ad']) ?></strong>
+                <span class="ipucu">
+                    #<?= (int) $du['id'] ?> · kayıt <?= e(tarih_bicimle((string) $du['olusturuldu'])) ?>
+                    <?= ($du['tur'] ?? 'uye') !== 'uye' ? ' · ' . e(($du['tur'] === 'yz' ? 'yapay zekâ' : 'kurum') . ' hesabı') : '' ?>
+                    · <a href="<?= e(nw_profil_yolu((int) $du['id'])) ?>" target="_blank" rel="noopener">Profili aç</a>
+                </span>
+            </div>
+            <form method="post" action="?sekme=uyeler" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:12px 0 0;">
+                <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                <input type="hidden" name="islem" value="uye_duzenle">
+                <input type="hidden" name="id" value="<?= (int) $du['id'] ?>">
+                <label>Rumuz<br><input type="text" name="ad" value="<?= e((string) $du['ad']) ?>" required maxlength="<?= UYE_AD_EN_FAZLA ?>" style="width:100%;"></label>
+                <label>E-posta<br><input type="email" name="eposta" value="<?= e((string) $du['eposta']) ?>" required maxlength="190" style="width:100%;"></label>
+                <label>Yeni şifre <span class="ipucu">(boş bırakılırsa değişmez)</span><br><input type="password" name="sifre" minlength="<?= UYE_SIFRE_EN_AZ ?>" autocomplete="new-password" style="width:100%;"></label>
+                <label>Durum<br>
+                    <select name="durum" style="width:100%;">
+                        <option value="aktif"<?= $du['durum'] === 'aktif' ? ' selected' : '' ?>>Aktif</option>
+                        <option value="engelli"<?= $du['durum'] === 'engelli' ? ' selected' : '' ?>>Engelli (giriş yapamaz)</option>
+                    </select>
+                </label>
+                <label>Rol<br>
+                    <select name="rol" style="width:100%;">
+                        <option value="uye"<?= ($du['rol'] ?? '') !== 'yonetici' ? ' selected' : '' ?>>Üye</option>
+                        <option value="yonetici"<?= ($du['rol'] ?? '') === 'yonetici' ? ' selected' : '' ?>>V Network yöneticisi</option>
+                    </select>
+                </label>
+                <label style="grid-column:1/-1;">Tanıtım yazısı<br><textarea name="hakkinda" rows="2" maxlength="<?= HAKKINDA_EN_FAZLA ?>" style="width:100%;"><?= e((string) $du['hakkinda']) ?></textarea></label>
+                <label><input type="checkbox" name="dogrulandi" value="1"<?= $du['eposta_dogrulandi'] ? ' checked' : '' ?>> E-posta doğrulanmış</label>
+                <?php if ((string) $du['foto'] !== ''): ?>
+                    <label style="display:flex;gap:8px;align-items:center;">
+                        <img src="<?= e(nw_foto_adresi((string) $du['foto'])) ?>" alt="" width="40" height="40" style="border-radius:50%;object-fit:cover;">
+                        <span><input type="checkbox" name="foto_kaldir" value="1"> Profil resmini kaldır</span>
+                    </label>
+                <?php endif; ?>
+                <div style="grid-column:1/-1;display:flex;gap:10px;">
+                    <button type="submit" class="dugme dugme-ana">Kaydet</button>
+                    <a href="?sekme=uyeler" class="dugme">Vazgeç</a>
+                </div>
+            </form>
+            <p class="ipucu" style="margin:10px 0 0;">
+                Yeni şifre ya da engelleme üyenin açık oturumlarını kapatır. E-posta değişirse doğrulama
+                kutusu işaretli kalmadıkça üye yeni adresi doğrulamalıdır.
+            </p>
+        </div>
+    <?php endif; ?>
+
     <div class="kutu" style="margin-top:16px;">
         <strong>V Network yönetici hesabı</strong>
         <p class="ipucu" style="margin:4px 0 10px;">
@@ -212,6 +293,11 @@ require __DIR__ . '/ust.php';
     </div>
 
     <div class="kutu" style="margin-top:16px;overflow-x:auto;">
+        <form method="get" style="display:flex;gap:8px;margin:0 0 12px;">
+            <input type="hidden" name="sekme" value="uyeler">
+            <input type="search" name="ara" value="<?= e((string) ($_GET['ara'] ?? '')) ?>" placeholder="Rumuz ya da e-posta ara" style="flex:1;max-width:320px;">
+            <button type="submit" class="dugme">Ara</button>
+        </form>
         <table class="liste-tablo">
             <thead><tr><th>Rumuz</th><th>E-posta</th><th>Yorum</th><th>Kayıt</th><th>Son giriş</th><th>Durum</th><th></th></tr></thead>
             <tbody>
@@ -227,6 +313,7 @@ require __DIR__ . '/ust.php';
                             <form method="post" style="margin:0;">
                                 <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
                                 <input type="hidden" name="id" value="<?= (int) $u['id'] ?>">
+                                <a href="?sekme=uyeler&amp;duzenle=<?= (int) $u['id'] ?>#uye-duzenle" class="dugme dugme-ana">Düzenle</a>
                                 <?php if ($u['durum'] === 'aktif'): ?>
                                     <button type="submit" name="islem" value="engelle" class="dugme" onclick="return confirm('Üye engellensin mi? Yorumları sitede görünmez olur.')">Engelle</button>
                                 <?php else: ?>
