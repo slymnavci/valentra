@@ -178,7 +178,7 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
             <?php else: ?>
                 <a href="<?= e(nw_profil_yolu((int) $v['uye_id'])) ?>" tabindex="-1" aria-hidden="true"><?= uye_simge_html($v, 40) ?></a>
                 <div>
-                    <a class="nw-hesap" href="<?= e(nw_profil_yolu((int) $v['uye_id'])) ?>"><?= e((string) $v['ad']) ?></a>
+                    <a class="nw-hesap" href="<?= e(nw_profil_yolu((int) $v['uye_id'])) ?>"><?= e((string) $v['ad']) ?><?= uye_rozet_html($v) ?></a>
                     <span class="nw-meta"><a href="<?= e($detayYol) ?>"><time datetime="<?= e(date('c', (int) strtotime($zaman))) ?>"><?= e(yorum_zaman($zaman)) ?></time></a></span>
                 </div>
                 <?php if ($uye !== null): ?>
@@ -276,7 +276,7 @@ function nw_kisi_html(array $k, array $takipEdilenler, string $donus, bool $kucu
 
     return '<div class="nw-kisi' . ($kucuk ? ' kucuk' : '') . '">'
          . '<a class="nw-kisi-bas" href="' . e(nw_profil_yolu($id)) . '">' . uye_simge_html($k, $kucuk ? 40 : 56)
-         . '<span><strong>' . e((string) $k['ad']) . '</strong>'
+         . '<span><strong>' . e((string) $k['ad']) . uye_rozet_html($k) . '</strong>'
          . (isset($k['takipci']) ? '<small>' . (int) $k['takipci'] . ' takipçi</small>' : '')
          . (!$kucuk && (string) ($k['hakkinda'] ?? '') !== '' ? '<small class="nw-kisi-hakkinda">' . e(kisalt((string) $k['hakkinda'], 90)) . '</small>' : '')
          . '</span></a>'

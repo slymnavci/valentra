@@ -53,6 +53,7 @@ on:
           - ag-tanisi
           - canli
           - yazar-portre
+          - topluluk
       kuru:
         description: 'Kuru calisma (siteye gonderme, sadece ciktiyi goster)'
         type: boolean
@@ -523,6 +524,26 @@ jobs:
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
         run: php burc.php --sure=8 ${{ inputs.mod == 'burc' && '--yeniden' || '' }} || true
+
+      # V Network yapay zeka ve kurum hesaplari (31.10.2026, site sahibi:
+      # "V Network kalabalik gorunsun"). Hesaplar sitede YZ/Resmi rozetiyle
+      # isaretli (includes/topluluk.php). Her calismada ~10 YZ hesabi ve bir
+      # kurum hesabi haberlere yorum, paylasim ve begeni yapar; hesap basina
+      # gunde en fazla 8 paylasim/yorum. Ilk calisma eksik hesaplari acar.
+      - name: Topluluk hesaplari
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'topla' || inputs.mod == 'gunluk' || inputs.mod == 'topluluk') }}
+        timeout-minutes: 8
+        working-directory: ajan
+        env:
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: php topluluk.php --sure=5 ${{ inputs.kuru && '--kuru' || '' }} || true
 
       # Sayfalardaki canli veri (23.10.2026, site sahibi: "haberleri ceken
       # robot borsa grafiklerini, mac sonuclarini da ceksin; eski bilgi

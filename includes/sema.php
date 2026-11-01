@@ -243,6 +243,8 @@ function sema_yukselt(array &$hatalar = []): array
     $sutunEkle('uyeler', 'eposta_dogrulandi', 'DATETIME NULL AFTER eposta');
     // V Network yoneticisi (31.10.2026; bkz. includes/uyelik.php).
     $sutunEkle('uyeler', 'rol', "ENUM('uye','yonetici') NOT NULL DEFAULT 'uye' AFTER durum");
+    // Yapay zeka ve kurum hesaplari (31.10.2026; bkz. includes/topluluk.php).
+    $sutunEkle('uyeler', 'tur', "ENUM('uye','yz','kurum') NOT NULL DEFAULT 'uye' AFTER rol");
     $sutunEkle('gonderiler', 'video_url', "VARCHAR(300) NOT NULL DEFAULT '' AFTER metin");
     $sutunEkle('yorumlar', 'gonderi_id', 'INT UNSIGNED NULL AFTER haber_id');
 
@@ -644,6 +646,7 @@ function sema_guncel_mi(): bool
             ['resmi_gazete', 'url'],
             // aktif_uye() bu sutunu sorguluyor; yoksa uyeler oturum acamaz.
             ['uyeler', 'rol'],
+            ['uyeler', 'tur'],
             ['kose_yazilari', 'parmak'],
             // haber_taslak_ekle() bu sutunlara yaziyor.
             ['haberler', 'isletme_etkisi'],
