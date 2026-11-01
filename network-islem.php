@@ -72,6 +72,23 @@ try {
             nw_uye_durum_degistir((int) ($_POST['uye'] ?? 0), $islem === 'uye_durdur');
             nw_bitir($islem === 'uye_durdur' ? nw_yol('kisiler') : $donus, 'bilgi', $islem === 'uye_durdur' ? 'Üyelik durduruldu.' : 'Üyelik yeniden açıldı.');
 
+        // Yonetici: uye ekle / uye cikar (01.11.2026; Kisiler sayfasi).
+        case 'uye_ekle':
+            if (!uye_yonetici_mi($uye)) {
+                nw_bitir($donus, 'hata', 'Bu işlem yalnızca yöneticiler içindir.');
+            }
+
+            $yeniId = nw_uye_ekle((string) ($_POST['ad'] ?? ''), (string) ($_POST['eposta'] ?? ''), (string) ($_POST['sifre'] ?? ''));
+            nw_bitir(nw_profil_yolu($yeniId), 'basari', 'Üye eklendi.');
+
+        case 'uye_sil':
+            if (!uye_yonetici_mi($uye)) {
+                nw_bitir($donus, 'hata', 'Bu işlem yalnızca yöneticiler içindir.');
+            }
+
+            $silinen = nw_uye_sil((int) ($_POST['uye'] ?? 0));
+            nw_bitir(nw_yol('kisiler'), 'bilgi', $silinen . ' adlı üye ve bütün içeriği silindi.');
+
         case 'gonderi_sikayet':
             gonderi_sikayet((int) ($_POST['gonderi'] ?? 0), $uyeId);
             nw_bitir($donus, 'bilgi', 'Bildiriminiz alındı, teşekkürler. Paylaşım site yönetimince incelenecek.');

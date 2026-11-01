@@ -6044,6 +6044,18 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 .uye-dugme.kucuk { min-height: 32px; padding: 0 12px; font-size: .85rem; }
 .nw-kisiler { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
 .nw-kisiler .nw-kisi { background: var(--kart); border-radius: var(--yuvarlak); box-shadow: var(--golge); padding: 14px; }
+
+/* Yonetici: uye ekle / uye cikar (01.11.2026). */
+.nw-kisi-kutu { display: grid; gap: 4px; align-content: start; }
+.nw-uye-sil { margin: 0; text-align: right; }
+.nw-uye-sil button { background: none; border: none; padding: 2px 4px; color: var(--vurgu); font: inherit; font-size: .8rem; font-weight: 600; cursor: pointer; }
+.nw-uye-sil button:hover { text-decoration: underline; }
+.nw-uye-ekle { margin-bottom: 14px; }
+.nw-uye-ekle summary { cursor: pointer; }
+.nw-uye-ekle form { display: grid; gap: 10px; margin-top: 10px; max-width: 420px; }
+.nw-uye-ekle label { display: grid; gap: 4px; font-size: .88rem; font-weight: 600; }
+.nw-uye-ekle input { padding: 9px 12px; border: 1px solid var(--cizgi); border-radius: 8px; background: var(--kart); color: var(--metin); font: inherit; }
+.nw-uye-ekle .uye-dugme { justify-self: start; }
 .nw-ara { display: flex; gap: 8px; margin-bottom: 12px; }
 .nw-ara input { flex: 1; min-width: 0; padding: 11px 14px; border: 1px solid var(--cizgi); border-radius: 8px; background: var(--kart); color: var(--metin); font: inherit; }
 
