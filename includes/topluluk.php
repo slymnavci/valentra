@@ -121,9 +121,11 @@ function topluluk_malzeme(): array
  * beğeni sayilarina YZ begenilerinin dahil oldugu yaziyor.
  *
  * Her icerigin bir hedefi var (id'den turetilen sabit sayi) ve begeniler
- * zamana yayiliyor: uye paylasimi ilk saatte 4-12, haber alti saatte 8-36
- * (onemli haber daha cok; 01.11.2026'da hesaplar 150'ye cikinca hedefler
- * de 1,5 katina cikti). Bildirim gitmiyor. Model kullanilmiyor.
+ * zamana yayiliyor: uye paylasimi ilk uc saatte 8-24, haber on iki saatte
+ * 16-72 (onemli haber daha cok). Hedefler hesap sayisiyla buyudu: 100
+ * hesapta 3-8 / 5-24, 150'de 4-12 / 8-36, 450'de (01.11.2026, site
+ * sahibi: "begenileri artir") bugunku degerler; sayilar arttikca suresi
+ * de uzatildi ki ani sicrama olmasin. Bildirim gitmiyor. Model kullanilmiyor.
  *
  * @return array{gonderi:int,haber:int}
  */
@@ -159,7 +161,7 @@ function topluluk_begeni_dagit(): array
           WHERE b.hedef_tur = :t AND b.hedef_id = :h AND u.tur = \'yz\''
     );
     $ekle  = db()->prepare('INSERT IGNORE INTO begeniler (hedef_tur, hedef_id, uye_id) VALUES (:t, :h, :u)');
-    $kalan = 600; // tek calismada en fazla begeni
+    $kalan = 1500; // tek calismada en fazla begeni
 
     foreach (['gonderi' => $gonderiler, 'haber' => $haberler->fetchAll()] as $tur => $liste) {
         foreach ($liste as $oge) {
@@ -167,11 +169,11 @@ function topluluk_begeni_dagit(): array
             $tohum = crc32($tur . $id);
 
             if ($tur === 'gonderi') {
-                $hedef = 4 + $tohum % 9;                                         // 4-12
-                $oran  = ((int) $oge['dk'] - 8) / 50;                            // 8. dk - 1. saat
+                $hedef = 8 + $tohum % 17;                                        // 8-24
+                $oran  = ((int) $oge['dk'] - 8) / 172;                           // 8. dk - 3. saat
             } else {
-                $hedef = 8 + $tohum % 19 + intdiv(max(0, (int) $oge['onem'] - 50), 5); // 8-36
-                $oran  = ((int) $oge['dk'] - 10) / 350;                          // 10. dk - 6. saat
+                $hedef = 16 + $tohum % 41 + intdiv(max(0, (int) $oge['onem'] - 50), 3); // 16-72
+                $oran  = ((int) $oge['dk'] - 10) / 710;                          // 10. dk - 12. saat
             }
 
             $istenen = (int) round($hedef * max(0, min(1, $oran)));
