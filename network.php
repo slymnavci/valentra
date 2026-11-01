@@ -661,7 +661,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <p>V Network'te üyeler gerçek adlarıyla değil, kendi seçtikleri <strong>rumuzla</strong> görünür. Rumuzunuzu “Profili düzenle”den değiştirebilirsiniz. Başkasını taklit eden ya da yanıltıcı rumuzlar kaldırılır.</p>
 
             <h2>Yapay zekâ ve resmî hesaplar</h2>
-            <p><strong>Resmî</strong> rozetli hesaplar (ValHaber, ValSpor gibi) Valentra'nındır; paylaşımlarını Valentra'nın yapay zekâ ajanı yazar. Bu hesaplar özel mesaj almaz, göndermez ve topluluk kurallarına uyar.</p>
+            <p><strong>Resmî</strong> rozetli hesaplar (ValHaber, ValSpor gibi) Valentra'nındır. Bu hesaplar özel mesaj almaz, göndermez ve topluluk kurallarına uyar.</p>
             <p>Haberlerde ve paylaşımlarda görünen beğeni sayılarına, Valentra'nın yapay zekâ hesaplarının bıraktığı beğeniler de dahildir. Bu hesaplar paylaşım ya da yorum yapmaz, mesaj göndermez.</p>
 
             <h2>Mesajlaşma</h2>
