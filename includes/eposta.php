@@ -84,6 +84,29 @@ function eposta_gonder(string $kime, string $konu, string $duzMetin, string $htm
     eposta_smtp($a, $kime, $ileti);
 }
 
+/**
+ * Bağlantı ya da STARTTLS hatasının okunur açıklaması ve ne yapılacağı.
+ *
+ * @param list<string> $uyarilar Yakalanan PHP uyarilari (OpenSSL mesajlari)
+ */
+function eposta_tls_ayrinti(string $hata, array $uyarilar): string
+{
+    $temiz   = array_map(static fn (string $u): string => preg_replace('/^stream_[a-z_]+\(\):\s*/', '', $u) ?? $u, $uyarilar);
+    $ayrinti = trim($hata . ' ' . implode(' ', array_unique($temiz)));
+    $ipucu   = '';
+
+    if (stripos($ayrinti, 'did not match') !== false || stripos($ayrinti, 'peer_name') !== false) {
+        $ipucu = ' Sunucunun sertifikası bu adla eşleşmiyor: SMTP sunucusuna IHS panelindeki e-posta '
+               . 'ayarlarında yazan sunucu adını (ör. sunucunun kendi adı) yazın.';
+    } elseif (stripos($ayrinti, 'certificate verify failed') !== false) {
+        $ipucu = ' Sunucunun sertifikası doğrulanamadı.';
+    } elseif (stripos($ayrinti, 'timed out') !== false || stripos($ayrinti, 'refused') !== false) {
+        $ipucu = ' Bu porta bağlantı yok: Port 587 ve Güvenlik "TLS" deneyin.';
+    }
+
+    return ($ayrinti !== '' ? mb_substr($ayrinti, 0, 300) : 'sebep bildirilmedi') . '.' . $ipucu;
+}
+
 /** @param array{gonderen:string,host:string,port:int,guvenlik:string,kullanici:string,sifre:string} $a */
 function eposta_smtp(array $a, string $kime, string $ileti): void
 {
@@ -107,7 +130,7 @@ function eposta_smtp(array $a, string $kime, string $ileti): void
     // TLS hatasinda $hata bos geliyor; asil sebep PHP uyarisinda (OpenSSL).
     $uyarilar = [];
     set_error_handler(static function (int $no, string $mesaj) use (&$uyarilar): bool {
-        $uyarilar[] = preg_replace('/^stream_socket_client\(\):\s*/', '', $mesaj) ?? $mesaj;
+        $uyarilar[] = $mesaj;
 
         return true;
     });
@@ -119,20 +142,8 @@ function eposta_smtp(array $a, string $kime, string $ileti): void
     }
 
     if ($soket === false) {
-        $ayrinti = trim($hata . ' ' . implode(' ', array_unique($uyarilar)));
-        $ipucu   = '';
-
-        if (stripos($ayrinti, 'did not match') !== false || stripos($ayrinti, 'peer_name') !== false) {
-            $ipucu = ' Sunucunun sertifikası bu adla eşleşmiyor: SMTP sunucusuna IHS panelindeki e-posta '
-                   . 'ayarlarında yazan sunucu adını (ör. sunucunun kendi adı) yazın.';
-        } elseif (stripos($ayrinti, 'certificate verify failed') !== false) {
-            $ipucu = ' Sunucunun sertifikası doğrulanamadı.';
-        } elseif (stripos($ayrinti, 'timed out') !== false || stripos($ayrinti, 'refused') !== false) {
-            $ipucu = ' Bu porta bağlantı yok: Port 587 ve Güvenlik "TLS" deneyin.';
-        }
-
         throw new RuntimeException('SMTP sunucusuna bağlanılamadı (' . $a['host'] . ':' . $a['port'] . '): '
-            . ($ayrinti !== '' ? mb_substr($ayrinti, 0, 300) : 'sebep bildirilmedi') . '.' . $ipucu);
+            . eposta_tls_ayrinti($hata, $uyarilar));
     }
 
     stream_set_timeout($soket, EPOSTA_ZAMAN_ASIMI);
@@ -174,8 +185,26 @@ function eposta_smtp(array $a, string $kime, string $ileti): void
         if ($a['guvenlik'] === 'tls') {
             $komut('STARTTLS', [220]);
 
-            if (!@stream_socket_enable_crypto($soket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
-                throw new RuntimeException('STARTTLS ile şifreli bağlantı kurulamadı.');
+            // TLS 1.3 de kabul (PHP'nin TLS_CLIENT sabiti 1.0-1.2); sebep 465'teki gibi
+            // PHP uyarisindan (01.11.2026: "STARTTLS ile sifreli baglanti kurulamadi.").
+            $yontem = STREAM_CRYPTO_METHOD_TLS_CLIENT
+                | (defined('STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT') ? STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT : 0);
+            $uyarilar = [];
+            set_error_handler(static function (int $no, string $mesaj) use (&$uyarilar): bool {
+                $uyarilar[] = $mesaj;
+
+                return true;
+            });
+
+            try {
+                $sifreli = stream_socket_enable_crypto($soket, true, $yontem);
+            } finally {
+                restore_error_handler();
+            }
+
+            if ($sifreli !== true) {
+                throw new RuntimeException('STARTTLS ile şifreli bağlantı kurulamadı (' . $a['host'] . ':' . $a['port'] . '): '
+                    . eposta_tls_ayrinti('', $uyarilar));
             }
 
             $komut('EHLO ' . $ben, [250]);
