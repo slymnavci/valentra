@@ -551,6 +551,34 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
         // gonderiler tablosu henuz yoksa yalnizca haberler.
     }
 
+    // Haberlerin altina yazilan yorumlar da akista ayri kart (site sahibinin
+    // istegi, 01.11.2026: "haberlerin altina yazilan yorumlar network'e
+    // gitsin, oradan gorelim"). Takip sekmesinde takip edilenlerin, profilde
+    // o uyenin yorumlari.
+    $kosul = str_replace('g.uye_id', 'y.uye_id', $kosul);
+
+    try {
+        $ifade = db()->prepare(
+            "SELECT y.id, y.uye_id, y.metin, y.olusturuldu, UNIX_TIMESTAMP(y.olusturuldu) AS zaman,
+                    u.ad, u.foto, u.tur, u.rol,
+                    h.id AS haber_id, h.baslik, h.gorsel_url, k.ad AS kategori_adi
+               FROM yorumlar y
+               JOIN uyeler u ON u.id = y.uye_id
+               JOIN haberler h ON h.id = y.haber_id
+               LEFT JOIN kategoriler k ON k.id = h.kategori_id
+              WHERE y.haber_id IS NOT NULL AND y.durum = 'yayinda' AND u.durum = 'aktif' AND u.tur <> 'yz'
+                AND h.durum = :d AND y.olusturuldu < FROM_UNIXTIME(:once) $kosul
+              ORDER BY y.olusturuldu DESC, y.id DESC LIMIT " . (int) $adet
+        );
+        $ifade->execute($deger + ['d' => HABER_YAYINDA]);
+
+        foreach ($ifade->fetchAll() as $y) {
+            $ogeler[] = ['tur' => 'yorum', 'zaman' => (int) $y['zaman'], 'veri' => $y];
+        }
+    } catch (PDOException $e) {
+        // yorumlar tablosu henuz yoksa yorum karti yok.
+    }
+
     usort($ogeler, static fn (array $a, array $b): int => $b['zaman'] <=> $a['zaman']);
     $ogeler = array_slice($ogeler, 0, $adet);
     $son    = $ogeler !== [] ? end($ogeler)['zaman'] : 0;

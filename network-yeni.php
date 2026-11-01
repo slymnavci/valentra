@@ -49,6 +49,13 @@ try {
                          WHERE g.durum = 'yayinda' AND u.durum = 'aktif' AND g.olusturuldu > FROM_UNIXTIME(:o)" . $kosul);
     $g->execute(['o' => $once] + ($takip ? ['u1' => (int) $uye['id'], 'u2' => (int) $uye['id']] : []));
     $sayi += (int) $g->fetchColumn();
+
+    // Haber yorumlari da akista kart (01.11.2026, bkz. nw_akis).
+    $y = db()->prepare("SELECT COUNT(*) FROM yorumlar y JOIN uyeler u ON u.id = y.uye_id
+                         WHERE y.haber_id IS NOT NULL AND y.durum = 'yayinda' AND u.durum = 'aktif' AND u.tur <> 'yz'
+                           AND y.olusturuldu > FROM_UNIXTIME(:o)" . str_replace('g.uye_id', 'y.uye_id', $kosul));
+    $y->execute(['o' => $once] + ($takip ? ['u1' => (int) $uye['id'], 'u2' => (int) $uye['id']] : []));
+    $sayi += (int) $y->fetchColumn();
 } catch (PDOException $e) {
     $sayi = 0;
 }
