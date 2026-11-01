@@ -158,7 +158,8 @@ function zr_olculer(string $bas, string $bit, bool $ham): array
     $temel = zr_sorgu(
         'SELECT COUNT(*) AS goruntulenme,
                 COUNT(DISTINCT ' . $id . ') AS ziyaretci,
-                SUM(z.haber_id IS NOT NULL) AS haber_goruntulenme'
+                SUM(z.haber_id IS NOT NULL) AS haber_goruntulenme,
+                SUM(z.yol LIKE \'%' . ZIYARET_AKIS_IZI . '\') AS akis_kart'
         . ($yeniSema ? ',
                 COUNT(DISTINCT CASE WHEN z.yeni = 1 THEN ' . $id . ' END) AS yeni_ziyaretci,
                 AVG(CASE WHEN z.insan = 1 AND z.sure > 0 THEN z.sure END) AS ort_sure,
@@ -184,6 +185,8 @@ function zr_olculer(string $bas, string $bit, bool $ham): array
         'ziyaretci'          => $ziyaretci,
         'goruntulenme'       => $goruntulenme,
         'haber_goruntulenme' => (int) ($temel['haber_goruntulenme'] ?? 0),
+        // V Network akisinda okunan kartlar (goruntulenmenin icinde; bkz. ZIYARET_AKIS_IZI).
+        'akis_kart'          => (int) ($temel['akis_kart'] ?? 0),
         'sayfa_kisi'         => $ziyaretci > 0 ? $goruntulenme / $ziyaretci : 0.0,
         'yeni_ziyaretci'     => isset($temel['yeni_ziyaretci']) ? (int) $temel['yeni_ziyaretci'] : null,
         'ort_sure'           => isset($temel['ort_sure']) ? (float) $temel['ort_sure'] : null,

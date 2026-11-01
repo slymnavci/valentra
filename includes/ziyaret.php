@@ -60,6 +60,13 @@ const ZIYARET_SAYMA_CEREZI = 'valentra_sayma';
 /** Tek sayfa icin kabul edilen en uzun goruntulenme suresi (saniye). */
 const ZIYARET_EN_UZUN_SURE = 3600;
 
+/**
+ * V Network akisinda okunan kartin satirindaki adres izi (bkz.
+ * network-okundu.php). Panel bu satirlari "V Network'te okunan kart"
+ * olarak ayri gosteriyor; toplamda yine sayiliyorlar.
+ */
+const ZIYARET_AKIS_IZI = '#akis';
+
 /** Son yazilan satirin numarasi; sayfa alti betigi bunu kullaniyor. */
 $GLOBALS['ziyaret_son_id'] = 0;
 
@@ -125,7 +132,12 @@ function ziyaret_kaydet(?int $haberId = null, string $baslik = ''): void
  *
  * Elenenler ve sebepleri:
  *   - Yonetici oturumu: kendi ziyaretlerimizi saymak sayilari sisirir
- *     ve "bugun kac kisi geldi" sorusunu anlamsizlastirir.
+ *     ve "bugun kac kisi geldi" sorusunu anlamsizlastirir. V Network'te
+ *     yonetici rolundeki uye hesabi da (01.11.2026, site sahibi: "ziyaretci
+ *     sayilari dogru mu, bugun neden bu kadar artis var"): site sahibi
+ *     panel oturumu olmayan telefondan "admin" hesabiyla geziyor ve her
+ *     sayfasi, akista okudugu her kart sayiliyordu. Normal uyeler ve uye
+ *     olmayan ziyaretciler sayilmaya devam ediyor.
  *   - "Bu cihazi sayma" cerezi: yonetici paneldeki oturumu kapaliyken de
  *     (telefondan bakarken) kendini saydirmasin.
  *   - Botlar: arama motoru taramalari insan ziyareti degil. Tam liste
@@ -157,6 +169,15 @@ function ziyaret_sayilmali(): bool
         oturum_baslat();
 
         if (oturum_acik()) {
+            return false;
+        }
+    }
+
+    // Uye cerezi yoksa sorgu yok: ziyaretcilerin cogu uye degil.
+    if (isset($_COOKIE['valentra_uye'])) {
+        require_once __DIR__ . '/uyelik.php';
+
+        if (uye_yonetici_mi()) {
             return false;
         }
     }
