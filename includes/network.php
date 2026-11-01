@@ -815,9 +815,18 @@ function nw_etkilesim_haberleri(int $limit = 6): array
               LIMIT " . max(1, min(20, $limit))
         );
         $ifade->execute(['d' => HABER_YAYINDA]);
+        $liste = $ifade->fetchAll();
+
+        // Gorunen okuyucu sayisina YZ begenilerinin payi (yz_okunma_ekleri).
+        $ek = yz_okunma_ekleri(array_map(static fn (array $h): int => (int) $h['id'], $liste));
+
+        foreach ($liste as &$h) {
+            $h['okuyucu'] = (int) $h['okuyucu'] + ($ek[(int) $h['id']] ?? 0);
+        }
+        unset($h);
 
         return array_values(array_filter(
-            $ifade->fetchAll(),
+            $liste,
             static fn (array $h): bool => (int) $h['okuyucu'] + (int) $h['begeni'] + (int) $h['yorum'] > 0
         ));
     } catch (PDOException $e) {
@@ -902,9 +911,46 @@ function begeni_bilgisi(string $tur, array $idler, ?int $uyeId): array
 }
 
 /**
+ * YZ begenilerinin gorunen okunma sayisina payi (site sahibinin istegi,
+ * 01.11.2026: "begeni oldugunda okunma sayilari da artsin"). Begenen
+ * okumustur; okuyan da begenenden cok olur: her YZ begenisi 3-6 okuma
+ * (carpan haber id'sinden, sabit). Yalnizca V Network'te GOSTERILEN
+ * sayiya ekleniyor; ziyaretler tablosuna ve yonetim istatistiklerine
+ * dokunulmuyor (onlar gercek okuyucuyu gosteriyor).
+ *
+ * @param list<int> $idler haber id'leri
+ * @return array<int,int>
+ */
+function yz_okunma_ekleri(array $idler): array
+{
+    $idler = array_values(array_unique(array_filter(array_map('intval', $idler))));
+    $sonuc = [];
+
+    if ($idler === []) {
+        return $sonuc;
+    }
+
+    try {
+        foreach (db()->query(
+            "SELECT b.hedef_id, COUNT(*) AS n FROM begeniler b JOIN uyeler u ON u.id = b.uye_id
+              WHERE b.hedef_tur = 'haber' AND u.tur = 'yz' AND b.hedef_id IN (" . implode(',', $idler) . ")
+              GROUP BY b.hedef_id"
+        ) as $s) {
+            $id = (int) $s['hedef_id'];
+            $sonuc[$id] = (int) $s['n'] * (3 + crc32('okunma' . $id) % 4);
+        }
+    } catch (PDOException $e) {
+        return [];
+    }
+
+    return $sonuc;
+}
+
+/**
  * Haberlerin okunma sayisi: haberi acan farkli okuyucu (botlar ve hic
  * gosterilmeyen onyuklemeler haric; ziyaret sayaciyla ayni olcut, bkz.
- * includes/ziyaret.php). Sitede ve V Network'te okunanlar birlikte.
+ * includes/ziyaret.php). Sitede ve V Network'te okunanlar birlikte; V
+ * Network'te gorunen sayiya YZ begenilerinin payi da ekleniyor.
  *
  * @param list<int> $idler
  * @return array<int,int>
@@ -930,7 +976,11 @@ function okunma_sayilari(array $idler): array
             $sonuc[(int) $s['haber_id']] = (int) $s['n'];
         }
     } catch (PDOException $e) {
-        return [];
+        $sonuc = [];
+    }
+
+    foreach (yz_okunma_ekleri($idler) as $id => $ek) {
+        $sonuc[$id] = ($sonuc[$id] ?? 0) + $ek;
     }
 
     return $sonuc;
