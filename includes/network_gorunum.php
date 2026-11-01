@@ -265,7 +265,16 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
         <?php endif; ?>
 
         <div class="nw-sayilar">
-            <span><?= $begeniSayi > 0 ? '👍 ' . $begeniSayi . ' beğeni' : '' ?></span>
+            <span>
+                <?= $begeniSayi > 0 ? '👍 ' . $begeniSayi . ' beğeni' : '' ?>
+                <?php if ($uye !== null && uye_yonetici_mi($uye)): ?>
+                    <?php // Yalnizca yonetici gorur: YZ hesaplarindan hemen 8-15 begeni (01.11.2026). ?>
+                    <form method="post" action="/network-islem.php" class="nw-yz-begeni">
+                        <?= nw_form_alanlari('yz_begeni', $donus, ['hedef' => $anahtar]) ?>
+                        <button type="submit" title="YZ hesaplarından bu içeriğe hemen beğeni gönder (yalnızca yönetici görür)">⚡ Beğeni gönder</button>
+                    </form>
+                <?php endif; ?>
+            </span>
             <span>
                 <?php if ($yorum['sayi'] > 0): ?><a href="<?= e($detayYol) ?>#yorumlar"><?= $yorum['sayi'] ?> yorum</a><?php endif; ?>
                 <?php if ($haber && $okunma > 0): ?><?= $yorum['sayi'] > 0 ? ' · ' : '' ?><?= $okunma ?> kişi okudu<?php endif; ?>

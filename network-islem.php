@@ -18,6 +18,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/network.php';
 require_once __DIR__ . '/includes/uye_eposta.php';
+require_once __DIR__ . '/includes/topluluk.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     http_response_code(405);
@@ -88,6 +89,22 @@ try {
 
             $silinen = nw_uye_sil((int) ($_POST['uye'] ?? 0));
             nw_bitir(nw_yol('kisiler'), 'bilgi', $silinen . ' adlı üye ve bütün içeriği silindi.');
+
+        case 'yz_begeni':
+        case 'yz_begeni_dalga':
+            // Yonetici dugmeleri (01.11.2026): YZ hesaplarindan hemen begeni.
+            if (!uye_yonetici_mi($uye)) {
+                nw_bitir($donus, 'hata', 'Bu işlem için yetkiniz yok.');
+            }
+
+            if ($islem === 'yz_begeni') {
+                $hedef = (string) ($_POST['hedef'] ?? '');
+                $n = topluluk_begeni_ekle(str_starts_with($hedef, 'g') ? 'gonderi' : 'haber', (int) substr($hedef, 1), random_int(8, 15));
+                nw_bitir($donus, 'basari', $n > 0 ? $n . ' beğeni geldi.' : 'Bu içeriği bütün YZ hesapları zaten beğenmiş.');
+            }
+
+            $d = topluluk_begeni_dagit(true);
+            nw_bitir($donus, 'basari', 'Beğeni dalgası: haberlere ' . $d['haber'] . ', paylaşımlara ' . $d['gonderi'] . ' beğeni geldi.');
 
         case 'gonderi_sikayet':
             gonderi_sikayet((int) ($_POST['gonderi'] ?? 0), $uyeId);
