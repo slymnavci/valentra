@@ -138,6 +138,7 @@ switch ($sayfa) {
         )), 0, 6);
         $populerKonular = nw_populer_konular(10);
         $etkilesimHaberleri = nw_etkilesim_haberleri(6);
+        $begenilenHaberler  = nw_begenilen_haberler(6);
         $buYol  = nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'once' => $once]);
         $sayfaBasligi = 'V Network — Valentra okurlarının buluşma yeri';
         break;
@@ -400,6 +401,22 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                                 <small>
                                     <?php if ((int) $h['okuyucu'] > 0): ?><span title="Son 24 saatte okuyan">👁 <?= (int) $h['okuyucu'] ?></span><?php endif; ?>
                                     <?php if ((int) $h['begeni'] > 0): ?><span title="Beğeni">👍 <?= (int) $h['begeni'] ?></span><?php endif; ?>
+                                    <?php if ((int) $h['yorum'] > 0): ?><span title="Yorum">💬 <?= (int) $h['yorum'] ?></span><?php endif; ?>
+                                </small>
+                            </li>
+                        <?php endforeach; ?>
+                    </ol>
+                </div>
+            <?php endif; ?>
+            <?php if ($begenilenHaberler !== []): ?>
+                <div class="nw-yan-kutu nw-gundem">
+                    <strong>En çok beğenilen haberler</strong>
+                    <ol>
+                        <?php foreach ($begenilenHaberler as $h): ?>
+                            <li>
+                                <a href="<?= e(nw_yol('h/' . (int) $h['id'])) ?>"><?= e((string) $h['baslik']) ?></a>
+                                <small>
+                                    <span title="Beğeni">👍 <?= (int) $h['begeni'] ?></span>
                                     <?php if ((int) $h['yorum'] > 0): ?><span title="Yorum">💬 <?= (int) $h['yorum'] ?></span><?php endif; ?>
                                 </small>
                             </li>

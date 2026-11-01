@@ -834,6 +834,33 @@ function nw_etkilesim_haberleri(int $limit = 6): array
     }
 }
 
+/**
+ * Son iki gunun en cok begenilen haberleri (site sahibinin istegi,
+ * 01.11.2026: "network'te bir baslik da en cok begenilen haberler olsun").
+ *
+ * @return list<array<string,mixed>>
+ */
+function nw_begenilen_haberler(int $limit = 6): array
+{
+    try {
+        $ifade = db()->prepare(
+            "SELECT h.id, h.baslik, COUNT(*) AS begeni,
+                    (SELECT COUNT(*) FROM yorumlar y WHERE y.haber_id = h.id AND y.durum = 'yayinda') AS yorum
+               FROM haberler h
+               JOIN begeniler b ON b.hedef_tur = 'haber' AND b.hedef_id = h.id
+              WHERE h.durum = :d AND h.yayin_tarihi >= NOW() - INTERVAL 2 DAY AND h.yayin_tarihi <= NOW()
+              GROUP BY h.id, h.baslik, h.yayin_tarihi
+              ORDER BY begeni DESC, h.yayin_tarihi DESC
+              LIMIT " . max(1, min(20, $limit))
+        );
+        $ifade->execute(['d' => HABER_YAYINDA]);
+
+        return $ifade->fetchAll();
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
 /* --- Begeni ve okunma ---------------------------------------------------- */
 
 /** Begeniyi acar/kapatir; yeni durumu dondurur (true = begendi). */
