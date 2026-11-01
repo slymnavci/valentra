@@ -395,6 +395,84 @@ function nw_uye_durum_degistir(int $uyeId, bool $durdur): void
     }
 }
 
+/**
+ * Yonetici: yeni uye acar (site sahibi, 01.11.2026: "admin tum yetkilere
+ * sahip olsun; uye ekle, uye cikar da dahil").
+ *
+ * Kayit formundaki denetimler (rumuz, e-posta, sifre uzunlugu) aynen;
+ * kayit sayaci (saatte bes kayit) yoneticiye uygulanmiyor. E-posta
+ * dogrulanmis sayiliyor: hesabi yonetici acti, uye paylasim yapabilsin.
+ */
+function nw_uye_ekle(string $ad, string $eposta, string $sifre): int
+{
+    $eposta = mb_strtolower(trim($eposta), 'UTF-8');
+    $ad     = uye_rumuz_sina($ad);
+
+    if (!filter_var($eposta, FILTER_VALIDATE_EMAIL) || strlen($eposta) > 190) {
+        throw new InvalidArgumentException('Geçerli bir e-posta adresi yazın.');
+    }
+
+    if (mb_strlen($sifre, 'UTF-8') < UYE_SIFRE_EN_AZ) {
+        throw new InvalidArgumentException('Şifre en az ' . UYE_SIFRE_EN_AZ . ' karakter olmalı.');
+    }
+
+    try {
+        db()->prepare("INSERT INTO uyeler (ad, eposta, eposta_dogrulandi, sifre, kayit_ip) VALUES (:ad, :e, NOW(), :s, 'yonetici')")
+            ->execute(['ad' => $ad, 'e' => $eposta, 's' => password_hash($sifre, PASSWORD_DEFAULT)]);
+    } catch (PDOException $e) {
+        if ((string) $e->getCode() === '23000') {
+            throw new InvalidArgumentException('Bu e-posta adresiyle zaten bir üyelik var.');
+        }
+
+        throw $e;
+    }
+
+    return (int) db()->lastInsertId();
+}
+
+/**
+ * Yonetici: uyeyi kalici olarak siler (01.11.2026, "uye cikar").
+ *
+ * Paylasimlari, yorumlari, begenileri, takipleri, mesajlari ve
+ * bildirimleri veritabaninda kendiliginden gidiyor (uyeler'e bagli butun
+ * tablolar ON DELETE CASCADE); diskteki profil ve paylasim fotograflari
+ * burada siliniyor. Yonetici hesabi silinemez: once panelden ya da
+ * profilden yoneticiligi alinmali. Geri alinamaz; gecici durdurma icin
+ * nw_uye_durum_degistir.
+ *
+ * @return string silinen uyenin rumuzu
+ */
+function nw_uye_sil(int $uyeId): string
+{
+    $hedef = db()->prepare('SELECT ad, rol, foto FROM uyeler WHERE id = :id');
+    $hedef->execute(['id' => $uyeId]);
+    $uye = $hedef->fetch();
+
+    if (!is_array($uye)) {
+        throw new InvalidArgumentException('Üye bulunamadı.');
+    }
+
+    if ($uye['rol'] === 'yonetici') {
+        throw new InvalidArgumentException('Yönetici hesabı silinemez; önce yöneticiliği alın.');
+    }
+
+    $fotolar = db()->prepare('SELECT dosya FROM gonderi_fotolari WHERE uye_id = :id');
+    $fotolar->execute(['id' => $uyeId]);
+    $dosyalar = $fotolar->fetchAll(PDO::FETCH_COLUMN);
+
+    if ((string) $uye['foto'] !== '') {
+        $dosyalar[] = (string) $uye['foto'];
+    }
+
+    db()->prepare('DELETE FROM uyeler WHERE id = :id')->execute(['id' => $uyeId]);
+
+    foreach ($dosyalar as $dosya) {
+        nw_foto_sil((string) $dosya);
+    }
+
+    return (string) $uye['ad'];
+}
+
 /* --- Mesajlar ------------------------------------------------------------ */
 
 function mesaj_gonder(int $gonderen, int $alici, string $metin): int

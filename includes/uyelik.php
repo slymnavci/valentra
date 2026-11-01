@@ -286,7 +286,9 @@ function uye_dogrula(string $giris, string $sifre): ?int
  * Sifre depoya yazilmiyor: panelde giris yapmis site yoneticisi formdan
  * giriyor, veritabaninda yalnizca ozeti duruyor. Ayni rumuzlu hesap varsa
  * sifresi ve rolu guncelleniyor. Giris rumuzla; e-posta alani benzersiz
- * olmak zorunda oldugu icin site icinde kullanilmayan bir adres.
+ * olmak zorunda oldugu icin site icinde kullanilmayan bir adres. Bu adres
+ * dogrulanamayacagi icin hesap dogrulanmis sayiliyor (01.11.2026): e-posta
+ * dogrulamasi zorunlu yapilinca yonetici paylasim ve mesaj yazamiyordu.
  */
 function uye_yonetici_kaydet(string $rumuz, string $sifre): int
 {
@@ -302,7 +304,7 @@ function uye_yonetici_kaydet(string $rumuz, string $sifre): int
     $ozet = password_hash($sifre, PASSWORD_DEFAULT);
 
     if ($id > 0) {
-        db()->prepare("UPDATE uyeler SET sifre = :s, rol = 'yonetici', durum = 'aktif' WHERE id = :id")
+        db()->prepare("UPDATE uyeler SET sifre = :s, rol = 'yonetici', durum = 'aktif', eposta_dogrulandi = COALESCE(eposta_dogrulandi, NOW()) WHERE id = :id")
             ->execute(['s' => $ozet, 'id' => $id]);
         // Eski oturumlar kapansin: sifre degisti.
         db()->prepare('DELETE FROM uye_oturumlari WHERE uye_id = :id')->execute(['id' => $id]);
@@ -312,7 +314,7 @@ function uye_yonetici_kaydet(string $rumuz, string $sifre): int
 
     $rumuz = uye_rumuz_sina($rumuz, 0, true);
 
-    db()->prepare("INSERT INTO uyeler (ad, eposta, sifre, rol, kayit_ip) VALUES (:ad, :e, :s, 'yonetici', 'panel')")
+    db()->prepare("INSERT INTO uyeler (ad, eposta, eposta_dogrulandi, sifre, rol, kayit_ip) VALUES (:ad, :e, NOW(), :s, 'yonetici', 'panel')")
         ->execute(['ad' => $rumuz, 'e' => 'yonetici-' . bin2hex(random_bytes(6)) . '@uye.valentra.invalid', 's' => $ozet]);
 
     return (int) db()->lastInsertId();

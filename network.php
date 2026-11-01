@@ -53,6 +53,16 @@ const NW_AKIS_ADEDI = 15;
 $yol   = trim((string) ($_GET['yol'] ?? ''), '/');
 $uye   = aktif_uye();
 $uyeId = $uye !== null ? (int) $uye['id'] : null;
+
+/*
+ * KISILER YALNIZCA YONETICIYE (site sahibi, 01.11.2026: "kisileri
+ * gostermeyelim simdilik; sadece admin gorebilsin"). Kisiler sayfasi,
+ * menudeki baglantisi ve akistaki "Tanisabilecegin kisiler" kutusu
+ * yoneticiye; digerlerine sayfa yok (404). Profiller acik: paylasim ve
+ * yorumlardaki isimler profile gidiyor. Yonetici sayfasi onbellege
+ * girmiyor (uye sayfasi), yani ziyaretciye sizmiyor.
+ */
+$kisilerAcik = uye_yonetici_mi($uye);
 $bildirim = nw_bildirim_html();
 
 /** 404: Network icinde bulunamayan sayfa. */
@@ -122,7 +132,7 @@ switch ($sayfa) {
         $akis   = nw_akis(NW_AKIS_ADEDI, $once, $sekme === 'takip' ? $uyeId : null);
         $baglam = nw_baglam($akis['ogeler']);
         $takipEdilenler = $uyeId !== null ? nw_takip_edilenler($uyeId) : [];
-        $oneriler = array_slice(array_values(array_filter(
+        $oneriler = !$kisilerAcik ? [] : array_slice(array_values(array_filter(
             nw_kisiler('', 'populer', 20),
             static fn (array $k): bool => (int) $k['id'] !== $uyeId && !in_array((int) $k['id'], $takipEdilenler, true)
         )), 0, 6);
@@ -192,6 +202,10 @@ switch ($sayfa) {
         break;
 
     case 'kisiler':
+        if (!$kisilerAcik) {
+            nw_bulunamadi();
+        }
+
         $ara  = mb_substr(trim((string) ($_GET['ara'] ?? '')), 0, 60);
         $sira = (string) ($_GET['sira'] ?? '') === 'yeni' ? 'yeni' : 'populer';
         $kisiler = nw_kisiler($ara, $sira, 60);
@@ -255,7 +269,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
 /* --- Sol ve sag kenar, paylasim kutusu ------------------------------------ */
 
-$solKenar = static function () use ($uye): void {
+$solKenar = static function () use ($uye, $kisilerAcik): void {
     ?>
     <aside class="nw-sol">
         <?php if ($uye !== null): ?>
@@ -269,7 +283,9 @@ $solKenar = static function () use ($uye): void {
             </div>
         <?php endif; ?>
         <a class="nw-sol-oge" href="<?= e(nw_yol()) ?>"><span class="nw-sol-simge" aria-hidden="true">🏠</span>Akış</a>
-        <a class="nw-sol-oge" href="<?= e(nw_yol('kisiler')) ?>"><span class="nw-sol-simge" aria-hidden="true">👥</span>Kişiler</a>
+        <?php if ($kisilerAcik): ?>
+            <a class="nw-sol-oge" href="<?= e(nw_yol('kisiler')) ?>"><span class="nw-sol-simge" aria-hidden="true">👥</span>Kişiler</a>
+        <?php endif; ?>
         <?php if ($uye !== null): ?>
             <a class="nw-sol-oge" href="<?= e(nw_yol('mesajlar')) ?>"><span class="nw-sol-simge" aria-hidden="true">💬</span>Mesajlar</a>
             <a class="nw-sol-oge" href="<?= e(nw_yol('bildirimler')) ?>"><span class="nw-sol-simge" aria-hidden="true">🔔</span>Bildirimler</a>
@@ -354,7 +370,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <?php endif; ?>
 
             <?php if ($akis['ogeler'] === []): ?>
-                <div class="bos-durum"><strong>Henüz paylaşım yok.</strong> <?= $sekme === 'takip' ? 'Kişiler sayfasından insanları takip edin; paylaşımları burada görünür.' : 'Yeni haberler geldikçe burada akacak.' ?></div>
+                <div class="bos-durum"><strong>Henüz paylaşım yok.</strong> <?= $sekme === 'takip' ? 'Paylaşım ve yorumlardaki isimlere tıklayıp insanları takip edin; paylaşımları burada görünür.' : 'Yeni haberler geldikçe burada akacak.' ?></div>
             <?php endif; ?>
 
             <?php foreach ($akis['ogeler'] as $oge): ?>
@@ -498,12 +514,32 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <a href="<?= e(nw_yol('kisiler', ['ara' => $ara])) ?>" class="<?= $sira === 'populer' ? 'aktif' : '' ?>">En çok takip edilenler</a>
             <a href="<?= e(nw_yol('kisiler', ['ara' => $ara, 'sira' => 'yeni'])) ?>" class="<?= $sira === 'yeni' ? 'aktif' : '' ?>">Yeni üyeler</a>
         </nav>
+        <?php /* Yonetici: uye ekle (01.11.2026). Sifre tarayicida kaydedilmesin. */ ?>
+        <details class="nw-yan-kutu nw-uye-ekle">
+            <summary><strong>Üye ekle</strong></summary>
+            <form method="post" action="/network-islem.php" autocomplete="off">
+                <?= nw_form_alanlari('uye_ekle', $buYol) ?>
+                <label>Rumuz<input type="text" name="ad" required maxlength="<?= UYE_AD_EN_FAZLA ?>"></label>
+                <label>E-posta<input type="email" name="eposta" required maxlength="190"></label>
+                <label>Şifre<input type="password" name="sifre" required minlength="<?= UYE_SIFRE_EN_AZ ?>" autocomplete="new-password"></label>
+                <button type="submit" class="uye-dugme">Üyeyi oluştur</button>
+            </form>
+        </details>
         <?php if ($kisiler === []): ?>
             <div class="bos-durum"><strong><?= $ara !== '' ? 'Bu isimde üye bulunamadı.' : 'Henüz üye yok.' ?></strong></div>
         <?php endif; ?>
         <div class="nw-kisiler">
             <?php foreach ($kisiler as $k): ?>
-                <?= nw_kisi_html($k, $takipEdilenler, $buYol) ?>
+                <div class="nw-kisi-kutu">
+                    <?= nw_kisi_html($k, $takipEdilenler, $buYol) ?>
+                    <?php if (($k['rol'] ?? '') !== 'yonetici' && (int) $k['id'] !== $uyeId): ?>
+                        <form method="post" action="/network-islem.php" class="nw-uye-sil"
+                              onsubmit="return confirm(<?= e(json_encode((string) $k['ad'] . ' adlı üye kalıcı olarak silinsin mi? Paylaşımları, yorumları, mesajları ve fotoğrafları da silinir; geri alınamaz.', JSON_UNESCAPED_UNICODE)) ?>)">
+                            <?= nw_form_alanlari('uye_sil', $buYol, ['uye' => (int) $k['id']]) ?>
+                            <button type="submit">Üyeyi çıkar</button>
+                        </form>
+                    <?php endif; ?>
+                </div>
             <?php endforeach; ?>
         </div>
     </div>
@@ -513,7 +549,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
         <aside class="nw-sohbetler">
             <h1 class="nw-baslik">Mesajlar</h1>
             <?php if ($sohbetler === [] && $arkadaslar === []): ?>
-                <p class="nw-not">Karşılıklı takipleştiğiniz kişilerle mesajlaşabilirsiniz. <a href="<?= e(nw_yol('kisiler')) ?>">Kişileri keşfedin →</a></p>
+                <p class="nw-not">Karşılıklı takipleştiğiniz kişilerle mesajlaşabilirsiniz.<?php if ($kisilerAcik): ?> <a href="<?= e(nw_yol('kisiler')) ?>">Kişileri keşfedin →</a><?php endif; ?></p>
             <?php endif; ?>
             <?php foreach ($sohbetler as $s): ?>
                 <a class="nw-sohbet<?= (int) $s['id'] === $detayId ? ' aktif' : '' ?><?= (int) $s['okunmamis'] > 0 ? ' okunmamis' : '' ?>" href="<?= e(nw_yol('mesajlar/' . (int) $s['id'])) ?>">
