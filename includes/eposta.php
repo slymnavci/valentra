@@ -20,6 +20,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/ayarlar.php';
 require_once __DIR__ . '/seo.php';
+require_once __DIR__ . '/http_ortak.php';
 
 const EPOSTA_ZAMAN_ASIMI = 20;
 
@@ -86,12 +87,52 @@ function eposta_gonder(string $kime, string $konu, string $duzMetin, string $htm
 /** @param array{gonderen:string,host:string,port:int,guvenlik:string,kullanici:string,sifre:string} $a */
 function eposta_smtp(array $a, string $kime, string $ileti): void
 {
-    $baglam = stream_context_create(['ssl' => ['verify_peer' => true, 'verify_peer_name' => true, 'SNI_enabled' => true]]);
+    /*
+     * Kok sertifika listesi sitenin kendisi (ca_paketi, 01.11.2026).
+     *
+     * Paylasimli hostingin listesi eksik; haber cekme ayni nedenle zaten
+     * includes/sertifika'daki listeyi kullaniyor (bkz. http_ortak.php).
+     * SMTP baglantisi kullanmiyordu ve mail.valentra.com.tr:465 "baglanilamadi"
+     * diye, sebepsiz dusuyordu. Dogrulama KAPATILMIYOR.
+     */
+    $ssl = ['verify_peer' => true, 'verify_peer_name' => true, 'SNI_enabled' => true];
+
+    if (($ca = ca_paketi()) !== null) {
+        $ssl['cafile'] = $ca;
+    }
+
+    $baglam = stream_context_create(['ssl' => $ssl]);
     $adres  = ($a['guvenlik'] === 'ssl' ? 'ssl://' : 'tcp://') . $a['host'] . ':' . $a['port'];
-    $soket  = @stream_socket_client($adres, $no, $hata, EPOSTA_ZAMAN_ASIMI, STREAM_CLIENT_CONNECT, $baglam);
+
+    // TLS hatasinda $hata bos geliyor; asil sebep PHP uyarisinda (OpenSSL).
+    $uyarilar = [];
+    set_error_handler(static function (int $no, string $mesaj) use (&$uyarilar): bool {
+        $uyarilar[] = preg_replace('/^stream_socket_client\(\):\s*/', '', $mesaj) ?? $mesaj;
+
+        return true;
+    });
+
+    try {
+        $soket = stream_socket_client($adres, $no, $hata, EPOSTA_ZAMAN_ASIMI, STREAM_CLIENT_CONNECT, $baglam);
+    } finally {
+        restore_error_handler();
+    }
 
     if ($soket === false) {
-        throw new RuntimeException('SMTP sunucusuna bağlanılamadı (' . $a['host'] . ':' . $a['port'] . '): ' . $hata);
+        $ayrinti = trim($hata . ' ' . implode(' ', array_unique($uyarilar)));
+        $ipucu   = '';
+
+        if (stripos($ayrinti, 'did not match') !== false || stripos($ayrinti, 'peer_name') !== false) {
+            $ipucu = ' Sunucunun sertifikası bu adla eşleşmiyor: SMTP sunucusuna IHS panelindeki e-posta '
+                   . 'ayarlarında yazan sunucu adını (ör. sunucunun kendi adı) yazın.';
+        } elseif (stripos($ayrinti, 'certificate verify failed') !== false) {
+            $ipucu = ' Sunucunun sertifikası doğrulanamadı.';
+        } elseif (stripos($ayrinti, 'timed out') !== false || stripos($ayrinti, 'refused') !== false) {
+            $ipucu = ' Bu porta bağlantı yok: Port 587 ve Güvenlik "TLS" deneyin.';
+        }
+
+        throw new RuntimeException('SMTP sunucusuna bağlanılamadı (' . $a['host'] . ':' . $a['port'] . '): '
+            . ($ayrinti !== '' ? mb_substr($ayrinti, 0, 300) : 'sebep bildirilmedi') . '.' . $ipucu);
     }
 
     stream_set_timeout($soket, EPOSTA_ZAMAN_ASIMI);
