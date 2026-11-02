@@ -107,6 +107,8 @@
                 ],
                 'Arama motorları' => [
                     'Google görünürlüğü'       => 'google.php',
+                    // GA4 verisi panelde (02.11.2026; bkz. includes/analytics.php).
+                    'Google Analytics'         => 'analytics.php',
                     'Arama motoru ayarları'    => 'seo.php',
                 ],
                 'Site'          => [
