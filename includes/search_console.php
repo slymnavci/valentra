@@ -226,7 +226,12 @@ function gsc_jeton(string $kapsam = GSC_KAPSAM): array
         return ['tamam' => false, 'jeton' => '', 'hata' => 'Servis hesabı anahtarı girilmemiş.'];
     }
 
-    $onbellekAdi = $kapsam === GSC_KAPSAM ? 'gsc_jeton' : 'gsc_jeton_yaz';
+    // Her kapsamin jetonu ayri saklaniyor (Google Analytics de bu hesabi kullaniyor; bkz. includes/analytics.php).
+    $onbellekAdi = match ($kapsam) {
+        GSC_KAPSAM     => 'gsc_jeton',
+        GSC_KAPSAM_YAZ => 'gsc_jeton_yaz',
+        default        => 'gsc_jeton_' . substr(md5($kapsam), 0, 8),
+    };
     $onbellek = json_decode(ayar_oku($onbellekAdi), true);
 
     if (is_array($onbellek) && (int) ($onbellek['bitis'] ?? 0) > time() + 60) {
