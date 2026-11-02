@@ -2335,6 +2335,9 @@ CREATE TABLE IF NOT EXISTS begeniler (
     hedef_tur     ENUM('haber','gonderi') NOT NULL,
     hedef_id      INT UNSIGNED  NOT NULL,
     uye_id        INT UNSIGNED  NOT NULL,
+    -- Tepki turu (02.11.2026; bkz. NW_TEPKILER, includes/network.php).
+    -- Uye bir icerige tek tepki veriyor; eski begeniler "begen".
+    tepki         ENUM('begen','alkis','sevgi','saskin','uzgun','kizgin') NOT NULL DEFAULT 'begen',
     olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     PRIMARY KEY (hedef_tur, hedef_id, uye_id),
