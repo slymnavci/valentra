@@ -848,6 +848,7 @@ function nw_begenilen_haberler(int $limit = 6): array
                     (SELECT COUNT(*) FROM yorumlar y WHERE y.haber_id = h.id AND y.durum = 'yayinda') AS yorum
                FROM haberler h
                JOIN begeniler b ON b.hedef_tur = 'haber' AND b.hedef_id = h.id
+                    AND b.tepki IN ('" . implode("','", NW_OLUMLU_TEPKILER) . "')
               WHERE h.durum = :d AND h.yayin_tarihi >= NOW() - INTERVAL 2 DAY AND h.yayin_tarihi <= NOW()
               GROUP BY h.id, h.baslik, h.yayin_tarihi
               ORDER BY begeni DESC, h.yayin_tarihi DESC
@@ -863,11 +864,46 @@ function nw_begenilen_haberler(int $limit = 6): array
 
 /* --- Begeni ve okunma ---------------------------------------------------- */
 
-/** Begeniyi acar/kapatir; yeni durumu dondurur (true = begendi). */
-function begeni_degistir(string $tur, int $hedefId, int $uyeId): bool
+/*
+ * TEPKILER (site sahibi, 02.11.2026: "begeni yaninda uzuntu ve alkis da
+ * olsun; baska varsa onlari da ekle"). Turk haber sitelerindeki yaygin
+ * set. Uye bir icerige tek tepki veriyor (begeniler tablosu, tepki
+ * sutunu); ayni tepkiye yeniden basmak geri aliyor, baskasina basmak
+ * degistiriyor. Toplam "begeni" sayisi butun tepkileri sayiyor; "En cok
+ * begenilen haberler" yalnizca olumlu tepkileri (NW_OLUMLU_TEPKILER).
+ *
+ * anahtar => [simge, dugme adi, verdikten sonraki ad]
+ */
+const NW_TEPKILER = [
+    'begen'  => ['👍', 'Beğen', 'Beğendin'],
+    'alkis'  => ['👏', 'Alkış', 'Alkışladın'],
+    'sevgi'  => ['❤️', 'Sevgi', 'Sevdin'],
+    'saskin' => ['😮', 'Şaşkın', 'Şaşırdın'],
+    'uzgun'  => ['😢', 'Üzgün', 'Üzüldün'],
+    'kizgin' => ['😠', 'Kızgın', 'Kızdın'],
+];
+const NW_OLUMLU_TEPKILER = ['begen', 'alkis', 'sevgi'];
+
+/**
+ * Tepkiyi verir, değiştirir ya da geri alır; uyenin yeni tepkisini
+ * dondurur ('' = tepkisi yok).
+ */
+function begeni_degistir(string $tur, int $hedefId, int $uyeId, string $tepki = 'begen'): string
 {
-    if (!in_array($tur, ['haber', 'gonderi'], true)) {
+    if (!in_array($tur, ['haber', 'gonderi'], true) || !isset(NW_TEPKILER[$tepki])) {
         throw new InvalidArgumentException('Geçersiz işlem.');
+    }
+
+    $simdiki = db()->prepare('SELECT tepki FROM begeniler WHERE hedef_tur = :t AND hedef_id = :h AND uye_id = :u');
+    $simdiki->execute(['t' => $tur, 'h' => $hedefId, 'u' => $uyeId]);
+    $eski = $simdiki->fetchColumn();
+
+    // Baska bir tepki vardi: degistir (bildirim zaten gitmisti).
+    if ($eski !== false && $eski !== $tepki) {
+        db()->prepare('UPDATE begeniler SET tepki = :k WHERE hedef_tur = :t AND hedef_id = :h AND uye_id = :u')
+            ->execute(['k' => $tepki, 't' => $tur, 'h' => $hedefId, 'u' => $uyeId]);
+
+        return $tepki;
     }
 
     $sil = db()->prepare('DELETE FROM begeniler WHERE hedef_tur = :t AND hedef_id = :h AND uye_id = :u');
@@ -878,7 +914,7 @@ function begeni_degistir(string $tur, int $hedefId, int $uyeId): bool
             bildirim_sil(bildirim_gonderi_sahibi($hedefId), $uyeId, 'begeni', $hedefId);
         }
 
-        return false;
+        return '';
     }
 
     $var = $tur === 'haber'
@@ -890,27 +926,30 @@ function begeni_degistir(string $tur, int $hedefId, int $uyeId): bool
         throw new InvalidArgumentException('İçerik bulunamadı.');
     }
 
-    db()->prepare('INSERT IGNORE INTO begeniler (hedef_tur, hedef_id, uye_id) VALUES (:t, :h, :u)')
-        ->execute(['t' => $tur, 'h' => $hedefId, 'u' => $uyeId]);
+    db()->prepare('INSERT IGNORE INTO begeniler (hedef_tur, hedef_id, uye_id, tepki) VALUES (:t, :h, :u, :k)')
+        ->execute(['t' => $tur, 'h' => $hedefId, 'u' => $uyeId, 'k' => $tepki]);
 
     // Paylasimin sahibine bildirim (haberin sahibi yok).
     if ($tur === 'gonderi') {
         bildirim_ekle(bildirim_gonderi_sahibi($hedefId), $uyeId, 'begeni', $hedefId);
     }
 
-    return true;
+    return $tepki;
 }
 
 /**
- * Begeni sayilari ve uyenin begendikleri.
+ * Tepki sayilari ve uyenin tepkileri.
+ *
+ * sayi: toplam (butun tepkiler); tepki: hedef => [tepki => adet];
+ * benim: hedef => uyenin tepkisi (bos degil = tepki vermis).
  *
  * @param list<int> $idler
- * @return array{sayi: array<int,int>, benim: array<int,bool>}
+ * @return array{sayi: array<int,int>, tepki: array<int,array<string,int>>, benim: array<int,string>}
  */
 function begeni_bilgisi(string $tur, array $idler, ?int $uyeId): array
 {
     $idler = array_values(array_unique(array_filter(array_map('intval', $idler))));
-    $sonuc = ['sayi' => [], 'benim' => []];
+    $sonuc = ['sayi' => [], 'tepki' => [], 'benim' => []];
 
     if ($idler === []) {
         return $sonuc;
@@ -919,19 +958,22 @@ function begeni_bilgisi(string $tur, array $idler, ?int $uyeId): array
     $liste = implode(',', $idler);
 
     try {
-        foreach (db()->query('SELECT hedef_id, COUNT(*) AS n FROM begeniler WHERE hedef_tur = ' . db()->quote($tur)
-                 . " AND hedef_id IN ($liste) GROUP BY hedef_id") as $s) {
-            $sonuc['sayi'][(int) $s['hedef_id']] = (int) $s['n'];
+        foreach (db()->query('SELECT hedef_id, tepki, COUNT(*) AS n FROM begeniler WHERE hedef_tur = ' . db()->quote($tur)
+                 . " AND hedef_id IN ($liste) GROUP BY hedef_id, tepki") as $s) {
+            $hid = (int) $s['hedef_id'];
+            $sonuc['sayi'][$hid] = ($sonuc['sayi'][$hid] ?? 0) + (int) $s['n'];
+            $sonuc['tepki'][$hid][(string) $s['tepki']] = (int) $s['n'];
         }
 
         if ($uyeId !== null) {
-            foreach (db()->query('SELECT hedef_id FROM begeniler WHERE hedef_tur = ' . db()->quote($tur)
+            foreach (db()->query('SELECT hedef_id, tepki FROM begeniler WHERE hedef_tur = ' . db()->quote($tur)
                      . " AND uye_id = " . (int) $uyeId . " AND hedef_id IN ($liste)") as $s) {
-                $sonuc['benim'][(int) $s['hedef_id']] = true;
+                $sonuc['benim'][(int) $s['hedef_id']] = (string) $s['tepki'];
             }
         }
     } catch (PDOException $e) {
-        // begeniler tablosu henuz yoksa sifir.
+        // begeniler tablosu (ya da tepki sutunu) henuz yoksa sifir; sema
+        // yukseltmesi bir sonraki istekte calisiyor.
     }
 
     return $sonuc;

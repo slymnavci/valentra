@@ -152,18 +152,61 @@ function nw_foto_izgara_html(array $fotolar): string
     return $html . '</div>';
 }
 
-/** Begen dugmesi (uye) ya da giris baglantisi; sayi yaninda. */
-function nw_begen_html(string $anahtar, int $sayi, bool $benim, string $donus): string
+/**
+ * Tepki düğmesi (üye) ya da giriş bağlantısı.
+ *
+ * Dugmeye dokununca tepki secici aciliyor (details; betik gerekmiyor,
+ * telefonda da calisiyor): Begen, Alkis, Sevgi, Saskin, Uzgun, Kizgin
+ * (NW_TEPKILER). Dugme uyenin verdigi tepkiyi gosteriyor; ayni tepkiye
+ * yeniden basmak geri aliyor.
+ *
+ * $benim: uyenin tepkisi ('' = yok).
+ */
+function nw_begen_html(string $anahtar, int $sayi, string $benim, string $donus): string
 {
-    $etiket = '<span class="nw-simge" aria-hidden="true">👍</span> ' . ($benim ? 'Beğendin' : 'Beğen');
+    $benim = isset(NW_TEPKILER[$benim]) ? $benim : '';
+    [$simge, , $verdi] = NW_TEPKILER[$benim !== '' ? $benim : 'begen'];
+    $etiket = '<span class="nw-simge" aria-hidden="true">' . $simge . '</span> '
+            . ($benim !== '' ? $verdi : 'Beğen');
 
     if (aktif_uye() === null) {
         return '<a class="nw-eylem" href="' . e(uye_yolu('giris', $donus)) . '">' . $etiket . '</a>';
     }
 
-    return '<form method="post" action="/network-islem.php" class="nw-eylem-form">'
-         . nw_form_alanlari('begen', $donus, ['hedef' => $anahtar])
-         . '<button type="submit" class="nw-eylem' . ($benim ? ' secili' : '') . '" aria-pressed="' . ($benim ? 'true' : 'false') . '">' . $etiket . '</button></form>';
+    $dugmeler = '';
+
+    foreach (NW_TEPKILER as $k => [$s, $ad]) {
+        $dugmeler .= '<button type="submit" name="tepki" value="' . e($k) . '" class="nw-tepki-sec' . ($k === $benim ? ' secili' : '')
+                   . '" title="' . e($ad) . '" aria-label="' . e($ad) . '" aria-pressed="' . ($k === $benim ? 'true' : 'false') . '">'
+                   . '<span aria-hidden="true">' . $s . '</span><small>' . e($ad) . '</small></button>';
+    }
+
+    return '<details class="nw-tepki">'
+         . '<summary class="nw-eylem' . ($benim !== '' ? ' secili' : '') . '">' . $etiket . '</summary>'
+         . '<form method="post" action="/network-islem.php" class="nw-tepki-panel">'
+         . nw_form_alanlari('begen', $donus, ['hedef' => $anahtar]) . $dugmeler . '</form></details>';
+}
+
+/** Tepki özeti: en çok verilen üç tepkinin simgesi ve toplam ("👍😢👏 12"). */
+function nw_tepki_ozet_html(array $tepkiler, int $toplam): string
+{
+    if ($toplam <= 0) {
+        return '';
+    }
+
+    arsort($tepkiler);
+    $simgeler = '';
+
+    foreach (array_slice(array_keys(array_filter($tepkiler)), 0, 3) as $k) {
+        $simgeler .= NW_TEPKILER[$k][0] ?? '';
+    }
+
+    $baslik = implode(', ', array_map(
+        static fn (string $k, int $n): string => (NW_TEPKILER[$k][1] ?? $k) . ' ' . $n,
+        array_keys($tepkiler), array_values($tepkiler)
+    ));
+
+    return '<span class="nw-tepki-ozet" title="' . e($baslik) . '">' . ($simgeler !== '' ? $simgeler : '👍') . ' ' . $toplam . '</span>';
 }
 
 /** Takip et / takibi birak dugmesi; kendi profilinde ve girissizde baglanti. */
@@ -202,7 +245,7 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
     $haber = $oge['tur'] === 'haber';
     $anahtar = ($haber ? 'h' : 'g') . $id;
     $uye   = aktif_uye();
-    $begeni = $baglam['begeni'][$haber ? 'haber' : 'gonderi'] ?? ['sayi' => [], 'benim' => []];
+    $begeni = $baglam['begeni'][$haber ? 'haber' : 'gonderi'] ?? ['sayi' => [], 'tepki' => [], 'benim' => []];
     $yorum  = $baglam['yorum'][$haber ? 'haber' : 'gonderi'][$id] ?? ['sayi' => 0, 'son' => []];
     $detayYol = $haber ? nw_yol('h/' . $id) : nw_gonderi_yolu($id);
     $zaman = (string) ($haber ? $v['yayin_tarihi'] : $v['olusturuldu']);
@@ -266,7 +309,7 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
 
         <div class="nw-sayilar">
             <span>
-                <?= $begeniSayi > 0 ? '👍 ' . $begeniSayi . ' beğeni' : '' ?>
+                <?= nw_tepki_ozet_html($begeni['tepki'][$id] ?? [], $begeniSayi) ?>
                 <?php if ($uye !== null && uye_yonetici_mi($uye)): ?>
                     <?php // Yalnizca yonetici gorur: YZ hesaplarindan hemen 8-15 begeni (01.11.2026). ?>
                     <form method="post" action="/network-islem.php" class="nw-yz-begeni">
@@ -282,7 +325,7 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
         </div>
 
         <div class="nw-eylemler">
-            <?= nw_begen_html($anahtar, $begeniSayi, !empty($begeni['benim'][$id]), $donus) ?>
+            <?= nw_begen_html($anahtar, $begeniSayi, (string) ($begeni['benim'][$id] ?? ''), $donus) ?>
             <a class="nw-eylem" href="<?= e($detayYol) ?>#yorumlar"><span class="nw-simge" aria-hidden="true">💬</span> Yorum yap</a>
             <?php if ($haber && !$detay): ?>
                 <a class="nw-eylem" href="<?= e($detayYol) ?>"><span class="nw-simge" aria-hidden="true">📰</span> Habere git</a>

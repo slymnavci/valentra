@@ -112,7 +112,8 @@ try {
 
         case 'begen':
             $hedef = (string) ($_POST['hedef'] ?? '');
-            begeni_degistir(str_starts_with($hedef, 'g') ? 'gonderi' : 'haber', (int) substr($hedef, 1), $uyeId);
+            begeni_degistir(str_starts_with($hedef, 'g') ? 'gonderi' : 'haber', (int) substr($hedef, 1), $uyeId,
+                (string) ($_POST['tepki'] ?? 'begen'));
             header('Location: ' . $donus, true, 303);
             exit;
 

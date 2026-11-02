@@ -6026,6 +6026,35 @@ a.nw-hesap:hover { text-decoration: underline; }
 }
 .nw-eylem:hover { background: var(--zemin); }
 .nw-eylem.secili { color: var(--altin) !important; }
+
+/* Tepkiler (02.11.2026): dugmeye dokununca ustte tepki secici. */
+.nw-tepki { flex: 1; display: flex; position: relative; margin: 0; }
+.nw-tepki > summary { list-style: none; }
+.nw-tepki > summary::-webkit-details-marker { display: none; }
+.nw-tepki-panel {
+    position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 20;
+    display: flex; gap: 2px; margin: 0; padding: 6px;
+    background: var(--kart); border: 1px solid var(--cizgi); border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(16, 26, 44, .18);
+}
+.nw-tepki-sec {
+    display: grid; justify-items: center; gap: 1px; min-width: 46px; padding: 4px 4px 2px;
+    border: none; border-radius: 12px; background: none; cursor: pointer; font: inherit;
+    transition: transform .12s ease, background .12s ease;
+}
+.nw-tepki-sec > span { font-size: 1.6rem; line-height: 1; }
+.nw-tepki-sec small { font-size: .62rem; font-weight: 700; color: var(--metin-soluk); }
+.nw-tepki-sec:hover, .nw-tepki-sec:focus-visible { transform: translateY(-3px) scale(1.12); background: var(--zemin); }
+.nw-tepki-sec.secili { background: color-mix(in srgb, var(--altin) 16%, transparent); }
+.nw-tepki-ozet { letter-spacing: .02em; }
+.nw-eylemler .nw-eylem { white-space: nowrap; }
+@media (max-width: 420px) {
+    .nw-eylemler .nw-eylem { gap: 4px; padding-inline: 2px; font-size: .86rem; }
+}
+@media (max-width: 420px) {
+    .nw-tepki-sec { min-width: 40px; }
+    .nw-tepki-sec > span { font-size: 1.4rem; }
+}
 .nw-haber-tamami {
     display: block; margin: 4px 0 0; padding: 14px; text-align: center;
     background: var(--kart); border-radius: var(--yuvarlak); box-shadow: var(--golge);

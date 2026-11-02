@@ -247,6 +247,8 @@ function sema_yukselt(array &$hatalar = []): array
     $sutunEkle('uyeler', 'tur', "ENUM('uye','yz','kurum') NOT NULL DEFAULT 'uye' AFTER rol");
     $sutunEkle('gonderiler', 'video_url', "VARCHAR(300) NOT NULL DEFAULT '' AFTER metin");
     $sutunEkle('yorumlar', 'gonderi_id', 'INT UNSIGNED NULL AFTER haber_id');
+    // Tepkiler (02.11.2026; bkz. NW_TEPKILER): eski begeniler "begen".
+    $sutunEkle('begeniler', 'tepki', "ENUM('begen','alkis','sevgi','saskin','uzgun','kizgin') NOT NULL DEFAULT 'begen' AFTER uye_id");
 
     $adim('yorumlar.haber_id bos olabilir', static function (): bool {
         $ifade = db()->prepare(
