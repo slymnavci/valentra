@@ -5912,12 +5912,16 @@ a.menu-oge-network:hover .menu-network { transform: translateY(-1px); box-shadow
 .nw-gundem ol { margin: 8px 0 0; padding: 0; list-style: none; counter-reset: gundem; }
 .nw-gundem li { counter-increment: gundem; display: grid; grid-template-columns: 22px 1fr; column-gap: 6px; padding: 8px 0; border-top: 1px solid var(--cizgi); }
 .nw-gundem li:first-child { border-top: none; }
-.nw-gundem li::before { content: counter(gundem); grid-row: span 2; font-weight: 800; color: var(--altin); font-size: 1.05rem; line-height: 1.3; }
-.nw-yan-kutu.nw-gundem li a { font-weight: 650; font-size: .92rem; line-height: 1.35; text-decoration: none; }
+.nw-gundem li::before { content: counter(gundem); grid-row: span 2; font-weight: 800; color: var(--metin-soluk); font-size: 1.05rem; line-height: 1.3; }
+/* Sag kenar basliklari kirmizi degil, metin renginde; uzerine gelince kirmizi (01.11.2026, site sahibi: "sagdaki kirmizi yazilar iyi durmuyor").
+   .nw-sag oneki: asagidaki .nw-yan-kutu a:not(...):not(...) kuralindan (0,3,1) guclu olsun diye. */
+.nw-sag .nw-yan-kutu.nw-gundem li a { font-weight: 600; font-size: .92rem; line-height: 1.35; text-decoration: none; color: var(--metin); }
+.nw-sag .nw-yan-kutu.nw-gundem li a:hover { color: var(--altin); }
 .nw-gundem small { display: flex; gap: 10px; color: var(--metin-soluk); font-size: .78rem; margin-top: 3px; }
 .nw-konular ul { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
 .nw-konular li { display: inline-flex; align-items: baseline; gap: 4px; padding: 4px 10px; border-radius: 999px; background: var(--zemin); border: 1px solid var(--cizgi); }
-.nw-yan-kutu.nw-konular li a { font-weight: 700; font-size: .86rem; text-decoration: none; }
+.nw-sag .nw-yan-kutu.nw-konular li a { font-weight: 600; font-size: .86rem; text-decoration: none; color: var(--metin); }
+.nw-sag .nw-yan-kutu.nw-konular li a:hover { color: var(--altin); }
 .nw-konular small { color: var(--metin-soluk); font-size: .74rem; }
 
 /*
