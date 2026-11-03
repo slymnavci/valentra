@@ -1326,10 +1326,13 @@ a.menu-oge.aktif::after,
  */
 .kaydirak-govde h2 {
     margin: 0;
-    font-size: clamp(1.4rem, 2.9vw, 2.2rem);
+    /* Bir ayar buyuk (03.11.2026): ozet kalkti, baslik tek basina okunuyor. */
+    font-size: clamp(1.75rem, 3.6vw, 2.85rem);
     font-weight: 800;
-    line-height: 1.14;
-    letter-spacing: -.014em;
+    line-height: 1.12;
+    letter-spacing: -.016em;
+    max-width: 24ch;
+    text-wrap: balance;
     color: #fff;
     text-shadow: 0 1px 12px rgba(0, 0, 0, .35);
 
@@ -1737,7 +1740,7 @@ a.menu-oge.aktif::after,
     /* Telefonda ekranin yarisindan fazlasini tek habere vermek,
        altindaki listeyi tamamen gorunmez yapiyor. */
     .kaydirak-slayt > a { height: clamp(260px, 44vh, 360px); }
-    .kaydirak-govde h2 { font-size: 1.3rem; }
+    .kaydirak-govde h2 { font-size: 1.62rem; max-width: none; }
 
     /*
      * Telefonda spot gizleniyor.
@@ -6513,3 +6516,12 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 .konu-liste a { display: block; font-weight: 700; color: var(--metin); font-size: 1.05rem; }
 .konu-liste span { font-size: .85rem; color: var(--metin-soluk); }
 .alt-bant-konular { flex-wrap: wrap; }
+
+/* Kayan mansette "Haberi oku" cagrisi (03.11.2026; bkz. includes/kaydirak.php). */
+.kaydirak-govde .kunye { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.kaydirak-oku {
+    display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 999px;
+    background: var(--vurgu); color: #fff; font-size: .82rem; font-weight: 800; letter-spacing: .02em;
+    transition: transform .15s ease;
+}
+.kaydirak-slayt a:hover .kaydirak-oku, .kaydirak-slayt a:focus-visible .kaydirak-oku { transform: translateX(3px); }
