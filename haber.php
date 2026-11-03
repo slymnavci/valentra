@@ -90,6 +90,10 @@ if (!haber_google_sunulur_mu($haber)) {
 
 require_once __DIR__ . '/includes/kurumsal.php';
 
+// Gunluk bulten: sabah 7'den sonra abonelere parca parca (bkz. includes/bulten.php).
+require_once __DIR__ . '/includes/bulten.php';
+bulten_gonder_sayfa_sonunda();
+
 $ilgililer = haber_ilgililer($haber, 6);
 
 // Gorsel sitenin kendi sunucusundan (bkz. includes/gorsel_onbellek.php).

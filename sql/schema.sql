@@ -2486,3 +2486,24 @@ CREATE TABLE IF NOT EXISTS canli_girisler (
     KEY ix_canli_giris (anlatim_id, id),
     CONSTRAINT fk_canli_giris FOREIGN KEY (anlatim_id) REFERENCES canli_anlatimlar (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- GUNLUK E-POSTA BULTENI (03.11.2026; bkz. includes/bulten.php). Cift
+-- onayli: abone "bekliyor" baslar, e-postadaki baglantiyla "aktif" olur.
+-- Her e-postada tek tikla ayrilma baglantisi (jeton). son_gonderim: o gunun
+-- bulteni bu aboneye gitti mi (gonderim parca parca yapiliyor).
+CREATE TABLE IF NOT EXISTS bulten_aboneler (
+    id           INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    eposta       VARCHAR(190)  NOT NULL,
+    durum        ENUM('bekliyor','aktif','ayrildi') NOT NULL DEFAULT 'bekliyor',
+    jeton        CHAR(32)      NOT NULL,
+    olusturuldu  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    onaylandi    DATETIME      NULL,
+    ayrildi      DATETIME      NULL,
+    son_gonderim DATE          NULL,
+    hata_sayisi  TINYINT UNSIGNED NOT NULL DEFAULT 0,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_bulten_eposta (eposta),
+    UNIQUE KEY uq_bulten_jeton (jeton),
+    KEY ix_bulten_gonderim (durum, son_gonderim)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

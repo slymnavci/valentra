@@ -8,6 +8,9 @@
     </footer>
     <?php else: ?>
     <footer class="alt-bant">
+        <?php /* Gunluk bulten aboneligi (03.11.2026; bkz. includes/bulten.php). */ ?>
+        <?php require_once __DIR__ . '/bulten.php'; ?>
+        <div class="sinirli"><?= bulten_kutu_html() ?></div>
         <?php require_once __DIR__ . '/kurumsal.php'; ?>
         <nav class="sinirli alt-bant-baglar" aria-label="Kurumsal">
             <?php foreach (kurumsal_sayfalar() as $kurumsalAnahtar => $kurumsalAd): ?>

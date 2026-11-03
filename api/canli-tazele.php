@@ -216,6 +216,10 @@ try {
 
         $ozet['uretim'] = ozgun_haberleri_uret();
 
+        // Gunluk bulten (03.11.2026): ziyaretci olmasa da sabah gitsin.
+        require_once __DIR__ . '/../includes/bulten.php';
+        $ozet['bulten'] = bulten_gonder_parca();
+
         // Gorselsiz habere konu gorseli (bkz. haber_kategori_gorsellerini_doldur).
         $ozet['kategori_gorseli'] = haber_kategori_gorsellerini_doldur();
     }

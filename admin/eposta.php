@@ -138,4 +138,23 @@ require __DIR__ . '/ust.php';
     <button type="submit" class="dugme">Gönder</button>
 </form>
 
+<?php
+// Gunluk bulten (03.11.2026; bkz. includes/bulten.php).
+require_once __DIR__ . '/../includes/bulten.php';
+$bultenSayi = bulten_sayilar();
+?>
+<div class="kutu" style="margin-top:16px;max-width:640px;">
+    <h2 style="margin-top:0;">Günlük bülten</h2>
+    <p class="ipucu">Her sabah <?= BULTEN_SAAT ?>'den sonra son 24 saatin en önemli <?= BULTEN_HABER ?> haberi, onaylı abonelere bu SMTP ayarlarıyla gönderilir.
+        Abonelik sayfaların altındaki kutudan; okur e-postadaki bağlantıyla onaylamadan bülten gitmez.</p>
+    <table class="liste-tablo">
+        <tbody>
+            <tr><td>Aktif abone</td><td><?= (int) $bultenSayi['aktif'] ?></td></tr>
+            <tr><td>Bugünün bülteni gönderilen</td><td><?= (int) $bultenSayi['bugun'] ?></td></tr>
+            <tr><td>Onay bekleyen</td><td><?= (int) $bultenSayi['bekliyor'] ?></td></tr>
+            <tr><td>Ayrılan</td><td><?= (int) $bultenSayi['ayrildi'] ?></td></tr>
+        </tbody>
+    </table>
+</div>
+
 <?php require __DIR__ . '/alt.php'; ?>

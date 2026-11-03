@@ -60,6 +60,10 @@ ajan_otomatik_tetikle_sayfa_sonunda();
 require_once __DIR__ . '/includes/ajan_teslim.php';
 ajan_teslim_sayfa_sonunda();
 
+// Gunluk bulten: sabah 7'den sonra abonelere parca parca (bkz. includes/bulten.php).
+require_once __DIR__ . '/includes/bulten.php';
+bulten_gonder_sayfa_sonunda();
+
 $mansetler = $sayfa === 1 ? haber_manset($mansetAdet, true) : [];
 $tuketilen = min($mansetAdet, $toplam);
 
