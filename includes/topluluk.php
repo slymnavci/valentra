@@ -112,6 +112,129 @@ function topluluk_malzeme(): array
     return ['hesaplar' => $hesaplar, 'begeni_bugun' => $begeni];
 }
 
+/*
+ * YZ TEPKILERI (site sahibi, 03.11.2026: "yapay zeka da habere gore tepki
+ * versin"). YZ hesaplari onceden her icerige yalnizca "begen" birakiyordu.
+ * Artik haberin basligina, ozetine ve konusuna gore bir tepki dagilimi
+ * seciliyor; her hesap bu dagilimdan, hesap ve haberle sabit bir tohumla
+ * tepki cekiyor (ayni hesap ayni habere hep ayni tepkiyi verir). Model
+ * kullanilmiyor: anahtar sozcuklar, sirayla ilk eslesen profil.
+ *
+ * Profil => [tepki => agirlik]; toplam 100.
+ */
+const TOPLULUK_TEPKI_PROFILLERI = [
+    'yas'    => ['uzgun' => 62, 'sevgi' => 12, 'kizgin' => 10, 'saskin' => 8, 'begen' => 8],
+    'ofke'   => ['kizgin' => 48, 'uzgun' => 27, 'saskin' => 15, 'begen' => 10],
+    'basari' => ['alkis' => 48, 'begen' => 27, 'sevgi' => 17, 'saskin' => 8],
+    'sevgi'  => ['sevgi' => 50, 'begen' => 25, 'alkis' => 15, 'saskin' => 10],
+    'saskin' => ['saskin' => 50, 'begen' => 30, 'alkis' => 12, 'uzgun' => 8],
+    'spor'   => ['begen' => 50, 'alkis' => 32, 'sevgi' => 10, 'saskin' => 8],
+    'genel'  => ['begen' => 72, 'saskin' => 10, 'alkis' => 10, 'sevgi' => 4, 'uzgun' => 4],
+    'gonderi'=> ['begen' => 62, 'sevgi' => 22, 'alkis' => 10, 'saskin' => 6],
+];
+
+/** Profillerin anahtar sozcukleri (kucuk harf); sira onemli: ilk eslesen kazanir. */
+const TOPLULUK_TEPKI_SOZCUKLERI = [
+    // Kurtarma ve kavusma once: "enkazdan bebek kurtarildi" yas haberi degil.
+    'sevgi'  => ['kurtarıldı', 'kurtardı', 'kavuştu', 'sağ çıkarıldı', 'hayata tutun'],
+    'yas'    => ['öldü', 'ölü', 'ölüm', 'hayatını kaybet', 'can kaybı', 'şehit', 'cenaze', 'vefat', 'yaralı',
+                 // "kaza" degil: "kazandi" da eslesirdi.
+                 'kazası', 'kazada', 'kaza ', 'deprem', 'yangın', 'sel ', 'selde', 'facia', 'enkaz', 'intihar', 'boğul', 'çöktü', 'kayboldu'],
+    'ofke'   => ['taciz', 'istismar', 'cinayet', 'katil', 'rüşvet', 'yolsuzluk', 'dolandır', 'şiddet', 'vahşet',
+                 'terör', 'saldırı', 'darp', 'tecavüz', 'zam geldi', 'zamlandı', 'skandal', 'işkence'],
+    'basari' => ['şampiyon', 'kazandı', 'zafer', 'galibiyet', 'madalya', 'kupa', 'ödül', 'başarı', 'birinci oldu',
+                 'final', 'yendi', 'tarihi gece', 'rekor kırdı'],
+    'sevgi2' => ['bebek', 'doğdu', 'yardım', 'bağış', 'gönüllü', 'düğün', 'bayram', 'köpek', 'kedi',
+                 'sokak hayvan', 'şefkat'],
+    'saskin' => ['ilk kez', 'dünyada ilk', 'şaşırt', 'beklenmedik', 'keşfedildi', 'inanılmaz', 'rekor', 'görülmemiş'],
+];
+
+/** Haberin YZ tepki profili (bkz. TOPLULUK_TEPKI_PROFILLERI). */
+function topluluk_tepki_profili(string $metin, string $kategori): string
+{
+    $metin = mb_strtolower(str_replace(['I', 'İ'], ['ı', 'i'], $metin), 'UTF-8');
+
+    foreach (TOPLULUK_TEPKI_SOZCUKLERI as $profil => $sozcukler) {
+        foreach ($sozcukler as $sozcuk) {
+            if (str_contains($metin, $sozcuk)) {
+                return rtrim($profil, '2');
+            }
+        }
+    }
+
+    return $kategori === 'spor' ? 'spor' : 'genel';
+}
+
+/** Profilden, hesap ve icerikle sabit tohumla bir tepki. */
+function topluluk_tepki_sec(string $profil, string $tur, int $hedefId, int $uyeId): string
+{
+    $agirliklar = TOPLULUK_TEPKI_PROFILLERI[$profil] ?? TOPLULUK_TEPKI_PROFILLERI['genel'];
+    $zar = crc32($tur . $hedefId . ':' . $uyeId) % array_sum($agirliklar);
+
+    foreach ($agirliklar as $tepki => $agirlik) {
+        if ($zar < $agirlik) {
+            return $tepki;
+        }
+
+        $zar -= $agirlik;
+    }
+
+    return 'begen';
+}
+
+/**
+ * Icerigin tepki profili veritabanindan (haber: baslik, ozet, konu; uye
+ * paylasimi: 'gonderi').
+ */
+function topluluk_icerik_profili(string $tur, int $hedefId): string
+{
+    if ($tur !== 'haber') {
+        return 'gonderi';
+    }
+
+    $ifade = db()->prepare(
+        'SELECT h.baslik, h.ozet, k.slug FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id WHERE h.id = :id'
+    );
+    $ifade->execute(['id' => $hedefId]);
+    $h = $ifade->fetch();
+
+    return is_array($h) ? topluluk_tepki_profili($h['baslik'] . ' ' . $h['ozet'], (string) ($h['slug'] ?? '')) : 'genel';
+}
+
+/**
+ * Tek seferlik (03.11.2026): son iki gunun haberlerindeki YZ "begen"lerini
+ * habere gore tepkiye cevirir; yeni kurala gecis aninda sayfadaki eski
+ * haberler de dogru gorunsun. Ayarlar tablosundaki isaretle bir kez.
+ */
+function topluluk_tepkileri_donustur(): void
+{
+    if (ayar_oku('yz_tepki_donusumu', '') === '1') {
+        return;
+    }
+
+    ayar_yaz('yz_tepki_donusumu', '1');
+
+    $satirlar = db()->query(
+        "SELECT b.hedef_tur, b.hedef_id, b.uye_id FROM begeniler b
+           JOIN uyeler u ON u.id = b.uye_id AND u.tur = 'yz'
+          WHERE b.tepki = 'begen' AND b.olusturuldu >= NOW() - INTERVAL 2 DAY"
+    )->fetchAll();
+
+    $guncelle = db()->prepare('UPDATE begeniler SET tepki = :k WHERE hedef_tur = :t AND hedef_id = :h AND uye_id = :u');
+    $profiller = [];
+
+    foreach ($satirlar as $b) {
+        $tur = (string) $b['hedef_tur'];
+        $id  = (int) $b['hedef_id'];
+        $profiller[$tur . $id] ??= topluluk_icerik_profili($tur, $id);
+        $tepki = topluluk_tepki_sec($profiller[$tur . $id], $tur, $id, (int) $b['uye_id']);
+
+        if ($tepki !== 'begen') {
+            $guncelle->execute(['k' => $tepki, 't' => $tur, 'h' => $id, 'u' => (int) $b['uye_id']]);
+        }
+    }
+}
+
 /**
  * YZ hesaplarinin begenileri (site sahibinin karari, 31.10.2026: "yapay
  * zeka hesaplari gorunmesin, sadece begeni atsinlar").
@@ -152,8 +275,9 @@ function topluluk_begeni_dagit(bool $hemen = false): array
     )->fetchAll();
 
     $haberler = db()->prepare(
-        "SELECT h.id, TIMESTAMPDIFF(MINUTE, h.yayin_tarihi, NOW()) AS dk, h.onem
-           FROM haberler h
+        "SELECT h.id, TIMESTAMPDIFF(MINUTE, h.yayin_tarihi, NOW()) AS dk, h.onem,
+                CONCAT(h.baslik, ' ', h.ozet) AS metin, k.slug AS konu
+           FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
           WHERE h.durum = :d AND h.yayin_tarihi <= NOW() AND h.yayin_tarihi >= NOW() - INTERVAL 1 DAY
           ORDER BY h.id DESC LIMIT 150"
     );
@@ -163,8 +287,10 @@ function topluluk_begeni_dagit(bool $hemen = false): array
         'SELECT b.uye_id FROM begeniler b JOIN uyeler u ON u.id = b.uye_id
           WHERE b.hedef_tur = :t AND b.hedef_id = :h AND u.tur = \'yz\''
     );
-    $ekle  = db()->prepare('INSERT IGNORE INTO begeniler (hedef_tur, hedef_id, uye_id) VALUES (:t, :h, :u)');
+    $ekle  = db()->prepare('INSERT IGNORE INTO begeniler (hedef_tur, hedef_id, uye_id, tepki) VALUES (:t, :h, :u, :k)');
     $kalan = 1500; // tek calismada en fazla begeni
+
+    topluluk_tepkileri_donustur();
 
     foreach (['gonderi' => $gonderiler, 'haber' => $haberler->fetchAll()] as $tur => $liste) {
         foreach ($liste as $oge) {
@@ -195,9 +321,12 @@ function topluluk_begeni_dagit(bool $hemen = false): array
 
             $adaylar = array_values(array_diff($yzler, $begenenler));
             shuffle($adaylar);
+            $profil = $tur === 'haber'
+                ? topluluk_tepki_profili((string) $oge['metin'], (string) ($oge['konu'] ?? ''))
+                : 'gonderi';
 
             foreach (array_slice($adaylar, 0, $eksik) as $uyeId) {
-                $ekle->execute(['t' => $tur, 'h' => $id, 'u' => $uyeId]);
+                $ekle->execute(['t' => $tur, 'h' => $id, 'u' => $uyeId, 'k' => topluluk_tepki_sec($profil, $tur, $id, $uyeId)]);
                 $sonuc[$tur] += $ekle->rowCount();
                 $kalan--;
             }
@@ -242,11 +371,12 @@ function topluluk_begeni_ekle(string $tur, int $hedefId, int $adet): int
     );
     $adaylar->execute(['t' => $tur, 'h' => $hedefId]);
 
-    $ekle  = db()->prepare('INSERT IGNORE INTO begeniler (hedef_tur, hedef_id, uye_id) VALUES (:t, :h, :u)');
-    $sayi  = 0;
+    $ekle   = db()->prepare('INSERT IGNORE INTO begeniler (hedef_tur, hedef_id, uye_id, tepki) VALUES (:t, :h, :u, :k)');
+    $sayi   = 0;
+    $profil = topluluk_icerik_profili($tur, $hedefId);
 
     foreach ($adaylar->fetchAll(PDO::FETCH_COLUMN) as $uyeId) {
-        $ekle->execute(['t' => $tur, 'h' => $hedefId, 'u' => (int) $uyeId]);
+        $ekle->execute(['t' => $tur, 'h' => $hedefId, 'u' => (int) $uyeId, 'k' => topluluk_tepki_sec($profil, $tur, $hedefId, (int) $uyeId)]);
         $sayi += $ekle->rowCount();
     }
 
