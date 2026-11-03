@@ -196,20 +196,63 @@ $govdeVeri = [
             })
             .catch(function () { bekliyor = false; bitti = true; });
     }
+    /*
+     * HER HABER AYRI SAYFA (site sahibinin istegi, 03.11.2026: "ikinci
+     * habere gectiginde yeni bir sayfaya tikliyor gibi gorunsun").
+     *
+     * Yeni gelen haber ilk kez okununca tarayici gecmisine YENI bir kayit
+     * ekleniyor (pushState): adres, baslik ve geri tusu normal bir sayfa
+     * gecisindeki gibi; geri tusu onceki haberin basina donduruyor. Daha once
+     * okunmus habere yukari kaydirmak yalnizca adresi duzeltiyor
+     * (replaceState) ve yeniden sayilmiyor.
+     *
+     * Google Analytics: her yeni haber bir page_view; onceki haber
+     * page_referrer (Analytics'te "bir sayfadan otekine gecis" gibi gorunur).
+     * gtag('set') ile sonraki olaylar (kaydirma, etkilesim suresi) da bu
+     * habere yaziliyor. Adres, tarayicinin kendi gecmis islevleriyle
+     * degisiyor (window.vzGecmis, includes/olcum_reklam.php): Analytics'in
+     * otomatik gecmis dinleyicisi acik olsa bile ayni haber iki kez sayilmiyor.
+     */
+    var G = window.vzGecmis || { p: history.pushState, r: history.replaceState };
+    var gecmiseEklenen = {}, popBekle = 0;
+    gecmiseEklenen[location.pathname + location.search] = 1;
+    function adresDegistir(adres, yeni) {
+        try { (yeni ? G.p : G.r).call(history, { vzAkis: adres }, '', adres); } catch (e) {}
+    }
+    try { G.r.call(history, { vzAkis: location.pathname + location.search }, '', location.href); } catch (e) {}
+    // Geri/ileri tusu: o haberin basina git (sayfa yeniden yuklenmeden).
+    window.addEventListener('popstate', function () {
+        var hedef = location.pathname + location.search, l = makaleler();
+        for (var i = 0; i < l.length; i++) {
+            if (l[i].getAttribute('data-adres') === hedef) {
+                popBekle = Date.now() + 700;
+                document.title = l[i].getAttribute('data-baslik');
+                l[i].scrollIntoView({ block: 'start' });
+                return;
+            }
+        }
+    });
+    if ('scrollRestoration' in history) { try { history.scrollRestoration = 'manual'; } catch (e) {} }
+    var oncekiAdres = location.href;
     // Okunan haber: adres, baslik ve sayim (ekranin ortasindaki serit).
     var izle = new IntersectionObserver(function (gozlem) {
         gozlem.forEach(function (g) {
             if (!g.isIntersecting) { return; }
             var a = g.target, adres = a.getAttribute('data-adres'), z = a.getAttribute('data-zid');
-            if (location.pathname + location.search !== adres) {
-                try { history.replaceState(null, '', adres); } catch (e) {}
-                document.title = a.getAttribute('data-baslik');
+            if (location.pathname + location.search !== adres && Date.now() > popBekle) {
+                var yeni = !gecmiseEklenen[adres], baslik = a.getAttribute('data-baslik');
+                gecmiseEklenen[adres] = 1;
+                document.title = baslik;
+                adresDegistir(adres, yeni);
                 // Google Analytics: kaydirmayla gelen her haber ayri sayfa goruntulemesi
-                // (site sahibinin istegi, 29.10.2026). Ilk haber sayfa acilisinda sayildi.
+                // (29.10.2026). Ilk haber sayfa acilisinda sayildi.
                 if (window.gtag && a !== ilkMakale && !gaSayilan[adres]) {
                     gaSayilan[adres] = 1;
-                    gtag('event', 'page_view', { page_location: location.origin + adres, page_path: adres, page_title: a.getAttribute('data-baslik') });
+                    var tam = location.origin + adres;
+                    gtag('set', { page_location: tam, page_title: baslik, page_referrer: oncekiAdres });
+                    gtag('event', 'page_view', { page_location: tam, page_title: baslik, page_referrer: oncekiAdres });
                 }
+                oncekiAdres = location.origin + adres;
             }
             if (z && !gorulen[z]) {
                 gorulen[z] = 1;
