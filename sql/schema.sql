@@ -136,6 +136,9 @@ CREATE TABLE IF NOT EXISTS haberler (
     -- [{"id":..,"ad":..,"url":..,"baslik":..}].
     derleme            TINYINT(1)   NOT NULL DEFAULT 0,
     derleme_kaynaklari TEXT         NULL,
+    -- %70 OZGUN (03.11.2026): tek kaynakli haber Google kotasina girdi mi
+    -- (bkz. haber_ozgun_kotasini_dagit). Ozgun haberde kullanilmiyor.
+    google_kota        TINYINT(1)   NOT NULL DEFAULT 0,
 
     onaylayan_id    INT UNSIGNED  NULL,
     onay_tarihi     DATETIME      NULL,

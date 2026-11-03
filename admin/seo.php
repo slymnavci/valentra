@@ -280,6 +280,34 @@ require __DIR__ . '/ust.php';
     </p>
 </div>
 
+<?php
+/* %70 ozgun kurali (03.11.2026; bkz. haber_ozgun_kotasini_dagit). */
+try {
+    $kotaOzet = haber_ozgun_kotasini_dagit(true);
+} catch (Throwable $e) {
+    $kotaOzet = null;
+}
+?>
+<?php if ($kotaOzet !== null): ?>
+<div class="kutu" style="margin-top:22px;">
+    <h2 style="margin-top:0;">Google'a sunulan haberler: %<?= e((string) $kotaOzet['oran']) ?> özgün</h2>
+    <p class="ipucu">
+        Hedef: en az %<?= HABER_OZGUN_HEDEF_YUZDE ?> özgün. Özgün sayılanlar: birden çok yayından yazılan
+        haberler, derlemeler ve sitenin kendi verisinden yazılanlar. Tek bir yayının haberi Google'a ancak kalan
+        paya, önem ve tazeliğe göre giriyor; payın dışındakiler okuyucu için sitede kalıyor ama Google'a sunulmuyor.
+        Search Console'da tıklama ya da en az <?= HABER_KOTA_KORUMA_GOSTERIM ?> gösterim alan sayfa her durumda kalıyor.
+    </p>
+    <table class="liste-tablo">
+        <tbody>
+            <tr><td>Özgün haber (Google'da)</td><td><?= (int) $kotaOzet['ozgun'] ?></td></tr>
+            <tr><td>Tek kaynaklı haber (toplam)</td><td><?= (int) $kotaOzet['tek'] ?></td></tr>
+            <tr><td>Tek kaynaklıdan Google'a sunulan</td><td><?= (int) $kotaOzet['secilen'] ?>
+                (pay <?= (int) $kotaOzet['kota'] ?><?= $kotaOzet['korunan'] > 0 ? ', trafik aldığı için korunan ' . (int) $kotaOzet['korunan'] : '' ?>)</td></tr>
+        </tbody>
+    </table>
+</div>
+<?php endif; ?>
+
 <div class="kutu" style="margin-top:22px;">
     <h2 style="margin-top:0;">Hazır olanlar</h2>
 
