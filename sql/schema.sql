@@ -2400,3 +2400,51 @@ CREATE TABLE IF NOT EXISTS uye_jetonlari (
     KEY ix_uye_jeton_uye (uye_id, olusturuldu),
     CONSTRAINT fk_uye_jeton_uye FOREIGN KEY (uye_id) REFERENCES uyeler (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Tarayici bildirimi (Web Push; 03.11.2026, bkz. includes/web_push.php)
+-- ---------------------------------------------------------------------------
+-- Okurun tarayicisinin verdigi abonelik: push servisinin adresi ve
+-- mesaji sifrelemek icin iki anahtar. Kisisel veri yok; adres servis
+-- ici rastgele bir kimlik. 404/410 donen ya da bes kez hata veren
+-- abonelik siliniyor.
+CREATE TABLE IF NOT EXISTS push_aboneleri (
+    id          INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    uc_ozet     CHAR(64)      NOT NULL,
+    uc          VARCHAR(1000) NOT NULL,
+    p256dh      VARCHAR(120)  NOT NULL,
+    auth        VARCHAR(40)   NOT NULL,
+    tarayici    VARCHAR(40)   NOT NULL DEFAULT '',
+    hata        TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    olusturuldu DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    guncellendi DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_push_uc (uc_ozet)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Her bildirim bir satir; aboneler kimlik sirasiyla parti parti
+-- isleniyor (son_abone kalinan yer). tiklama: bildirimden gelen ziyaret
+-- (utm_source=bildirim; sw.js tiklaninca /bildirim.php'ye yaziyor).
+CREATE TABLE IF NOT EXISTS push_gonderimleri (
+    id          INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    haber_id    INT UNSIGNED  NULL,
+    tur         ENUM('otomatik','elle') NOT NULL DEFAULT 'elle',
+    baslik      VARCHAR(200)  NOT NULL,
+    metin       VARCHAR(300)  NOT NULL DEFAULT '',
+    adres       VARCHAR(500)  NOT NULL,
+    gorsel      VARCHAR(500)  NOT NULL DEFAULT '',
+    durum       ENUM('bekliyor','gonderiliyor','bitti') NOT NULL DEFAULT 'bekliyor',
+    hedef       INT UNSIGNED  NOT NULL DEFAULT 0,
+    son_abone   INT UNSIGNED  NOT NULL DEFAULT 0,
+    basarili    INT UNSIGNED  NOT NULL DEFAULT 0,
+    basarisiz   INT UNSIGNED  NOT NULL DEFAULT 0,
+    tiklama     INT UNSIGNED  NOT NULL DEFAULT 0,
+    olusturuldu DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    bitti       DATETIME      NULL,
+
+    PRIMARY KEY (id),
+    KEY ix_push_gonderim_durum (durum, id),
+    KEY ix_push_gonderim_haber (haber_id),
+    KEY ix_push_gonderim_tur (tur, olusturuldu)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

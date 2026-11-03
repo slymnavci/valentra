@@ -1,0 +1,23 @@
+{
+  "name": "Valentra — Güncel Haberler",
+  "short_name": "Valentra",
+  "description": "Son dakika ve güncel haberler, köşe yazıları, V Network.",
+  "lang": "tr",
+  "dir": "ltr",
+  "id": "/",
+  "start_url": "/?utm_source=uygulama",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1f1f23",
+  "categories": ["news"],
+  "icons": [
+    { "src": "/assets/ikon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/logo-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/ikon-maskeli-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Son dakika", "url": "/?utm_source=uygulama", "icons": [{ "src": "/assets/ikon-192.png", "sizes": "192x192" }] },
+    { "name": "V Network", "url": "/network?utm_source=uygulama", "icons": [{ "src": "/assets/ikon-192.png", "sizes": "192x192" }] }
+  ]
+}

@@ -6248,3 +6248,42 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
     border: 1px dashed var(--cizgi); border-radius: var(--yuvarlak); background: var(--kart);
 }
 .nw-yz-dalga small { color: var(--metin-soluk); font-size: .82rem; flex: 1 1 220px; }
+
+/* --- Tarayici bildirimi ve uygulama (03.11.2026; bkz. assets/bildirim.js) ---
+   Sag altta kucuk kutu; cerez bildirimiyle ayni dil. Telefonda tam genislik. */
+.bildirim-kutu {
+    position: fixed; right: 16px; bottom: 16px; z-index: 999; width: min(400px, calc(100vw - 32px));
+    display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: start;
+    padding: 16px 40px 14px 16px; background: var(--kart); color: var(--metin);
+    border: 1px solid var(--cizgi); border-top: 3px solid var(--vurgu); border-radius: 12px;
+    box-shadow: 0 10px 34px rgba(0, 0, 0, .2); font-size: .9rem;
+    opacity: 0; transform: translateY(12px); transition: opacity .25s ease, transform .25s ease;
+}
+.bildirim-kutu.acik { opacity: 1; transform: none; }
+.bildirim-kutu-simge { font-size: 1.6rem; line-height: 1; padding-top: 2px; }
+.bildirim-kutu-metin strong { display: block; font-size: 1rem; margin-bottom: 3px; }
+.bildirim-kutu-metin span { color: var(--metin-soluk); line-height: 1.45; }
+.bildirim-kutu-dugmeler { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 8px; }
+.bildirim-kutu-dugmeler button {
+    font: inherit; font-weight: 700; padding: 8px 14px; border-radius: 8px;
+    border: 1px solid var(--cizgi); background: var(--kart); color: var(--metin); cursor: pointer;
+}
+.bildirim-kutu-dugmeler button.ana { background: var(--vurgu); border-color: var(--vurgu); color: #fff; }
+.bildirim-kutu-kapat {
+    position: absolute; top: 6px; right: 8px; width: 30px; height: 30px; border: 0; background: none;
+    color: var(--metin-soluk); font-size: 1.4rem; line-height: 1; cursor: pointer; border-radius: 6px;
+}
+.bildirim-kutu-kapat:hover { background: var(--zemin); color: var(--metin); }
+@media (max-width: 520px) {
+    .bildirim-kutu { right: 8px; left: 8px; bottom: 8px; width: auto; }
+}
+@media (prefers-reduced-motion: reduce) { .bildirim-kutu { transition: none; } }
+
+.alt-bant .alt-bant-uygulama { justify-content: flex-start; margin-top: 12px; }
+.alt-bant .alt-bant-uygulama:not(:has(button:not([hidden]))) { display: none; }
+.alt-bant-dugme {
+    font: inherit; font-size: .88rem; font-weight: 700; padding: 7px 14px; border-radius: 999px;
+    border: 1px solid var(--cizgi); background: var(--zemin); color: var(--metin); cursor: pointer;
+}
+.alt-bant-dugme:hover:not(:disabled) { border-color: var(--vurgu); color: var(--vurgu); }
+.alt-bant-dugme:disabled { cursor: default; opacity: .75; }
