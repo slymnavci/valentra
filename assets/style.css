@@ -6424,3 +6424,41 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 .bulten-sayfa h1 { margin-top: 0; }
 .bulten-sonuc p { line-height: 1.6; }
 .bulten-sonuc a { color: var(--vurgu); }
+
+/* --- Senin icin: sehrim ve ilgi alanlarim (03.11.2026; bkz. assets/senin-icin.js) --- */
+.senin-icin { margin-bottom: 26px; }
+.senin-icin[hidden], .senin-icin [hidden] { display: none !important; }
+.senin-icin .bolum-basligi { align-items: center; }
+.senin-ayarla {
+    margin-left: 12px; font: inherit; font-size: .85rem; font-weight: 700; padding: 6px 12px; border-radius: 999px;
+    border: 1px solid var(--cizgi); background: var(--kart); color: var(--metin); cursor: pointer; white-space: nowrap;
+}
+.senin-ayarla:hover { border-color: var(--vurgu); color: var(--vurgu); }
+.senin-ozet { margin: -6px 0 12px; color: var(--metin-soluk); font-size: .9rem; font-weight: 700; }
+.senin-tanit {
+    position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 16px 44px 16px 18px;
+    border: 1px dashed color-mix(in srgb, var(--vurgu) 45%, var(--cizgi)); border-radius: 12px;
+    background: color-mix(in srgb, var(--vurgu) 5%, var(--kart));
+}
+.senin-tanit strong { flex-basis: 100%; font-size: 1.02rem; }
+.senin-tanit span { flex: 1 1 280px; color: var(--metin-soluk); font-size: .92rem; }
+.senin-kapat { position: absolute; top: 6px; right: 8px; width: 30px; height: 30px; border: 0; background: none; color: var(--metin-soluk); font-size: 1.4rem; cursor: pointer; }
+.senin-ayarlar { padding: 16px 18px; margin-bottom: 14px; border: 1px solid var(--cizgi); border-radius: 12px; background: var(--kart); display: grid; gap: 14px; }
+.senin-sehir { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.senin-sehir select { font: inherit; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--cizgi); background: var(--kart); color: var(--metin); }
+.senin-konular { display: flex; flex-wrap: wrap; gap: 8px; }
+.senin-cip { position: relative; }
+.senin-cip input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.senin-cip span {
+    display: inline-block; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--cizgi); background: var(--zemin);
+    font-size: .9rem; font-weight: 700; cursor: pointer; user-select: none;
+}
+.senin-cip input:checked + span { background: var(--vurgu); border-color: var(--vurgu); color: #fff; }
+.senin-cip input:focus-visible + span { outline: 2px solid var(--vurgu); outline-offset: 2px; }
+.senin-dugmeler { display: flex; gap: 8px; flex-wrap: wrap; }
+.senin-dugmeler button, .senin-tanit button:not(.senin-kapat) {
+    font: inherit; font-weight: 800; padding: 9px 16px; border-radius: 8px; border: 1px solid var(--cizgi);
+    background: var(--kart); color: var(--metin); cursor: pointer;
+}
+.senin-dugmeler button.ana, .senin-tanit button.ana { background: var(--vurgu); border-color: var(--vurgu); color: #fff; }
+.senin-yukleniyor, .senin-bos { color: var(--metin-soluk); }

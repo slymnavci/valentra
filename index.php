@@ -143,6 +143,43 @@ require __DIR__ . '/includes/sayfa_ust.php';
              */
             ?>
 
+            <?php
+            /* SENIN ICIN (03.11.2026; bkz. includes/senin_icin.php): sehrim ve
+               ilgi alanlarim. Secim tarayicida; haberleri betik getiriyor
+               (sayfa onbellekte, herkese ayni). Betik yoksa bolum gizli kalir. */
+            ?>
+            <?php if ($sayfa === 1): ?>
+                <?php require_once __DIR__ . '/includes/senin_icin.php'; ?>
+                <section class="senin-icin" id="senin-icin" hidden
+                         data-konular="<?= e((string) json_encode(senin_konular(), JSON_UNESCAPED_UNICODE)) ?>"
+                         data-sehirler="<?= e((string) json_encode(senin_sehirler(), JSON_UNESCAPED_UNICODE)) ?>">
+                    <div class="bolum-basligi">
+                        <h2>Senin İçin</h2>
+                        <span class="cizgi"></span>
+                        <button type="button" class="senin-ayarla" data-senin="ayarla">⚙ Ayarla</button>
+                    </div>
+                    <p class="senin-ozet" data-senin-ozet></p>
+                    <div class="senin-ayarlar" data-senin-ayarlar hidden>
+                        <label class="senin-sehir">Şehrim
+                            <select data-senin-sehir><option value="">Seçmeyin</option></select>
+                        </label>
+                        <div class="senin-konular" data-senin-konular role="group" aria-label="İlgi alanlarım"></div>
+                        <div class="senin-dugmeler">
+                            <button type="button" data-senin="kaydet" class="ana">Kaydet</button>
+                            <button type="button" data-senin="gizle">Bu bölümü gizle</button>
+                        </div>
+                    </div>
+                    <div class="senin-tanit" data-senin-tanit hidden>
+                        <strong>Haberleri size göre ayarlayın</strong>
+                        <span>Şehrinizi ve ilgi alanlarınızı seçin; size özel haberler burada en üstte.</span>
+                        <button type="button" data-senin="ayarla" class="ana">Şehrimi ve konularımı seç</button>
+                        <button type="button" data-senin="gizle" class="senin-kapat" aria-label="Kapat">×</button>
+                    </div>
+                    <div class="senin-haberler" data-senin-haberler aria-live="polite"></div>
+                </section>
+                <script src="<?= e(varlik('/assets/senin-icin.js')) ?>" defer></script>
+            <?php endif; ?>
+
             <?php if ($haberler !== []): ?>
                 <div class="bolum-basligi">
                     <h2><?= $sayfa > 1 ? 'Haberler' : 'Son Haberler' ?></h2>
