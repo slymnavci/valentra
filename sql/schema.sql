@@ -2448,3 +2448,38 @@ CREATE TABLE IF NOT EXISTS push_gonderimleri (
     KEY ix_push_gonderim_haber (haber_id),
     KEY ix_push_gonderim_tur (tur, olusturuldu)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Canli anlatim (03.11.2026, bkz. includes/canli.php)
+-- ---------------------------------------------------------------------------
+-- Secim, deprem, buyuk mac gibi olaylarda dakika dakika guncellenen tek
+-- sayfa. Panelden aciliyor; gelismeler (canli_girisler) en yeni ustte.
+-- Sayfa acikken yeni gelismeler kendiliginden geliyor.
+CREATE TABLE IF NOT EXISTS canli_anlatimlar (
+    id          INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    baslik      VARCHAR(200)  NOT NULL,
+    slug        VARCHAR(220)  NOT NULL,
+    ozet        VARCHAR(400)  NOT NULL DEFAULT '',
+    gorsel_url  VARCHAR(500)  NOT NULL DEFAULT '',
+    durum       ENUM('canli','bitti') NOT NULL DEFAULT 'canli',
+    olusturuldu DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    guncellendi DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    bitti       DATETIME      NULL,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_canli_slug (slug),
+    KEY ix_canli_durum (durum, guncellendi)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS canli_girisler (
+    id          INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    anlatim_id  INT UNSIGNED  NOT NULL,
+    baslik      VARCHAR(200)  NOT NULL DEFAULT '',
+    metin       TEXT          NOT NULL,
+    onemli      TINYINT(1)    NOT NULL DEFAULT 0,
+    olusturuldu DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    KEY ix_canli_giris (anlatim_id, id),
+    CONSTRAINT fk_canli_giris FOREIGN KEY (anlatim_id) REFERENCES canli_anlatimlar (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

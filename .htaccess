@@ -172,6 +172,14 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^kategori/([^/]+)/?$ kategori.php?k=$1 [L,QSA]
 
+    # Canli anlatim (03.11.2026): /canli, /canli/secim-2026
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^canli/?$ canli.php [L,QSA]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^canli/([^/]+)/?$ canli.php?c=$1 [L,QSA]
+
     # Video haberler (30.10.2026)
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

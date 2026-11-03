@@ -436,6 +436,22 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
             </div>
         </div>
     <?php endif; ?>
+
+    <?php
+    /* CANLI ANLATIM BANDI (03.11.2026; bkz. includes/canli.php): acik
+       anlatim varsa her sayfanin ustunde; anlatimin kendi sayfasinda yok. */
+    require_once __DIR__ . '/canli.php';
+    $canliBant = canli_aciklar(1)[0] ?? null;
+    ?>
+    <?php if ($canliBant !== null && ($_GET['c'] ?? '') !== $canliBant['slug']): ?>
+        <a class="canli-bant" href="<?= e(canli_yolu((string) $canliBant['slug'])) ?>">
+            <span class="sinirli canli-bant-ic">
+                <span class="canli-rozet">Canlı</span>
+                <span class="canli-bant-baslik"><?= e((string) $canliBant['baslik']) ?></span>
+                <span class="canli-bant-git">Takip et →</span>
+            </span>
+        </a>
+    <?php endif; ?>
 <?php endif; ?>
 
     <main class="sinirli">
