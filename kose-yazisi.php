@@ -102,6 +102,11 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <?= kose_icerik_html((string) $yazi['icerik']) ?>
     </div>
 
+    <?php /* Paylasim ve WhatsApp kanali (03.11.2026; bkz. includes/paylas.php). */ ?>
+    <?php require_once __DIR__ . '/includes/paylas.php'; ?>
+    <?= str_replace('Bu haberi paylaşın', 'Bu yazıyı paylaşın', paylas_cubugu_html((string) $yazi['baslik'], kose_yolu((string) $yazi['slug']), 'alt')) ?>
+    <?= whatsapp_kanal_html() ?>
+
     <?php if ($dayanaklar !== []): ?>
         <section class="kose-dayanak">
             <h2>Yazının dayandığı haberler</h2>

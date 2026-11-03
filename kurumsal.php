@@ -148,9 +148,11 @@ require __DIR__ . '/includes/sayfa_ust.php';
                     <?php if ($kunye[$anahtar] !== ''): ?>
                         <div>
                             <dt><?= e($alan['etiket']) ?></dt>
-                            <dd><?= $anahtar === 'kunye_eposta'
-                                ? '<a href="mailto:' . e($kunye[$anahtar]) . '">' . e($kunye[$anahtar]) . '</a>'
-                                : nl2br(e($kunye[$anahtar])) ?></dd>
+                            <dd><?= match ($anahtar) {
+                                'kunye_eposta'   => '<a href="mailto:' . e($kunye[$anahtar]) . '">' . e($kunye[$anahtar]) . '</a>',
+                                'kunye_whatsapp' => '<a href="' . e($kunye[$anahtar]) . '" target="_blank" rel="noopener">Kanala katılın</a>',
+                                default          => nl2br(e($kunye[$anahtar])),
+                            } ?></dd>
                         </div>
                     <?php endif; ?>
                 <?php endforeach; ?>

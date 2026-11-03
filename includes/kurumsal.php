@@ -40,6 +40,10 @@ function kunye_alanlari(): array
         'kunye_telefon'       => ['etiket' => 'Telefon',
                                   'ipucu'  => 'İsteğe bağlı.',
                                   'cok_satir' => false],
+        // WhatsApp kanali (03.11.2026): girilirse her haberin altinda "Kanala katil" kutusu (bkz. includes/paylas.php).
+        'kunye_whatsapp'      => ['etiket' => 'WhatsApp kanalı',
+                                  'ipucu'  => 'Valentra WhatsApp kanalının bağlantısı (https://whatsapp.com/channel/...). Girilirse her haberin ve köşe yazısının altında "Kanala katıl" kutusu çıkar.',
+                                  'cok_satir' => false],
         'kunye_yer_saglayici' => ['etiket' => 'Yer sağlayıcı',
                                   'ipucu'  => 'Barındırma firmasının ticaret unvanı ve adresi (ör. hosting faturasındaki unvan).',
                                   'cok_satir' => true],
