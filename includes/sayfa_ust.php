@@ -62,6 +62,12 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/assets/ikon-180.png">
+    <?php /* Kurulabilir site ve tarayici bildirimi (03.11.2026; bkz. /sw.js, includes/web_push.php). */ ?>
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#1f1f23">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Valentra">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <?php /* Gece/gunduz modu: ziyaretcinin sectigi tema stil dosyasindan
              ONCE uygulaniyor, yoksa sayfa bir an yanlis renkte gorunup
              sonra degisirdi. Secim yoksa sistem ayari gecerli. */ ?>

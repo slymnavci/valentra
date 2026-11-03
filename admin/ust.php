@@ -98,6 +98,8 @@
                     'Köşe yazıları'   => 'kose-yazilari.php',
                     // Valentra Network (31.10.2026): uye yorumlari ve uyeler.
                     'V Network' => 'yorumlar.php',
+                    // Tarayici bildirimleri (Web Push; 03.11.2026).
+                    'Bildirimler'     => 'bildirimler.php',
                     'Grafikler'       => 'grafikler.php',
                 ],
                 'Ajan ve aktarım' => [

@@ -18,11 +18,17 @@
             <span>&copy; <?= date('Y') ?> Valentra — Güncel Haberler</span>
             <span>Haberler, kaynaklarına atıf ve bağlantıyla özet olarak yayımlanır.</span>
         </div>
+        <div class="sinirli alt-bant-uygulama">
+            <button type="button" class="alt-bant-dugme" data-bildirim-dugme hidden>🔔 Son dakika bildirimlerini aç</button>
+            <button type="button" class="alt-bant-dugme" data-uygulama-dugme hidden>📲 Valentra uygulamasını yükle</button>
+        </div>
     </footer>
     <?php endif; ?>
 <?php /* Ziyaretin tarayicida dogrulanmasi; bkz. includes/ziyaret.php */ ?>
 <?= function_exists('sayfa_onbellek_ziyaret_betigi') ? sayfa_onbellek_ziyaret_betigi() : (function_exists('ziyaret_betigi') ? ziyaret_betigi() : '') ?>
 <?php require_once __DIR__ . '/olcum_reklam.php'; ?>
 <?= cerez_bildirimi_html() ?>
+<?php require_once __DIR__ . '/web_push.php'; ?>
+<script src="<?= e(varlik('/assets/bildirim.js')) ?>" data-anahtar="<?= e(push_acik_vapid()) ?>" defer></script>
 </body>
 </html>
