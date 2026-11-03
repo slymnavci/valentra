@@ -23,8 +23,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $eposta = trim((string) ($_POST['kunye_eposta'] ?? ''));
 
+    $whatsapp = trim((string) ($_POST['kunye_whatsapp'] ?? ''));
+
     if ($eposta !== '' && filter_var($eposta, FILTER_VALIDATE_EMAIL) === false) {
         $hata = 'E-posta adresi geçerli değil.';
+    } elseif ($whatsapp !== '' && preg_match('#^https://(www\.)?whatsapp\.com/channel/[A-Za-z0-9_-]{10,}/?$#', $whatsapp) !== 1) {
+        $hata = 'WhatsApp kanalı adresi https://whatsapp.com/channel/... biçiminde olmalı (WhatsApp → Güncellemeler → kanalınız → Kanal bağlantısı).';
     } else {
         foreach (kunye_alanlari() as $anahtar => $alan) {
             $deger = trim(str_replace("\r\n", "\n", (string) ($_POST[$anahtar] ?? '')));

@@ -6287,3 +6287,52 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 }
 .alt-bant-dugme:hover:not(:disabled) { border-color: var(--vurgu); color: var(--vurgu); }
 .alt-bant-dugme:disabled { cursor: default; opacity: .75; }
+
+/* --- Paylasim dugmeleri ve WhatsApp kanali (03.11.2026; bkz. includes/paylas.php) --- */
+.paylas { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.paylas-dugme {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-width: 40px; height: 40px; padding: 0 10px; border-radius: 999px;
+    border: 1px solid var(--cizgi); background: var(--kart); color: var(--metin);
+    font: inherit; font-size: .9rem; font-weight: 700; text-decoration: none; cursor: pointer;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.paylas-dugme[hidden] { display: none; }
+.paylas-dugme:hover, .paylas-dugme:focus-visible { border-color: currentColor; text-decoration: none; }
+.paylas-whatsapp { color: #128c4a; }
+.paylas-x { color: var(--metin); }
+.paylas-facebook { color: #1877f2; }
+.paylas-telegram { color: #229ed9; }
+.paylas-dugme.kopyalandi { background: var(--metin); color: var(--kart); border-color: var(--metin); }
+.paylas-ust { margin: 6px 0 18px; }
+.paylas-ust .paylas-dugme { min-width: 36px; height: 36px; padding: 0 8px; }
+.paylas-alt {
+    margin: 26px 0 8px; padding: 14px 16px; border: 1px solid var(--cizgi); border-radius: 12px; background: var(--zemin);
+}
+.paylas-etiket { flex-basis: 100%; font-size: .78rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--metin-soluk); }
+.paylas-alt .paylas-whatsapp { background: #25d366; border-color: #25d366; color: #fff; padding: 0 16px; }
+.paylas-alt .paylas-whatsapp:hover { background: #1ebe5b; border-color: #1ebe5b; color: #fff; }
+@media (prefers-color-scheme: dark) {
+    :root:not([data-tema="acik"]) .paylas-ust .paylas-whatsapp { color: #4be08a; }
+    :root:not([data-tema="acik"]) .paylas-facebook { color: #6ea8ff; }
+}
+:root[data-tema="koyu"] .paylas-ust .paylas-whatsapp { color: #4be08a; }
+:root[data-tema="koyu"] .paylas-facebook { color: #6ea8ff; }
+
+.wa-kanal {
+    display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+    margin: 12px 0 8px; padding: 14px 16px; border-radius: 12px;
+    background: color-mix(in srgb, #25d366 10%, var(--kart)); border: 1px solid color-mix(in srgb, #25d366 40%, var(--cizgi));
+}
+.wa-kanal-simge { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: #25d366; color: #fff; }
+.wa-kanal-simge svg { width: 24px; height: 24px; }
+.wa-kanal strong { display: block; }
+.wa-kanal div span { color: var(--metin-soluk); font-size: .9rem; }
+.wa-kanal a {
+    padding: 9px 16px; border-radius: 999px; background: #128c4a; color: #fff; font-weight: 800; text-decoration: none; white-space: nowrap;
+}
+.wa-kanal a:hover { background: #0e7a40; color: #fff; }
+@media (max-width: 560px) {
+    .wa-kanal { grid-template-columns: auto 1fr; }
+    .wa-kanal a { grid-column: 1 / -1; text-align: center; }
+}

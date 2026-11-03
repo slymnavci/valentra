@@ -65,6 +65,10 @@ foreach (($govdeVeri ?? []) as $ad => $deger) {
 
     </div>
 
+    <?php /* Paylasim (03.11.2026; bkz. includes/paylas.php): kunyenin altinda kucuk simgeler. */ ?>
+    <?php require_once __DIR__ . '/paylas.php'; ?>
+    <?= paylas_cubugu_html((string) $haber['baslik'], haber_yolu((string) $haber['slug']), 'ust') ?>
+
     <?php if ($haberGorseli !== ''): ?>
         <?php // Sayfada kucuk kopya; asil dosya paylasim gorseli ve yapisal veride.
               // Kaydirinca gelen haberde gorsel tembel yukleniyor. ?>
@@ -225,6 +229,10 @@ foreach (($govdeVeri ?? []) as $ad => $deger) {
     <div class="icerik">
         <?= $metinHtml ?>
     </div>
+
+    <?php /* Metnin sonunda buyuk paylasim cubugu ve WhatsApp kanali (03.11.2026). */ ?>
+    <?= paylas_cubugu_html((string) $haber['baslik'], haber_yolu((string) $haber['slug']), 'alt') ?>
+    <?= whatsapp_kanal_html() ?>
 
     <?php
     // Reklam alani (AdSense panelden tanimliysa; bkz. includes/olcum_reklam.php).

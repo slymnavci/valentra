@@ -30,5 +30,7 @@
 <?= cerez_bildirimi_html() ?>
 <?php require_once __DIR__ . '/web_push.php'; ?>
 <script src="<?= e(varlik('/assets/bildirim.js')) ?>" data-anahtar="<?= e(push_acik_vapid()) ?>" defer></script>
+<?php /* Paylasim dugmeleri (03.11.2026; bkz. includes/paylas.php). */ ?>
+<script src="<?= e(varlik('/assets/paylas.js')) ?>" defer></script>
 </body>
 </html>
