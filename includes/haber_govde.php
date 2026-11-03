@@ -100,6 +100,10 @@ foreach (($govdeVeri ?? []) as $ad => $deger) {
         </section>
     <?php endif; ?>
 
+    <?php /* Gundem dosyasi (03.11.2026; bkz. includes/konu.php): ic baglanti. */ ?>
+    <?php require_once __DIR__ . '/konu.php'; ?>
+    <?= konu_haber_kutusu_html($haber) ?>
+
     <?php
     /*
      * VALENTRA ANALIZ — haberin "bana ne" karsiligi.

@@ -214,8 +214,8 @@ final class Yazar implements SemaliIstemci
              skor ve isimleri kaynaktaki gibi ver; kaynakta yoksa
              uydurma. Eksik ya da belirsiz bir ayrıntıyı ajan notunda
              editöre bildir.
-           - Türkçe, sade ve kurumsal dil. Ünlem, abartı ve tıklama
-             tuzağı başlık kullanma.
+           - Türkçe, sade ve kurumsal dil. Ünlem ve abartı yok; başlık
+             merak uyandırabilir ama yanıltamaz (bkz. BAŞLIK).
            - ÇIKTININ TAMAMI TÜRKÇE: başlık, özet, metin, etiketler, red
              nedeni ve ajan notu. Kaynak yabancı dildeyse de Türkçe
              yazarsın; cümle cümle çevirme, anlayıp aktar. Kurum ve kişi
@@ -239,8 +239,25 @@ final class Yazar implements SemaliIstemci
              bildirdi") ve ajan notuna yaz. Yalnızca BİR kaynakta geçen
              iddiayı kesin bilgi gibi yazma, kime ait olduğunu söyle.
            - Paragrafları BOŞ SATIRLA ayır.
-           - Başlık en fazla 90 karakter, olguyu bildirsin; soru ya da
-             merak uyandırma kalıbı kullanma.
+           - BAŞLIK — KISA, VURUCU, MERAK UYANDIRAN (site sahibinin
+             kararı, 03.11.2026; okur habere tıklasın, ayrıntı içeride):
+             * En fazla 60 karakter, ideali 6-8 kelime.
+             * Kim ne yaptı / ne oldu, net ve canlı. En çarpıcı ayrıntıyı
+               (rakam, sonuç, isim) başlıkta vermek ŞART DEĞİL; habere
+               bırakabilirsin. Örnekler: "TÜİK ekim enflasyonunu
+               açıkladı", "Merkez Bankası faiz kararını verdi",
+               "Fenerbahçe'de Kartal dönemi bitti", "Akaryakıta yeni zam
+               kapıda", "Asgari ücrette ilk rakam masada".
+             * Kaynağın başlığını kopyalama ya da çevirme; kendi başlığını
+               yaz.
+             * Merak, metinde KARŞILIĞI OLAN bir bilgiyle giderilmeli:
+               başlık yanıltmaz, abartmaz, metinde olmayanı vaat etmez.
+               YASAK: "şok", "flaş", "bomba", "skandal", "inanamayacaksınız",
+               "bakın ne oldu", "herkes bunu konuşuyor"; kişi ya da kurum
+               hakkında ima ve suçlama. Soru başlığı ancak metin o soruyu
+               açıkça cevaplıyorsa.
+             * Spot (özet) başlığı tamamlar: konuyu bir adım açar, ama ana
+               rakamı ya da sonucu yine metne bırakabilir.
            - Özet (spot) tek cümle, en fazla 200 karakter.
            - Etiketler: 2-4 adet, konu terimleri (örnek: TBMM, Süper Lig,
              enflasyon, yapay zekâ). Kişi adlarını etiket yapma.
@@ -285,7 +302,22 @@ final class Yazar implements SemaliIstemci
           kararı, enflasyon verisi, büyük afetler, seçim sonuçları,
           Türkiye'de can kaybı olan terör saldırıları, çok sayıda ölü ya da
           yaralının olduğu kazalar, Türkiye'yi doğrudan etkileyen büyük
-          uluslararası olaylar.
+          uluslararası olaylar. Site sahibinin özellikle saydıkları
+          (okuyucusu en çok olanlar; hepsi en az 88):
+          * Açıklanan enflasyon oranları (TÜİK, aylık ve yıllık TÜFE/ÜFE):
+            o günün EN önemli haberi (95-100).
+          * Zam oranları: emekli zammı, memur ve öğretmen maaş artışı,
+            asgari ücret, kamu işçisi zammı, vergi ve harç artışları,
+            elektrik/doğalgaz/akaryakıt zamları (90-100).
+          * Cumhurbaşkanının konuşması ve açıklamaları; devlet
+            yönetiminden (Cumhurbaşkanlığı, hükümet, bakanlar) gelen resmî
+            açıklama ve kararlar (88-96).
+          * Türkiye'yi ilgilendiren savaş ve krizlerdeki gelişmeler:
+            İran-ABD-İsrail çatışması, Rusya-Ukrayna savaşı, Gazze;
+            Türkiye-Yunanistan, Türkiye-İsrail meseleleri (88-96). Rutin,
+            yeni bilgi içermeyen açıklama 75-85.
+          * Çok sayıda ölü ya da yaralının olduğu kaza ve afetler; ölü
+            sayısı arttıkça puan artar (88-100).
         - 70-84: Türkiye siyaseti ve gündemi: partilerin ve hükümetin
           politika içeren açıklamaları, bakanlık kararları, önemli
           diplomatik görüşmeler; ölüm ya da yaralanmalı kazalar ve
@@ -364,8 +396,8 @@ final class Yazar implements SemaliIstemci
             anlamaya yetmiyorsa.
         - YAZIM — KISA: Bu bir video haberidir, uzun haber değil.
           "TÜM AYRINTILAR" ve "UZUNLUK" kuralları burada UYGULANMAZ.
-          * baslik: olayı ve yerini söyleyen kısa bir başlık (en fazla 90
-            karakter). Örnek: "Malatya'da kurt sürüsü köye indi".
+          * baslik: olayı ve yerini söyleyen kısa, vurucu bir başlık (en
+            fazla 60 karakter). Örnek: "Malatya'da kurt sürüsü köye indi".
           * ozet: tek cümle.
           * icerik: 2-4 cümle, tek paragraf (açıklama zenginse en fazla
             iki kısa paragraf). Ne oldu, nerede, ne zaman (biliniyorsa),
@@ -429,7 +461,7 @@ final class Yazar implements SemaliIstemci
             'sira'        => ['type' => 'integer', 'description' => 'Adayin kullanici mesajindaki sira numarasi'],
             'ilgili'      => ['type' => 'boolean', 'description' => 'Haber yayın politikasına göre yayımlanabilir mi'],
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
-            'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı, en fazla 90 karakter'],
+            'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı: kısa, vurucu, merak uyandıran; en fazla 60 karakter, ayrıntı metinde'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
             'icerik'      => ['type' => 'string',  'description' => 'Tarafsız, özgün cümlelerle yeniden yazılmış haber metni: kaynaktaki bütün ayrıntılar (rakam, tarih, isim, açıklama, arka plan); kaynak zenginse 5-10, kısaysa 3 paragraf; paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
             'etiketler'   => [
@@ -472,7 +504,7 @@ final class Yazar implements SemaliIstemci
         'properties' => [
             'ilgili'      => ['type' => 'boolean', 'description' => 'Haber yayın politikasına göre yayımlanabilir mi'],
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
-            'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı, en fazla 90 karakter'],
+            'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı: kısa, vurucu, merak uyandıran; en fazla 60 karakter, ayrıntı metinde'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
             'icerik'      => ['type' => 'string',  'description' => 'Tarafsız, özgün cümlelerle yeniden yazılmış haber metni: kaynaktaki bütün ayrıntılar (rakam, tarih, isim, açıklama, arka plan); kaynak zenginse 5-10, kısaysa 3 paragraf; paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
             'etiketler'   => [

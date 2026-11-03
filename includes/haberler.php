@@ -1606,6 +1606,9 @@ function haber_onayla(int $id, int $yoneticiId): bool
         // Son dakika ya da onemli haber: tarayici bildirimi (03.11.2026; bkz. includes/web_push.php).
         require_once __DIR__ . '/web_push.php';
         push_haber_yayinlandi($id);
+        // Ayni olcutle Telegram kanalina (03.11.2026; bkz. includes/telegram.php).
+        require_once __DIR__ . '/telegram.php';
+        telegram_haber_yayinlandi($id);
 
         return true;
     }
@@ -1704,6 +1707,9 @@ function haber_otomatik_yayinla(int $id): bool
     // Son dakika ya da onemli haber: tarayici bildirimi (03.11.2026; bkz. includes/web_push.php).
     require_once __DIR__ . '/web_push.php';
     push_haber_yayinlandi($id);
+    // Ayni olcutle Telegram kanalina (03.11.2026; bkz. includes/telegram.php).
+    require_once __DIR__ . '/telegram.php';
+    telegram_haber_yayinlandi($id);
 
     return true;
 }
@@ -1788,6 +1794,9 @@ function haber_durum_degistir(int $id, string $durum): bool
         // Son dakika ya da onemli haber: tarayici bildirimi (03.11.2026; bkz. includes/web_push.php).
         require_once __DIR__ . '/web_push.php';
         push_haber_yayinlandi($id);
+        // Ayni olcutle Telegram kanalina (03.11.2026; bkz. includes/telegram.php).
+        require_once __DIR__ . '/telegram.php';
+        telegram_haber_yayinlandi($id);
     }
 
     return $ifade->rowCount() > 0;

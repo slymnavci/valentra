@@ -90,6 +90,10 @@ if (!haber_google_sunulur_mu($haber)) {
 
 require_once __DIR__ . '/includes/kurumsal.php';
 
+// Esik ustu yeni deprem varsa haber (en fazla uc dakikada bir; bkz. includes/deprem.php).
+require_once __DIR__ . '/includes/deprem.php';
+deprem_denetle_sayfa_sonunda();
+
 $ilgililer = haber_ilgililer($haber, 6);
 
 // Gorsel sitenin kendi sunucusundan (bkz. includes/gorsel_onbellek.php).
@@ -251,6 +255,8 @@ $govdeVeri = [
                     var tam = location.origin + adres;
                     gtag('set', { page_location: tam, page_title: baslik, page_referrer: oncekiAdres });
                     gtag('event', 'page_view', { page_location: tam, page_title: baslik, page_referrer: oncekiAdres });
+                    // Akisin olcusu (panel > Google Analytics > Okur davranisi): kaydirmayla acilan haber.
+                    gtag('event', 'sonraki_haber', { haber_sirasi: Object.keys(gaSayilan).length + 1 });
                 }
                 oncekiAdres = location.origin + adres;
             }

@@ -251,6 +251,56 @@ require __DIR__ . '/ust.php';
         <?php endforeach; ?>
     <?php endif; ?>
 
+    <?php
+    /*
+     * OKUR DAVRANISI (03.11.2026): kaydirma akisi isliyor mu, okur kac
+     * haber okuyor, bulten ve Telegram ne kadar okur getiriyor.
+     */
+    if ($rapor['ozet'] !== []):
+        $oz      = $rapor['ozet'];
+        $olay    = $rapor['olaylar'] + ['g7' => [], 'o7' => []];
+        $akis7   = (int) ($olay['g7']['sonraki_haber'] ?? 0);
+        $akisO7  = (int) ($olay['o7']['sonraki_haber'] ?? 0);
+        $pv7     = max(1, (int) ($olay['g7']['page_view'] ?? $oz['g7']['goruntuleme']));
+        $okurBasi  = $oz['g7']['oturum'] > 0 ? $oz['g7']['goruntuleme'] / $oz['g7']['oturum'] : 0.0;
+        $okurBasiO = $oz['o7']['oturum'] > 0 ? $oz['o7']['goruntuleme'] / $oz['o7']['oturum'] : 0.0;
+        $organik = 0;
+
+        foreach ($rapor['kanallar'] as $k) {
+            $organik += $k['ad'] === 'Organic Search' ? $k['oturum'] : 0;
+        }
+
+        $kendi = $rapor['kendi'];
+    ?>
+        <div class="kutu" style="margin-top:20px;">
+            <h2 style="margin-top:0;">Okur davranışı <span class="ipucu" style="font-weight:400;">(son 7 gün; önceki 7 günle)</span></h2>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;">
+                <?php foreach ([
+                    ['Oturum başına sayfa', number_format($okurBasi, 2, ',', '.'), $degisim($okurBasi, $okurBasiO), 'Bir okur bir ziyarette ortalama kaç sayfa açtı.'],
+                    ['Kaydırmayla açılan haber', $sayi($akis7), $degisim($akis7, $akisO7), 'Haberin altından sıradaki habere geçiş.'],
+                    ['Akışın payı', '%' . number_format($akis7 * 100 / $pv7, 1, ',', '.'), '', 'Bütün sayfa görüntülemelerinin kaçı kaydırmayla geldi.'],
+                ] as [$ad, $deger, $fark, $ipucu]): ?>
+                    <div style="padding:12px 14px;border:1px solid var(--cizgi);border-radius:8px;">
+                        <div class="ipucu"><?= e($ad) ?></div>
+                        <div style="font-size:1.5rem;font-weight:800;"><?= e($deger) ?> <?= $fark ?></div>
+                        <div class="ipucu" style="font-size:.8rem;"><?= e($ipucu) ?></div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <h3 style="margin:18px 0 8px;font-size:1rem;">Okur getiren kanallarımız <span class="ipucu" style="font-weight:400;">(28 gün, oturum)</span></h3>
+            <table class="liste-tablo">
+                <thead><tr><th>Kanal</th><th class="sag">Oturum</th><th class="sag">Sayfa görüntüleme</th></tr></thead>
+                <tbody>
+                    <tr><td>Google araması (organik)</td><td class="sag"><?= $sayi($organik) ?></td><td class="sag">—</td></tr>
+                    <tr><td>E-posta bülteni</td><td class="sag"><?= $sayi($kendi['bulten']['oturum'] ?? 0) ?></td><td class="sag"><?= $sayi($kendi['bulten']['goruntuleme'] ?? 0) ?></td></tr>
+                    <tr><td>Telegram kanalı</td><td class="sag"><?= $sayi($kendi['telegram_kanal']['oturum'] ?? 0) ?></td><td class="sag"><?= $sayi($kendi['telegram_kanal']['goruntuleme'] ?? 0) ?></td></tr>
+                </tbody>
+            </table>
+            <p class="ipucu" style="margin:8px 0 0;">Kaydırma ölçümü 3 Kasım 2026'dan itibaren; bülten ve Telegram, kuruldukları günden itibaren görünür.</p>
+        </div>
+    <?php endif; ?>
+
     <?php if ($rapor['gunluk'] !== []): ?>
         <?php $enYuksek = max(1, max(array_column($rapor['gunluk'], 'goruntuleme'))); ?>
         <div class="kutu" style="margin-top:20px;">

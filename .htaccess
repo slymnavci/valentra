@@ -203,6 +203,18 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^etiket/([^/]+)/?$ etiket.php?e=$1 [L,QSA,B]
 
+    # Son depremler (03.11.2026; bkz. includes/deprem.php)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^son-depremler/?$ deprem.php [L,QSA]
+    # Gundem dosyalari (03.11.2026; bkz. includes/konu.php)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^konular/?$ konu.php [L,QSA]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^konu/([a-z0-9-]+)/?$ konu.php?k=$1 [L,QSA]
+
     # Piyasalar (Ekonomi menusu, 22.10.2026)
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
