@@ -6490,3 +6490,26 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
     .deprem-tablo { font-size: .88rem; }
     .deprem-tablo th, .deprem-tablo td { padding: 7px 5px; }
 }
+/* Gundem dosyalari (03.11.2026; konu.php) */
+.konu-kutu { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin: 18px 0; padding: 12px 14px; border-left: 4px solid var(--vurgu); background: var(--kart, #fff); border-radius: 6px; }
+.konu-kutu span { font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--vurgu); }
+.konu-kutu a { font-weight: 600; color: var(--metin); }
+.konu-guncel { font-size: .88rem; color: var(--metin-soluk); }
+.konu-son { padding: 16px 18px; border: 1px solid var(--cizgi); border-radius: 10px; background: var(--kart, #fff); margin-bottom: 26px; }
+.konu-son h2, .konu-zaman h2, .konu-diger h2 { font-size: 1.05rem; margin: 0 0 10px; }
+.konu-son-baslik { display: block; font-size: 1.25rem; font-weight: 700; color: var(--metin); line-height: 1.3; }
+.konu-son time, .konu-zaman time { display: block; font-size: .85rem; color: var(--metin-soluk); margin: 4px 0; }
+.konu-neden { border-top: 1px solid var(--cizgi); padding-top: 10px; }
+.konu-zaman ol { list-style: none; margin: 0; padding: 0 0 0 16px; border-left: 2px solid var(--cizgi); }
+.konu-zaman li { position: relative; padding: 0 0 18px 10px; }
+.konu-zaman li::before { content: ""; position: absolute; left: -23px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--vurgu); }
+.konu-zaman li a { font-weight: 600; color: var(--metin); }
+.konu-zaman li p { margin: 4px 0 0; color: var(--metin-soluk); font-size: .93rem; }
+.konu-diger { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.konu-diger h2 { flex-basis: 100%; }
+.konu-diger a { color: var(--vurgu); }
+.konu-liste { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.konu-liste li { padding: 14px 16px; border: 1px solid var(--cizgi); border-radius: 10px; background: var(--kart, #fff); }
+.konu-liste a { display: block; font-weight: 700; color: var(--metin); font-size: 1.05rem; }
+.konu-liste span { font-size: .85rem; color: var(--metin-soluk); }
+.alt-bant-konular { flex-wrap: wrap; }
