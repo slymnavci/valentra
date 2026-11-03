@@ -55,7 +55,12 @@ function olcum_head_html(): string
         return '';
     }
 
-    $html = "<script>\nwindow.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\n"
+    // vzGecmis: tarayicinin kendi pushState/replaceState'i, gtag.js yuklenmeden
+    // once saklaniyor. Haber akisi (haber.php) adres cubugunu bunlarla
+    // degistiriyor; Analytics'in "gecmis olaylari" dinleyicisi ayni degisikligi
+    // ikinci kez saymasin, sayfa goruntulemesini akis betigi kendisi gonderiyor.
+    $html = "<script>\nwindow.vzGecmis = {p: history.pushState, r: history.replaceState};\n"
+        . "window.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\n"
         . "gtag('consent', 'default', {ad_storage: 'denied', analytics_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied'});\n"
         . "try { if (localStorage.getItem('vz_cerez') === 'evet') { gtag('consent', 'update', {ad_storage: 'granted', analytics_storage: 'granted', ad_user_data: 'granted', ad_personalization: 'granted'}); } } catch (e) {}\n"
         . "</script>\n";
