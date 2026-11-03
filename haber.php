@@ -251,6 +251,8 @@ $govdeVeri = [
                     var tam = location.origin + adres;
                     gtag('set', { page_location: tam, page_title: baslik, page_referrer: oncekiAdres });
                     gtag('event', 'page_view', { page_location: tam, page_title: baslik, page_referrer: oncekiAdres });
+                    // Akisin olcusu (panel > Google Analytics > Okur davranisi): kaydirmayla acilan haber.
+                    gtag('event', 'sonraki_haber', { haber_sirasi: Object.keys(gaSayilan).length + 1 });
                 }
                 oncekiAdres = location.origin + adres;
             }
