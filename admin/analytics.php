@@ -294,7 +294,7 @@ require __DIR__ . '/ust.php';
                 <tbody>
                     <tr><td>Google araması (organik)</td><td class="sag"><?= $sayi($organik) ?></td><td class="sag">—</td></tr>
                     <tr><td>E-posta bülteni</td><td class="sag"><?= $sayi($kendi['bulten']['oturum'] ?? 0) ?></td><td class="sag"><?= $sayi($kendi['bulten']['goruntuleme'] ?? 0) ?></td></tr>
-                    <tr><td>Telegram kanalı</td><td class="sag"><?= $sayi($kendi['telegram']['oturum'] ?? 0) ?></td><td class="sag"><?= $sayi($kendi['telegram']['goruntuleme'] ?? 0) ?></td></tr>
+                    <tr><td>Telegram kanalı</td><td class="sag"><?= $sayi($kendi['telegram_kanal']['oturum'] ?? 0) ?></td><td class="sag"><?= $sayi($kendi['telegram_kanal']['goruntuleme'] ?? 0) ?></td></tr>
                 </tbody>
             </table>
             <p class="ipucu" style="margin:8px 0 0;">Kaydırma ölçümü 3 Kasım 2026'dan itibaren; bülten ve Telegram, kuruldukları günden itibaren görünür.</p>

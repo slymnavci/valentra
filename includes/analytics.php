@@ -221,7 +221,7 @@ function ga_raporlar(bool $zorla = false): array
             'dateRanges' => [$son28],
             'dimensions' => [['name' => 'sessionSource']],
             'metrics'    => [['name' => 'sessions'], ['name' => 'screenPageViews']],
-            'dimensionFilter' => ['filter' => ['fieldName' => 'sessionSource', 'inListFilter' => ['values' => ['bulten', 'telegram']]]],
+            'dimensionFilter' => ['filter' => ['fieldName' => 'sessionSource', 'inListFilter' => ['values' => ['bulten', 'telegram_kanal']]]],
         ],
     ]]);
 
