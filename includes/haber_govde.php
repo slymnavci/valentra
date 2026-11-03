@@ -233,6 +233,9 @@ foreach (($govdeVeri ?? []) as $ad => $deger) {
     <?php /* Metnin sonunda buyuk paylasim cubugu ve WhatsApp kanali (03.11.2026). */ ?>
     <?= paylas_cubugu_html((string) $haber['baslik'], haber_yolu((string) $haber['slug']), 'alt') ?>
     <?= whatsapp_kanal_html() ?>
+    <?php /* Gunluk e-posta bulteni (03.11.2026; bkz. includes/bulten.php). */ ?>
+    <?php require_once __DIR__ . '/bulten.php'; ?>
+    <?= bulten_kutu_html('haber') ?>
 
     <?php
     // Reklam alani (AdSense panelden tanimliysa; bkz. includes/olcum_reklam.php).

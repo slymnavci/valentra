@@ -102,6 +102,8 @@
                     'V Network' => 'yorumlar.php',
                     // Tarayici bildirimleri (Web Push; 03.11.2026).
                     'Bildirimler'     => 'bildirimler.php',
+                    // Gunluk e-posta bulteni (03.11.2026).
+                    'E-posta bülteni' => 'bulten.php',
                     'Grafikler'       => 'grafikler.php',
                 ],
                 'Ajan ve aktarım' => [

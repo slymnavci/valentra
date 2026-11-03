@@ -43,7 +43,7 @@ function eposta_ayarlari(): array
  * E-posta gonderir; basarisizlikta RuntimeException (mesaj panelde
  * gosteriliyor, uyeye degil).
  */
-function eposta_gonder(string $kime, string $konu, string $duzMetin, string $html): void
+function eposta_gonder(string $kime, string $konu, string $duzMetin, string $html, array $ekBasliklar = []): void
 {
     if (!filter_var($kime, FILTER_VALIDATE_EMAIL) || preg_match('/[\r\n]/', $kime)) {
         throw new RuntimeException('Alıcı adresi geçersiz.');
@@ -63,6 +63,14 @@ function eposta_gonder(string $kime, string $konu, string $duzMetin, string $htm
         'MIME-Version: 1.0',
         'Content-Type: multipart/alternative; boundary="' . $sinir . '"',
     ];
+
+    // Ek basliklar (bulten: List-Unsubscribe; 03.11.2026). Satir sonu
+    // iceren baslik kabul edilmiyor (baslik enjeksiyonu).
+    foreach ($ekBasliklar as $ekBaslik) {
+        if (is_string($ekBaslik) && !preg_match('/[\r\n]/', $ekBaslik) && preg_match('/^[A-Za-z-]+: /', $ekBaslik)) {
+            $basliklar[] = $ekBaslik;
+        }
+    }
 
     $govde = '--' . $sinir . "\r\n"
            . "Content-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"

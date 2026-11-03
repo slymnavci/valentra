@@ -36,6 +36,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 require_once __DIR__ . '/../includes/web_push.php';
 push_bekleyen_varsa_devam();
 
+// Gunluk e-posta bulteni: saati geldiyse sayfa sonunda hazirla/gonder (03.11.2026; bkz. includes/bulten.php).
+require_once __DIR__ . '/../includes/bulten.php';
+bulten_zamani_geldiyse();
+
 $id      = (int) ($_POST['id'] ?? 0);
 $imza    = (string) ($_POST['t'] ?? '');
 $anahtar = strtolower((string) ($_POST['k'] ?? ''));
