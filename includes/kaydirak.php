@@ -48,12 +48,13 @@ if (($mansetler ?? []) === []) {
 
                         <h2><?= e($haber['baslik']) ?></h2>
 
-                        <?php if ($haber['ozet'] !== ''): ?>
-                            <p class="ozet"><?= e(kisalt($haber['ozet'], 170)) ?></p>
-                        <?php endif; ?>
-
+                        <?php /* Ozet yok (site sahibi, 03.11.2026: "kayar slayttaki haberler
+                                 kisa olsun, detay vermeyelim; okumak isteyen haberin icine
+                                 tiklasin; baslik biraz daha buyuk olsun, merak uyandirsin").
+                                 Yalnizca baslik, saat ve "Haberi oku" cagrisi. */ ?>
                         <div class="kunye">
-                            <?= e(tarih_bicimle($haber['yayin_tarihi'])) ?>
+                            <span><?= e(tarih_bicimle($haber['yayin_tarihi'])) ?></span>
+                            <span class="kaydirak-oku" aria-hidden="true">Haberi oku →</span>
                         </div>
                     </div>
                 </a>
