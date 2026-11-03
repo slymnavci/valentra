@@ -476,7 +476,7 @@ jobs:
 
       # Aciklayici yazi (28.10.2026, site sahibinin istegi: ozgun haber):
       # Search Console firsat sorgusuna, sitede en az iki ilgili haber varsa
-      # yalnizca o haberlerden "nedir, nasil" yazisi. Gunde bir; doluysa
+      # yalnizca o haberlerden "nedir, nasil" yazisi. Gunde uc (calisma basina bir); doluysa
       # model cagrilmiyor. Yazi onay bekliyor. Isin kalan suresine gore.
       - name: Aciklayici yazi
         if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'gunluk') }}
