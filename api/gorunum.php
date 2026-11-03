@@ -31,6 +31,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     exit;
 }
 
+// Bitmemis bildirim gonderimi varsa sayfa sonunda bir parti daha
+// (03.11.2026; bkz. includes/web_push.php). Ucuz denetim: tek ayar okumasi.
+require_once __DIR__ . '/../includes/web_push.php';
+push_bekleyen_varsa_devam();
+
 $id      = (int) ($_POST['id'] ?? 0);
 $imza    = (string) ($_POST['t'] ?? '');
 $anahtar = strtolower((string) ($_POST['k'] ?? ''));

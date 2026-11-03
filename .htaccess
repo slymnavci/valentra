@@ -290,4 +290,15 @@
     <FilesMatch "^[0-9a-f]{40}(-\d+)?\.(webp|jpe?g|png|gif|avif)$">
         Header set Cache-Control "public, max-age=31536000, immutable"
     </FilesMatch>
+    # Service worker ve uygulama tanimi (03.11.2026): surumsuz adreste
+    # duruyorlar, degisiklik hemen ulassin diye onbelleksiz. FilesMatch
+    # yukaridaki .js kuralindan sonra geldigi icin onun yerine geciyor.
+    <FilesMatch "^(sw\.js|manifest\.webmanifest)$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+</IfModule>
+
+# Uygulama taniminin turu (03.11.2026). IfModule: modul yoksa site dusmesin.
+<IfModule mod_mime.c>
+    AddType application/manifest+json .webmanifest
 </IfModule>
