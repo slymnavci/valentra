@@ -130,7 +130,7 @@ function ga_satirlar(array $rapor): array
  */
 function ga_raporlar(bool $zorla = false): array
 {
-    $bos = ['zaman' => 0, 'hata' => '', 'ozet' => [], 'gunluk' => [], 'sayfalar' => [], 'kanallar' => [], 'kaynaklar' => [], 'cihazlar' => [], 'sehirler' => []];
+    $bos = ['zaman' => 0, 'hata' => '', 'ozet' => [], 'gunluk' => [], 'sayfalar' => [], 'kanallar' => [], 'kaynaklar' => [], 'cihazlar' => [], 'sehirler' => [], 'olaylar' => [], 'kendi' => []];
     $onbellek = json_decode(ayar_oku('ga_rapor_onbellek'), true);
 
     if (!$zorla && is_array($onbellek) && (int) ($onbellek['zaman'] ?? 0) > time() - GA_RAPOR_SURE && ($onbellek['mulk'] ?? '') === ga_mulk()) {
@@ -202,6 +202,27 @@ function ga_raporlar(bool $zorla = false): array
             'orderBys'   => [['metric' => ['metricName' => 'activeUsers'], 'desc' => true]],
             'limit'      => 12,
         ],
+        /*
+         * Okur davranisi (03.11.2026): kaydirma akisinda acilan haber
+         * (haber.php "sonraki_haber" olayi) ve butun sayfa goruntulemeleri,
+         * son 7 gun ve onceki 7 gun.
+         */
+        [
+            'dateRanges' => [
+                ['startDate' => '6daysAgo', 'endDate' => 'today', 'name' => 'g7'],
+                ['startDate' => '13daysAgo', 'endDate' => '7daysAgo', 'name' => 'o7'],
+            ],
+            'dimensions' => [['name' => 'eventName']],
+            'metrics'    => [['name' => 'eventCount']],
+            'dimensionFilter' => ['filter' => ['fieldName' => 'eventName', 'inListFilter' => ['values' => ['sonraki_haber', 'page_view']]]],
+        ],
+        // Kendi kanallarimiz: bulten ve Telegram (utm_source), 28 gun.
+        [
+            'dateRanges' => [$son28],
+            'dimensions' => [['name' => 'sessionSource']],
+            'metrics'    => [['name' => 'sessions'], ['name' => 'screenPageViews']],
+            'dimensionFilter' => ['filter' => ['fieldName' => 'sessionSource', 'inListFilter' => ['values' => ['bulten', 'telegram_kanal']]]],
+        ],
     ]]);
 
     $r = (array) ($birinci['veri']['reports'] ?? []);
@@ -240,9 +261,32 @@ function ga_raporlar(bool $zorla = false): array
         'cihazlar' => array_map(static fn (array $s): array => ['ad' => $s['b'][0] ?? '', 'kullanici' => (int) $s['m'][0]], ga_satirlar((array) ($r[4] ?? []))),
         'kaynaklar' => array_map(static fn (array $s): array => ['ad' => $s['b'][0] ?? '', 'oturum' => (int) $s['m'][0]], ga_satirlar((array) ($r2[0] ?? []))),
         'sehirler' => array_map(static fn (array $s): array => ['ad' => $s['b'][0] ?? '', 'kullanici' => (int) $s['m'][0]], ga_satirlar((array) ($r2[1] ?? []))),
+        'olaylar'  => ga_olay_sayilari((array) ($r2[2] ?? [])),
+        'kendi'    => array_column(array_map(static fn (array $s): array => [
+            'ad' => $s['b'][0] ?? '', 'oturum' => (int) ($s['m'][0] ?? 0), 'goruntuleme' => (int) ($s['m'][1] ?? 0),
+        ], ga_satirlar((array) ($r2[3] ?? []))), null, 'ad'),
     ];
 
     ayar_yaz('ga_rapor_onbellek', (string) json_encode($sonuc, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+    return $sonuc;
+}
+
+/**
+ * Olay sayıları, dönemlere göre: ['g7' => ['page_view' => n, 'sonraki_haber' => n], 'o7' => ...].
+ * Birden çok tarih aralığında GA "dateRange" boyutunu kendisi ekliyor.
+ *
+ * @return array<string,array<string,int>>
+ */
+function ga_olay_sayilari(array $rapor): array
+{
+    $sonuc = ['g7' => [], 'o7' => []];
+
+    foreach (ga_satirlar($rapor) as $s) {
+        $olay  = $s['b'][0] ?? '';
+        $donem = $s['b'][1] ?? 'g7';
+        $sonuc[$donem][$olay] = (int) ($s['m'][0] ?? 0);
+    }
 
     return $sonuc;
 }
