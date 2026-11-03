@@ -433,7 +433,7 @@ jobs:
       # Derleme haberler (28.10.2026, site sahibinin karari): ayni olayi
       # veren birden cok yayinin haberlerinden ozgun haber; Google'a
       # yalnizca bunlar sunuluyor (bkz. includes/derleme.php). Gunde en
-      # fazla 20, bir calismada en fazla 5; saat 07'den itibaren. Kose
+      # fazla 40, bir calismada en fazla 8 (03.11.2026: %70 ozgun); saat 07'den itibaren. Kose
       # yazilarindan SONRA ve isin kalan suresiyle (5 dk pay, en fazla 15).
       # Hepsi onaya duser.
       - name: Derleme haberleri yaz
@@ -472,7 +472,7 @@ jobs:
             KALAN=15
           fi
 
-          php derle.php $BAYRAKLAR --sure=$KALAN --en-fazla=5
+          php derle.php $BAYRAKLAR --sure=$KALAN --en-fazla=8
 
       # Aciklayici yazi (28.10.2026, site sahibinin istegi: ozgun haber):
       # Search Console firsat sorgusuna, sitede en az iki ilgili haber varsa

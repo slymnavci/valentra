@@ -1761,6 +1761,13 @@ function haber_bugunku_taslaklari_yayinla_arada(): void
         // Ana sayfa bu yuzden dusmemeli; bir sonraki acilista yeniden.
         error_log('[valentra] otomatik yayin: ' . $e->getMessage());
     }
+
+    // Google'a sunulan haberlerde %70 ozgun (bkz. haber_ozgun_kotasini_dagit).
+    try {
+        haber_ozgun_kotasini_dagit();
+    } catch (Throwable $e) {
+        error_log('[valentra] ozgun kota: ' . $e->getMessage());
+    }
 }
 
 /**
@@ -2465,6 +2472,12 @@ function haber_google_sunulur_mu(array $haber): bool
         return false;
     }
 
+    // %70 ozgun kurali (bkz. HABER_OZGUN_HEDEF_YUZDE): ozgun haber her
+    // zaman, tek kaynakli haber yalnizca kotaya girdiyse.
+    if (HABER_OZGUN_KOTASI_ACIK && array_key_exists('google_kota', $haber)) {
+        return haber_ozgun_mu($haber) || (int) $haber['google_kota'] === 1;
+    }
+
     if (!HABER_YALNIZCA_OZGUN_DIZINDE) {
         return true;
     }
@@ -2496,11 +2509,200 @@ function haber_dizinlenir_kosulu(string $takma = ''): string
            : '(CHAR_LENGTH(' . $p . 'icerik)' . ($neden ? ' + CHAR_LENGTH(' . $p . 'neden_onemli)' : '')
              . ' >= ' . HABER_INCE_KARAKTER . ')';
 
-    if (HABER_YALNIZCA_OZGUN_DIZINDE) {
+    if (HABER_OZGUN_KOTASI_ACIK && haber_sutun_var('google_kota')) {
+        $kosul .= ' AND (' . haber_ozgun_kosulu($takma) . ' OR ' . $p . 'google_kota = 1)';
+    } elseif (HABER_YALNIZCA_OZGUN_DIZINDE) {
         $kosul .= ' AND (' . ($derleme ? $p . 'derleme = 1 OR ' : '') . $p . "kaynak_url = '' OR " . $p . "ajan_modeli LIKE 'valentra-%')";
     }
 
     return $kosul;
+}
+
+/* ------------------------------------------------------------------ *
+ * GOOGLE'A SUNULANLARIN %70'I OZGUN (site sahibinin karari, 03.11.2026:
+ * "ozgun icerik payini artir, %70 ozgun icerik olsun; haberleri
+ * Google'in kabul edecegi olcude ozgunlestirelim").
+ *
+ * Search Console'da yuzlerce haber "Tarandi - dizine eklenmemis":
+ * Google tek bir yayinin haberinin ozetini, aslinin kopyasi sayip
+ * almiyor; bu sayfalarin cokluguyla butun sitenin kalitesini dusuk
+ * degerlendiriyor. Bu yuzden Google'a sunulan haberlerin en az
+ * HABER_OZGUN_HEDEF_YUZDE'si ozgun:
+ *
+ *   OZGUN (haber_ozgun_mu): derleme haber; birden cok yayinin metninden
+ *   yazilan haber (derleme_kaynaklari dolu); sitenin kendi verisinden ya
+ *   da panelde yazilan haber (Valentra Veri, Dosya; kaynak adresi yok).
+ *
+ *   TEK KAYNAKLI haberler kalan paya (ozgun sayisinin 30/70'i) onem ve
+ *   tazelige gore giriyor (google_kota = 1). Search Console'da tiklama ya
+ *   da en az HABER_KOTA_KORUMA_GOSTERIM gosterim alan sayfa her durumda
+ *   korunuyor: trafik getiren sayfa dizinden cikmiyor.
+ *
+ * Kotaya girmeyen haber okuyucu icin sitede yayinda kaliyor; yalnizca
+ * "noindex, follow" ve site haritalarinin disinda. Kota bes dakikada bir
+ * (ana sayfa) ve site haritasi istendiginde yeniden hesaplaniyor.
+ * ------------------------------------------------------------------ */
+
+/** false: eski davranis (bkz. HABER_YALNIZCA_OZGUN_DIZINDE). */
+const HABER_OZGUN_KOTASI_ACIK = true;
+
+/** Google'a sunulan haberlerde özgün payı (yüzde). */
+const HABER_OZGUN_HEDEF_YUZDE = 70;
+
+/** Bu kadar gösterim alan tek kaynaklı sayfa kotadan bağımsız dizinde kalır. */
+const HABER_KOTA_KORUMA_GOSTERIM = 20;
+
+/** Tek kaynaklı haberin tazelik cezası: her gün için önem puanından düşülen. */
+const HABER_KOTA_GUNLUK_CEZA = 6;
+
+/** @param array<string,mixed> $haber */
+function haber_ozgun_mu(array $haber): bool
+{
+    return haber_derleme_mi($haber)
+        || trim((string) ($haber['kaynak_url'] ?? '')) === ''
+        || str_starts_with((string) ($haber['ajan_modeli'] ?? ''), 'valentra-')
+        || trim((string) ($haber['derleme_kaynaklari'] ?? '')) !== '';
+}
+
+/** haber_ozgun_mu'nun SQL karşılığı (sütunu olmayan koşul girmiyor). */
+function haber_ozgun_kosulu(string $takma = ''): string
+{
+    $p = $takma !== '' ? $takma . '.' : '';
+    $parca = [$p . "kaynak_url = ''", $p . "ajan_modeli LIKE 'valentra-%'"];
+
+    if (haber_sutun_var('derleme')) {
+        $parca[] = $p . 'derleme = 1';
+    }
+
+    if (haber_sutun_var('derleme_kaynaklari')) {
+        $parca[] = '(' . $p . 'derleme_kaynaklari IS NOT NULL AND ' . $p . "derleme_kaynaklari <> '')";
+    }
+
+    return '(' . implode(' OR ', $parca) . ')';
+}
+
+/**
+ * Search Console'da trafik alan sayfaların haber adları (slug).
+ *
+ * @return array<string,bool>
+ */
+function haber_kota_korunanlar(): array
+{
+    require_once __DIR__ . '/ayarlar.php';
+
+    $veri = json_decode(ayar_oku('gsc_sayfalar'), true);
+    $korunan = [];
+
+    foreach (is_array($veri) ? ($veri['satirlar'] ?? []) : [] as $r) {
+        if (!is_array($r) || ((int) ($r['tiklama'] ?? 0) < 1 && (int) ($r['gosterim'] ?? 0) < HABER_KOTA_KORUMA_GOSTERIM)) {
+            continue;
+        }
+
+        $adres = (string) ($r['anahtar'][0] ?? '');
+        $yol   = (string) parse_url($adres, PHP_URL_PATH);
+
+        if (preg_match('~/haber/([^/]+)/?$~', $yol, $m) === 1) {
+            $korunan[rawurldecode($m[1])] = true;
+        }
+
+        parse_str((string) parse_url($adres, PHP_URL_QUERY), $q);
+
+        if (is_string($q['h'] ?? null) && $q['h'] !== '') {
+            $korunan[$q['h']] = true;
+        }
+    }
+
+    return $korunan;
+}
+
+/**
+ * Tek kaynaklı haberlerin Google kotasını yeniden dağıtır.
+ *
+ * @return array{ozgun:int,tek:int,kota:int,secilen:int,korunan:int,oran:float}|null
+ *         null: sütun yok ya da süresi dolmadı
+ */
+function haber_ozgun_kotasini_dagit(bool $zorla = false): ?array
+{
+    if (!HABER_OZGUN_KOTASI_ACIK || !haber_sutun_var('google_kota')) {
+        return null;
+    }
+
+    require_once __DIR__ . '/ayarlar.php';
+
+    if (!$zorla && time() - (int) ayar_oku('haber_kota_son', '0') < 240) {
+        return null;
+    }
+
+    ayar_yaz('haber_kota_son', (string) time());
+
+    $ince   = HABER_KISA_DA_DIZINDE ? '1 = 1' : 'CHAR_LENGTH(icerik) + CHAR_LENGTH(neden_onemli) >= ' . HABER_INCE_KARAKTER;
+    $ozgunK = haber_ozgun_kosulu();
+
+    $ozgun = (int) db()->query(
+        "SELECT COUNT(*) FROM haberler WHERE durum = 'yayinda' AND " . $ince . ' AND ' . $ozgunK
+    )->fetchColumn();
+
+    $tekler = db()->query(
+        "SELECT id, slug, onem, google_kota, TIMESTAMPDIFF(HOUR, yayin_tarihi, NOW()) AS saat
+           FROM haberler
+          WHERE durum = 'yayinda' AND " . $ince . ' AND NOT ' . $ozgunK
+    )->fetchAll();
+
+    $korunanAd = haber_kota_korunanlar();
+    $kota      = intdiv($ozgun * (100 - HABER_OZGUN_HEDEF_YUZDE), HABER_OZGUN_HEDEF_YUZDE);
+
+    // Once trafik alan sayfalar, sonra onem eksi tazelik cezasi.
+    usort($tekler, static function (array $a, array $b) use ($korunanAd): int {
+        $ka = isset($korunanAd[$a['slug']]) ? 1 : 0;
+        $kb = isset($korunanAd[$b['slug']]) ? 1 : 0;
+
+        if ($ka !== $kb) {
+            return $kb <=> $ka;
+        }
+
+        $pa = (int) $a['onem'] - max(0, (int) $a['saat']) / 24 * HABER_KOTA_GUNLUK_CEZA;
+        $pb = (int) $b['onem'] - max(0, (int) $b['saat']) / 24 * HABER_KOTA_GUNLUK_CEZA;
+
+        return $pb <=> $pa ?: (int) $b['id'] <=> (int) $a['id'];
+    });
+
+    $ac = $kapat = [];
+    $secilen = $korunan = 0;
+
+    foreach ($tekler as $t) {
+        $koru = isset($korunanAd[$t['slug']]);
+        $sec  = $koru || $secilen < $kota;
+
+        if ($sec) {
+            $secilen++;
+            $korunan += $koru ? 1 : 0;
+        }
+
+        if ($sec && (int) $t['google_kota'] !== 1) {
+            $ac[] = (int) $t['id'];
+        } elseif (!$sec && (int) $t['google_kota'] !== 0) {
+            $kapat[] = (int) $t['id'];
+        }
+    }
+
+    foreach ([1 => $ac, 0 => $kapat] as $deger => $idler) {
+        foreach (array_chunk($idler, 500) as $parca) {
+            db()->exec('UPDATE haberler SET google_kota = ' . $deger . ' WHERE id IN (' . implode(',', $parca) . ')');
+        }
+    }
+
+    $toplam = $ozgun + $secilen;
+    $ozet = [
+        'ozgun'   => $ozgun,
+        'tek'     => count($tekler),
+        'kota'    => $kota,
+        'secilen' => $secilen,
+        'korunan' => $korunan,
+        'oran'    => $toplam > 0 ? round($ozgun * 100 / $toplam, 1) : 0.0,
+    ];
+    ayar_yaz('haber_kota_ozet', (string) json_encode($ozet + ['zaman' => time()]));
+
+    return $ozet;
 }
 
 function haber_sutun_var(string $sutun): bool

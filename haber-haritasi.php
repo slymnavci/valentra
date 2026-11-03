@@ -24,6 +24,13 @@ header('Cache-Control: public, max-age=300');
 
 $taban = site_adresi();
 
+// %70 ozgun kotasi taze olsun (bkz. haber_ozgun_kotasini_dagit).
+try {
+    haber_ozgun_kotasini_dagit();
+} catch (Throwable $e) {
+    error_log('[valentra] ozgun kota: ' . $e->getMessage());
+}
+
 $haberler = db()->query(
     'SELECT slug, baslik, yayin_tarihi
        FROM haberler

@@ -21,7 +21,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/haberler.php';
 
 /** Günde en fazla bu kadar derleme (reddedilen sayılmaz). */
-const DERLEME_GUNLUK_TAVAN = 20;
+// 20'den 40'a (03.11.2026, site sahibi: "%70 ozgun icerik olsun").
+const DERLEME_GUNLUK_TAVAN = 40;
 
 /** Bir derlemenin dayanması gereken en az farklı kaynak. */
 const DERLEME_ASGARI_KAYNAK = 2;
