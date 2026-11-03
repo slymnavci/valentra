@@ -18,6 +18,7 @@ require_once __DIR__ . '/includes/kurumsal.php';
 require_once __DIR__ . '/includes/pratik.php';
 require_once __DIR__ . '/includes/piyasalar.php';
 require_once __DIR__ . '/includes/deprem.php';
+require_once __DIR__ . '/includes/konu.php';
 
 header('Content-Type: application/xml; charset=utf-8');
 
@@ -158,6 +159,23 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
             <changefreq>daily</changefreq>
             <priority>0.6</priority>
         </url>
+    <?php endforeach; ?>
+
+    <?php /* Gundem dosyalari: yeterli haberi olanlar (bkz. KONU_DIZIN_ASGARI). */ ?>
+    <url>
+        <loc><?= e($taban . konu_yolu()) ?></loc>
+        <changefreq>daily</changefreq>
+        <priority>0.6</priority>
+    </url>
+    <?php foreach (konu_ozetleri() as $konuSlug => $konuOzet): ?>
+        <?php if ($konuOzet['sayi'] >= KONU_DIZIN_ASGARI): ?>
+        <url>
+            <loc><?= e($taban . konu_yolu($konuSlug)) ?></loc>
+            <lastmod><?= e(date('c', strtotime($konuOzet['son']))) ?></lastmod>
+            <changefreq>daily</changefreq>
+            <priority>0.8</priority>
+        </url>
+        <?php endif; ?>
     <?php endforeach; ?>
 
     <url>
