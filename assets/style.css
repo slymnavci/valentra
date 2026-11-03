@@ -6462,3 +6462,31 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 }
 .senin-dugmeler button.ana, .senin-tanit button.ana { background: var(--vurgu); border-color: var(--vurgu); color: #fff; }
 .senin-yukleniyor, .senin-bos { color: var(--metin-soluk); }
+/* Son depremler (03.11.2026; deprem.php) */
+.deprem-ozet { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 18px; }
+.deprem-ozet > div { flex: 1 1 160px; background: var(--kart, #fff); border: 1px solid var(--cizgi, #e5e5e5); border-radius: 10px; padding: 12px 14px; }
+.deprem-ozet strong { display: block; font-size: 1.6rem; line-height: 1.1; }
+.deprem-ozet span { color: var(--metin-soluk, #666); font-size: .9rem; overflow-wrap: anywhere; }
+.deprem-haberler { margin: 0 0 18px; }
+.deprem-haberler h2 { font-size: 1.05rem; margin: 0 0 8px; }
+.deprem-haberler ul { margin: 0; padding-left: 18px; }
+.deprem-haberler li { margin: 4px 0; }
+.deprem-haberler time { color: var(--metin-soluk, #666); font-size: .85rem; margin-left: 6px; }
+.deprem-tablo-kap { overflow-x: auto; }
+.deprem-tablo { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.deprem-tablo th, .deprem-tablo td { padding: 8px 10px; border-bottom: 1px solid var(--cizgi, #e5e5e5); text-align: left; vertical-align: top; }
+.deprem-tablo th { font-size: .82rem; text-transform: uppercase; letter-spacing: .03em; color: var(--metin-soluk, #666); }
+.deprem-tablo td small { display: block; color: var(--metin-soluk, #666); }
+.deprem-b { display: inline-block; min-width: 2.6em; text-align: center; font-weight: 700; border-radius: 6px; padding: 2px 6px; background: rgba(127,127,127,.12); }
+.deprem-tablo tr.b3 .deprem-b { background: #fde9a8; color: #5a4300; }
+.deprem-tablo tr.b4 .deprem-b { background: #f8b27a; color: #4a1f00; }
+.deprem-tablo tr.b5 .deprem-b { background: #d93025; color: #fff; }
+.deprem-tablo tr.b4 td, .deprem-tablo tr.b5 td { font-weight: 600; }
+@media (max-width: 600px) {
+    .deprem-ozet { gap: 8px; }
+    .deprem-ozet > div { flex: 1 1 0; min-width: 0; padding: 10px; }
+    .deprem-ozet strong { font-size: 1.3rem; }
+    .deprem-ozet span { font-size: .78rem; }
+    .deprem-tablo { font-size: .88rem; }
+    .deprem-tablo th, .deprem-tablo td { padding: 7px 5px; }
+}
