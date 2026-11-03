@@ -285,7 +285,22 @@ final class Yazar implements SemaliIstemci
           kararı, enflasyon verisi, büyük afetler, seçim sonuçları,
           Türkiye'de can kaybı olan terör saldırıları, çok sayıda ölü ya da
           yaralının olduğu kazalar, Türkiye'yi doğrudan etkileyen büyük
-          uluslararası olaylar.
+          uluslararası olaylar. Site sahibinin özellikle saydıkları
+          (okuyucusu en çok olanlar; hepsi en az 88):
+          * Açıklanan enflasyon oranları (TÜİK, aylık ve yıllık TÜFE/ÜFE):
+            o günün EN önemli haberi (95-100).
+          * Zam oranları: emekli zammı, memur ve öğretmen maaş artışı,
+            asgari ücret, kamu işçisi zammı, vergi ve harç artışları,
+            elektrik/doğalgaz/akaryakıt zamları (90-100).
+          * Cumhurbaşkanının konuşması ve açıklamaları; devlet
+            yönetiminden (Cumhurbaşkanlığı, hükümet, bakanlar) gelen resmî
+            açıklama ve kararlar (88-96).
+          * Türkiye'yi ilgilendiren savaş ve krizlerdeki gelişmeler:
+            İran-ABD-İsrail çatışması, Rusya-Ukrayna savaşı, Gazze;
+            Türkiye-Yunanistan, Türkiye-İsrail meseleleri (88-96). Rutin,
+            yeni bilgi içermeyen açıklama 75-85.
+          * Çok sayıda ölü ya da yaralının olduğu kaza ve afetler; ölü
+            sayısı arttıkça puan artar (88-100).
         - 70-84: Türkiye siyaseti ve gündemi: partilerin ve hükümetin
           politika içeren açıklamaları, bakanlık kararları, önemli
           diplomatik görüşmeler; ölüm ya da yaralanmalı kazalar ve
