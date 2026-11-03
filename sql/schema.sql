@@ -2486,3 +2486,48 @@ CREATE TABLE IF NOT EXISTS canli_girisler (
     KEY ix_canli_giris (anlatim_id, id),
     CONSTRAINT fk_canli_giris FOREIGN KEY (anlatim_id) REFERENCES canli_anlatimlar (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Gunluk e-posta bulteni (03.11.2026, bkz. includes/bulten.php)
+-- ---------------------------------------------------------------------------
+-- Abone iki asamali: adresini yazar (bekliyor), e-postadaki onay
+-- baglantisina tiklar (aktif). anahtar onay ve iptal baglantilarinda;
+-- her e-postada tek tikla abonelikten cikma var.
+CREATE TABLE IF NOT EXISTS bulten_aboneleri (
+    id          INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    eposta      VARCHAR(190)  NOT NULL,
+    anahtar     CHAR(32)      NOT NULL,
+    durum       ENUM('bekliyor','aktif','iptal') NOT NULL DEFAULT 'bekliyor',
+    ip          VARCHAR(45)   NOT NULL DEFAULT '',
+    olusturuldu DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    onay_gonderildi DATETIME  NULL,
+    onaylandi   DATETIME      NULL,
+    ayrildi     DATETIME      NULL,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_bulten_eposta (eposta),
+    UNIQUE KEY uq_bulten_anahtar (anahtar),
+    KEY ix_bulten_durum (durum, id),
+    KEY ix_bulten_ip (ip, olusturuldu)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Her gunun bulteni bir satir: icerik bir kez hazirlaniyor, aboneler
+-- parti parti gonderiliyor (son_abone kalinan yer).
+CREATE TABLE IF NOT EXISTS bulten_sayilari (
+    id          INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    gun         DATE          NOT NULL,
+    konu        VARCHAR(200)  NOT NULL,
+    html        MEDIUMTEXT    NOT NULL,
+    metin       MEDIUMTEXT    NOT NULL,
+    durum       ENUM('gonderiliyor','bitti') NOT NULL DEFAULT 'gonderiliyor',
+    hedef       INT UNSIGNED  NOT NULL DEFAULT 0,
+    gonderilen  INT UNSIGNED  NOT NULL DEFAULT 0,
+    hata        INT UNSIGNED  NOT NULL DEFAULT 0,
+    son_hata    VARCHAR(300)  NOT NULL DEFAULT '',
+    son_abone   INT UNSIGNED  NOT NULL DEFAULT 0,
+    olusturuldu DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    bitti       DATETIME      NULL,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_bulten_gun (gun)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

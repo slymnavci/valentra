@@ -6399,3 +6399,28 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 .canli-liste a { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 14px 16px; border: 1px solid var(--cizgi); border-radius: 12px; background: var(--kart); color: var(--metin); text-decoration: none; }
 .canli-liste a:hover { border-color: var(--vurgu); }
 .canli-liste .ipucu { flex-basis: 100%; }
+
+/* --- Gunluk e-posta bulteni (03.11.2026; bkz. includes/bulten.php) ------- */
+.bulten-kutu {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 12px 18px; align-items: center;
+    margin: 12px 0 8px; padding: 16px 18px; border-radius: 12px; border: 1px solid var(--cizgi);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--vurgu) 7%, var(--kart)), var(--kart));
+}
+.bulten-kutu-metin strong { display: block; font-size: 1.02rem; }
+.bulten-kutu-metin span { color: var(--metin-soluk); font-size: .9rem; line-height: 1.45; }
+.bulten-form { display: flex; gap: 8px; }
+.bulten-form input[type="email"] {
+    flex: 1; min-width: 0; font: inherit; padding: 10px 12px; border-radius: 8px;
+    border: 1px solid var(--cizgi); background: var(--kart); color: var(--metin);
+}
+.bulten-form button, .bulten-cik {
+    font: inherit; font-weight: 800; padding: 10px 16px; border: 0; border-radius: 8px;
+    background: var(--vurgu); color: #fff; cursor: pointer; white-space: nowrap;
+}
+.bulten-tuzak { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+@media (max-width: 760px) { .bulten-kutu { grid-template-columns: minmax(0, 1fr); } }
+.bulten-kutu > * { min-width: 0; }
+.bulten-sayfa { max-width: 720px; margin: 24px auto; background: var(--kart); border: 1px solid var(--cizgi); border-radius: 14px; padding: clamp(18px, 3vw, 34px); }
+.bulten-sayfa h1 { margin-top: 0; }
+.bulten-sonuc p { line-height: 1.6; }
+.bulten-sonuc a { color: var(--vurgu); }

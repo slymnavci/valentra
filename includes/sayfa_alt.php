@@ -13,6 +13,7 @@
             <?php foreach (kurumsal_sayfalar() as $kurumsalAnahtar => $kurumsalAd): ?>
                 <a href="<?= e(kurumsal_yolu($kurumsalAnahtar)) ?>"><?= e($kurumsalAd) ?></a>
             <?php endforeach; ?>
+            <a href="/bulten.php">E-posta bülteni</a>
         </nav>
         <div class="sinirli">
             <span>&copy; <?= date('Y') ?> Valentra — Güncel Haberler</span>

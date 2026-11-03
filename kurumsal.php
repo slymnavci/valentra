@@ -175,6 +175,13 @@ require __DIR__ . '/includes/sayfa_ust.php';
                 sayılmaması için rastgele bir kimlik saklanır. Bu kayıtlar 180 gün sonra kendiliğinden
                 silinir ve üçüncü kişilerle paylaşılmaz.</p>
 
+            <h2 id="bulten">E-posta bülteni ve bildirimler</h2>
+            <p>Günlük e-posta bültenine abone olursanız yalnızca e-posta adresiniz saklanır ve yalnızca
+                bülten göndermek için kullanılır; abonelik, size gönderilen onay e-postasındaki bağlantıya
+                tıkladığınızda başlar. Her bültenin altındaki bağlantıyla tek tıkla abonelikten çıkabilirsiniz.
+                Tarayıcı bildirimlerine izin verirseniz tarayıcınızın verdiği abonelik bilgisi (kişisel veri
+                içermeyen bir adres ve anahtar) saklanır; izni tarayıcı ayarlarınızdan istediğiniz an geri alabilirsiniz.</p>
+
             <h2 id="cerezler">Çerezler</h2>
             <ul>
                 <li><strong>Zorunlu:</strong> tema tercihi (açık/koyu) ve çerez tercihiniz tarayıcınızda
