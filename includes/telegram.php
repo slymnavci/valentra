@@ -129,7 +129,7 @@ function telegram_haber_gonder(array $h, bool $sonDakika = false): array
 {
     $a   = telegram_ayarlari();
     $e   = static fn (string $s): string => htmlspecialchars($s, ENT_NOQUOTES, 'UTF-8');
-    $url = site_adresi() . haber_yolu((string) $h['slug']) . '?utm_source=telegram&utm_medium=social&utm_campaign=kanal';
+    $url = site_adresi() . haber_yolu((string) $h['slug']) . '?utm_source=telegram_kanal&utm_medium=social';
 
     $metin = ($sonDakika ? '🔴 <b>SON DAKİKA</b>' . "\n" : '')
         . '<b>' . $e((string) $h['baslik']) . '</b>'

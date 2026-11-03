@@ -96,7 +96,7 @@ require __DIR__ . '/ust.php';
         <input type="checkbox" name="acik" value="1" <?= $a['acik'] ? 'checked' : '' ?>> Açık: önemli haberler yayına girince kanala gönderilsin
     </label>
 
-    <p class="ipucu" style="margin:0;">Gece <?= TELEGRAM_SESSIZ_BAS ?>:00–0<?= TELEGRAM_SESSIZ_BIT ?>:00 arası gönderilmez; günde en fazla <?= TELEGRAM_GUNLUK_TAVAN ?> gönderi. Bağlantılarda <code>utm_source=telegram</code> var: Analytics'te kanaldan gelen okur ayrı görünür.</p>
+    <p class="ipucu" style="margin:0;">Gece <?= TELEGRAM_SESSIZ_BAS ?>:00–0<?= TELEGRAM_SESSIZ_BIT ?>:00 arası gönderilmez; günde en fazla <?= TELEGRAM_GUNLUK_TAVAN ?> gönderi. Bağlantılarda <code>utm_source=telegram_kanal</code> var: Analytics'te kanaldan gelen okur ayrı görünür.</p>
 
     <div><button type="submit" class="dugme dugme-ana">Kaydet</button></div>
 </form>
