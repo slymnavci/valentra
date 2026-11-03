@@ -22,7 +22,8 @@ require_once __DIR__ . '/seo.php';
 require_once __DIR__ . '/ayarlar.php';
 
 const DOSYA_TURLERI       = ['aciklayici'];
-const DOSYA_GUNLUK_TAVAN  = ['aciklayici' => 1];
+// Gunde 3 (03.11.2026, site sahibi: ozgun icerik payi); ajan calisma basina bir yazi yaziyor.
+const DOSYA_GUNLUK_TAVAN  = ['aciklayici' => 3];
 const DOSYA_MODEL_ONEKI   = 'valentra-dosya';
 
 /**
