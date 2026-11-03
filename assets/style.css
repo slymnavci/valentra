@@ -6336,3 +6336,66 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
     .wa-kanal { grid-template-columns: auto 1fr; }
     .wa-kanal a { grid-column: 1 / -1; text-align: center; }
 }
+
+/* --- Canli anlatim (03.11.2026; bkz. includes/canli.php, canli.php) ------- */
+.canli-rozet {
+    display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 4px;
+    background: #d50000; color: #fff; font-size: .74rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    vertical-align: middle;
+}
+.canli-rozet::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%; background: #fff;
+    animation: canli-nabiz 1.4s ease-in-out infinite;
+}
+@keyframes canli-nabiz { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.7); } }
+.canli-bitti-etiket {
+    display: inline-block; padding: 3px 10px; border-radius: 4px; background: var(--zemin); border: 1px solid var(--cizgi);
+    color: var(--metin-soluk); font-size: .74rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+}
+
+.canli-bant { display: block; background: color-mix(in srgb, #d50000 9%, var(--kart)); border-bottom: 1px solid color-mix(in srgb, #d50000 30%, var(--cizgi)); color: var(--metin); text-decoration: none; }
+.canli-bant:hover { background: color-mix(in srgb, #d50000 14%, var(--kart)); }
+.canli-bant-ic { display: flex; align-items: center; gap: 12px; padding-top: 9px; padding-bottom: 9px; }
+.canli-bant-baslik { font-weight: 800; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.canli-bant-git { color: #c40000; font-weight: 800; white-space: nowrap; font-size: .9rem; }
+@media (max-width: 560px) { .canli-bant-git { display: none; } .canli-bant-baslik { white-space: normal; font-size: .92rem; } }
+
+.canli-anlatim { background: var(--kart); border: 1px solid var(--cizgi); border-radius: 14px; padding: clamp(18px, 3vw, 34px); margin-top: 18px; }
+.canli-ust h1 { margin: 12px 0 10px; }
+.canli-bilgi { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 0 0 8px; color: var(--metin-soluk); font-size: .88rem; }
+.canli-nokta { width: 9px; height: 9px; border-radius: 50%; background: #d50000; animation: canli-nabiz 1.4s ease-in-out infinite; }
+.canli-yeni {
+    position: sticky; top: 70px; z-index: 5; margin-left: auto; font: inherit; font-weight: 800; padding: 7px 14px; border-radius: 999px;
+    border: 0; background: #d50000; color: #fff; cursor: pointer; box-shadow: 0 4px 14px rgba(213, 0, 0, .3);
+}
+.canli-akis { position: relative; margin-top: 10px; }
+.canli-akis::before { content: ""; position: absolute; left: 62px; top: 6px; bottom: 6px; width: 2px; background: var(--cizgi); }
+.canli-giris { position: relative; display: grid; grid-template-columns: 52px 1fr; gap: 32px; padding: 16px 0; border-bottom: 1px solid var(--cizgi); scroll-margin-top: 90px; }
+.canli-giris:last-child { border-bottom: 0; }
+.canli-giris::before { content: ""; position: absolute; left: 57px; top: 22px; width: 12px; height: 12px; border-radius: 50%; background: var(--kart); border: 2px solid var(--metin-soluk); }
+.canli-giris.onemli::before { background: #d50000; border-color: #d50000; }
+.canli-giris time { display: flex; flex-direction: column; align-items: flex-end; padding-top: 2px; }
+.canli-saat { font-weight: 800; font-size: 1.05rem; color: var(--metin); }
+.canli-gun { font-size: .75rem; color: var(--metin-soluk); }
+.canli-giris-govde h2 { margin: 0 0 6px; font-size: 1.15rem; line-height: 1.35; }
+.canli-giris-govde p { margin: 0 0 10px; line-height: 1.65; }
+.canli-giris-govde p:last-child { margin-bottom: 0; }
+.canli-giris-govde a { color: var(--vurgu); text-decoration: underline; word-break: break-word; }
+.canli-giris.onemli .canli-giris-govde { padding: 12px 14px; border-radius: 10px; background: color-mix(in srgb, #d50000 7%, var(--kart)); border-left: 3px solid #d50000; }
+.canli-onemli-etiket { display: inline-block; margin-bottom: 6px; font-size: .7rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #c40000; }
+@keyframes canli-geldi { from { background: color-mix(in srgb, #ffd54f 35%, transparent); } to { background: transparent; } }
+.canli-giris.yeni { animation: canli-geldi 2.5s ease-out; }
+@media (max-width: 560px) {
+    .canli-akis::before { left: 46px; }
+    .canli-giris { grid-template-columns: 40px 1fr; gap: 26px; }
+    .canli-giris::before { left: 41px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .canli-rozet::before, .canli-nokta, .canli-giris.yeni { animation: none; }
+}
+
+.canli-sayfa-baslik { display: flex; align-items: center; gap: 12px; }
+.canli-liste { list-style: none; margin: 16px 0; padding: 0; display: grid; gap: 10px; }
+.canli-liste a { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 14px 16px; border: 1px solid var(--cizgi); border-radius: 12px; background: var(--kart); color: var(--metin); text-decoration: none; }
+.canli-liste a:hover { border-color: var(--vurgu); }
+.canli-liste .ipucu { flex-basis: 100%; }

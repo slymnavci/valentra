@@ -77,6 +77,19 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         <priority>0.7</priority>
     </url>
 
+    <?php
+    // Canli anlatimlar (03.11.2026; bkz. includes/canli.php).
+    require_once __DIR__ . '/includes/canli.php';
+    try { $canliHarita = canli_liste(100); } catch (PDOException $e) { $canliHarita = []; }
+    ?>
+    <?php foreach ($canliHarita as $canliSatir): ?>
+        <url>
+            <loc><?= e($taban . canli_yolu((string) $canliSatir['slug'])) ?></loc>
+            <lastmod><?= e(date('c', strtotime((string) $canliSatir['guncellendi']) ?: time())) ?></lastmod>
+            <changefreq><?= $canliSatir['durum'] === 'canli' ? 'always' : 'monthly' ?></changefreq>
+        </url>
+    <?php endforeach; ?>
+
     <?php foreach (array_keys(kurumsal_sayfalar()) as $kurumsalAnahtar): ?>
         <url>
             <loc><?= e($taban . kurumsal_yolu($kurumsalAnahtar)) ?></loc>
