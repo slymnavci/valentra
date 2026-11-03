@@ -17,6 +17,7 @@ require_once __DIR__ . '/includes/seo.php';
 require_once __DIR__ . '/includes/kurumsal.php';
 require_once __DIR__ . '/includes/pratik.php';
 require_once __DIR__ . '/includes/piyasalar.php';
+require_once __DIR__ . '/includes/deprem.php';
 
 header('Content-Type: application/xml; charset=utf-8');
 
@@ -158,6 +159,12 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
             <priority>0.6</priority>
         </url>
     <?php endforeach; ?>
+
+    <url>
+        <loc><?= e($taban . deprem_yolu()) ?></loc>
+        <changefreq>always</changefreq>
+        <priority>0.8</priority>
+    </url>
 
     <url>
         <loc><?= e($taban . piyasalar_yolu()) ?></loc>

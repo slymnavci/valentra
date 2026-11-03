@@ -58,6 +58,10 @@ function site_menusu(): array
     // Video haberler (30.10.2026): videosu olan haberler bir arada.
     $menu[] = ['ad' => 'Video', 'anahtar' => 'video', 'href' => video_yolu(), 'altlar' => []];
 
+    // Son depremler (03.11.2026): AFAD/Kandilli canli liste.
+    require_once __DIR__ . '/deprem.php';
+    $menu[] = ['ad' => 'Son Depremler', 'anahtar' => 'deprem', 'href' => deprem_yolu(), 'altlar' => []];
+
     $menu[] = gazete_menu_ogesi('valmagazin', ['kultur-sanat', 'magazin', 'yemek-tarifleri', 'burc', 'burclar']);
 
     /*

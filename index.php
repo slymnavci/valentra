@@ -60,6 +60,10 @@ ajan_otomatik_tetikle_sayfa_sonunda();
 require_once __DIR__ . '/includes/ajan_teslim.php';
 ajan_teslim_sayfa_sonunda();
 
+// Esik ustu yeni deprem varsa haber (en fazla uc dakikada bir; bkz. includes/deprem.php).
+require_once __DIR__ . '/includes/deprem.php';
+deprem_denetle_sayfa_sonunda();
+
 $mansetler = $sayfa === 1 ? haber_manset($mansetAdet, true) : [];
 $tuketilen = min($mansetAdet, $toplam);
 

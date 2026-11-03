@@ -216,6 +216,10 @@ try {
 
         $ozet['uretim'] = ozgun_haberleri_uret();
 
+        // Deprem haberleri (03.11.2026; bkz. includes/deprem.php).
+        require_once __DIR__ . '/../includes/deprem.php';
+        $ozet['deprem'] = deprem_haberleri_uret();
+
         // Gorselsiz habere konu gorseli (bkz. haber_kategori_gorsellerini_doldur).
         $ozet['kategori_gorseli'] = haber_kategori_gorsellerini_doldur();
     }
