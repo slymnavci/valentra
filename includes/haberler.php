@@ -2481,6 +2481,12 @@ function haber_google_sunulur_mu(array $haber): bool
         return false;
     }
 
+    // Turkiye'yle ilgisi zayif dis haber (bkz. HABER_DUSUK_ILGI); Search
+    // Console'da trafik alan sayfa korunuyor.
+    if (haber_dusuk_ilgi_mi($haber) && !isset(haber_kota_korunanlar()[(string) ($haber['slug'] ?? '')])) {
+        return false;
+    }
+
     // %70 ozgun kurali (bkz. HABER_OZGUN_HEDEF_YUZDE): ozgun haber her
     // zaman, tek kaynakli haber yalnizca kotaya girdiyse.
     if (HABER_OZGUN_KOTASI_ACIK && array_key_exists('google_kota', $haber)) {
@@ -2518,6 +2524,8 @@ function haber_dizinlenir_kosulu(string $takma = ''): string
            : '(CHAR_LENGTH(' . $p . 'icerik)' . ($neden ? ' + CHAR_LENGTH(' . $p . 'neden_onemli)' : '')
              . ' >= ' . HABER_INCE_KARAKTER . ')';
 
+    $kosul .= ' AND ' . haber_dusuk_ilgi_disi_kosulu($takma);
+
     if (HABER_OZGUN_KOTASI_ACIK && haber_sutun_var('google_kota')) {
         $kosul .= ' AND (' . haber_ozgun_kosulu($takma) . ' OR ' . $p . 'google_kota = 1)';
     } elseif (HABER_YALNIZCA_OZGUN_DIZINDE) {
@@ -2525,6 +2533,78 @@ function haber_dizinlenir_kosulu(string $takma = ''): string
     }
 
     return $kosul;
+}
+
+/* ------------------------------------------------------------------ *
+ * TURKIYE'YLE ILGISI ZAYIF DIS HABERLER GOOGLE'A SUNULMUYOR (site
+ * sahibinin karari, 04.11.2026).
+ *
+ * Search Console'da yuzlerce haber "Bulundu, henuz taranmadi": Google
+ * yeni sitenin sinirli tarama butcesini Florida'da ucak kazasi, Alman alt
+ * lig teknik direktoru, Brezilya'da ciftlik dezenfeksiyonu gibi Turk
+ * okurun aramadigi sayfalara harciyor; onemli haberler sirada bekliyor.
+ * Bu kategorilerde onemi esigin altindaki haberler okur icin sitede kaliyor
+ * ama "noindex, follow" ve site haritalarinin disinda. Onem puanini ajan
+ * Turkiye'ye etkisine gore veriyor (Turkiye'yi dogrudan etkileyen dunya
+ * olayi 85+, Turk kulupleri 45-60, yabanci ligler 30-45).
+ * ------------------------------------------------------------------ */
+
+/** Kategori (ve alt kategorileri) => Google'a sunulmak için gereken en az önem. */
+const HABER_DUSUK_ILGI = ['dunya' => 60, 'spor' => 45];
+
+/** @return array<int,int> kategori id => eşik */
+function haber_dusuk_ilgi_kategorileri(): array
+{
+    static $esik = null;
+
+    if ($esik !== null) {
+        return $esik;
+    }
+
+    $esik = [];
+
+    try {
+        $satirlar = db()->query('SELECT id, slug, ust_id FROM kategoriler')->fetchAll();
+    } catch (Throwable $e) {
+        return $esik;
+    }
+
+    $slugId = array_column($satirlar, 'id', 'slug');
+
+    foreach ($satirlar as $k) {
+        $ana = (string) $k['slug'];
+
+        if (!isset(HABER_DUSUK_ILGI[$ana]) && !empty($k['ust_id'])) {
+            $ana = (string) (array_search((int) $k['ust_id'], array_map('intval', $slugId), true) ?: '');
+        }
+
+        if (isset(HABER_DUSUK_ILGI[$ana])) {
+            $esik[(int) $k['id']] = HABER_DUSUK_ILGI[$ana];
+        }
+    }
+
+    return $esik;
+}
+
+/** @param array<string,mixed> $haber */
+function haber_dusuk_ilgi_mi(array $haber): bool
+{
+    $esik = haber_dusuk_ilgi_kategorileri()[(int) ($haber['kategori_id'] ?? 0)] ?? null;
+
+    return $esik !== null && (int) ($haber['onem'] ?? 50) < $esik;
+}
+
+/** haber_dusuk_ilgi_mi'nin tersinin SQL karşılığı ("bu haber düşük ilgili değil"). */
+function haber_dusuk_ilgi_disi_kosulu(string $takma = ''): string
+{
+    $p = $takma !== '' ? $takma . '.' : '';
+    $parca = [];
+
+    foreach (haber_dusuk_ilgi_kategorileri() as $id => $esik) {
+        $parca[] = '(COALESCE(' . $p . 'kategori_id, 0) = ' . (int) $id . ' AND COALESCE(' . $p . 'onem, 50) < ' . (int) $esik . ')';
+    }
+
+    return $parca === [] ? '(1 = 1)' : 'NOT (' . implode(' OR ', $parca) . ')';
 }
 
 /* ------------------------------------------------------------------ *
@@ -2644,7 +2724,8 @@ function haber_ozgun_kotasini_dagit(bool $zorla = false): ?array
 
     ayar_yaz('haber_kota_son', (string) time());
 
-    $ince   = HABER_KISA_DA_DIZINDE ? '1 = 1' : 'CHAR_LENGTH(icerik) + CHAR_LENGTH(neden_onemli) >= ' . HABER_INCE_KARAKTER;
+    $ince   = (HABER_KISA_DA_DIZINDE ? '1 = 1' : 'CHAR_LENGTH(icerik) + CHAR_LENGTH(neden_onemli) >= ' . HABER_INCE_KARAKTER)
+            . ' AND ' . haber_dusuk_ilgi_disi_kosulu();
     $ozgunK = haber_ozgun_kosulu();
 
     $ozgun = (int) db()->query(
