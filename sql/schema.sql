@@ -2572,3 +2572,31 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, kategor
     ('İHA Kayseri',                 'https://www.iha.com.tr',         NULL, 'https://www.iha.com.tr/kayseri-haberleri',                 'web', 'yerel', 'kayseri', 1),
     ('Özgür Kocaeli',               'https://www.ozgurkocaeli.com.tr', 'https://www.ozgurkocaeli.com.tr/rss.xml',             NULL, 'rss', 'yerel', 'kocaeli', 1),
     ('İHA Kocaeli',                 'https://www.iha.com.tr',         NULL, 'https://www.iha.com.tr/kocaeli-haberleri',                 'web', 'yerel', 'kocaeli', 1);
+
+-- ---------------------------------------------------------------------------
+-- Mac ozetleri (04.11.2026, bkz. includes/mac_ozeti.php)
+-- ---------------------------------------------------------------------------
+-- Maclar bittikten sonra YouTube'a dusen ozet videolari. Haber degil:
+-- ana sayfaya ve haber akisina girmiyor; ValSpor > Mac Ozetleri ve her
+-- ozetin kendi sayfasi (YouTube oynaticisi, VideoObject). Ajan resmi
+-- yayinci kanallarinin beslemesinden basliginda "ozet" gecenleri getiriyor.
+CREATE TABLE IF NOT EXISTS mac_ozetleri (
+    id          INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    video_id    VARCHAR(20)   NOT NULL,
+    slug        VARCHAR(220)  NOT NULL,
+    baslik      VARCHAR(300)  NOT NULL,
+    aciklama    VARCHAR(1000) NOT NULL DEFAULT '',
+    kanal       VARCHAR(120)  NOT NULL DEFAULT '',
+    ev          VARCHAR(80)   NOT NULL DEFAULT '',
+    deplasman   VARCHAR(80)   NOT NULL DEFAULT '',
+    skor        VARCHAR(12)   NOT NULL DEFAULT '',
+    yayin       DATETIME      NOT NULL,
+    durum       ENUM('yayinda','gizli') NOT NULL DEFAULT 'yayinda',
+    izlenme     INT UNSIGNED  NOT NULL DEFAULT 0,
+    olusturuldu DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_mac_ozeti_video (video_id),
+    UNIQUE KEY uq_mac_ozeti_slug (slug),
+    KEY ix_mac_ozeti_yayin (durum, yayin)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

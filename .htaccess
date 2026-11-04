@@ -172,6 +172,14 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^kategori/([^/]+)/?$ kategori.php?k=$1 [L,QSA]
 
+    # Mac ozetleri (04.11.2026): /mac-ozetleri, /mac-ozeti/galatasaray-fenerbahce-...
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^mac-ozetleri/?$ mac-ozetleri.php [L,QSA]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^mac-ozeti/([^/]+)/?$ mac-ozetleri.php?o=$1 [L,QSA]
+
     # Canli anlatim (03.11.2026): /canli, /canli/secim-2026
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

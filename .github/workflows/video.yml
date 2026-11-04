@@ -79,6 +79,16 @@ jobs:
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
         run: php video_tarih.php
 
+      # Mac ozetleri (04.11.2026, site sahibi: "maclar bittikten sonra
+      # YouTube'a dusen ozetleri alalim; ana sayfaya koymadan yayinlayalim").
+      # Model kullanilmiyor; yayinci kanallarinin beslemesi okunuyor.
+      - name: Mac ozetlerini topla
+        working-directory: ajan
+        env:
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: php mac_ozetleri.php ${{ inputs.kuru == true && '--kuru' || '' }} || true
+
       - name: Videolu haberleri topla
         working-directory: ajan
         env:

@@ -206,6 +206,13 @@ function gazeteler(): array
                         'dünya kupası', 'mls ', 'messi', 'ronaldo', 'mbappe', 'haaland',
                     ], 'haric' => $sporDisi]],
                 ],
+                // Mac ozetleri (04.11.2026; bkz. includes/mac_ozeti.php): ayri sayfa,
+                // haberlerden degil YouTube ozetlerinden.
+                'mac-ozetleri' => [
+                    'ad'       => 'Maç Özetleri',
+                    'yol'      => ['mac_ozetleri_yolu'],
+                    'anahtar'  => 'valspor-mac-ozetleri',
+                ],
                 'basketbol' => [
                     'ad'       => 'Basketbol',
                     'veri'     => 'basketbol',
@@ -309,6 +316,8 @@ function gazete_bolum_yolu(string $gazete, string $bolum, int $sayfa = 1): strin
             require_once __DIR__ . '/spor_panel.php';
         } elseif ($islev === 'burclar_yolu') {
             require_once __DIR__ . '/burclar.php';
+        } elseif ($islev === 'mac_ozetleri_yolu') {
+            require_once __DIR__ . '/mac_ozeti.php';
         }
 
         return $arguman !== null ? $islev($arguman) : $islev();

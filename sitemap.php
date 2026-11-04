@@ -99,6 +99,25 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         </url>
     <?php endforeach; ?>
 
+    <?php
+    // Mac ozetleri (04.11.2026; bkz. includes/mac_ozeti.php): liste ve son 500 ozet.
+    require_once __DIR__ . '/includes/mac_ozeti.php';
+    try { $ozetHarita = mac_ozeti_liste(100, 0); for ($i = 1; $i < 5 && count($ozetHarita) === 100 * $i; $i++) { $ozetHarita = array_merge($ozetHarita, mac_ozeti_liste(100, 100 * $i)); } } catch (PDOException $e) { $ozetHarita = []; }
+    ?>
+    <?php if ($ozetHarita !== []): ?>
+        <url>
+            <loc><?= e($taban . mac_ozetleri_yolu()) ?></loc>
+            <changefreq>hourly</changefreq>
+            <priority>0.7</priority>
+        </url>
+    <?php endif; ?>
+    <?php foreach ($ozetHarita as $ozetSatir): ?>
+        <url>
+            <loc><?= e($taban . mac_ozeti_yolu((string) $ozetSatir['slug'])) ?></loc>
+            <lastmod><?= e(date('c', strtotime((string) $ozetSatir['yayin']) ?: time())) ?></lastmod>
+        </url>
+    <?php endforeach; ?>
+
     <?php foreach (array_keys(kurumsal_sayfalar()) as $kurumsalAnahtar): ?>
         <url>
             <loc><?= e($taban . kurumsal_yolu($kurumsalAnahtar)) ?></loc>
