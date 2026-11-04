@@ -1192,7 +1192,7 @@ function haber_kategori_gorsellerini_doldur(int $limit = 1000): int
  * Kasten temkinli: "X ile alay ettiler" diye aktarilan bir aciklama da
  * eleniyor; boyle haber elle yazilabilir (panel bu denetime takilmaz).
  */
-const HABER_DEVLET_MAKAMLARI = '/(erdo[gğ]an|cumhurba[sş]kan|ba[sş]bakan|tbmm ba[sş]kan|meclis ba[sş]kan|bakan[ıi]\b|bakanlar[ıi]?\b|valisi\b|genelkurmay|t[uü]rk silahl[ıi] kuvvet|president erdo|turkish president)/iu';
+const HABER_DEVLET_MAKAMLARI = '/(erdo[gğ]an|cumhurba[sş]kan|ba[sş]bakan|tbmm ba[sş]kan|meclis ba[sş]kan|\bbakan\p{L}*|\bvali(si|yi|ye|nin|\b)|genelkurmay|t[uü]rk silahl[ıi] kuvvet|president erdo|turkish president)/iu';
 const HABER_ALAY_IFADELERI = '/(alay\s*(et|ed)|alayc|dalga ge[cç]|taklit|parodi|hiciv|skeç|skec|karikat[uü]r|mizah|g[uü]l[uü]n[cç]|komik duruma|maskara|rezil|mock|ridicul|satir|parod|lampoon|caricatur|laugh(ed|ing)? at|joke[sd]? about|imitat)/iu';
 
 /** @param array<string,mixed> $veri */

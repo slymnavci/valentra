@@ -2605,14 +2605,14 @@ CREATE TABLE IF NOT EXISTS mac_ozetleri (
 -- DW Turkce videolari kapatildi (04.11.2026, site sahibinin karari: "DW'den
 -- aldigin ve yayindan kaldirdigin Cumhurbaskani ile alay eden videolar kesin
 -- olmasin; devlet buyuklerine saygisiz haberler olmayacak"). Kanal artik
--- taranmiyor; daha once alinmis ve hala yayinda olan DW videolari da
--- yayindan kaldiriliyor (silinmiyor, "reddedildi"; panelden geri alinabilir).
+-- taranmiyor; daha once alinmis, yayinda ya da taslakta bekleyen DW videolari
+-- da yayindan kaldiriliyor (silinmiyor, "reddedildi"; panelden geri alinabilir).
 -- Tek seferlik: panelden yeniden acilirsa ezilmez.
 -- ---------------------------------------------------------------------------
 UPDATE kaynaklar SET aktif = 0 WHERE ad = 'DW Türkçe (video)'
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_dw_video_kapali_2026_11_04');
 UPDATE haberler SET durum = 'reddedildi'
- WHERE kaynak_adi = 'DW Türkçe (video)' AND durum = 'yayinda'
+ WHERE kaynak_adi = 'DW Türkçe (video)' AND durum IN ('yayinda', 'taslak')
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_dw_video_kapali_2026_11_04');
 INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_dw_video_kapali_2026_11_04', '04.11.2026');
 
