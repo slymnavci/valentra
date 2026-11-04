@@ -32,7 +32,23 @@ const MAC_OZETI_VARSAYILAN_KANALLAR = [
     // Ingiltere ve Ispanya (04.11.2026, site sahibi: "Ingiltere ve Ispanya liglerini de ekleyebilirsin").
     'https://www.youtube.com/@premierleague',
     'https://www.youtube.com/@LaLiga',
+    // Dunya (04.11.2026, site sahibi: "dunyadaki tum kanallara da bak; anlatimi
+    // yabanci dilde olabilir; onemli olan Galatasaray, Fenerbahce ve diger onemli
+    // liglerin ozetleri"). Ligler, Avrupa kupalari ve buyuk kuluplerin resmi kanallari.
+    'https://www.youtube.com/@SerieA',
+    'https://www.youtube.com/@bundesliga',
+    'https://www.youtube.com/@Ligue1',
+    'https://www.youtube.com/@eredivisie',
+    'https://www.youtube.com/@CBSSportsGolazo',
+    'https://www.youtube.com/@UEFA',
+    'https://www.youtube.com/@Galatasaray',
+    'https://www.youtube.com/@Fenerbahce',
+    'https://www.youtube.com/@Besiktas',
+    'https://www.youtube.com/@Trabzonspor',
 ];
+
+/** One cikan takimlar: ozet seridinde ve listede once (son 3 gun). */
+const MAC_OZETI_ONE_CIKAN = ['galatasaray', 'fenerbahçe', 'fenerbahce', 'beşiktaş', 'besiktas', 'trabzonspor', 'türkiye', 'turkey', 'başakşehir', 'basaksehir'];
 
 const MAC_OZETI_SAYFA = 24;
 
@@ -65,12 +81,14 @@ function mac_ozeti_mi(string $baslik): bool
 {
     $b = mb_strtolower($baslik, 'UTF-8');
 
-    if (preg_match('/#shorts|canlı yayın|canli yayin|basın toplantısı|röportaj|antrenman|tahmin|press conference|interview|reaction|preview|rueda de prensa|entrevista|previa/u', $b)) {
+    if (preg_match('/#shorts|canlı yayın|canli yayin|basın toplantısı|röportaj|antrenman|tahmin|press conference|interview|reaction|preview|rueda de prensa|entrevista|previa'
+        . '|pressekonferenz|conférence de presse|conferenza stampa|persconferentie|conferência de imprensa|training|behind the scenes|tunnel cam/u', $b)) {
         return false;
     }
 
-    // Ingilizce "highlights", Ispanyolca "resumen" (Premier League, LaLiga).
-    return preg_match('/(?:^|[\s|\-–—:(\[])(?:maç\s+özeti|geniş\s+özet|özet|özeti|highlights|resumen)(?:$|[\s|\-–—:)\].!,])/u', $b) === 1;
+    // Dillere gore "ozet": Ingilizce highlights, Ispanyolca resumen, Italyanca sintesi,
+    // Almanca Zusammenfassung, Fransizca resume, Portekizce resumo, Hollandaca samenvatting.
+    return preg_match('/(?:^|[\s|\-–—:(\[])(?:maç\s+özeti|geniş\s+özet|özet|özeti|highlights|resumen|sintesi|zusammenfassung|résumé|resume|resumo|samenvatting)(?:$|[\s|\-–—:)\].!,])/u', $b) === 1;
 }
 
 /**
@@ -89,6 +107,13 @@ function mac_ozeti_coz(string $baslik): array
             $dep = trim(preg_replace('/\s+(?:(?:maç\s+)?(?:geniş\s+)?özet[i]?|(?:extended\s+)?highlights|resumen(?:\s+y\s+goles)?)$/iu', '', $e[4]) ?? $e[4]);
 
             return ['ev' => mb_substr($ev, 0, 80), 'deplasman' => mb_substr($dep, 0, 80), 'skor' => $e[2] . '-' . $e[3]];
+        }
+    }
+
+    // Italyan, Alman, Fransiz bicimi: "Juventus-Inter 2-1", "Bayern München - Borussia Dortmund 3:1", "PSG - OM (2-0)".
+    foreach (explode(' | ', $temiz) as $parca) {
+        if (preg_match('/^\s*([\p{L}\p{M}.\'’ ]{2,30}?)\s*-\s*([\p{L}\p{M}.\'’ ]{2,30}?)\s+\(?(\d{1,2})\s*[-:]\s*(\d{1,2})\)?\s*$/u', $parca, $e)) {
+            return ['ev' => mb_substr(trim($e[1]), 0, 80), 'deplasman' => mb_substr(trim($e[2]), 0, 80), 'skor' => $e[3] . '-' . $e[4]];
         }
     }
 
@@ -176,7 +201,11 @@ function mac_ozeti_liste(int $adet = MAC_OZETI_SAYFA, int $atla = 0, string $ara
         $param = ['a1' => $desen, 'a2' => $desen, 'a3' => $desen];
     }
 
-    $ifade = db()->prepare('SELECT * FROM mac_ozetleri WHERE ' . $kosul . ' ORDER BY yayin DESC, id DESC LIMIT ' . max(1, min(100, $adet)) . ' OFFSET ' . max(0, $atla));
+    // Son uc gunun Turk buyukleri ve milli takim ozetleri once (site sahibi: "onemli olan
+    // Galatasaray, Fenerbahce"); sonra yeniden eskiye.
+    $one = implode(' OR ', array_map(static fn (string $k): string => 'baslik LIKE ' . db()->quote('%' . $k . '%'), MAC_OZETI_ONE_CIKAN));
+    $ifade = db()->prepare('SELECT * FROM mac_ozetleri WHERE ' . $kosul
+        . ' ORDER BY (yayin > NOW() - INTERVAL 3 DAY AND (' . $one . ')) DESC, yayin DESC, id DESC LIMIT ' . max(1, min(100, $adet)) . ' OFFSET ' . max(0, $atla));
     $ifade->execute($param);
 
     return $ifade->fetchAll();
