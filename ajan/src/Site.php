@@ -665,7 +665,7 @@ final class Site
     /**
      * Başlığı Türkçe denetlenecek haberler (api/baslik-denetim.php).
      *
-     * @return list<array{id:int,baslik:string,ozet:string}>
+     * @return list<array{id:int,baslik:string,ozet:string,giris?:string}>
      */
     public function baslikDenetimListesi(int $gun = 3): array
     {

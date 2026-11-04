@@ -11,7 +11,7 @@ declare(strict_types=1);
  * okutuyor; anlasilmayan, ceviri kalibi ya da eksik tumlecli basliklarin
  * dogal Turkce karsiligini buraya gonderiyor.
  *
- *   GET  ?gun=3   -> {"haberler": [{"id", "baslik", "ozet"}]}  denetlenmemis olanlar
+ *   GET  ?gun=3   -> {"haberler": [{"id", "baslik", "ozet", "giris"}]}  denetlenmemis olanlar
  *   POST {"basliklar": [{"id": 1, "yeni": "..."|null}]} -> {"duzeltilen": n}
  *
  * Adres (slug) degismiyor: paylasilmis baglantilar bozulmasin. Onceki
@@ -35,7 +35,7 @@ if ($yontem === 'GET') {
     $gun = max(1, min(30, (int) ($_GET['gun'] ?? 3)));
 
     $ifade = db()->prepare(
-        "SELECT h.id, h.baslik, h.ozet
+        "SELECT h.id, h.baslik, h.ozet, LEFT(h.icerik, 1500) AS icerik
            FROM haberler h
           WHERE h.durum = 'yayinda'
             AND h.baslik_denetlendi IS NULL
@@ -48,7 +48,14 @@ if ($yontem === 'GET') {
     $ifade->execute(['gun' => $gun]);
 
     ajan_json(200, ['haberler' => array_map(
-        static fn (array $s): array => ['id' => (int) $s['id'], 'baslik' => (string) $s['baslik'], 'ozet' => (string) $s['ozet']],
+        // Ilk paragraf da gidiyor: "Galatasaray'a gol atti" gibi ek hatalari
+        // ancak oyuncunun hangi takimda oldugu bilinince yakalaniyor.
+        static fn (array $s): array => [
+            'id'     => (int) $s['id'],
+            'baslik' => (string) $s['baslik'],
+            'ozet'   => (string) $s['ozet'],
+            'giris'  => mb_substr(trim((string) preg_replace('/\s+/u', ' ', strip_tags((string) preg_split('/\n\s*\n|<\/p>/u', (string) $s['icerik'])[0]))), 0, 400),
+        ],
         $ifade->fetchAll()
     )]);
 }

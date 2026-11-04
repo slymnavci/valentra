@@ -83,7 +83,8 @@ $yazar->sureSiniri(120, [10, 30], $bitis);
 
 $yonerge = <<<'METIN'
 Sen Valentra haber sitesinin Türkçe başlık editörüsün. Sana yayımlanmış
-haberlerin başlığı ve spotu (özeti) verilecek. Her başlık için karar ver:
+haberlerin başlığı, spotu (özeti) ve ilk paragrafı verilecek. Her başlık
+için karar ver:
 
 İYİ: Başlığı haberi hiç bilmeyen bir Türk okur tek okumada anlıyor,
 doğal Türkçe. Dokunma (duzelt=false, yeni boş).
@@ -97,9 +98,13 @@ DÜZELT: Aşağıdakilerden biri varsa başlığı yeniden yaz (duzelt=true):
 - Çevrilmiş bir sözcük öbeği tırnağa alınıp anlamı askıda bırakılmış.
   Tırnak yalnızca birinin söylediği, tek başına anlamlı söz için kalır.
 - Türkçe karşılığı olan yabancı terim, yanlış ek, anlatım bozukluğu.
+- ANLAMI TERSİNE ÇEVİREN EK (özellikle spor): "X'e gol attı" X'in
+  kalesine, yani X'e KARŞI attı demektir. Spot oyuncunun X'in oyuncusu
+  olduğunu ya da X için attığını söylüyorsa başlık "X adına" olur.
+  Kimin kime karşı oynadığını, kimin kimden aldığını spota göre denetle.
 
 YENİ BAŞLIĞIN KURALLARI:
-- Aynı olayı anlatır; spotta ve başlıkta olmayan bilgi EKLEME, rakam ve
+- Aynı olayı anlatır; spotta, ilk paragrafta ve başlıkta olmayan bilgi EKLEME, rakam ve
   isim değiştirme. Anlamı netleştir, haberi değiştirme.
 - En fazla 70 karakter, kısa ve vurucu; ünlem, "şok", "flaş" yok.
 - Kurum adları Türkçe bilinen biçimiyle (Beyaz Saray, Temsilciler Meclisi).
@@ -107,6 +112,7 @@ YENİ BAŞLIĞIN KURALLARI:
 ÖRNEKLER:
 - "Trump uzayı 'tüm insanlığın' ilan etti" → "Trump uzayı tüm insanlığın ortak alanı ilan etti"
 - "Fed 'beklemede' kalmayı seçti" → "Fed faizi sabit tuttu"
+- "Batrakov, Galatasaray'a Şampiyonlar Ligi'nde iki gol attı" (spota göre Galatasaray'ın oyuncusu) → "Batrakov, Galatasaray adına Şampiyonlar Ligi'nde iki gol attı"
 - "TÜİK ekim enflasyonunu açıkladı" → iyi, dokunma.
 
 Emin değilsen dokunma: iyi bir başlığı değiştirmek de hatadır.
@@ -145,7 +151,8 @@ foreach (array_chunk($haberler, PARTI) as $parti) {
     $istem = "Başlıklar:\n";
 
     foreach ($parti as $i => $h) {
-        $istem .= ($i + 1) . '. Başlık: ' . $h['baslik'] . "\n   Spot: " . mb_substr((string) $h['ozet'], 0, 300) . "\n";
+        $istem .= ($i + 1) . '. Başlık: ' . $h['baslik'] . "\n   Spot: " . mb_substr((string) $h['ozet'], 0, 300)
+            . (($h['giris'] ?? '') !== '' ? "\n   İlk paragraf: " . mb_substr((string) $h['giris'], 0, 400) : '') . "\n";
     }
 
     try {
