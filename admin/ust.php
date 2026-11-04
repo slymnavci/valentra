@@ -98,6 +98,8 @@
                     'Köşe yazıları'   => 'kose-yazilari.php',
                     // Canli anlatim (03.11.2026; bkz. includes/canli.php).
                     'Canlı anlatım'   => 'canli.php',
+                    // YouTube mac ozetleri (04.11.2026).
+                    'Maç özetleri'    => 'mac-ozetleri.php',
                     // Valentra Network (31.10.2026): uye yorumlari ve uyeler.
                     'V Network' => 'yorumlar.php',
                     // Tarayici bildirimleri (Web Push; 03.11.2026).

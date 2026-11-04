@@ -77,6 +77,7 @@ final class Besleme
                 'ozet'     => $girdi['ozet'],
                 'tarih'    => $girdi['zaman'] !== null ? date('Y-m-d H:i:s', $girdi['zaman']) : null,
                 'gorsel'   => $girdi['gorsel'],
+                'yazar'    => (string) ($girdi['yazar'] ?? ''),
             ];
         }
 
@@ -264,6 +265,8 @@ final class Besleme
                      */
                     'zaman'    => $this->zaman($this->metin($oge->published) ?: $this->metin($oge->updated)),
                     'gorsel'   => $this->gorsel($oge),
+                    // YouTube'da kanal adi (mac ozetleri, 04.11.2026).
+                    'yazar'    => isset($oge->author) ? $this->metin($oge->author->name) : '',
                 ];
             }
         }

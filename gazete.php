@@ -171,6 +171,12 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <?php require __DIR__ . '/includes/kaydirak.php'; ?>
         <?php endif; ?>
 
+        <?php /* ValSpor on sayfasi ve Futbol: son mac ozetleri (04.11.2026; bkz. includes/mac_ozeti.php). */ ?>
+        <?php if ($gazete === 'valspor' && ($onSayfa || $bolum === 'futbol' || $bolum === 'super-lig')): ?>
+            <?php require_once __DIR__ . '/includes/mac_ozeti.php'; ?>
+            <?= mac_ozeti_serit_html(4) ?>
+        <?php endif; ?>
+
         <?php if ($canli !== ''): ?>
             <?php require_once __DIR__ . '/includes/canli_betik.php'; ?>
             <?php if ($onSayfa): ?>

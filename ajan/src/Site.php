@@ -696,6 +696,40 @@ final class Site
         return (int) ($veri['duzeltilen'] ?? 0);
     }
 
+    /**
+     * Maç özeti kanalları ve son günlerde kaydedilmiş videolar (api/mac-ozeti.php).
+     *
+     * @return array{kanallar:list<string>,bilinen:list<string>}
+     */
+    public function macOzetiDurum(): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/mac-ozeti.php');
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Maç özeti ayarları alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return ['kanallar' => array_values((array) ($veri['kanallar'] ?? [])), 'bilinen' => array_values((array) ($veri['bilinen'] ?? []))];
+    }
+
+    /**
+     * Maç özeti videolarını gönderir; eklenen sayısını döndürür.
+     *
+     * @param list<array{video_id:string,baslik:string,aciklama:string,kanal:string,yayin:int}> $ozetler
+     */
+    public function macOzetiGonder(array $ozetler): int
+    {
+        [$kod, $govde] = $this->istek('POST', '/api/mac-ozeti.php', (string) json_encode(['ozetler' => $ozetler], JSON_UNESCAPED_UNICODE));
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Maç özetleri yazılamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return (int) ($veri['eklenen'] ?? 0);
+    }
+
     /** Yazar fotoğrafını yükler. */
     public function portreGonder(string $anahtar, string $ikili): void
     {
