@@ -39,7 +39,10 @@ if ($slug !== '') {
     $digerler = array_values(array_filter(mac_ozeti_liste(9), static fn (array $o): bool => (int) $o['id'] !== (int) $ozet['id']));
     $digerler = array_slice($digerler, 0, 8);
 
-    $mac = (string) $ozet['ev'] !== '' ? $ozet['ev'] . ' ' . $ozet['skor'] . ' ' . $ozet['deplasman'] : (string) $ozet['baslik'];
+    // Skor yoksa (Premier League "Arsenal v Chelsea" bicimi) takimlar arasinda tire.
+    $mac = (string) $ozet['ev'] !== ''
+        ? $ozet['ev'] . ((string) $ozet['skor'] !== '' ? ' ' . $ozet['skor'] . ' ' : ' - ') . $ozet['deplasman']
+        : (string) $ozet['baslik'];
     $sayfaBasligi  = mb_strlen($mac . ' maç özeti izle') <= 52 ? $mac . ' maç özeti izle — Valentra' : $mac . ' maç özeti';
     $sayfaAciklama = kisalt(($ozet['ev'] !== '' ? $mac . ' maçının özetini ve gollerini izleyin. ' : '') . ($ozet['aciklama'] !== '' ? $ozet['aciklama'] : $ozet['baslik']), 155);
     $seoAdres  = site_adresi() . mac_ozeti_yolu((string) $ozet['slug']);

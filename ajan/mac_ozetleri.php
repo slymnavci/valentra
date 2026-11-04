@@ -79,7 +79,7 @@ foreach ($durum['kanallar'] as $kanal) {
         }
 
         // Ilk eleme burada (site de yeniden eliyor): basliginda ozet gecmeyen video gitmesin.
-        if (!preg_match('/(?:özet|ozet|highlights)/iu', (string) $g['baslik']) || preg_match('/#shorts/iu', (string) $g['baslik'])) {
+        if (!preg_match('/(?:özet|ozet|highlights|resumen)/iu', (string) $g['baslik']) || preg_match('/#shorts/iu', (string) $g['baslik'])) {
             continue;
         }
 

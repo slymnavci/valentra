@@ -29,6 +29,9 @@ const MAC_OZETI_VARSAYILAN_KANALLAR = [
     'https://www.youtube.com/@ssporturkiye',
     'https://www.youtube.com/@tivibuspor',
     'https://www.youtube.com/@ExxenSpor',
+    // Ingiltere ve Ispanya (04.11.2026, site sahibi: "Ingiltere ve Ispanya liglerini de ekleyebilirsin").
+    'https://www.youtube.com/@premierleague',
+    'https://www.youtube.com/@LaLiga',
 ];
 
 const MAC_OZETI_SAYFA = 24;
@@ -62,11 +65,12 @@ function mac_ozeti_mi(string $baslik): bool
 {
     $b = mb_strtolower($baslik, 'UTF-8');
 
-    if (preg_match('/#shorts|canlı yayın|canli yayin|basın toplantısı|röportaj|antrenman|tahmin/u', $b)) {
+    if (preg_match('/#shorts|canlı yayın|canli yayin|basın toplantısı|röportaj|antrenman|tahmin|press conference|interview|reaction|preview|rueda de prensa|entrevista|previa/u', $b)) {
         return false;
     }
 
-    return preg_match('/(?:^|[\s|\-–—:(\[])(?:maç\s+özeti|geniş\s+özet|özet|özeti|highlights)(?:$|[\s|\-–—:)\].!])/u', $b) === 1;
+    // Ingilizce "highlights", Ispanyolca "resumen" (Premier League, LaLiga).
+    return preg_match('/(?:^|[\s|\-–—:(\[])(?:maç\s+özeti|geniş\s+özet|özet|özeti|highlights|resumen)(?:$|[\s|\-–—:)\].!,])/u', $b) === 1;
 }
 
 /**
@@ -82,9 +86,22 @@ function mac_ozeti_coz(string $baslik): array
     foreach (explode(' | ', $temiz) as $parca) {
         if (preg_match('/^\s*(?:(?:maç\s+)?özet[i]?\s*[:\-–]\s*)?([\p{L}\p{M}.\'’ ]{2,40}?)\s+(\d{1,2})\s*[-–:]\s*(\d{1,2})\s+([\p{L}\p{M}.\'’ ]{2,40}?)\s*(?:[-–(].*)?$/iu', $parca, $e)) {
             $ev  = trim($e[1]);
-            $dep = trim(preg_replace('/\s+(?:(?:maç\s+)?(?:geniş\s+)?özet[i]?|highlights)$/iu', '', $e[4]) ?? $e[4]);
+            $dep = trim(preg_replace('/\s+(?:(?:maç\s+)?(?:geniş\s+)?özet[i]?|(?:extended\s+)?highlights|resumen(?:\s+y\s+goles)?)$/iu', '', $e[4]) ?? $e[4]);
 
             return ['ev' => mb_substr($ev, 0, 80), 'deplasman' => mb_substr($dep, 0, 80), 'skor' => $e[2] . '-' . $e[3]];
+        }
+    }
+
+    // LaLiga bicimi: "Resumen de Atlético de Madrid vs Sevilla FC (3-0)".
+    if (preg_match('/^\s*resumen\s+(?:y\s+goles\s+)?(?:de|del)\s+(.{2,40}?)\s+(?:vs\.?|v|-)\s+(.{2,40}?)\s*\((\d{1,2})\s*[-–]\s*(\d{1,2})\)/iu', $baslik, $e)) {
+        return ['ev' => mb_substr(trim($e[1]), 0, 80), 'deplasman' => mb_substr(trim($e[2]), 0, 80), 'skor' => $e[3] . '-' . $e[4]];
+    }
+
+    // Skorsuz bicim: "Arsenal v Chelsea | Premier League Highlights", "Real Madrid vs Barcelona".
+    foreach (explode(' | ', $temiz) as $parca) {
+        if (preg_match('/^\s*([\p{L}\p{M}.\'’& ]{2,40}?)\s+(?:v|vs\.?|-)\s+([\p{L}\p{M}.\'’& ]{2,40}?)\s*(?:[(\[].*)?$/iu', $parca, $e)
+            && !preg_match('/özet|highlights|resumen|league|liga|lig/iu', $e[1] . ' ' . $e[2])) {
+            return ['ev' => mb_substr(trim($e[1]), 0, 80), 'deplasman' => mb_substr(trim($e[2]), 0, 80), 'skor' => ''];
         }
     }
 
