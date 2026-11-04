@@ -26,9 +26,10 @@ const MAC_OZETI_VARSAYILAN_KANALLAR = [
     'https://www.youtube.com/@beINSPORTSTurkiye',
     'https://www.youtube.com/@trtspor',
     'https://www.youtube.com/@ASpor',
-    'https://www.youtube.com/@ssporturkiye',
-    'https://www.youtube.com/@tivibuspor',
-    'https://www.youtube.com/@ExxenSpor',
+    // Duzeltilmis adresler (04.11.2026): eski @adlar okunamiyordu. Exxen Spor
+    // cikti (son ozetleri iki yil once).
+    'https://www.youtube.com/ssport',
+    'https://www.youtube.com/channel/UCzzylIZKbeIDhohxAaQFy1Q',
     // Ingiltere ve Ispanya (04.11.2026, site sahibi: "Ingiltere ve Ispanya liglerini de ekleyebilirsin").
     'https://www.youtube.com/@premierleague',
     'https://www.youtube.com/@LaLiga',
@@ -38,7 +39,8 @@ const MAC_OZETI_VARSAYILAN_KANALLAR = [
     'https://www.youtube.com/@SerieA',
     'https://www.youtube.com/@bundesliga',
     'https://www.youtube.com/@Ligue1',
-    'https://www.youtube.com/@eredivisie',
+    // Eredivisie ozetleri ESPN NL kanalinda (maclardan hemen sonra).
+    'https://www.youtube.com/user/EredivisieLive',
     'https://www.youtube.com/@CBSSportsGolazo',
     'https://www.youtube.com/@UEFA',
     'https://www.youtube.com/@Galatasaray',
@@ -73,7 +75,21 @@ function mac_ozeti_kanallari(): array
         return MAC_OZETI_VARSAYILAN_KANALLAR;
     }
 
-    return array_values(array_filter(array_map('trim', preg_split('/\R/u', $kayitli) ?: []), static fn (string $s): bool => $s !== ''));
+    /*
+     * Panelde kayitli listede okunamayan eski adresler varsa dogrusuyla
+     * degistir (04.11.2026: S Sport, Tivibu Spor, Eredivisie okunamiyordu;
+     * Exxen Spor iki yildir ozet yuklemiyor).
+     */
+    $duzeltme = [
+        'https://www.youtube.com/@ssporturkiye' => 'https://www.youtube.com/ssport',
+        'https://www.youtube.com/@tivibuspor'   => 'https://www.youtube.com/channel/UCzzylIZKbeIDhohxAaQFy1Q',
+        'https://www.youtube.com/@eredivisie'   => 'https://www.youtube.com/user/EredivisieLive',
+        'https://www.youtube.com/@ExxenSpor'    => '',
+    ];
+
+    $liste = array_map(static fn (string $s): string => $duzeltme[trim($s)] ?? trim($s), preg_split('/\R/u', $kayitli) ?: []);
+
+    return array_values(array_unique(array_filter($liste, static fn (string $s): bool => $s !== '')));
 }
 
 /** Basliktan mac ozeti mi? (Kisa videolar ve canli yayinlar disarida.) */

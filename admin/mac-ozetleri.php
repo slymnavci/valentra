@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($islem === 'kanallar') {
         $satirlar = array_filter(array_map('trim', preg_split('/\R/u', (string) ($_POST['kanallar'] ?? '')) ?: []));
-        $gecersiz = array_filter($satirlar, static fn (string $s): bool => !preg_match('#^https://(www\.)?youtube\.com/(@[\w.\-]+|channel/UC[\w-]{22})/?$#', $s));
+        $gecersiz = array_filter($satirlar, static fn (string $s): bool => !preg_match('#^https://(www\.)?youtube\.com/(@[\w.\-]+|channel/UC[\w-]{22}|user/[\w.\-]+|c/[\w.\-]+|(?!watch|feeds|playlist|shorts|embed|live|results)[\w.\-]+)/?$#', $s));
 
         if ($gecersiz !== []) {
             $hata = 'Şu satırlar YouTube kanal adresi değil: ' . implode(', ', $gecersiz) . '. Biçim: https://www.youtube.com/@kanaladi';
@@ -98,7 +98,7 @@ require __DIR__ . '/ust.php';
             <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
             <input type="hidden" name="islem" value="kanallar">
             <textarea name="kanallar" rows="8" style="width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem;"><?= e(implode("\n", mac_ozeti_kanallari())) ?></textarea>
-            <p class="ipucu">Her satıra bir kanal: <code>https://www.youtube.com/@kanaladi</code>. Yalnızca başlığında “özet” ya da yabancı dildeki karşılığı (highlights, resumen, sintesi, Zusammenfassung, résumé, resumo, samenvatting) geçen videolar alınır; son 3 günün Galatasaray, Fenerbahçe, Beşiktaş, Trabzonspor ve milli takım özetleri listede öne çıkar; kısa videolar (#shorts) ve canlı yayınlar alınmaz. Okunamayan kanal GitHub'daki çalışma kaydında yazar.</p>
+            <p class="ipucu">Her satıra bir kanal: <code>https://www.youtube.com/@kanaladi</code> (eski biçimler de olur: <code>/channel/UC…</code>, <code>/user/ad</code>, <code>/c/ad</code>). Yalnızca başlığında “özet” ya da yabancı dildeki karşılığı (highlights, resumen, sintesi, Zusammenfassung, résumé, resumo, samenvatting) geçen videolar alınır; son 3 günün Galatasaray, Fenerbahçe, Beşiktaş, Trabzonspor ve milli takım özetleri listede öne çıkar; kısa videolar (#shorts) ve canlı yayınlar alınmaz. Okunamayan kanal GitHub'daki çalışma kaydında yazar.</p>
             <button type="submit" class="dugme dugme-ana">Kaydet</button>
         </form>
     </div>
