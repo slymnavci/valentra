@@ -413,7 +413,17 @@ final class Besleme
     {
         static $cozulen = [];
 
-        if (!preg_match('#^https?://(?:www\.|m\.)?youtube\.com/(?:channel/(UC[\w-]{22})|(@[\w.\-]+))/?(?:videos/?)?$#i', trim($url), $e)) {
+        /*
+         * Eski bicim adresler de (04.11.2026): youtube.com/user/AD (beslemesi
+         * dogrudan ?user=), youtube.com/c/AD ve youtube.com/AD (ozel adres;
+         * kimlik sayfadan okunuyor, @adli gibi). Ornek: S Sport
+         * youtube.com/ssport, ESPN NL youtube.com/user/EredivisieLive.
+         */
+        if (preg_match('#^https?://(?:www\.|m\.)?youtube\.com/user/([\w.\-]+)/?(?:videos/?)?$#i', trim($url), $u)) {
+            return 'https://www.youtube.com/feeds/videos.xml?user=' . rawurlencode($u[1]);
+        }
+
+        if (!preg_match('#^https?://(?:www\.|m\.)?youtube\.com/(?:channel/(UC[\w-]{22})|(@[\w.\-]+|c/[\w.\-]+|(?!watch|feeds|playlist|shorts|embed|live|results)[\w.\-]+))/?(?:videos/?)?$#i', trim($url), $e)) {
             return $url;
         }
 
