@@ -32,6 +32,11 @@ CREATE TABLE IF NOT EXISTS kaynaklar (
     -- giden aday kontenjanini basliklara bununla paylastiriyor; haberin
     -- asil basligini model seciyor. Bos: ekonomi (eski kaynaklar).
     kategori      VARCHAR(60)   NULL,
+    -- Yerel kaynagin ili (04.11.2026; il slug'i: trabzon, kayseri...).
+    -- Dolu ise kaynagin haberleri haberler.sehir'e yaziliyor ve dusuk
+    -- onemliler ana sayfaya ve kategori sayfalarina cikmiyor
+    -- (bkz. haber_yerel_kosulu). Bos: ulusal kaynak.
+    sehir         VARCHAR(40)   NULL,
     aktif         TINYINT(1)    NOT NULL DEFAULT 1,
     son_tarama    DATETIME      NULL,
     olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -109,6 +114,11 @@ CREATE TABLE IF NOT EXISTS haberler (
     -- Onem puani (0-100): ana sayfa ve konu sayfalarinda son 24 saatin
     -- haberleri bu puana gore siralaniyor. Ajan veriyor, panelden degisir.
     onem            TINYINT UNSIGNED NOT NULL DEFAULT 50,
+    -- Yerel kaynaktan gelen haberin ili (04.11.2026; kaynaklar.sehir'den).
+    -- Onemi YEREL_ANA_SAYFA_ESIGI'nin altindaysa ana sayfaya ve kategori
+    -- sayfalarina cikmiyor; haber sayfasinda, aramada ve "Senin Icin"
+    -- sehir bolumunde duruyor.
+    sehir           VARCHAR(40)   NULL,
     ajan_notu       VARCHAR(600)  NOT NULL DEFAULT '',
     -- Haberi yazan model (23.10.2026; ornegin gpt-6-luna, gemini-3.8-flash).
     -- Otomatik yayin esigi buna gore seciliyor (bkz. haber_guven_esigi_kosulu).
@@ -165,6 +175,7 @@ CREATE TABLE IF NOT EXISTS haberler (
     KEY ix_haber_durum_tarih (durum, yayin_tarihi),
     KEY ix_haber_bekleyen (durum, olusturuldu),
     KEY ix_haber_kategori (kategori_id, durum, yayin_tarihi),
+    KEY ix_haber_sehir (sehir, durum, olusturuldu),
     CONSTRAINT fk_haber_kategori FOREIGN KEY (kategori_id)  REFERENCES kategoriler (id) ON DELETE SET NULL,
     CONSTRAINT fk_haber_kaynak   FOREIGN KEY (kaynak_id)    REFERENCES kaynaklar (id)   ON DELETE SET NULL,
     CONSTRAINT fk_haber_onaylayan FOREIGN KEY (onaylayan_id) REFERENCES yoneticiler (id) ON DELETE SET NULL
@@ -2535,3 +2546,29 @@ CREATE TABLE IF NOT EXISTS bulten_sayilari (
     PRIMARY KEY (id),
     UNIQUE KEY uq_bulten_gun (gun)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Yerel kaynaklar (04.11.2026, site sahibi: "yerel haber ajanslarini da
+-- ekleyelim; Trabzon, Kayseri, Kocaeli gazetelerine de bakip degeri dusuk
+-- haberleri ana sayfaya almayacak sekilde arka planda tutalim; gunluk
+-- bunlardan da haber gelsin").
+--
+-- kategori 'yerel': ajanda kendi aday payi (ajan/src/HaberAkisi.php).
+-- sehir: haberler.sehir'e yaziliyor; onemi YEREL_ANA_SAYFA_ESIGI'nin
+-- altindaki haber ana sayfaya ve kategori sayfalarina cikmiyor
+-- (includes/haberler.php, haber_yerel_kosulu).
+--
+-- Adresler 04.11.2026'da ajanin "kaynak-testi" moduyla GitHub'dan
+-- denendi; calisanlar alindi. Denenip GitHub'i engelleyen (403) yerel
+-- siteler: Kayseri Anadolu Haber, Kayseri Gundem, Cagdas Kocaeli, Bizim
+-- Yaka, Kocaeli Baris, Ses Kocaeli, Yeni Kocaeli. IHA il sayfalari liste
+-- (kazima) olarak; Kayseri sayfasi denendi, digerleri ayni yapida.
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, liste_url, tur, kategori, sehir, aktif) VALUES
+    ('Taka Gazetesi (Trabzon)',     'https://www.takagazete.com.tr',  'https://www.takagazete.com.tr/rss',                    NULL, 'rss', 'yerel', 'trabzon', 1),
+    ('Karadeniz Gazetesi Trabzon',  'https://www.karadenizgazete.com.tr', 'https://www.karadenizgazete.com.tr/rss/karadeniz/trabzon', NULL, 'rss', 'yerel', 'trabzon', 1),
+    ('İHA Trabzon',                 'https://www.iha.com.tr',         NULL, 'https://www.iha.com.tr/trabzon-haberleri',                 'web', 'yerel', 'trabzon', 1),
+    ('Kayseri Haber',               'https://www.kayserihaber.com.tr', 'https://www.kayserihaber.com.tr/rss',                 NULL, 'rss', 'yerel', 'kayseri', 1),
+    ('Kayseri Gazetesi',            'https://www.kayserigazetesi.com', 'https://www.kayserigazetesi.com/rss.xml',             NULL, 'rss', 'yerel', 'kayseri', 1),
+    ('İHA Kayseri',                 'https://www.iha.com.tr',         NULL, 'https://www.iha.com.tr/kayseri-haberleri',                 'web', 'yerel', 'kayseri', 1),
+    ('Özgür Kocaeli',               'https://www.ozgurkocaeli.com.tr', 'https://www.ozgurkocaeli.com.tr/rss.xml',             NULL, 'rss', 'yerel', 'kocaeli', 1),
+    ('İHA Kocaeli',                 'https://www.iha.com.tr',         NULL, 'https://www.iha.com.tr/kocaeli-haberleri',                 'web', 'yerel', 'kocaeli', 1);

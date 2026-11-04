@@ -51,6 +51,16 @@ final class HaberAkisi
         'yemek-tarifleri' => 12,
         'dunya'        => 10,
         'teknoloji'    => 6,
+        /*
+         * Yerel gazeteler (04.11.2026, site sahibi: "Trabzon, Kayseri,
+         * Kocaeli gazetelerine de bakalim; gunluk bunlardan da haber
+         * gelsin"). Kendi payi var ki ulusal basliklarin yerini almasin;
+         * model haberin asil basligini (gundem, spor...) ve onemini
+         * seciyor. Site dusuk onemli yerel haberi ana sayfaya ve kategori
+         * sayfalarina cikarmiyor (includes/haberler.php, haber_yerel_kosulu).
+         * Calisma basina 6 aday, gunde ~12 calisma.
+         */
+        'yerel'        => 6,
     ];
 
     /**
@@ -65,7 +75,7 @@ final class HaberAkisi
     public const SIRA = [
         'gundem', 'spor', 'politika', 'ekonomi',
         'saglik', 'kultur-sanat', 'magazin', 'yemek-tarifleri',
-        'dunya', 'teknoloji',
+        'yerel', 'dunya', 'teknoloji',
     ];
 
     /** Gunluge yazilacak baslik adi. */
@@ -80,6 +90,7 @@ final class HaberAkisi
         'kultur-sanat' => 'Kültür-Sanat',
         'magazin'      => 'Magazin',
         'yemek-tarifleri' => 'Yemek Tarifleri',
+        'yerel'        => 'Yerel',
     ];
 
     /**

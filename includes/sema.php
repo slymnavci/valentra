@@ -382,6 +382,18 @@ function sema_yukselt(array &$hatalar = []): array
     $sutunEkle('kaynaklar', 'kategori', 'VARCHAR(60) NULL AFTER tur');
     // Onem puani: ana sayfa sirasi (Ekim 2026).
     $sutunEkle('haberler', 'onem', 'TINYINT UNSIGNED NOT NULL DEFAULT 50 AFTER guven_skoru');
+    // Yerel kaynaklar (04.11.2026; bkz. haber_yerel_kosulu).
+    $sutunEkle('kaynaklar', 'sehir', 'VARCHAR(40) NULL AFTER kategori');
+    $sutunEkle('haberler', 'sehir', 'VARCHAR(40) NULL AFTER onem');
+    $adim('haberler.ix_haber_sehir indeksi', static function (): bool {
+        if (!sema_sutun_var('haberler', 'sehir') || sema_indeks_var('haberler', 'ix_haber_sehir')) {
+            return false;
+        }
+
+        db()->exec('ALTER TABLE haberler ADD INDEX ix_haber_sehir (sehir, durum, olusturuldu)');
+
+        return true;
+    });
 
     // Kopya sorgulari bu iki alan uzerinden calisiyor; indekssiz
     // arama arsiv buyudukce her aday icin tam tarama demek olurdu.
@@ -627,6 +639,9 @@ function sema_guncel_mi(): bool
             // api/kaynaklar.php bu sutunu sorguluyor; yoksa ajan
             // yapilandirmayi alamaz.
             ['kaynaklar', 'kategori'],
+            // Yerel haber suzgeci (haber_yerel_kosulu) ve haber ekleme bunlari kullaniyor.
+            ['kaynaklar', 'sehir'],
+            ['haberler', 'sehir'],
             // Ana sayfa siralamasi ve haber_taslak_ekle() bu sutunu kullaniyor.
             ['haberler', 'onem'],
             // haber_taslak_ekle() ve api/kaynaklar.php kopya denetiminde

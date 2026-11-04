@@ -72,16 +72,19 @@ function senin_icin_haberler(array $konular, string $sehir, int $adet = SENIN_AD
     $konular  = array_values(array_intersect($konular, array_keys(senin_konular())));
     $secim    = 'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
                    FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
-                  WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . haber_ana_akis_kosulu() . '
+                  WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND %s
                     AND h.olusturuldu > NOW() - INTERVAL 3 DAY';
 
     if ($sehirAdi !== '') {
         // Harmanlama (utf8mb4_unicode_ci) buyuk-kucuk harf ve I/İ farkini gozetmiyor;
-        // "İzmir'de", "Izmir" de yakalaniyor.
-        $ifade = db()->prepare($secim . ' AND (h.baslik LIKE :s1 OR h.ozet LIKE :s2 OR h.etiketler LIKE :s3)
+        // "İzmir'de", "Izmir" de yakalaniyor. O ilin yerel kaynaklarinin
+        // haberleri de burada (onemi dusuk olsa da; ana akista yoklar,
+        // bkz. haber_yerel_kosulu).
+        $ifade = db()->prepare(sprintf($secim, haber_ana_akis_kosulu(true))
+            . ' AND (h.sehir = :il OR h.baslik LIKE :s1 OR h.ozet LIKE :s2 OR h.etiketler LIKE :s3)
                                           ORDER BY h.olusturuldu DESC LIMIT ' . max(1, min(12, (int) ceil($adet / 2))));
         $desen = '%' . $sehirAdi . '%';
-        $ifade->execute(['s1' => $desen, 's2' => $desen, 's3' => $desen]);
+        $ifade->execute(['il' => $sehir, 's1' => $desen, 's2' => $desen, 's3' => $desen]);
         $sonuc['sehir'] = $ifade->fetchAll();
     }
 
@@ -90,7 +93,7 @@ function senin_icin_haberler(array $konular, string $sehir, int $adet = SENIN_AD
 
     if ($konular !== [] && $kalan > 0) {
         $yer = implode(', ', array_map(static fn (string $k): string => db()->quote($k), $konular));
-        $sql = $secim . ' AND k.slug IN (' . $yer . ')'
+        $sql = sprintf($secim, haber_ana_akis_kosulu()) . ' AND k.slug IN (' . $yer . ')'
             . ($haric !== [] ? ' AND h.id NOT IN (' . implode(', ', $haric) . ')' : '')
             . ' ORDER BY DATE(h.olusturuldu) DESC, h.onem DESC, h.olusturuldu DESC LIMIT ' . max(1, min(24, $kalan + 2));
         $sonuc['konu'] = array_slice(db()->query($sql)->fetchAll(), 0, $kalan);
