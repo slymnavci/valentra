@@ -49,6 +49,113 @@ function bulten_yolu(string $islem = '', string $anahtar = ''): string
  * --------------------------------------------------------------------- */
 
 /**
+ * Onay e-postası (04.11.2026, site sahibi: "daha dikkat cekici yapalim;
+ * insanlar gordugunde girmek isteyecekleri bir sekilde iletelim").
+ *
+ * Genel sablon (eposta_sablon) yerine bultene ozel: guclu konu satiri ve
+ * on izleme metni, kirmizi ust bant, buyuk onay dugmesi, bultende neler
+ * oldugu ve gunun one cikan uc basligindan bir tadimlik. Basliklar bilerek
+ * BAGLANTI DEGIL: tek tiklanacak sey onay dugmesi (abonelik yalnizca
+ * okur dugmeye basinca baslar; baska bir tiklama onay sayilmaz).
+ *
+ * @return array{konu:string,html:string,metin:string}
+ */
+function bulten_onay_epostasi(string $adres): array
+{
+    $e = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+
+    // Gunun one cikan basliklari (tadimlik); alinamazsa bolum gosterilmiyor.
+    $basliklar = [];
+
+    try {
+        require_once __DIR__ . '/haberler.php';
+        $ifade = db()->prepare(
+            'SELECT h.baslik FROM haberler h
+              WHERE h.durum = :d AND h.olusturuldu > NOW() - INTERVAL 24 HOUR
+              ORDER BY h.onem DESC, h.olusturuldu DESC LIMIT 3'
+        );
+        $ifade->execute(['d' => HABER_YAYINDA]);
+        $basliklar = array_map('strval', $ifade->fetchAll(PDO::FETCH_COLUMN));
+    } catch (Throwable $e) {
+        $basliklar = [];
+    }
+
+    $konu = 'Son bir adım: yarın sabah ilk bülteniniz gelsin';
+    $onIzleme = 'Tek tıkla onaylayın; her sabah günün en önemli ' . BULTEN_HABER . ' haberi 2 dakikada e-postanızda.';
+
+    $neler = [
+        ['📰', 'Günün en önemli ' . BULTEN_HABER . ' haberi', 'Gece neler oldu, sabah ilk siz bilin.'],
+        ['🌍', 'Türkiye ve dünyadan', 'Gündem, ekonomi, dünya, spor: önemli ne varsa.'],
+        ['✍️', 'Günün köşe yazısı', 'Gündemin arka planı, sade bir dille.'],
+        ['⏱️', '2 dakikada okunur', 'Her sabah, kısa ve reklamsız.'],
+    ];
+
+    $nelerHtml = '';
+
+    foreach ($neler as [$simge, $baslik, $aciklama]) {
+        $nelerHtml .= '<tr><td width="40" valign="top" style="padding:0 0 14px;font-size:22px;line-height:1">' . $simge . '</td>'
+            . '<td valign="top" style="padding:0 0 14px"><div style="font-size:15px;font-weight:700;color:#18181b">' . $e($baslik) . '</div>'
+            . '<div style="font-size:13px;line-height:1.5;color:#71717a">' . $e($aciklama) . '</div></td></tr>';
+    }
+
+    $dugme = static fn (string $metin): string =>
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" bgcolor="#d7161f" style="border-radius:10px">'
+        . '<a href="' . $e($adres) . '" style="display:block;padding:16px 20px;font-size:17px;font-weight:800;color:#ffffff;text-decoration:none;border-radius:10px">' . $e($metin) . '</a>'
+        . '</td></tr></table>';
+
+    $tadimlik = '';
+
+    if ($basliklar !== []) {
+        $satirlar = '';
+
+        foreach ($basliklar as $i => $b) {
+            $satirlar .= '<tr><td width="28" valign="top" style="padding:8px 0;font-size:15px;font-weight:800;color:#d7161f">' . ($i + 1) . '</td>'
+                . '<td style="padding:8px 0;border-bottom:1px solid #f0f0f2;font-size:15px;font-weight:700;line-height:1.4;color:#18181b">' . $e($b) . '</td></tr>';
+        }
+
+        $tadimlik = '<tr><td style="padding:6px 28px 4px"><div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#a1a1aa">Bugün bültende olsaydı</div></td></tr>'
+            . '<tr><td style="padding:4px 28px 18px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">' . $satirlar . '</table>'
+            . '<div style="font-size:13px;color:#71717a;margin-top:10px">Yarın sabahın en önemli haberleri de böyle, tek bakışta.</div></td></tr>';
+    }
+
+    $html = '<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' . $e($konu) . '</title></head>'
+        . '<body style="margin:0;background:#f4f4f5;font-family:Arial,Helvetica,sans-serif;color:#18181b">'
+        . '<div style="display:none;max-height:0;overflow:hidden">' . $e($onIzleme) . '</div>'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px 10px">'
+        . '<table role="presentation" width="100%" style="max-width:540px;background:#ffffff;border-radius:14px;overflow:hidden" cellpadding="0" cellspacing="0">'
+        // Ust bant
+        . '<tr><td bgcolor="#d7161f" style="background:#d7161f;padding:26px 28px 24px">'
+        . '<div style="font-size:24px;font-weight:900;letter-spacing:.12em;color:#ffffff">VALENTRA</div>'
+        . '<div style="font-size:14px;color:#ffe4e6;margin-top:4px">Günün özeti, her sabah e-postanızda</div></td></tr>'
+        // Baslik ve cagri
+        . '<tr><td style="padding:28px 28px 6px;font-size:26px;font-weight:900;line-height:1.25;color:#18181b">Son bir adım kaldı!</td></tr>'
+        . '<tr><td style="padding:6px 28px 20px;font-size:16px;line-height:1.6;color:#3f3f46">Aboneliğinizi onaylayın, <strong>yarın sabah ilk bülteniniz</strong> e-postanızda olsun. Tek tık yeterli.</td></tr>'
+        . '<tr><td style="padding:0 28px 24px">' . $dugme('Evet, bülteni istiyorum →') . '</td></tr>'
+        // Neler gelecek
+        . '<tr><td style="padding:4px 28px 8px"><div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#a1a1aa">Her sabah neler gelecek?</div></td></tr>'
+        . '<tr><td style="padding:10px 28px 8px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">' . $nelerHtml . '</table></td></tr>'
+        . $tadimlik
+        // Ikinci cagri
+        . '<tr><td style="padding:6px 28px 26px">' . $dugme('Aboneliği onayla') . '</td></tr>'
+        . '</table>'
+        // Alt bilgi
+        . '<table role="presentation" width="100%" style="max-width:540px" cellpadding="0" cellspacing="0"><tr><td style="padding:16px 24px;font-size:12px;line-height:1.6;color:#71717a;text-align:center">'
+        . 'Bu e-postayı valentra.com.tr\'de bültene abone olmak istendiği için aldınız. Siz istemediyseniz yok sayın; onaylamadan abone olmazsınız.<br>'
+        . 'Her bültenin altında tek tıkla abonelikten çıkabilirsiniz.<br>'
+        . '<span style="color:#a1a1aa">Düğme çalışmazsa: ' . $e($adres) . '</span></td></tr></table>'
+        . '</td></tr></table></body></html>';
+
+    $metin = "Son bir adım kaldı!\n\n"
+        . 'Valentra günlük bültenini onaylayın; yarın sabah ilk bülteniniz e-postanızda olsun. Her sabah'
+        . ' günün en önemli ' . BULTEN_HABER . " haberi ve günün köşe yazısı; 2 dakikada okunur.\n\n"
+        . "Onaylamak için: " . $adres . "\n\n"
+        . ($basliklar !== [] ? "Bugün bültende olsaydı:\n- " . implode("\n- ", $basliklar) . "\n\n" : '')
+        . "Bu isteği siz yapmadıysanız e-postayı yok sayın; onaylamadan abone olmazsınız.\n";
+
+    return ['konu' => $konu, 'html' => $html, 'metin' => $metin];
+}
+
+/**
  * Adresi kaydeder ve onay e-postasi gonderir. Ziyaretciye her durumda ayni
  * yanit gosteriliyor (adresin kayitli olup olmadigi disari sizmasin).
  *
@@ -93,21 +200,10 @@ function bulten_abone_ol(string $eposta, string $ip): string
     }
 
     $adres = site_adresi() . bulten_yolu('onay', $anahtar);
+    $onay  = bulten_onay_epostasi($adres);
 
     try {
-        eposta_gonder(
-            $eposta,
-            'Valentra bültenine aboneliğinizi onaylayın',
-            "Valentra günlük bültenine abone olmak için bu bağlantıyı açın:\n" . $adres
-                . "\n\nBu isteği siz yapmadıysanız e-postayı yok sayın; abone olmazsınız.",
-            eposta_sablon(
-                'Aboneliğinizi onaylayın',
-                'Her sabah günün en önemli haberlerini e-postanıza göndereceğiz. Abone olmak için aşağıdaki düğmeye basın. Bu isteği siz yapmadıysanız e-postayı yok sayın; abone olmazsınız.',
-                'Aboneliği onayla',
-                $adres,
-                'Valentra — Güncel Haberler'
-            )
-        );
+        eposta_gonder($eposta, $onay['konu'], $onay['metin'], $onay['html']);
     } catch (RuntimeException $e) {
         error_log('[valentra] bulten onay e-postasi: ' . $e->getMessage());
     }
