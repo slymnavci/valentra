@@ -2303,7 +2303,7 @@ function kategori_bloklari(int $grupBasiHaber = 4, int $enFazlaGrup = 6): array
 {
     $satirlar = db()->query(
         'SELECT h.id, h.baslik, h.slug, h.ozet, h.gorsel_url, h.yayin_tarihi,
-                h.kaynak_adi, k.ad AS kategori_adi, k.slug AS kategori_slug, k.sira
+                h.kaynak_adi, h.kaynak_baslik, h.kaynak_url, k.ad AS kategori_adi, k.slug AS kategori_slug, k.sira
            FROM haberler h
            JOIN kategoriler k ON k.id = h.kategori_id
           WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . '
@@ -2859,7 +2859,7 @@ function haber_ilgililer(array $haber, int $adet = 4): array
     try {
         $ifade = db()->prepare(
             'SELECT h.id, h.baslik, h.slug, h.ozet, h.etiketler, h.gorsel_url, h.yayin_tarihi, h.kategori_id,
-                    h.iframe_url, h.kaynak_adi, k.ad AS kategori_adi, k.slug AS kategori_slug
+                    h.iframe_url, h.kaynak_adi, h.kaynak_baslik, h.kaynak_url, k.ad AS kategori_adi, k.slug AS kategori_slug
                FROM haberler h
           LEFT JOIN kategoriler k ON k.id = h.kategori_id
               WHERE h.durum = :d

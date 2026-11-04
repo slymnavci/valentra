@@ -285,7 +285,7 @@ function bulten_icerik(): array
     $izle  = static fn (string $yol): string => $taban . $yol . (str_contains($yol, '?') ? '&' : '?') . 'utm_source=bulten&utm_medium=eposta';
 
     $ifade = db()->prepare(
-        'SELECT h.id, h.baslik, h.slug, h.ozet, h.gorsel_url, h.onem, k.ad AS kategori_adi
+        'SELECT h.id, h.baslik, h.slug, h.ozet, h.gorsel_url, h.onem, h.kaynak_baslik, h.kaynak_url, k.ad AS kategori_adi
            FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
           WHERE h.durum = :d AND ' . haber_ana_akis_kosulu() . '
             AND h.olusturuldu > NOW() - INTERVAL 24 HOUR
