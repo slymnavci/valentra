@@ -662,6 +662,40 @@ final class Site
         return (int) ($veri['duzeltilen'] ?? 0);
     }
 
+    /**
+     * Başlığı Türkçe denetlenecek haberler (api/baslik-denetim.php).
+     *
+     * @return list<array{id:int,baslik:string,ozet:string}>
+     */
+    public function baslikDenetimListesi(int $gun = 3): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/baslik-denetim.php?gun=' . max(1, min(30, $gun)));
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Başlık listesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return array_values((array) ($veri['haberler'] ?? []));
+    }
+
+    /**
+     * Düzeltilmiş başlıkları yazar (yeni null: başlık iyi, yalnızca işaretle).
+     *
+     * @param list<array{id:int,yeni:?string}> $basliklar
+     */
+    public function baslikDenetimGonder(array $basliklar): int
+    {
+        [$kod, $govde] = $this->istek('POST', '/api/baslik-denetim.php', (string) json_encode(['basliklar' => $basliklar], JSON_UNESCAPED_UNICODE));
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Başlık düzeltmesi yazılamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return (int) ($veri['duzeltilen'] ?? 0);
+    }
+
     /** Yazar fotoğrafını yükler. */
     public function portreGonder(string $anahtar, string $ikili): void
     {

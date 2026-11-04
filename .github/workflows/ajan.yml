@@ -54,6 +54,7 @@ on:
           - canli
           - yazar-portre
           - topluluk
+          - baslik-denetim
       kuru:
         description: 'Kuru calisma (siteye gonderme, sadece ciktiyi goster)'
         type: boolean
@@ -335,6 +336,26 @@ jobs:
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
         run: php tarih_denetle.php || true
+
+      # Basliklarin Turkcesi (04.11.2026, site sahibi: "basliklarin
+      # Turkcesini cok iyi yapmamiz lazim; ne dedigi anlasilmiyor; benzer
+      # hatalar da duzeltilsin"). Yeni yayimlanan basliklar modele
+      # okutuluyor; anlasilmayan, ceviri kalibi ya da eksik tumlecli
+      # olanlar dogal Turkceyle yeniden yaziliyor. Her baslik bir kez.
+      # Elle "baslik-denetim" modu son iki haftayi tariyor (ilk temizlik).
+      - name: Baslik Turkcesini denetle
+        if: ${{ !cancelled() && (((inputs.mod == 'topla' || inputs.mod == 'gunluk' || inputs.mod == '') && inputs.kuru != true) || inputs.mod == 'baslik-denetim') }}
+        working-directory: ajan
+        env:
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
+        run: php baslik_denetle.php ${{ inputs.mod == 'baslik-denetim' && '--gun=14 --sure=15' || '--sure=4' }} ${{ inputs.kuru == true && '--kuru' || '' }} || true
 
       # Siteye gonderilemeyen haberler: site bu eseri GitHub API'den
       # kendisi indiriyor (includes/ajan_teslim.php). GitHub'dan siteye
