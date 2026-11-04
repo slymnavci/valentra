@@ -396,6 +396,7 @@ final class TohumYapilandirma
                 'liste_secici' => $satir['liste_secici'] ?? null,
                 'tur'          => (string) ($satir['tur'] ?? 'rss'),
                 'kategori'     => $satir['kategori'] ?? null,
+                'sehir'        => $satir['sehir'] ?? null,
             ];
         }
 

@@ -23,7 +23,7 @@ if (ajan_anahtar_dogrula($neden) === null) {
 }
 
 $kaynaklar = db()->query(
-    'SELECT id, ad, site_url, besleme_url, liste_url, liste_secici, tur, kategori
+    'SELECT id, ad, site_url, besleme_url, liste_url, liste_secici, tur, kategori, sehir
        FROM kaynaklar
       WHERE aktif = 1
       ORDER BY ad'
@@ -153,6 +153,8 @@ ajan_json(200, [
         'liste_secici' => $k['liste_secici'],
         'tur'          => $k['tur'],
         'kategori'     => $k['kategori'],
+        // Yerel kaynagin ili (04.11.2026): ajan bu kaynaktan yalnizca o ilin haberini aliyor.
+        'sehir'        => $k['sehir'],
     ], $kaynaklar),
     'kategoriler' => $kategoriler,
     'bilinen'        => $parmaklar,

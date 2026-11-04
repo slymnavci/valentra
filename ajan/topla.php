@@ -820,6 +820,64 @@ function resmi_gazete_mi(array $kaynak): bool
     return $host === 'www.resmigazete.gov.tr' || $host === 'resmigazete.gov.tr';
 }
 
+/*
+ * Yerel kaynaklardan YALNIZCA o ilin haberi (04.11.2026, site sahibi:
+ * "normal haberler olmasin, sadece yerel haberleri buradan alalim").
+ * Yerel gazeteler ulusal haber de veriyor (pasaport harci, MTV); bunlar
+ * il etiketiyle arka plana dusuyordu. Baslikta ya da ozette il, ilce ya
+ * da ile ozgu bir ad (universite, kulup) gecmiyorsa aday modele gitmiyor.
+ *
+ * Bilerek disarida: Kocaeli'nin Korfez ilcesi ("Basra Korfezi"),
+ * Kayseri'nin Hacilar ilcesi ("hacilar") — genel kelime, yanlis eslesir.
+ */
+const YEREL_ANAHTARLAR = [
+    'trabzon' => ['trabzon', 'ortahisar', 'akçaabat', 'araklı', 'arsin', 'beşikdüzü', 'çarşıbaşı', 'çaykara',
+                  'dernekpazarı', 'düzköy', 'hayrat', 'köprübaşı', 'maçka', 'of', 'sürmene', 'şalpazarı', 'tonya',
+                  'vakfıkebir', 'yomra', 'uzungöl', 'sümela', 'ktü', 'karadeniz teknik'],
+    'kayseri' => ['kayseri', 'melikgazi', 'kocasinan', 'talas', 'akkışla', 'bünyan', 'develi', 'felahiye',
+                  'incesu', 'özvatan', 'pınarbaşı', 'sarıoğlan', 'sarız', 'tomarza', 'yahyalı', 'yeşilhisar',
+                  'erciyes'],
+    'kocaeli' => ['kocaeli', 'izmit', 'gebze', 'darıca', 'çayırova', 'dilovası', 'derince', 'başiskele',
+                  'kartepe', 'gölcük', 'karamürsel', 'kandıra', 'gosb'],
+];
+
+/** Turkce kucuk harf (I -> ı, İ -> i). */
+function yerel_kucult(string $metin): string
+{
+    return mb_strtolower(strtr($metin, ['I' => 'ı', 'İ' => 'i']), 'UTF-8');
+}
+
+/**
+ * Yerel kaynagin adayi o ilin haberi mi? Kaynagin ili yoksa (ulusal
+ * kaynak ya da eski yapilandirma) true.
+ *
+ * Anahtar kelimenin oncesinde harf olmamali ("Trabzon'da", "Trabzonspor"
+ * gecer, "metrabzon" gecmez); dort harften kisa anahtarlarin (Of, KTÜ)
+ * sonunda da ("ofis" gecmez, "Of'ta" gecer).
+ */
+function yerel_haber_mi(array $aday): bool
+{
+    $sehir = (string) ($aday['kaynak']['sehir'] ?? '');
+
+    if ($sehir === '' || !isset(YEREL_ANAHTARLAR[$sehir])) {
+        return true;
+    }
+
+    $metin = yerel_kucult(strip_tags(
+        (string) ($aday['girdi']['baslik'] ?? '') . ' ' . (string) ($aday['girdi']['ozet'] ?? '')
+    ));
+
+    foreach (YEREL_ANAHTARLAR[$sehir] as $anahtar) {
+        $son = mb_strlen($anahtar, 'UTF-8') < 4 ? '(?![\p{L}])' : '';
+
+        if (preg_match('/(?<![\p{L}])' . preg_quote($anahtar, '/') . $son . '/u', $metin) === 1) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 /**
  * Tarif kaynagindan gelen baslik bir tarif olabilir mi?
  *
@@ -1390,6 +1448,7 @@ $kaynakBasinaTavan = max(1, (int) ($secenekler['kaynakbasina'] ?? ($videoModu
 $kaynakSayaci      = [];
 $secilen           = [];
 $tarifDegil        = 0;
+$yerelDegil        = 0;
 
 /*
  * RESMI GAZETE ONCE VE TAVANSIZ.
@@ -1428,6 +1487,12 @@ foreach ($adaylar as $aday) {
         continue;
     }
 
+    // Yerel kaynagin ulusal haberi alinmiyor (bkz. yerel_haber_mi).
+    if (!yerel_haber_mi($aday)) {
+        $yerelDegil++;
+        continue;
+    }
+
     $ad = (string) $aday['kaynak']['ad'];
     $kaynakSayaci[$ad] = ($kaynakSayaci[$ad] ?? 0) + 1;
 
@@ -1442,7 +1507,11 @@ if ($tarifDegil > 0) {
     gunluk('  ' . $tarifDegil . ' tarif kaynağı girdisi başlığından tarif olmadığı belli olduğu için alınmadı (nerede yenir, menü vb.).');
 }
 
-$tavanaTakilan = count($adaylar) - count($secilen) - count($rgAdaylar) - $tarifDegil;
+if ($yerelDegil > 0) {
+    gunluk('  ' . $yerelDegil . ' yerel kaynak girdisi o ilin haberi olmadığı için alınmadı (başlıkta ve özette il ya da ilçe adı yok).');
+}
+
+$tavanaTakilan = count($adaylar) - count($secilen) - count($rgAdaylar) - $tarifDegil - $yerelDegil;
 
 [$tekil, $kopyaElenen] = ayni_olayi_ele(array_merge($rgAdaylar, $secilen));
 
