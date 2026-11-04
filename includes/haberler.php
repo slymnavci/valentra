@@ -57,6 +57,26 @@ const HABER_AKIS_KATEGORILERI = [
 const HABER_AKIS_DISI = ['yemek-tarifleri', 'magazin'];
 
 /*
+ * Yerel kaynaklar (04.11.2026, site sahibi: "yerel haber ajanslarini da
+ * ekleyelim; Trabzon, Kayseri, Kocaeli gazetelerine de bakip degeri dusuk
+ * haberleri ana sayfaya almayacak sekilde arka planda tutalim, gunluk
+ * bunlardan da haber gelsin").
+ *
+ * Yerel kaynagin haberi (haberler.sehir dolu) onemi bu esigin altindaysa
+ * ana sayfaya, kategori sayfalarina ve bultene cikmiyor; yayinda kaliyor:
+ * haber sayfasi, arama, site haritasi ve ana sayfadaki "Senin Icin"
+ * bolumunde o ili secen okura. Esigi gecen yerel haber (buyuk kaza,
+ * afet, ulusal yanki) ulusal haber gibi her yerde.
+ */
+const YEREL_ANA_SAYFA_ESIGI = 75;
+
+/** Dusuk onemli yerel haberleri disarida birakan kosul ("h" takma adiyla). */
+function haber_yerel_kosulu(): string
+{
+    return '(h.sehir IS NULL OR h.onem >= ' . YEREL_ANA_SAYFA_ESIGI . ')';
+}
+
+/*
  * Haber sirasi: ONCE BUGUN TOPLANANLAR, kendi icinde EN ONEMLIDEN
  * ONEMSIZE (site sahibinin istegi, 23.10.2026: "halen eski haberler
  * duruyor; bugun toplananlari on plana getir, oncelik en onemli
@@ -715,7 +735,7 @@ const HABER_ANA_SAYFA_EN_FAZLA_GUN = 14;
  * (yemek tarifi gibi akis disi bir baslikta olmayan), kaynak tarihi
  * bilinen haber. Tarih penceresi yok; siniri haber sayisi koyuyor.
  */
-function haber_ana_akis_kosulu(): string
+function haber_ana_akis_kosulu(bool $yerelDahil = false): string
 {
     $disarida = implode(', ', array_map(
         static fn (string $slug): string => db()->quote($slug),
@@ -751,7 +771,9 @@ function haber_ana_akis_kosulu(): string
         . ' AND (h.kategori_id IS NULL OR h.kategori_id NOT IN'
         . ' (SELECT id FROM kategoriler WHERE slug IN (' . $disarida . ')))'
         . ' AND h.kaynak_tarihi IS NOT NULL'
-        . ' AND h.olusturuldu >= NOW() - INTERVAL ' . HABER_ANA_SAYFA_EN_FAZLA_GUN . ' DAY';
+        . ' AND h.olusturuldu >= NOW() - INTERVAL ' . HABER_ANA_SAYFA_EN_FAZLA_GUN . ' DAY'
+        // Dusuk onemli yerel haber ana akista yok ($yerelDahil: "Senin Icin" sehir bolumu).
+        . ($yerelDahil ? '' : ' AND ' . haber_yerel_kosulu());
 }
 
 /**
@@ -1268,6 +1290,17 @@ function haber_taslak_ekle(array $veri): array
 
     $id = (int) db()->lastInsertId();
     haber_kaynak_listesi_yaz($id, $veri, $kaynakUrl);
+
+    // Yerel kaynagin haberi: ili kaynaktan (bkz. haber_yerel_kosulu).
+    try {
+        db()->prepare(
+            'UPDATE haberler h JOIN kaynaklar k ON (k.id = h.kaynak_id OR (h.kaynak_id IS NULL AND k.ad = h.kaynak_adi))
+                SET h.sehir = k.sehir
+              WHERE h.id = :id AND k.sehir IS NOT NULL AND k.sehir <> \'\''
+        )->execute(['id' => $id]);
+    } catch (PDOException $e) {
+        error_log('[valentra] haber sehri yazilamadi: ' . $e->getMessage());
+    }
 
     return ['durum' => 'eklendi', 'id' => $id];
 }
@@ -2112,7 +2145,7 @@ function haber_kategoride(int $kategoriId, int $limit = 20, int $atla = 0): arra
         'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
            FROM haberler h
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
-          WHERE h.durum = :durum AND h.kategori_id = :kategori
+          WHERE h.durum = :durum AND h.kategori_id = :kategori AND ' . haber_yerel_kosulu() . '
           ORDER BY ' . haber_sirasi() . '
           LIMIT :limit OFFSET :atla'
     );
@@ -2128,7 +2161,7 @@ function haber_kategoride(int $kategoriId, int $limit = 20, int $atla = 0): arra
 function haber_kategoride_sayi(int $kategoriId): int
 {
     $ifade = db()->prepare(
-        'SELECT COUNT(*) FROM haberler WHERE durum = :durum AND kategori_id = :kategori'
+        'SELECT COUNT(*) FROM haberler h WHERE h.durum = :durum AND h.kategori_id = :kategori AND ' . haber_yerel_kosulu()
     );
     $ifade->execute(['durum' => HABER_YAYINDA, 'kategori' => $kategoriId]);
 
