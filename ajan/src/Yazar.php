@@ -271,6 +271,16 @@ final class Yazar implements SemaliIstemci
                sabit tuttu".
                KÖTÜ: "Biden'dan 'kırmızı çizgi' çıkışı" → İYİ: "Biden
                İsrail'e Refah uyarısı yaptı".
+               - EKLER ANLAMI DEĞİŞTİRİR, özellikle sporda: "Galatasaray'a
+                 gol attı" RAKİP olarak Galatasaray'ın kalesine attı
+                 demektir. Oyuncu kendi takımı için attıysa "Galatasaray
+                 adına", "Galatasaray formasıyla" ya da "X, Galatasaray'ı
+                 taşıdı" yazılır. Aynı dikkat "-e karşı / -den / -le"
+                 eklerinde: kimin kime, kimin kimden aldığı kaynakla aynı
+                 olmalı.
+               KÖTÜ: "Batrakov, Galatasaray'a Şampiyonlar Ligi'nde iki gol
+               attı" (oyuncu Galatasaray'ın) → İYİ: "Batrakov, Galatasaray
+               adına Şampiyonlar Ligi'nde iki gol attı".
              * Merak, metinde KARŞILIĞI OLAN bir bilgiyle giderilmeli:
                başlık yanıltmaz, abartmaz, metinde olmayanı vaat etmez.
                YASAK: "şok", "flaş", "bomba", "skandal", "inanamayacaksınız",
