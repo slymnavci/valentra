@@ -463,10 +463,16 @@ function gsc_kapsam_acikla(string $kapsam): array
 /** Search Console'da bu adresin URL denetimi sayfasi. */
 function gsc_denetim_adresi(string $url): string
 {
-    $site = ayar_oku('gsc_site');
+    /*
+     * Mulkun Search Console ana sayfasi (04.11.2026). Dogrudan adres
+     * denetimi baglantisi (.../search-console/inspect?resource_id=&id=)
+     * Google'da 404 veriyordu. Panel dugmesi haberin adresini panoya
+     * kopyalayip bunu aciyor; adres ustteki "URL'yi denetle" kutusuna
+     * yapistiriliyor. $url yalnizca imza uyumu icin.
+     */
+    unset($url);
 
-    return 'https://search.google.com/search-console/inspect?'
-         . http_build_query(['resource_id' => $site, 'id' => $url]);
+    return 'https://search.google.com/search-console?' . http_build_query(['resource_id' => ayar_oku('gsc_site')]);
 }
 
 /**
