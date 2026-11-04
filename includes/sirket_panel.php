@@ -87,6 +87,8 @@ function sirket_bist_bolumu_html(): string
             'sifirdan' => false,
             'hane'     => 2,
             'golge'    => true,
+            // Golge ve cizgi yukseliste yesil, dususte kirmizi (site sahibi, 04.11.2026).
+            'yon_renk' => true,
         ]);
     }
 
