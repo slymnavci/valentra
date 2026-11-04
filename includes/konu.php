@@ -162,7 +162,8 @@ function konu_haberleri(string $slug, int $adet = KONU_HABER_TAVANI): array
 
     try {
         $ifade = db()->prepare(
-            "SELECT h.id, h.baslik, h.slug, h.ozet, h.neden_onemli, h.gorsel_url, h.yayin_tarihi, h.kaynak_adi
+            "SELECT h.id, h.baslik, h.slug, h.ozet, h.neden_onemli, h.gorsel_url, h.yayin_tarihi, h.kaynak_adi,
+                    h.kaynak_baslik, h.kaynak_url
                FROM haberler h
               WHERE h.durum = 'yayinda' AND h.yayin_tarihi >= NOW() - INTERVAL " . KONU_GUN . " DAY
                 AND {$kosul}
