@@ -385,6 +385,8 @@ function sema_yukselt(array &$hatalar = []): array
     // Yerel kaynaklar (04.11.2026; bkz. haber_yerel_kosulu).
     $sutunEkle('kaynaklar', 'sehir', 'VARCHAR(40) NULL AFTER kategori');
     $sutunEkle('haberler', 'sehir', 'VARCHAR(40) NULL AFTER onem');
+    // Yapay zekanin son dakika karari (04.11.2026; bkz. haber_son_dakika_mi).
+    $sutunEkle('haberler', 'son_dakika', 'TINYINT(1) NOT NULL DEFAULT 0 AFTER sehir');
     $adim('haberler.ix_haber_sehir indeksi', static function (): bool {
         if (!sema_sutun_var('haberler', 'sehir') || sema_indeks_var('haberler', 'ix_haber_sehir')) {
             return false;
@@ -642,6 +644,8 @@ function sema_guncel_mi(): bool
             // Yerel haber suzgeci (haber_yerel_kosulu) ve haber ekleme bunlari kullaniyor.
             ['kaynaklar', 'sehir'],
             ['haberler', 'sehir'],
+            // Son dakika puani, yuvasi, gorseli ve bildirimleri bunu kullaniyor.
+            ['haberler', 'son_dakika'],
             // Ana sayfa siralamasi ve haber_taslak_ekle() bu sutunu kullaniyor.
             ['haberler', 'onem'],
             // haber_taslak_ekle() ve api/kaynaklar.php kopya denetiminde

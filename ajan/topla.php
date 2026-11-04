@@ -1994,6 +1994,9 @@ foreach ($gruplar as $grupNo => $grup) {
             // Haberin kaynakta olmayan acisi; sayfada "Neden onemli?"
             // (Google'in ozgun katki aradigi kisim, 26.10.2026).
             'neden_onemli' => (string) ($sonuc['neden_onemli'] ?? ''),
+            // Modelin son dakika karari (04.11.2026): haberi okuyup veriyor;
+            // site bunu yasla birlikte kullaniyor (bkz. haber_son_dakika_mi).
+            'son_dakika'   => !empty($sonuc['son_dakika']),
             // Haberi yazan model: site otomatik yayin esigini buna gore
             // seciyor (Luna guveni daha temkinli puanliyor).
             'model'       => $yanitlayanModel,

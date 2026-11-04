@@ -469,6 +469,8 @@ function deprem_haber_kaydet(array $d, array $h): string
         'kaynak_zamani' => time(),
         'guven_skoru'   => 95,
         'onem'          => $h['onem'],
+        // 4,5 ve ustu deprem canli veriden geliyor; son dakika.
+        'son_dakika'    => $h['onem'] >= 76,
         'model'         => 'valentra-veri',
         'ajan_notu'     => 'Özgün veri haberi (deprem): metin şablondan, rakamlar AFAD/Kandilli verisinden.',
     ]);
