@@ -32,7 +32,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $islem = (string) ($_POST['islem'] ?? '');
 
-    if ($islem === 'anahtar') {
+    if ($islem === 'istendi') {
+        // "Bugun Google'a iste" listesinde isaretleme (bkz. gsc_isteme_listesi).
+        $istenenUrl = (string) ($_POST['url'] ?? '');
+
+        if (str_starts_with($istenenUrl, site_adresi() . '/')) {
+            gsc_istendi_isaretle($istenenUrl);
+        }
+
+        yonlendir('google.php#google-iste');
+    } elseif ($islem === 'anahtar') {
         $sonuc = gsc_hesap_kaydet((string) ($_POST['json'] ?? ''));
 
         if ($sonuc['tamam']) {
@@ -221,6 +230,50 @@ require __DIR__ . '/ust.php';
                         onclick="return confirm('Servis hesabı anahtarı silinsin mi?')">Anahtarı sil</button>
             </form>
         </div>
+    </div>
+
+    <?php
+    /* "Bugun Google'a iste" (04.11.2026; bkz. gsc_isteme_listesi). */
+    $istemeListesi = gsc_isteme_listesi();
+    $bugunIstenen  = gsc_bugun_istenen();
+    ?>
+    <div class="kutu" id="google-iste" style="margin-top:20px;">
+        <h2 style="margin-top:0;">Bugün Google'a iste
+            <span class="ipucu" style="font-weight:400;">(bugün <?= $bugunIstenen ?> / <?= GSC_ISTEME_GUNLUK ?> istendi)</span></h2>
+        <p class="ipucu">
+            Son 36 saatin Google'a sunulan haberlerinden, yapay zekânın verdiği önem puanına göre en önemlileri; dizinde olanlar listede yok.
+            Her biri için: <strong>Search Console'da aç</strong> → açılan sayfada <strong>"Dizine eklenmesini iste"</strong> → bitince burada <strong>İstedim</strong>.
+            Google bu isteği günde sınırlı sayıda kabul ediyor; "kota aşıldı" derse ertesi gün devam edin.
+        </p>
+
+        <?php if ($istemeListesi === []): ?>
+            <p class="ipucu">Şu an istenecek haber yok: önemli haberler ya dizinde ya da zaten istendi.</p>
+        <?php else: ?>
+            <table class="liste-tablo">
+                <thead><tr><th>Haber</th><th class="sag">Önem</th><th>Google'da</th><th></th></tr></thead>
+                <tbody>
+                <?php foreach ($istemeListesi as $i): ?>
+                    <tr>
+                        <td style="word-break:break-word;">
+                            <a href="<?= e($i['url']) ?>" target="_blank" rel="noopener"><?= e($i['baslik']) ?></a>
+                            <?php if ($i['ozgun']): ?> <span class="rozet rozet-yayinda">Özgün</span><?php endif; ?>
+                            <div class="ipucu" style="font-size:.8rem;"><?= e(tarih_bicimle($i['yayin'])) ?></div>
+                        </td>
+                        <td class="sag"><?= (int) $i['onem'] ?></td>
+                        <td class="ipucu"><?= e($i['durum']) ?></td>
+                        <td style="white-space:nowrap;">
+                            <a class="dugme dugme-ana" href="<?= e(gsc_denetim_adresi($i['url'])) ?>" target="_blank" rel="noopener">Search Console'da aç</a>
+                            <form method="post" action="google.php" style="display:inline;margin:0;">
+                                <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                                <input type="hidden" name="url" value="<?= e($i['url']) ?>">
+                                <button type="submit" name="islem" value="istendi" class="dugme">İstedim</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
     </div>
 
     <?php if ($sonHata !== '' && $tazeleme === null): ?>

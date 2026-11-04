@@ -846,3 +846,90 @@ function gsc_site_haritasi_gonder(): array
 
     return ['tamam' => $hatalar === [], 'hata' => implode(' · ', $hatalar)] + $sonuc;
 }
+
+/* ------------------------------------------------------------------------
+ * "Bugun Google'a iste" listesi (04.11.2026, site sahibinin istegi:
+ * "onemli haberleri bir tus ile Google'a gonderme").
+ *
+ * Google'in haberler icin otomatik "hemen tara" yolu yok (Indexing API
+ * yalnizca is ilani ve canli yayin icin; haberde kullanmak spam sayiliyor).
+ * Kurala uygun en kisa yol: Search Console'da adresi acip "Dizine
+ * eklenmesini iste" dugmesine basmak; Google bunu gunde sinirli sayida
+ * kabul ediyor. Bu liste son 36 saatin Google'a sunulan haberlerinden,
+ * yapay zekanin verdigi onem puanina gore en onemlilerini seciyor; dizinde
+ * olanlar ve "istendi" isaretlenenler cikiyor.
+ * --------------------------------------------------------------------- */
+
+/** Günde elle istenecek haber sayısı (Search Console'un günlük sınırına yakın). */
+const GSC_ISTEME_GUNLUK = 10;
+
+/** @return array<string,int> adres => isaretlendigi zaman (son 7 gun) */
+function gsc_istenenler(): array
+{
+    $liste = json_decode(ayar_oku('gsc_istenenler'), true);
+
+    return is_array($liste) ? array_filter($liste, static fn ($z): bool => (int) $z > time() - 7 * 86400) : [];
+}
+
+function gsc_istendi_isaretle(string $url): void
+{
+    $liste = gsc_istenenler();
+    $liste[$url] = time();
+    ayar_yaz('gsc_istenenler', (string) json_encode($liste, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+}
+
+/** Bugün (Türkiye) "istendi" işaretlenen sayı. */
+function gsc_bugun_istenen(): int
+{
+    $bugun = strtotime('today');
+
+    return count(array_filter(gsc_istenenler(), static fn ($z): bool => (int) $z >= $bugun));
+}
+
+/**
+ * @return list<array{baslik:string,url:string,onem:int,ozgun:bool,durum:string,yayin:string}>
+ */
+function gsc_isteme_listesi(int $adet = GSC_ISTEME_GUNLUK): array
+{
+    require_once __DIR__ . '/haberler.php';
+    require_once __DIR__ . '/seo.php';
+
+    try {
+        $satirlar = db()->query(
+            "SELECT * FROM haberler
+              WHERE durum = 'yayinda' AND yayin_tarihi >= NOW() - INTERVAL 36 HOUR
+                AND " . haber_dizinlenir_kosulu() . "
+              ORDER BY onem DESC, yayin_tarihi DESC
+              LIMIT 120"
+        )->fetchAll();
+        $denetim = array_column(db()->query('SELECT url, sonuc, kapsam FROM gsc_denetim')->fetchAll(), null, 'url');
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    $istenen = gsc_istenenler();
+    $liste   = [];
+
+    foreach ($satirlar as $h) {
+        $url = site_adresi() . haber_yolu((string) $h['slug']);
+        $d   = $denetim[$url] ?? null;
+
+        if (isset($istenen[$url]) || ($d !== null && $d['sonuc'] === 'PASS')) {
+            continue;
+        }
+
+        $liste[] = [
+            'baslik' => (string) $h['baslik'],
+            'url'    => $url,
+            'onem'   => (int) $h['onem'],
+            'ozgun'  => haber_ozgun_mu($h),
+            'durum'  => $d !== null ? gsc_kapsam_acikla((string) $d['kapsam'])[0] : 'Denetlenmedi',
+            'yayin'  => (string) $h['yayin_tarihi'],
+        ];
+    }
+
+    // Esit onemde ozgun haber once (Google'in en cok deger verdigi).
+    usort($liste, static fn (array $a, array $b): int => [$b['onem'], $b['ozgun']] <=> [$a['onem'], $a['ozgun']]);
+
+    return array_slice($liste, 0, $adet);
+}
