@@ -2600,3 +2600,19 @@ CREATE TABLE IF NOT EXISTS mac_ozetleri (
     UNIQUE KEY uq_mac_ozeti_slug (slug),
     KEY ix_mac_ozeti_yayin (durum, yayin)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- DW Turkce videolari kapatildi (04.11.2026, site sahibinin karari: "DW'den
+-- aldigin ve yayindan kaldirdigin Cumhurbaskani ile alay eden videolar kesin
+-- olmasin; devlet buyuklerine saygisiz haberler olmayacak"). Kanal artik
+-- taranmiyor; daha once alinmis ve hala yayinda olan DW videolari da
+-- yayindan kaldiriliyor (silinmiyor, "reddedildi"; panelden geri alinabilir).
+-- Tek seferlik: panelden yeniden acilirsa ezilmez.
+-- ---------------------------------------------------------------------------
+UPDATE kaynaklar SET aktif = 0 WHERE ad = 'DW Türkçe (video)'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_dw_video_kapali_2026_11_04');
+UPDATE haberler SET durum = 'reddedildi'
+ WHERE kaynak_adi = 'DW Türkçe (video)' AND durum = 'yayinda'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_dw_video_kapali_2026_11_04');
+INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_dw_video_kapali_2026_11_04', '04.11.2026');
+

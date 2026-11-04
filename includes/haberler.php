@@ -1180,6 +1180,35 @@ function haber_kategori_gorsellerini_doldur(int $limit = 1000): int
     return $ifade->rowCount();
 }
 
+/*
+ * DEVLET BUYUKLERINE SAYGI (site sahibinin karari, 04.11.2026: "DW'den
+ * aldigin ve yayindan kaldirdigin Cumhurbaskani ile alay eden videolar
+ * kesin olmasin; devlet buyuklerine saygisiz haberler olmayacak").
+ *
+ * Model zaten yayin politikasiyla eliyor (ajan/src/Yazar.php, madde j);
+ * bu ikinci, modelden bagimsiz kilit: baslikta, ozette, kaynagin
+ * basliginda ya da metnin basinda bir devlet makami ile alay/taklit/
+ * parodi gibi bir ifade birlikte geciyorsa haber siteye hic girmiyor.
+ * Kasten temkinli: "X ile alay ettiler" diye aktarilan bir aciklama da
+ * eleniyor; boyle haber elle yazilabilir (panel bu denetime takilmaz).
+ */
+const HABER_DEVLET_MAKAMLARI = '/(erdo[gğ]an|cumhurba[sş]kan|ba[sş]bakan|tbmm ba[sş]kan|meclis ba[sş]kan|bakan[ıi]\b|bakanlar[ıi]?\b|valisi\b|genelkurmay|t[uü]rk silahl[ıi] kuvvet|president erdo|turkish president)/iu';
+const HABER_ALAY_IFADELERI = '/(alay\s*(et|ed)|alayc|dalga ge[cç]|taklit|parodi|hiciv|skeç|skec|karikat[uü]r|mizah|g[uü]l[uü]n[cç]|komik duruma|maskara|rezil|mock|ridicul|satir|parod|lampoon|caricatur|laugh(ed|ing)? at|joke[sd]? about|imitat)/iu';
+
+/** @param array<string,mixed> $veri */
+function haber_devlet_buyuklerine_saygisiz_mi(array $veri): bool
+{
+    $metin = implode(' ', [
+        (string) ($veri['baslik'] ?? ''),
+        (string) ($veri['ozet'] ?? ''),
+        (string) ($veri['kaynak_baslik'] ?? ''),
+        mb_substr((string) ($veri['icerik'] ?? ''), 0, 600, 'UTF-8'),
+    ]);
+
+    return preg_match(HABER_DEVLET_MAKAMLARI, $metin) === 1
+        && preg_match(HABER_ALAY_IFADELERI, $metin) === 1;
+}
+
 /**
  * Ajanin buldugu haberi taslak olarak kaydeder.
  *
@@ -1193,6 +1222,10 @@ function haber_taslak_ekle(array $veri): array
 
     if ($baslik === '' || $icerik === '') {
         throw new InvalidArgumentException('Baslik ve icerik zorunludur.');
+    }
+
+    if (haber_devlet_buyuklerine_saygisiz_mi($veri)) {
+        throw new InvalidArgumentException('Yayın politikası: devlet büyüklerine saygı (alay, taklit, parodi içeren haber alınmaz).');
     }
 
     $parmak       = haber_parmak_izi($kaynakUrl, $baslik);

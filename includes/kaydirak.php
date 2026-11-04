@@ -46,7 +46,12 @@ if (($mansetler ?? []) === []) {
                             <span class="video-rozet" title="Videolu haber">&#9654; Video</span>
                         <?php endif; ?>
 
-                        <h2><?= e($haber['baslik']) ?></h2>
+                        <?php
+                        // Baslik kesilmiyor; uzunsa kucuk punto (bkz. .kaydirak-govde h2.uzun).
+                        $mansetUzunluk = mb_strlen((string) $haber['baslik'], 'UTF-8');
+                        $mansetSinif   = $mansetUzunluk > 85 ? 'cok-uzun' : ($mansetUzunluk > 55 ? 'uzun' : '');
+                        ?>
+                        <h2<?= $mansetSinif !== '' ? ' class="' . $mansetSinif . '"' : '' ?>><?= e($haber['baslik']) ?></h2>
 
                         <?php /* Ozet yok (site sahibi, 03.11.2026: "kayar slayttaki haberler
                                  kisa olsun, detay vermeyelim; okumak isteyen haberin icine

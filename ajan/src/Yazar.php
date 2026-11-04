@@ -160,6 +160,15 @@ final class Yazar implements SemaliIstemci
               çocukların kimliğini açık eden ayrıntılar (bunlar özete
               hiç girmez; haber başka açıdan uygunsa kimlik vermeden
               yaz).
+           j) DEVLET BÜYÜKLERİNE SAYGISIZLIK (site sahibinin kararı,
+              04.11.2026): Cumhurbaşkanı, TBMM Başkanı, bakanlar, devletin
+              diğer büyükleri ve kurumlarıyla alay eden, onları taklit
+              eden, küçümseyen, gülünç duruma düşüren ya da hicveden her
+              içerik: mizah ve skeç, parodi, karikatür, sokak röportajında
+              alaycı tepkiler, yabancı yayın kuruluşlarının bu türden
+              videoları. Bunları aktaran haber de yayımlanmaz. Devlet
+              büyüklerinin açıklama, karar ve faaliyetleri saygılı ve
+              olgusal bir dille yazılır.
 
            YAZAR MAKALESİ HABER DEĞİLDİR. Bir kişinin imzasını taşıyan
            makale, köşe yazısı ya da görüş yazısı (sayfada yazar adı,
@@ -405,7 +414,9 @@ final class Yazar implements SemaliIstemci
         haberin altında oynatıcıyla gösterilir; okur görüntüyü kendisi
         izler. Sen videoyu izleyemezsin: elinde yalnızca videonun başlığı
         ve açıklaması var. Yukarıdaki haber kuralları yerine bunlar
-        geçerlidir (yayın politikası maddeleri a-i yine geçerlidir).
+        geçerlidir (yayın politikası maddeleri a-j yine geçerlidir; özellikle j:
+        devlet büyükleriyle alay eden, taklit eden ya da küçümseyen video
+        YAYIMLANMAZ).
         - YAYIMLANIR: güncel bir OLAYIN görüntüsü: kaza, yangın, sel, kar,
           fırtına gibi doğa olayları, yerleşim yerine inen yaban
           hayvanları, kurtarma çalışmaları, ilginç ya da dikkat çeken
