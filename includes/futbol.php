@@ -840,8 +840,11 @@ function futbol_mac_ayrintilari(array $maclar): array
     $sonuc = [];
 
     foreach ($gunler as $lig => $liste) {
+        // "20261103" gibi anahtarlari PHP tamsayiya ceviriyor; strict_types
+        // altinda futbol_tarih_maclari(string) TypeError atip kulup sayfasini
+        // dusuruyordu (04.11.2026). Bkz. ayni durum futbol_lig_bilgisi'nde.
         foreach (array_keys($liste) as $gun) {
-            foreach (futbol_tarih_maclari((string) $lig, $gun)['veri'] ?? [] as $a) {
+            foreach (futbol_tarih_maclari((string) $lig, (string) $gun)['veri'] ?? [] as $a) {
                 $sonuc[$a['id']] = $a;
             }
         }
