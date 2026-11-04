@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bildirim = 'GitHub anahtarı silindi.';
 
     } elseif ($islem === 'calistir' || $islem === 'calistir_kuru' || $islem === 'kaynak_testi'
-               || $islem === 'kanun_testi' || $islem === 'pratik_topla') {
+               || $islem === 'kanun_testi' || $islem === 'pratik_topla' || $islem === 'baslik_denetim') {
         // Suren bir calisma varken yenisini gondermek ise yaramaz:
         // GitHub ayni eszamanlilik grubunda sirada tek bir calisma
         // tutuyor, yeni istek bekleyeni IPTAL ediyor. Dugmeye art arda
@@ -76,6 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'kaynak_testi' => 'kaynak-testi',
                     'kanun_testi'  => 'kanun-testi',
                     'pratik_topla' => 'pratik-bilgiler',
+                    // Son iki haftanin basliklarini Turkce denetle (04.11.2026; bkz. ajan/baslik_denetle.php).
+                    'baslik_denetim' => 'baslik-denetim',
                     default        => 'topla',
                 },
                 (string) ($_POST['konu'] ?? ''),
@@ -195,6 +197,9 @@ require __DIR__ . '/ust.php';
 
                 <button type="submit" name="islem" value="pratik_topla"
                         class="dugme">Pratik bilgileri topla</button>
+
+                <button type="submit" name="islem" value="baslik_denetim"
+                        class="dugme" title="Son iki haftanın başlıklarını okur; anlaşılmayan ya da çeviri kokan başlıkları doğal Türkçeyle yeniden yazar.">Başlıkların Türkçesini düzelt</button>
             </div>
 
             <p class="ipucu" style="margin:14px 0 0;">

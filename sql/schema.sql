@@ -148,6 +148,10 @@ CREATE TABLE IF NOT EXISTS haberler (
     kaynak_tarihi   DATETIME      NULL,
     -- Tarih denetiminin bu habere baktigi an (ajan/tarih_denetle.php).
     tarih_denetlendi DATETIME     NULL,
+    -- Baslik denetimi (04.11.2026, ajan/baslik_denetle.php): bakildigi an
+    -- ve duzeltildiyse onceki baslik (geri almak icin).
+    baslik_denetlendi DATETIME    NULL,
+    eski_baslik     VARCHAR(300)  NOT NULL DEFAULT '',
 
     olusturuldu     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     guncellendi     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

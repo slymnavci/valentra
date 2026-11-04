@@ -250,6 +250,27 @@ final class Yazar implements SemaliIstemci
                kapıda", "Asgari ücrette ilk rakam masada".
              * Kaynağın başlığını kopyalama ya da çevirme; kendi başlığını
                yaz.
+             * ANLAŞILIR, DOĞAL TÜRKÇE (site sahibi, 04.11.2026: "başlığın
+               Türkçesini çok iyi yapmamız lazım; ne dediği anlaşılmıyor").
+               Başlığı haberi hiç bilmeyen biri okuyunca tek seferde ne
+               olduğunu anlamalı. Yabancı başlığın kalıbını, kelime
+               sırasını ve deyimini Türkçeye taşıma; anlamı Türkçe kur.
+               - Fiilin istediği tümleç eksik kalmasın: "X'i ilan etti",
+                 "X'i ... olarak tanıdı" gibi yapılarda NE ilan edildiği
+                 açıkça yazılır.
+               - Tırnak yalnızca birinin GERÇEKTEN söylediği ve tek başına
+                 anlam taşıyan sözü içindir; çevrilmiş bir sözcük
+                 öbeğini tırnağa alıp cümleyi yarım bırakma.
+               - Türkçede karşılığı olan yabancı terimi kullanma; kurum
+                 adlarını Türkçe bilinen biçimiyle yaz (Beyaz Saray,
+                 Temsilciler Meclisi, Avrupa Birliği).
+               KÖTÜ: "Trump uzayı 'tüm insanlığın' ilan etti" (neyi ilan
+               ettiği belli değil) → İYİ: "Trump uzayı tüm insanlığın
+               ortak alanı ilan etti".
+               KÖTÜ: "Fed 'beklemede' kalmayı seçti" → İYİ: "Fed faizi
+               sabit tuttu".
+               KÖTÜ: "Biden'dan 'kırmızı çizgi' çıkışı" → İYİ: "Biden
+               İsrail'e Refah uyarısı yaptı".
              * Merak, metinde KARŞILIĞI OLAN bir bilgiyle giderilmeli:
                başlık yanıltmaz, abartmaz, metinde olmayanı vaat etmez.
                YASAK: "şok", "flaş", "bomba", "skandal", "inanamayacaksınız",
@@ -461,7 +482,7 @@ final class Yazar implements SemaliIstemci
             'sira'        => ['type' => 'integer', 'description' => 'Adayin kullanici mesajindaki sira numarasi'],
             'ilgili'      => ['type' => 'boolean', 'description' => 'Haber yayın politikasına göre yayımlanabilir mi'],
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
-            'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı: kısa, vurucu, merak uyandıran; en fazla 60 karakter, ayrıntı metinde'],
+            'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı: kısa, vurucu, merak uyandıran, doğal ve tek okumada anlaşılır Türkçe (çeviri kalıbı yok, eksik tümleç yok); en fazla 60 karakter, ayrıntı metinde'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
             'icerik'      => ['type' => 'string',  'description' => 'Tarafsız, özgün cümlelerle yeniden yazılmış haber metni: kaynaktaki bütün ayrıntılar (rakam, tarih, isim, açıklama, arka plan); kaynak zenginse 5-10, kısaysa 3 paragraf; paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
             'etiketler'   => [
@@ -504,7 +525,7 @@ final class Yazar implements SemaliIstemci
         'properties' => [
             'ilgili'      => ['type' => 'boolean', 'description' => 'Haber yayın politikasına göre yayımlanabilir mi'],
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
-            'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı: kısa, vurucu, merak uyandıran; en fazla 60 karakter, ayrıntı metinde'],
+            'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı: kısa, vurucu, merak uyandıran, doğal ve tek okumada anlaşılır Türkçe (çeviri kalıbı yok, eksik tümleç yok); en fazla 60 karakter, ayrıntı metinde'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
             'icerik'      => ['type' => 'string',  'description' => 'Tarafsız, özgün cümlelerle yeniden yazılmış haber metni: kaynaktaki bütün ayrıntılar (rakam, tarih, isim, açıklama, arka plan); kaynak zenginse 5-10, kısaysa 3 paragraf; paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
             'etiketler'   => [

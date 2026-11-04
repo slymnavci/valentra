@@ -224,6 +224,9 @@ function sema_yukselt(array &$hatalar = []): array
     $sutunEkle('haberler', 'kaynak_tarihi', 'DATETIME NULL AFTER yayin_tarihi');
     // Tarih denetimi (23.10.2026; bkz. api/tarih-denetim.php).
     $sutunEkle('haberler', 'tarih_denetlendi', 'DATETIME NULL AFTER kaynak_tarihi');
+    // Baslik denetimi (04.11.2026, ajan/baslik_denetle.php).
+    $sutunEkle('haberler', 'baslik_denetlendi', 'DATETIME NULL AFTER tarih_denetlendi');
+    $sutunEkle('haberler', 'eski_baslik', "VARCHAR(300) NOT NULL DEFAULT '' AFTER baslik_denetlendi");
     // Haberi yazan model; otomatik yayin esigi buna gore (23.10.2026).
     $sutunEkle('haberler', 'ajan_modeli', "VARCHAR(80) NOT NULL DEFAULT '' AFTER ajan_notu");
     // "Neden onemli?" — haberin ozgun katkisi (26.10.2026; bkz. haber.php).
