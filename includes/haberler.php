@@ -199,20 +199,19 @@ function haber_etkin_onem_ifadesi(): string
  * SON DAKIKA PUANI (site sahibinin istegi, 23.10.2026: "son dakika
  * haberleri daha yuksek derece alsin").
  *
- * Kaynak haberi "son dakika" diye isaretlediyse (kaynagin basligi ya da
- * adresi) +30; saatte 5 azaliyor, 6 saatte sifir. Son
- * dakika haberi taze oldugu surece degerli; aksama kadar ustte kalmamali.
- * Ajan basligi yeniden yaziyor, bu yuzden kaynagin ozgun basligina
- * (kaynak_baslik) da bakiliyor. Sutunlar utf8mb4_unicode_ci: LIKE buyuk
- * kucuk harf ve "SON DAKİKA" yazimini da yakaliyor.
+ * Yapay zeka haberi okuyup son dakika dediyse (h.son_dakika) +30; saatte
+ * 5 azaliyor, 6 saatte sifir. Son dakika haberi taze oldugu surece
+ * degerli; aksama kadar ustte kalmamali. 04.11.2026'ya kadar kaynagin
+ * basliginda ya da adresinde "son dakika" gecmesi yetiyordu; bazi
+ * siteler eski haberi de boyle isaretledigi icin birkac gunluk haber son
+ * dakika oldu (site sahibi: "once haberi okusun, ona gore karar versin").
  */
 const HABER_SON_DAKIKA_TAVANI = 30;
 
 function haber_son_dakika_ifadesi(): string
 {
-    return "CASE WHEN h.kaynak_baslik LIKE '%son dakika%' OR h.baslik LIKE '%son dakika%'
-                   OR h.kaynak_url LIKE '%son-dakika%' OR h.kaynak_url LIKE '%sondakika%'
-              THEN GREATEST(0, " . HABER_SON_DAKIKA_TAVANI . ' - '
+    return 'CASE WHEN h.son_dakika = 1
+              THEN GREATEST(0, ' . HABER_SON_DAKIKA_TAVANI . ' - '
         . haber_yas_dakika_ifadesi() . ' / ' . HABER_GUNCELLIK_DAKIKASI . ') ELSE 0 END';
 }
 
@@ -297,6 +296,10 @@ function haber_arkadaki_spor_ifadesi(): string
 const HABER_TOPLAMA_BOSLUGU_SANIYE = 600;
 
 /*
+ * Yapay zeka haberi okuyup son dakika demis olmali (h.son_dakika;
+ * 04.11.2026, site sahibi: "son dakika diye cikan haber birkac gunluk;
+ * once haberi okusun, ona gore karar versin"). Demediyse yuva bos kalir.
+ *
  * Son dakika olabilmek icin haberin KAYNAKTA en fazla 3 saat once ve
  * bugun yayimlanmis olmasi gerekiyor (site sahibi, 23.10.2026: Euronews'un
  * dun 22:57'de yayimladigi deprem haberi ertesi sabah toplanip son dakika
@@ -364,6 +367,7 @@ function haber_son_dakika_id(): ?int
                FROM haberler h
               WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . haber_ana_akis_kosulu() . "
                 AND h.kaynak_tarihi IS NOT NULL
+                AND h.son_dakika = 1
                 AND h.onem >= " . ANA_SAYFA_ONEM_ESIGI . "
                 AND (h.kategori_id IS NULL OR h.kategori_id NOT IN
                      (SELECT id FROM kategoriler WHERE slug IN ('teknoloji', 'kultur-sanat'"
@@ -1261,13 +1265,13 @@ function haber_taslak_ekle(array $veri): array
              kaynak_id, kaynak_adi, kaynak_url, kaynak_parmak, url_parmak,
              baslik_parmak, kaynak_baslik, kaynak_baslik_parmak, iframe_url, guven_skoru, onem, ajan_notu, ajan_modeli,
              analiz_degisen, analiz_etkilenen, analiz_zaman, analiz_islem,
-             isletme_etkisi, uygulama_ornegi, resmi_dayanak, neden_onemli, kaynak_tarihi)
+             isletme_etkisi, uygulama_ornegi, resmi_dayanak, neden_onemli, son_dakika, kaynak_tarihi)
          VALUES
             (:baslik, :slug, :ozet, :icerik, :gorsel_url, :etiketler, :durum, :kategori_id,
              :kaynak_id, :kaynak_adi, :kaynak_url, :kaynak_parmak, :url_parmak,
              :baslik_parmak, :kaynak_baslik, :kaynak_baslik_parmak, :iframe_url, :guven_skoru, :onem, :ajan_notu, :ajan_modeli,
              :analiz_degisen, :analiz_etkilenen, :analiz_zaman, :analiz_islem,
-             :isletme_etkisi, :uygulama_ornegi, :resmi_dayanak, :neden_onemli,
+             :isletme_etkisi, :uygulama_ornegi, :resmi_dayanak, :neden_onemli, :son_dakika,
              IF(:kaynak_var = 1, NOW() - INTERVAL :kaynak_gecikme MINUTE, NULL))'
     );
 
@@ -1317,6 +1321,14 @@ function haber_taslak_ekle(array $veri): array
         'analiz_etkilenen' => mb_substr(trim((string) ($veri['analiz_etkilenen'] ?? '')), 0, 600, 'UTF-8'),
         'analiz_zaman'     => mb_substr(trim((string) ($veri['analiz_zaman'] ?? '')), 0, 600, 'UTF-8'),
         'analiz_islem'     => mb_substr(trim((string) ($veri['analiz_islem'] ?? '')), 0, 600, 'UTF-8'),
+        /*
+         * Son dakika: modelin karari (haberi okuyarak) VE kaynaktaki yayin
+         * zamani bilinen, en fazla HABER_SON_DAKIKA_EN_FAZLA_DAKIKA once.
+         * Ikisinden biri yoksa son dakika degil (04.11.2026: birkac gunluk
+         * haber "son dakika" gorseliyle cikiyordu).
+         */
+        'son_dakika'       => !empty($veri['son_dakika']) && $kaynakVar
+            && $kaynakGecikme <= HABER_SON_DAKIKA_EN_FAZLA_DAKIKA ? 1 : 0,
         'kaynak_var'       => $kaynakVar ? 1 : 0,
         'kaynak_gecikme'   => $kaynakVar ? $kaynakGecikme : 0,
     ] + haber_format_alanlari($veri));

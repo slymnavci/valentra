@@ -64,29 +64,66 @@ function haber_gorsel_yerel(string $url): string
  * haberleri icin bunu kullanalim"). Son dakika haberinin karti, mansetteki
  * yeri ve haber sayfasi kaynagin fotografi yerine kirmizi "SON DAKIKA"
  * gorseliyle gorunuyor. Son dakika sayilan haber (bkz. haber_son_dakika_mi):
- * basliginda ya da kaynagin basliginda "son dakika" gecen, kaynagin son
- * dakika bolumunden gelen ya da ana sayfanin son dakika yuvasindaki haber.
+ * yapay zekanin haberi okuyup son dakika dedigi (haberler.son_dakika) ve
+ * kaynakta en fazla 3 saat once yayimlanmis haber ya da ana sayfanin son
+ * dakika yuvasindaki haber. Kaynagin basliginda ya da adresinde "son
+ * dakika" gecmesi ARTIK YETMIYOR (04.11.2026: birkac gunluk haber bu
+ * gorselle cikti; site sahibi "once haberi okusun, ona gore karar versin").
  */
 const HABER_SON_DAKIKA_GORSELI = '/assets/ozgun/son-dakika.jpg';
+
+/**
+ * Su an son dakika sayilan haberlerin kimlikleri: yapay zeka son dakika
+ * dedi ve haber hala taze. Sayfa basina bir sorgu (onbellek).
+ *
+ * @return array<int,true>
+ */
+function haber_son_dakika_kimlikleri(): array
+{
+    static $onbellek = null;
+
+    if ($onbellek !== null) {
+        return $onbellek;
+    }
+
+    $onbellek = [];
+
+    if (!function_exists('haber_yas_dakika_ifadesi') || !defined('HABER_SON_DAKIKA_EN_FAZLA_DAKIKA')) {
+        return $onbellek;
+    }
+
+    try {
+        $idler = db()->query(
+            'SELECT h.id FROM haberler h
+              WHERE h.son_dakika = 1 AND h.durum = ' . db()->quote(HABER_YAYINDA) . '
+                AND ' . haber_yas_dakika_ifadesi() . ' <= ' . (int) HABER_SON_DAKIKA_EN_FAZLA_DAKIKA . '
+              LIMIT 50'
+        )->fetchAll(PDO::FETCH_COLUMN);
+
+        foreach ($idler as $id) {
+            $onbellek[(int) $id] = true;
+        }
+    } catch (Throwable $e) {
+        error_log('[valentra] son dakika kimlikleri: ' . $e->getMessage());
+    }
+
+    return $onbellek;
+}
 
 /** @param array<string,mixed> $haber */
 function haber_son_dakika_mi(array $haber): bool
 {
-    // Ayni kural siralamada da (haber_son_dakika_ifadesi). "SON DAKİKA"
-    // buyuk yazimi icin I/İ de; /i Turkce harfleri esitlemiyor.
-    $metin = (string) ($haber['baslik'] ?? '') . ' ' . (string) ($haber['kaynak_baslik'] ?? '');
-
-    if (preg_match('/son\s*dak[iıİI]ka/iu', $metin) === 1) {
-        return true;
-    }
-
-    if (preg_match('/son-?dakika/i', (string) ($haber['kaynak_url'] ?? '')) === 1) {
-        return true;
-    }
-
     $id = (int) ($haber['id'] ?? 0);
 
-    return $id > 0 && function_exists('haber_son_dakika_id') && haber_son_dakika_id() === $id;
+    if ($id <= 0) {
+        return false;
+    }
+
+    if (isset(haber_son_dakika_kimlikleri()[$id])) {
+        return true;
+    }
+
+    return function_exists('haber_son_dakika_id') && haber_son_dakika_id() === $id;
 }
 
 /**

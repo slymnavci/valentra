@@ -522,7 +522,7 @@ function push_haber_yayinlandi(int $haberId): void
         }
 
         $h = db()->prepare(
-            "SELECT h.id, h.baslik, h.slug, h.ozet, h.gorsel_url, h.onem, h.kaynak_baslik, h.kaynak_url, k.slug AS kategori
+            "SELECT h.id, h.baslik, h.slug, h.ozet, h.gorsel_url, h.onem, h.son_dakika, k.slug AS kategori
                FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
               WHERE h.id = :id AND h.durum = :d
                 AND LEAST(h.olusturuldu, COALESCE(h.kaynak_tarihi, h.olusturuldu)) > NOW() - INTERVAL 3 HOUR"
@@ -535,8 +535,8 @@ function push_haber_yayinlandi(int $haberId): void
             return;
         }
 
-        $sonDakika = preg_match('/son\s*dakika/iu', (string) $h['baslik'] . ' ' . (string) $h['kaynak_baslik']) === 1
-            || preg_match('/son-?dakika/i', (string) $h['kaynak_url']) === 1;
+        // Yapay zekanin karari (04.11.2026); kaynagin "son dakika" demesi yetmiyor.
+        $sonDakika = (int) ($h['son_dakika'] ?? 0) === 1;
 
         if (!$sonDakika && (int) $h['onem'] < PUSH_ONEM_ESIGI) {
             return;

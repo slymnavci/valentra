@@ -119,6 +119,9 @@ CREATE TABLE IF NOT EXISTS haberler (
     -- sayfalarina cikmiyor; haber sayfasinda, aramada ve "Senin Icin"
     -- sehir bolumunde duruyor.
     sehir           VARCHAR(40)   NULL,
+    -- Yapay zekanin son dakika karari (04.11.2026): haberi okuyup veriyor;
+    -- kaynagin "son dakika" demesi olcu degil (bkz. haber_son_dakika_mi).
+    son_dakika      TINYINT(1)    NOT NULL DEFAULT 0,
     ajan_notu       VARCHAR(600)  NOT NULL DEFAULT '',
     -- Haberi yazan model (23.10.2026; ornegin gpt-6-luna, gemini-3.8-flash).
     -- Otomatik yayin esigi buna gore seciliyor (bkz. haber_guven_esigi_kosulu).

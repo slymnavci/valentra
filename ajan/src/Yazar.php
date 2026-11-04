@@ -328,6 +328,40 @@ final class Yazar implements SemaliIstemci
         (yargı süreci, güvenlik, siyasi gerginlik) 70'in üstüne çıkma ve
         ajan notunda belirt.
 
+        TAZELİK VE SON DAKİKA (site sahibinin kararı, 04.11.2026: "son
+        dakika diye çıkan haber birkaç günlük; önce haberi okusun, ona
+        göre karar versin; sanki yeni açıklanmış gibi söylüyor").
+        İstemde bugünün tarihi ve kaynağın yayın zamanı verilir. Kaynağın
+        tarihi YETMEZ: bazı siteler eski haberi yeni tarihle yeniden
+        yayımlar, başlığına "SON DAKİKA" yazar. Sayfa metnini OKU ve
+        olayın NE ZAMAN olduğuna metinden karar ver (metindeki tarih ve
+        gün adları, "geçen hafta", "dün", "3 gün önce", "hafta sonu",
+        maçın oynandığı gün, açıklamanın yapıldığı gün).
+        - Olay bugünden ESKİYSE ve metin bugüne ait YENİ bir gelişme
+          vermiyorsa: ilgili=false, red_nedeni "eski: " ile başlasın
+          (ör. "eski: açıklama 1 Kasım'da yapılmış"). Eski bir olayı
+          yeni gibi vermek en büyük hatadır.
+        - Eski bir konuda bugün YENİ bir gelişme varsa haberi o
+          gelişme üzerine kur: başlık ve ilk paragraf yeni gelişmeyi
+          söylesin; eski kısmı tarihiyle ("1 Kasım'da açıklanan ...")
+          arka plan olarak ver. Eski açıklamayı "açıkladı", "duyurdu"
+          diye bugün olmuş gibi yazma.
+        - Metinde olayın ne zaman olduğu geçiyorsa (bugün değilse) ilk
+          paragrafta tarihini ya da gününü yaz.
+        - Başlığa ve özete "son dakika", "flaş", "sıcak gelişme" gibi
+          kalıplar YAZILMAZ; son dakika kararı ayrı alandadır.
+        - son_dakika alanı: YALNIZCA şu üçü birden doğruysa true:
+          (1) metne göre olay ya da açıklama BUGÜN, son birkaç saat
+          içinde oldu; (2) kamuoyunu hemen ilgilendiren önemli ve yeni
+          bir gelişme (deprem, büyük kaza, resmî karar ya da açıklama,
+          istifa, atama, faiz/enflasyon verisi, savaş/saldırı, büyük
+          maç sonucu); (3) haberin ilk kez duyurulduğu belli. Rutin
+          haber, değerlendirme, yorum, röportaj, magazin, tarif, video
+          görüntüsü, "bekleniyor/planlanıyor" haberi, takvimi önceden
+          belli bir etkinlik ve eski bir olayın ayrıntısı son dakika
+          DEĞİLDİR. Kaynağın "SON DAKİKA" demesi tek başına ölçü
+          değildir. Tereddütte false.
+
         ÖNEM PUANI (0-100): Haberin okur için ne kadar önemli olduğu.
         Sitede haberler önemden önemsize doğru sıralanır; bu puan o
         sıranın ölçüsüdür, güven skorundan ayrıdır. Ölçütler: kaç kişiyi
@@ -515,6 +549,7 @@ final class Yazar implements SemaliIstemci
             'guven_skoru' => ['type' => 'integer', 'description' => '0-100 arası güven'],
             'onem'        => ['type' => 'integer', 'description' => '0-100 arası önem puanı: haberin kamuoyu için ne kadar önemli olduğu (bkz. ÖNEM PUANI)'],
             'ajan_notu'   => ['type' => 'string',  'description' => 'Onaylayacak editöre tek cümlelik not'],
+            'son_dakika'  => ['type' => 'boolean', 'description' => 'Haberi okuyarak karar ver: olay ya da açıklama bugün, son birkaç saatte ilk kez duyurulan önemli ve yeni bir gelişme mi (bkz. TAZELİK VE SON DAKİKA). Kaynağın "son dakika" demesi ölçü değil; tereddütte false'],
             'neden_onemli'=> ['type' => 'string',  'description' => '2-3 cümle: gelişmenin okur için anlamı, yalnızca kaynaktaki olgulardan (bkz. NEDEN ÖNEMLİ). Yemek tarifinde boş.'],
 
             /*
@@ -534,7 +569,7 @@ final class Yazar implements SemaliIstemci
         ],
         'required' => [
             'sira', 'ilgili', 'red_nedeni', 'baslik', 'ozet', 'icerik',
-            'etiketler', 'kategori', 'guven_skoru', 'onem', 'ajan_notu', 'neden_onemli',
+            'etiketler', 'kategori', 'guven_skoru', 'onem', 'ajan_notu', 'neden_onemli', 'son_dakika',
             'analiz_degisen', 'analiz_etkilenen', 'analiz_zaman', 'analiz_islem',
             'isletme_etkisi', 'uygulama_ornegi', 'resmi_dayanak',
         ],
@@ -558,12 +593,13 @@ final class Yazar implements SemaliIstemci
             'guven_skoru' => ['type' => 'integer', 'description' => '0-100 arası güven'],
             'onem'        => ['type' => 'integer', 'description' => '0-100 arası önem puanı: haberin kamuoyu için ne kadar önemli olduğu (bkz. ÖNEM PUANI)'],
             'ajan_notu'   => ['type' => 'string',  'description' => 'Onaylayacak editöre tek cümlelik not'],
+            'son_dakika'  => ['type' => 'boolean', 'description' => 'Haberi okuyarak karar ver: olay ya da açıklama bugün, son birkaç saatte ilk kez duyurulan önemli ve yeni bir gelişme mi (bkz. TAZELİK VE SON DAKİKA). Kaynağın "son dakika" demesi ölçü değil; tereddütte false'],
         ],
         // Gemini'nin responseSchema'si OpenAPI alt kumesidir;
         // additionalProperties desteklenmez, gonderilirse istek 400 doner.
         'required' => [
             'ilgili', 'red_nedeni', 'baslik', 'ozet', 'icerik',
-            'etiketler', 'kategori', 'guven_skoru', 'onem', 'ajan_notu',
+            'etiketler', 'kategori', 'guven_skoru', 'onem', 'ajan_notu', 'son_dakika',
         ],
     ];
 
@@ -1340,10 +1376,13 @@ final class Yazar implements SemaliIstemci
                 $ekler = "\nEk kaynaklar (aynı olay, başka yayıncılar):" . $ekler;
             }
 
+            $yayin = self::yayinZamaniYaz($girdi['tarih'] ?? null);
+
             if (!empty($aday['video'])) {
                 $bloklar[] = <<<METIN
                 ### ADAY {$no} — VİDEO HABERİ
                 Kaynak: {$aday['kaynakAdi']} (YouTube kanalı)
+                Yayın zamanı: {$yayin}
                 Adres: {$girdi['baglanti']}
                 Videonun başlığı: {$girdi['baslik']}
                 Videonun açıklaması:
@@ -1358,6 +1397,7 @@ final class Yazar implements SemaliIstemci
             $bloklar[] = <<<METIN
             ### ADAY {$no}
             Kaynak: {$aday['kaynakAdi']} — {$tur}
+            Kaynaktaki yayın zamanı: {$yayin}
             Bu olayı veren kaynak sayısı (bu taramada): {$kapsam}
             Adres: {$girdi['baglanti']}
             Başlık: {$girdi['baslik']}
@@ -1371,6 +1411,7 @@ final class Yazar implements SemaliIstemci
 
         $adayMetni = implode("\n\n", $bloklar);
         $adet      = count($adaylar);
+        $bugun     = self::bugunYaz();
 
         /*
          * DAHA ONCE YAYIMLANANLAR.
@@ -1417,6 +1458,9 @@ final class Yazar implements SemaliIstemci
         }
 
         return <<<METIN
+        Bugün: {$bugun} (Türkiye saati). Olayın ne zaman olduğunu buna
+        göre değerlendir (bkz. TAZELİK VE SON DAKİKA).
+
         Konu grupları (kategori alanına bunlardan birinin slug'ını yaz):
         {$gruplar}
         {$oncekiBlok}
@@ -1429,6 +1473,33 @@ final class Yazar implements SemaliIstemci
 
         {$adayMetni}
         METIN;
+    }
+
+    private const GUNLER = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+
+    /** Modelin tarih kiyaslayabilmesi icin: "04.11.2026 Çarşamba 14:05". */
+    private static function zamanYaz(\DateTimeImmutable $an): string
+    {
+        return $an->format('d.m.Y') . ' ' . self::GUNLER[(int) $an->format('w')] . ' ' . $an->format('H:i');
+    }
+
+    private static function bugunYaz(): string
+    {
+        return self::zamanYaz(new \DateTimeImmutable('now', new \DateTimeZone('Europe/Istanbul')));
+    }
+
+    /** Kaynagin yayin zamani (girdi['tarih'], "Y-m-d H:i:s" yerel saat) ya da "bilinmiyor". */
+    private static function yayinZamaniYaz(mixed $tarih): string
+    {
+        $zaman = is_string($tarih) && $tarih !== '' ? strtotime($tarih) : false;
+
+        if ($zaman === false || $zaman <= 0) {
+            return 'bilinmiyor (metinden karar ver)';
+        }
+
+        $an = (new \DateTimeImmutable('@' . $zaman))->setTimezone(new \DateTimeZone('Europe/Istanbul'));
+
+        return self::zamanYaz($an) . ' (kaynağın kendi tarihi; eski haberi yeniden yayımlamış olabilir)';
     }
 
     /** @param list<array<string,mixed>> $kategoriler */
@@ -1612,13 +1683,19 @@ final class Yazar implements SemaliIstemci
         }
 
         $gruplar = implode("\n", $grupSatirlari);
+        $bugun   = self::bugunYaz();
+        $yayin   = self::yayinZamaniYaz($aday['tarih'] ?? null);
 
         return <<<METIN
+        Bugün: {$bugun} (Türkiye saati). Olayın ne zaman olduğunu buna
+        göre değerlendir (bkz. TAZELİK VE SON DAKİKA).
+
         Konu grupları (kategori alanına bunlardan birinin slug'ını yaz):
         {$gruplar}
 
         Kaynak: {$kaynakAdi}
         {$turAciklama}
+        Kaynaktaki yayın zamanı: {$yayin}
         Adres: {$aday['baglanti']}
 
         Besleme başlığı:
