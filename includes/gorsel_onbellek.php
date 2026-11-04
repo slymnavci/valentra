@@ -59,14 +59,49 @@ function haber_gorsel_yerel(string $url): string
     return '';
 }
 
+/*
+ * SON DAKIKA GORSELI (site sahibinin istegi, 04.11.2026: "son dakika
+ * haberleri icin bunu kullanalim"). Son dakika haberinin karti, mansetteki
+ * yeri ve haber sayfasi kaynagin fotografi yerine kirmizi "SON DAKIKA"
+ * gorseliyle gorunuyor. Son dakika sayilan haber (bkz. haber_son_dakika_mi):
+ * basliginda ya da kaynagin basliginda "son dakika" gecen, kaynagin son
+ * dakika bolumunden gelen ya da ana sayfanin son dakika yuvasindaki haber.
+ */
+const HABER_SON_DAKIKA_GORSELI = '/assets/ozgun/son-dakika.jpg';
+
+/** @param array<string,mixed> $haber */
+function haber_son_dakika_mi(array $haber): bool
+{
+    // Ayni kural siralamada da (haber_son_dakika_ifadesi). "SON DAKİKA"
+    // buyuk yazimi icin I/İ de; /i Turkce harfleri esitlemiyor.
+    $metin = (string) ($haber['baslik'] ?? '') . ' ' . (string) ($haber['kaynak_baslik'] ?? '');
+
+    if (preg_match('/son\s*dak[iıİI]ka/iu', $metin) === 1) {
+        return true;
+    }
+
+    if (preg_match('/son-?dakika/i', (string) ($haber['kaynak_url'] ?? '')) === 1) {
+        return true;
+    }
+
+    $id = (int) ($haber['id'] ?? 0);
+
+    return $id > 0 && function_exists('haber_son_dakika_id') && haber_son_dakika_id() === $id;
+}
+
 /**
  * Sablonlarin kullandigi gorsel adresi.
  *
  * Onbellekte varsa yerel dosya; yoksa gorsel.php (ilk istekte indirir);
- * haberin kimligi yoksa kaynagin kendi adresi.
+ * haberin kimligi yoksa kaynagin kendi adresi. Son dakika haberinde son
+ * dakika gorseli (bkz. HABER_SON_DAKIKA_GORSELI).
  */
 function haber_gorsel(array $haber): string
 {
+    if (haber_son_dakika_mi($haber)) {
+        return HABER_SON_DAKIKA_GORSELI;
+    }
+
     $url = guvenli_url((string) ($haber['gorsel_url'] ?? ''));
 
     if ($url === '') {
