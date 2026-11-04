@@ -242,7 +242,8 @@ require __DIR__ . '/ust.php';
             <span class="ipucu" style="font-weight:400;">(bugün <?= $bugunIstenen ?> / <?= GSC_ISTEME_GUNLUK ?> istendi)</span></h2>
         <p class="ipucu">
             Son 36 saatin Google'a sunulan haberlerinden, yapay zekânın verdiği önem puanına göre en önemlileri; dizinde olanlar listede yok.
-            Her biri için: <strong>Search Console'da aç</strong> → açılan sayfada <strong>"Dizine eklenmesini iste"</strong> → bitince burada <strong>İstedim</strong>.
+            Her biri için: <strong>Kopyala ve Search Console'u aç</strong> (haberin adresi panoya kopyalanır) → Search Console'da en üstteki
+            <strong>"… içindeki herhangi bir URL'yi denetle"</strong> kutusuna yapıştırın (Ctrl+V, Enter) → <strong>"Dizine eklenmesini iste"</strong> → bitince burada <strong>İstedim</strong>.
             Google bu isteği günde sınırlı sayıda kabul ediyor; "kota aşıldı" derse ertesi gün devam edin.
         </p>
 
@@ -262,7 +263,7 @@ require __DIR__ . '/ust.php';
                         <td class="sag"><?= (int) $i['onem'] ?></td>
                         <td class="ipucu"><?= e($i['durum']) ?></td>
                         <td style="white-space:nowrap;">
-                            <a class="dugme dugme-ana" href="<?= e(gsc_denetim_adresi($i['url'])) ?>" target="_blank" rel="noopener">Search Console'da aç</a>
+                            <a class="dugme dugme-ana" href="<?= e(gsc_denetim_adresi($i['url'])) ?>" target="_blank" rel="noopener" data-gsc-kopyala="<?= e($i['url']) ?>">Kopyala ve Search Console'u aç</a>
                             <form method="post" action="google.php" style="display:inline;margin:0;">
                                 <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
                                 <input type="hidden" name="url" value="<?= e($i['url']) ?>">
@@ -505,7 +506,7 @@ require __DIR__ . '/ust.php';
                         <td class="ipucu">
                             <?= e($oneri) ?>
                             <?php if ($d['sonuc'] !== 'PASS'): ?>
-                                <br><a href="<?= e(gsc_denetim_adresi((string) $d['url'])) ?>" target="_blank" rel="noopener">Search Console'da aç &rarr;</a>
+                                <br><a href="<?= e(gsc_denetim_adresi((string) $d['url'])) ?>" target="_blank" rel="noopener" data-gsc-kopyala="<?= e((string) $d['url']) ?>">Kopyala ve Search Console'u aç &rarr;</a>
                             <?php endif; ?>
                         </td>
                         <td><?= $d['son_tarama'] ? e(tarih_bicimle((string) $d['son_tarama'], false)) : '—' ?></td>
@@ -557,5 +558,19 @@ require __DIR__ . '/ust.php';
         <a href="rehberler.php">Rehberleri yönetin</a>.
     </p>
 </div>
+
+<script>
+// "Kopyala ve Search Console'u ac": haberin adresi panoya, sonra baglanti yeni sekmede acilir.
+document.addEventListener('click', function (e) {
+    var a = e.target.closest('[data-gsc-kopyala]');
+    if (!a) { return; }
+    var adres = a.getAttribute('data-gsc-kopyala'), eski = a.textContent;
+    var bitti = function () { a.textContent = 'Kopyalandı ✓ — kutuya yapıştırın'; setTimeout(function () { a.textContent = eski; }, 4000); };
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(adres).then(bitti, function () { window.prompt('Adresi kopyalayın:', adres); }); return; }
+    } catch (x) {}
+    window.prompt('Adresi kopyalayın:', adres);
+});
+</script>
 
 <?php require __DIR__ . '/alt.php'; ?>
