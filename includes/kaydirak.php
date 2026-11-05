@@ -119,9 +119,33 @@ if (($mansetler ?? []) === []) {
     }
 
     dugmeler.forEach(function (dugme) {
-        dugme.addEventListener('click', function () {
+        /*
+         * Numaraya tiklayinca haber aciliyor (site sahibi, 05.11.2026: "1.
+         * haberin 1'ine bastigimizda linkin acilmasi gerekiyor"). Fareyle
+         * numaranin uzerine gelince haber zaten one geciyor; tiklama artik
+         * o haberin sayfasina gidiyor. Dokunmatikte ilk dokunus haberi
+         * gosterir, gosterilen haberin numarasina dokunus acar. Ctrl/Cmd
+         * ya da orta tus yeni sekmede.
+         */
+        function ac(sira, yeniSekme) {
+            var baglanti = slaytlar[sira] && slaytlar[sira].querySelector('a[href]');
+            if (!baglanti) { return; }
+            if (yeniSekme) { window.open(baglanti.href, '_blank', 'noopener'); }
+            else { window.location.href = baglanti.href; }
+        }
+
+        dugme.addEventListener('click', function (olay) {
             kullaniciMudahalesi = true;
-            git(parseInt(dugme.dataset.sira, 10), true);
+            var sira = parseInt(dugme.dataset.sira, 10);
+            if (sira === aktif) {
+                ac(sira, olay.ctrlKey || olay.metaKey || olay.shiftKey);
+                return;
+            }
+            git(sira, true);
+        });
+
+        dugme.addEventListener('auxclick', function (olay) {
+            if (olay.button === 1) { olay.preventDefault(); ac(parseInt(dugme.dataset.sira, 10), true); }
         });
 
         // Fare numaranin uzerine gelir gelmez o haber. Dokunmatik ekranda
