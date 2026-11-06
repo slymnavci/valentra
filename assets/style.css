@@ -5878,6 +5878,8 @@ a.menu-oge-network:hover .menu-network { transform: translateY(-1px); box-shadow
     font-size: .72rem; font-weight: 800;
 }
 .nw-bant-menu .nw-rozet { position: absolute; top: 6px; right: 14px; }
+/* Haber sitesine donus sekmesi yalnizca telefonda (genis ekranda logonun yanindaki "← Valentra Haber"). */
+.nw-bant-menu a.nw-menu-haber { display: none; }
 .nw-bant-sag { display: flex; align-items: center; gap: 8px; }
 .nw-tema {
     width: 38px; height: 38px; border-radius: 50%;
@@ -6188,6 +6190,7 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
         justify-content: space-around;
     }
     .nw-bant-menu a { flex-direction: column; gap: 2px; height: 54px; font-size: .72rem; flex: 1; padding: 0; min-width: 0; }
+    .nw-bant-menu a.nw-menu-haber { display: flex; }
     .nw-bant-menu a.aktif::after { top: 0; bottom: auto; }
     .nw-bant-menu .nw-rozet { top: 2px; right: calc(50% - 22px); }
     .nw-bant-uye span { display: none; }

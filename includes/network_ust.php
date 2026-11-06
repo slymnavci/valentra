@@ -41,6 +41,15 @@ if (!uye_yonetici_mi($nwUye)) {
         <a class="nw-bant-donus" href="/" title="Valentra haber sitesine dön">← Valentra Haber</a>
 
         <nav class="nw-bant-menu" aria-label="V Network">
+            <?php /* Telefonda haber sitesine donus (06.11.2026; site sahibi:
+                     "telefondan networke girdigimde haberlere geri donus
+                     olmuyor"). Ustteki "← Valentra Haber" dar ekranda
+                     gizli; alttaki sekme cubugunun ilk sekmesi bu.
+                     Genis ekranda gizli (bkz. .nw-menu-haber). */ ?>
+            <a href="/" class="nw-menu-haber" title="Valentra haber sitesine dön">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v8a2 2 0 0 1-2 2h-1"/><path d="M7 9h7M7 12.5h7M7 16h4"/></svg>
+                <span>Haberler</span>
+            </a>
             <?php foreach ($nwBolumler as $anahtar => [$ad, $yol, $simge]): ?>
                 <a href="<?= e($yol) ?>" class="<?= $nwAktif === $anahtar ? 'aktif' : '' ?>"<?= $nwAktif === $anahtar ? ' aria-current="page"' : '' ?>>
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><?= $simge ?></svg>
