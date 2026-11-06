@@ -43,7 +43,7 @@ require_once __DIR__ . '/includes/topluluk.php';
 // YZ begenileri (en fazla 5 dakikada bir, istegin sonunda).
 topluluk_begeni_zamanla();
 
-sayfa_onbellek(['yol', 'sekme', 'once', 'ara', 'sira']);
+sayfa_onbellek(['yol', 'sekme', 'once', 'ara', 'sira', 'konu']);
 
 require_once __DIR__ . '/includes/seo.php';
 require_once __DIR__ . '/includes/network_gorunum.php';
@@ -129,7 +129,11 @@ switch ($sayfa) {
     case 'akis':
         $sekme  = $uyeId !== null && (string) ($_GET['sekme'] ?? '') === 'takip' ? 'takip' : 'herkes';
         $once   = max(0, (int) ($_GET['once'] ?? 0));
-        $akis   = nw_akis(NW_AKIS_ADEDI, $once, $sekme === 'takip' ? $uyeId : null);
+        // Konu secici (06.11.2026, bkz. nw_konular): ?konu=spor
+        $konular = nw_konular();
+        $konu   = (string) ($_GET['konu'] ?? '');
+        $konu   = isset($konular[$konu]) ? $konu : '';
+        $akis   = nw_akis(NW_AKIS_ADEDI, $once, $sekme === 'takip' ? $uyeId : null, null, $konu);
         $baglam = nw_baglam($akis['ogeler']);
         $takipEdilenler = $uyeId !== null ? nw_takip_edilenler($uyeId) : [];
         $oneriler = !$kisilerAcik ? [] : array_slice(array_values(array_filter(
@@ -139,8 +143,10 @@ switch ($sayfa) {
         $populerKonular = nw_populer_konular(10);
         $etkilesimHaberleri = nw_etkilesim_haberleri(6);
         $begenilenHaberler  = nw_begenilen_haberler(6);
-        $buYol  = nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'once' => $once]);
-        $sayfaBasligi = 'V Network — Valentra okurlarının buluşma yeri';
+        $buYol  = nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'once' => $once]);
+        $sayfaBasligi = $konu !== ''
+            ? $konular[$konu] . ' — V Network | Valentra'
+            : 'V Network — Valentra okurlarının buluşma yeri';
         break;
 
     case 'haber':
@@ -373,13 +379,26 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <?php endif; ?>
             <?php if ($uyeId !== null): ?>
                 <nav class="nw-sekmeler" aria-label="Akış">
-                    <a href="<?= e(nw_yol()) ?>" class="<?= $sekme === 'herkes' ? 'aktif' : '' ?>">Herkes</a>
-                    <a href="<?= e(nw_yol('', ['sekme' => 'takip'])) ?>" class="<?= $sekme === 'takip' ? 'aktif' : '' ?>">Takip ettiklerim</a>
+                    <a href="<?= e(nw_yol('', ['konu' => $konu])) ?>" class="<?= $sekme === 'herkes' ? 'aktif' : '' ?>">Herkes</a>
+                    <a href="<?= e(nw_yol('', ['sekme' => 'takip', 'konu' => $konu])) ?>" class="<?= $sekme === 'takip' ? 'aktif' : '' ?>">Takip ettiklerim</a>
+                </nav>
+            <?php endif; ?>
+
+            <?php if ($konular !== []): ?>
+                <?php /* Konu secici (06.11.2026): okur akista hangi haberleri gorecegini secer.
+                         Secim tarayicida hatirlaniyor (assets/network-akis.js). */ ?>
+                <nav class="nw-konular-secici" aria-label="Haber konusu">
+                    <a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : ''])) ?>" data-konu=""
+                       class="<?= $konu === '' ? 'aktif' : '' ?>"<?= $konu === '' ? ' aria-current="page"' : '' ?>>Tümü</a>
+                    <?php foreach ($konular as $slug => $ad): ?>
+                        <a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $slug])) ?>" data-konu="<?= e($slug) ?>"
+                           class="<?= $konu === $slug ? 'aktif' : '' ?>"<?= $konu === $slug ? ' aria-current="page"' : '' ?>><?= e($ad) ?></a>
+                    <?php endforeach; ?>
                 </nav>
             <?php endif; ?>
 
             <?php if ($akis['ogeler'] === []): ?>
-                <div class="bos-durum"><strong>Henüz paylaşım yok.</strong> <?= $sekme === 'takip' ? 'Paylaşım ve yorumlardaki isimlere tıklayıp insanları takip edin; paylaşımları burada görünür.' : 'Yeni haberler geldikçe burada akacak.' ?></div>
+                <div class="bos-durum"><strong><?= $konu !== '' ? e($konular[$konu]) . ' başlığında henüz haber yok.' : 'Henüz paylaşım yok.' ?></strong> <?= $konu !== '' ? 'Başka bir konu seçin ya da “Tümü”ne dönün.' : ($sekme === 'takip' ? 'Paylaşım ve yorumlardaki isimlere tıklayıp insanları takip edin; paylaşımları burada görünür.' : 'Yeni haberler geldikçe burada akacak.') ?></div>
             <?php endif; ?>
 
             <?php foreach ($akis['ogeler'] as $oge): ?>
@@ -387,7 +406,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <?php endforeach; ?>
 
             <?php if ($akis['sonraki'] > 0): ?>
-                <nav class="nw-sayfalar"><a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'once' => $akis['sonraki']])) ?>">Daha eski paylaşımlar →</a></nav>
+                <nav class="nw-sayfalar"><a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'once' => $akis['sonraki']])) ?>">Daha eski <?= $konu !== '' ? 'haberler' : 'paylaşımlar' ?> →</a></nav>
             <?php endif; ?>
         </div>
         <aside class="nw-sag">

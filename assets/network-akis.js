@@ -19,6 +19,38 @@
     var akis = document.querySelector('.nw-orta');
     if (!akis) { return; }
 
+    /* --- 0. Konu secici (06.11.2026): secilen konu bu tarayicida hatirlaniyor;
+       /network'e konusuz gelince son secilen konu aciliyor. "Tumu" secimi siler. --- */
+    var KONU = 'nw-konu';
+    var kalici = null;
+    try { kalici = window.localStorage; } catch (e) { kalici = null; }
+    var secici = document.querySelector('.nw-konular-secici');
+
+    if (secici) {
+        var adres0 = new URL(location.href);
+        var kayitli = '';
+        try { kayitli = kalici ? (kalici.getItem(KONU) || '') : ''; } catch (e) { kayitli = ''; }
+
+        if (location.pathname === '/network' && !adres0.searchParams.has('konu') && !adres0.searchParams.get('once')
+            && /^[a-z0-9-]+$/.test(kayitli) && secici.querySelector('a[data-konu="' + kayitli + '"]')) {
+            adres0.searchParams.set('konu', kayitli);
+            location.replace(adres0.pathname + adres0.search + adres0.hash);
+            return;
+        }
+
+        secici.querySelectorAll('a[data-konu]').forEach(function (a) {
+            a.addEventListener('click', function () {
+                try { if (kalici) { kalici.setItem(KONU, a.getAttribute('data-konu') || ''); } } catch (e) {}
+            });
+        });
+
+        // Telefonda secili konu gorunur olsun (yatay kayan seritte).
+        var secili = secici.querySelector('a.aktif');
+        if (secili && secici.scrollWidth > secici.clientWidth) {
+            secici.scrollLeft = secili.offsetLeft - (secici.clientWidth - secili.offsetWidth) / 2;
+        }
+    }
+
     var ANAHTAR = 'nw-kalinan-yer';
     var BU_SAYFA = location.pathname + location.search;
     var bellek = null;
@@ -97,9 +129,11 @@
     if (!ilk || new URL(location.href).searchParams.get('once')) { return; }
 
     var sekme = new URL(location.href).searchParams.get('sekme') || '';
+    var konu = new URL(location.href).searchParams.get('konu') || '';
     function sor() {
         if (document.hidden) { return; }
-        fetch('/network-yeni.php?once=' + encodeURIComponent(ilk.getAttribute('data-zaman')) + (sekme ? '&sekme=' + encodeURIComponent(sekme) : ''),
+        fetch('/network-yeni.php?once=' + encodeURIComponent(ilk.getAttribute('data-zaman')) + (sekme ? '&sekme=' + encodeURIComponent(sekme) : '')
+              + (konu ? '&konu=' + encodeURIComponent(konu) : ''),
               { credentials: 'same-origin', cache: 'no-store' })
             .then(function (y) { return y.ok ? y.json() : { sayi: 0 }; })
             .then(function (v) {

@@ -33,27 +33,35 @@ if ($once <= 0 || $once > time() + 3600) {
 
 $uye   = aktif_uye();
 $takip = $uye !== null && (string) ($_GET['sekme'] ?? '') === 'takip';
+// Konu secili akis (06.11.2026, bkz. nw_konular): yalnizca o konunun haberleri ve yorumlari.
+$konu  = (string) ($_GET['konu'] ?? '');
+$konu  = isset(nw_konular()[$konu]) ? $konu : '';
 $sayi  = 0;
 
 try {
     $h = db()->prepare(
         "SELECT COUNT(*) FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
           WHERE h.durum = :d AND h.yayin_tarihi > FROM_UNIXTIME(:o) AND h.yayin_tarihi <= NOW()
-            AND (k.slug IS NULL OR k.slug <> 'yemek-tarifleri')"
+            AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')")
     );
     $h->execute(['d' => HABER_YAYINDA, 'o' => $once]);
     $sayi += (int) $h->fetchColumn();
 
     $kosul = $takip ? ' AND (g.uye_id = :u1 OR g.uye_id IN (SELECT takip_edilen FROM takipler WHERE takip_eden = :u2))' : '';
-    $g = db()->prepare("SELECT COUNT(*) FROM gonderiler g JOIN uyeler u ON u.id = g.uye_id
-                         WHERE g.durum = 'yayinda' AND u.durum = 'aktif' AND g.olusturuldu > FROM_UNIXTIME(:o)" . $kosul);
-    $g->execute(['o' => $once] + ($takip ? ['u1' => (int) $uye['id'], 'u2' => (int) $uye['id']] : []));
-    $sayi += (int) $g->fetchColumn();
+
+    if ($konu === '') {
+        $g = db()->prepare("SELECT COUNT(*) FROM gonderiler g JOIN uyeler u ON u.id = g.uye_id
+                             WHERE g.durum = 'yayinda' AND u.durum = 'aktif' AND g.olusturuldu > FROM_UNIXTIME(:o)" . $kosul);
+        $g->execute(['o' => $once] + ($takip ? ['u1' => (int) $uye['id'], 'u2' => (int) $uye['id']] : []));
+        $sayi += (int) $g->fetchColumn();
+    }
 
     // Haber yorumlari da akista kart (01.11.2026, bkz. nw_akis).
     $y = db()->prepare("SELECT COUNT(*) FROM yorumlar y JOIN uyeler u ON u.id = y.uye_id
+                          JOIN haberler h ON h.id = y.haber_id LEFT JOIN kategoriler k ON k.id = h.kategori_id
                          WHERE y.haber_id IS NOT NULL AND y.durum = 'yayinda' AND u.durum = 'aktif' AND u.tur <> 'yz'
-                           AND y.olusturuldu > FROM_UNIXTIME(:o)" . str_replace('g.uye_id', 'y.uye_id', $kosul));
+                           AND y.olusturuldu > FROM_UNIXTIME(:o)" . str_replace('g.uye_id', 'y.uye_id', $kosul)
+                        . ($konu !== '' ? ' AND k.slug = ' . db()->quote($konu) : ''));
     $y->execute(['o' => $once] + ($takip ? ['u1' => (int) $uye['id'], 'u2' => (int) $uye['id']] : []));
     $sayi += (int) $y->fetchColumn();
 } catch (PDOException $e) {

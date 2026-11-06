@@ -660,10 +660,15 @@ function mesaj_okunmamis(int $uyeId): int
  *
  * @return array{ogeler: list<array<string,mixed>>, sonraki: int}
  */
-function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUye = null): array
+function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUye = null, string $konu = ''): array
 {
     $once  = $once > 0 ? $once : time() + 60;
     $ogeler = [];
+
+    // Konu secildiyse (06.11.2026, bkz. nw_konular) yalnizca o konunun
+    // haberleri ve o haberlere yazilan yorumlar; uye paylasimlarinin konusu
+    // yok, konu akisinda gorunmuyorlar.
+    $konu = isset(nw_konular()[$konu]) ? $konu : '';
 
     // Profil akisinda haber yok, yalnizca o uyenin paylasimlari.
     if ($yalnizUye === null) {
@@ -671,7 +676,7 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
             "SELECT h.id, h.baslik, h.slug, h.ozet, h.gorsel_url, h.iframe_url, h.yayin_tarihi,
                     UNIX_TIMESTAMP(h.yayin_tarihi) AS zaman, k.ad AS kategori_adi
                FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
-              WHERE h.durum = :d AND (k.slug IS NULL OR k.slug <> 'yemek-tarifleri')
+              WHERE h.durum = :d AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
                 AND h.yayin_tarihi < FROM_UNIXTIME(:once)
               ORDER BY h.yayin_tarihi DESC, h.id DESC LIMIT :l"
         );
@@ -698,6 +703,10 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
     }
 
     try {
+        if ($konu !== '') {
+            throw new RangeException('konu akisinda uye paylasimi yok');
+        }
+
         $ifade = db()->prepare(
             "SELECT g.id, g.uye_id, g.metin, g.video_url, g.olusturuldu, UNIX_TIMESTAMP(g.olusturuldu) AS zaman, u.ad, u.foto, u.tur, u.rol
                FROM gonderiler g JOIN uyeler u ON u.id = g.uye_id
@@ -709,8 +718,8 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
         foreach ($ifade->fetchAll() as $g) {
             $ogeler[] = ['tur' => 'gonderi', 'zaman' => (int) $g['zaman'], 'veri' => $g];
         }
-    } catch (PDOException $e) {
-        // gonderiler tablosu henuz yoksa yalnizca haberler.
+    } catch (PDOException | RangeException $e) {
+        // gonderiler tablosu henuz yoksa (ya da konu secildiyse) yalnizca haberler.
     }
 
     // Haberlerin altina yazilan yorumlar da akista ayri kart (site sahibinin
@@ -729,7 +738,8 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
                JOIN haberler h ON h.id = y.haber_id
                LEFT JOIN kategoriler k ON k.id = h.kategori_id
               WHERE y.haber_id IS NOT NULL AND y.durum = 'yayinda' AND u.durum = 'aktif' AND u.tur <> 'yz'
-                AND h.durum = :d AND y.olusturuldu < FROM_UNIXTIME(:once) $kosul
+                AND h.durum = :d AND y.olusturuldu < FROM_UNIXTIME(:once) $kosul"
+              . ($konu !== '' ? ' AND k.slug = ' . db()->quote($konu) : '') . "
               ORDER BY y.olusturuldu DESC, y.id DESC LIMIT " . (int) $adet
         );
         $ifade->execute($deger + ['d' => HABER_YAYINDA]);
@@ -746,6 +756,35 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
     $son    = $ogeler !== [] ? end($ogeler)['zaman'] : 0;
 
     return ['ogeler' => $ogeler, 'sonraki' => count($ogeler) === $adet ? $son : 0];
+}
+
+/**
+ * Akisin ustundeki konu secici (06.11.2026, site sahibi: "V Network'e
+ * girdigimizde okuyucu hangi haberleri okuyacagini secebilsin; ustte
+ * basliktan haber turunu secsin, ona gore haber gostersin"). Menudeki
+ * haber basliklari, menu sirasiyla; haberi olmayan baslik gosterilmiyor.
+ *
+ * @return array<string,string> slug => ad
+ */
+function nw_konular(): array
+{
+    static $konular = null;
+
+    if ($konular === null) {
+        $konular = [];
+
+        try {
+            foreach (haber_akis_kategorileri() as $k) {
+                if ($k['adet'] > 0) {
+                    $konular[$k['slug']] = $k['ad'];
+                }
+            }
+        } catch (PDOException $e) {
+            $konular = [];
+        }
+    }
+
+    return $konular;
 }
 
 /* --- Sag kenar: gundem -------------------------------------------------- */

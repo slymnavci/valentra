@@ -6555,3 +6555,16 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 .mozet-ara { display: flex; gap: 8px; margin: 0 0 18px; max-width: 460px; }
 .mozet-ara input { flex: 1; min-width: 0; font: inherit; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--cizgi); background: var(--kart); color: var(--metin); }
 .mozet-ara button { font: inherit; font-weight: 800; padding: 9px 16px; border: 0; border-radius: 8px; background: var(--vurgu); color: #fff; cursor: pointer; }
+
+/* V Network konu secici (06.11.2026): akisin ustunde haber konulari; telefonda yatay kayar. */
+.nw-konular-secici {
+    display: flex; gap: 8px; margin: 0 0 14px; padding: 2px 2px 6px;
+    overflow-x: auto; scrollbar-width: thin; -webkit-overflow-scrolling: touch;
+}
+.nw-konular-secici a {
+    flex: none; padding: 7px 14px; border-radius: 999px;
+    background: var(--kart); border: 1px solid var(--cizgi); box-shadow: var(--golge);
+    color: var(--metin); text-decoration: none; font-weight: 700; font-size: .9rem; white-space: nowrap;
+}
+.nw-konular-secici a:hover { border-color: var(--altin); color: var(--altin); }
+.nw-konular-secici a.aktif { background: var(--altin); border-color: var(--altin); color: #fff; }
