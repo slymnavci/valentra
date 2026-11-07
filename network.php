@@ -159,6 +159,17 @@ switch ($sayfa) {
         $haber = $h->fetch();
 
         if (!is_array($haber)) {
+            // Birlesen haber: ana haberin kartina (bkz. includes/kopya.php).
+            require_once __DIR__ . '/includes/kopya.php';
+            $hedef = kopya_hedef_slug('', $detayId);
+
+            if ($hedef !== null) {
+                $hedefId = db()->prepare('SELECT id FROM haberler WHERE slug = :s');
+                $hedefId->execute(['s' => $hedef]);
+                header('Location: ' . nw_yol('h/' . (int) $hedefId->fetchColumn()), true, 301);
+                exit;
+            }
+
             nw_bulunamadi();
         }
 

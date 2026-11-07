@@ -24,6 +24,20 @@ if (($_GET['sonraki'] ?? '') === '1') {
     exit;
 }
 
+// Ayni olayin haberiyle birlestirilen haber (07.11.2026, bkz. includes/kopya.php):
+// adres kalici olarak ana habere yonleniyor; paylasilmis baglantilar bozulmuyor.
+if ($haber === null && $slug !== '') {
+    require_once __DIR__ . '/includes/kopya.php';
+    require_once __DIR__ . '/includes/adres.php';
+
+    $hedef = kopya_hedef_slug($slug);
+
+    if ($hedef !== null) {
+        header('Location: ' . haber_yolu($hedef), true, 301);
+        exit;
+    }
+}
+
 if ($haber === null) {
     http_response_code(404);
     $sayfaBasligi = 'Haber bulunamadı — Valentra';

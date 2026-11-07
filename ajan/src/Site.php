@@ -697,6 +697,44 @@ final class Site
     }
 
     /**
+     * Ayni olay birlestirmesi (api/kopya.php): site once kendi
+     * birlestirmelerini yapiyor, sonra yayindaki son haberleri donduruyor.
+     *
+     * @return array{birlesen:int,haberler:list<array<string,mixed>>}
+     */
+    public function kopyaListe(int $saat = 36): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/kopya.php?saat=' . max(6, min(96, $saat)));
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Haber listesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return [
+            'birlesen' => (int) ($veri['birlesen'] ?? 0),
+            'haberler' => array_values((array) ($veri['haberler'] ?? [])),
+        ];
+    }
+
+    /**
+     * Ayni olayi veren haber gruplarini birlestirir.
+     *
+     * @param list<list<int>> $gruplar
+     */
+    public function kopyaBirlestir(array $gruplar): int
+    {
+        [$kod, $govde] = $this->istek('POST', '/api/kopya.php', (string) json_encode(['gruplar' => $gruplar]));
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Birleştirme yazılamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return (int) ($veri['birlesen'] ?? 0);
+    }
+
+    /**
      * Maç özeti kanalları ve son günlerde kaydedilmiş videolar (api/mac-ozeti.php).
      *
      * @return array{kanallar:list<string>,bilinen:list<string>}

@@ -55,6 +55,7 @@ on:
           - yazar-portre
           - topluluk
           - baslik-denetim
+          - kopya
       kuru:
         description: 'Kuru calisma (siteye gonderme, sadece ciktiyi goster)'
         type: boolean
@@ -494,6 +495,27 @@ jobs:
           fi
 
           php derle.php $BAYRAKLAR --sure=$KALAN --en-fazla=8
+
+      # Ayni olay tek haber (07.11.2026, site sahibi: "ayni haberi birden
+      # cok kez yayinlama; ana sayfadaki 20 haberin hicbirisi ayni olmamali;
+      # benzer konusu ayni haberi birlestir, tek haber yap"). Site derlemenin
+      # dayandigi ve basligi cok benzeyen haberleri kendisi birlestiriyor;
+      # kelimeleri farkli olanlari model buluyor (ajan/kopya.php).
+      # Derlemelerden SONRA. Elle "kopya" modu son uc gunu tariyor.
+      - name: Ayni haberleri birlestir
+        if: ${{ !cancelled() && (((github.event_name == 'schedule' || inputs.mod == 'topla' || inputs.mod == 'gunluk' || inputs.mod == '') && inputs.kuru != true) || inputs.mod == 'kopya') }}
+        timeout-minutes: 8
+        working-directory: ajan
+        env:
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
+        run: php kopya.php ${{ inputs.mod == 'kopya' && '--saat=72 --sure=6' || '--sure=4' }} ${{ inputs.kuru == true && '--kuru' || '' }} || true
 
       # Aciklayici yazi (28.10.2026, site sahibinin istegi: ozgun haber):
       # Search Console firsat sorgusuna, sitede en az iki ilgili haber varsa

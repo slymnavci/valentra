@@ -1218,7 +1218,7 @@ function haber_devlet_buyuklerine_saygisiz_mi(array $veri): bool
  *
  * @return array{durum:string,id:?int} durum: 'eklendi' | 'yinelenen'
  */
-function haber_taslak_ekle(array $veri): array
+function haber_taslak_ekle(array $veri, bool $ayniOlayDenetimi = false): array
 {
     $baslik    = trim((string) ($veri['baslik'] ?? ''));
     $icerik    = trim((string) ($veri['icerik'] ?? ''));
@@ -1252,6 +1252,22 @@ function haber_taslak_ekle(array $veri): array
 
     if ($mevcutId !== null) {
         return ['durum' => 'yinelenen', 'id' => $mevcutId];
+    }
+
+    /*
+     * Ayni olay (07.11.2026, site sahibi: "ayni haberi birden cok kez
+     * yayinlama"): son saatlerde ayni olayi farkli kelimelerle veren haber
+     * varsa yenisi eklenmiyor. Yalnizca ajanin getirdigi haberde; derleme
+     * bilerek ayni olayi yaziyor (bkz. includes/kopya.php).
+     */
+    if ($ayniOlayDenetimi) {
+        require_once __DIR__ . '/kopya.php';
+
+        $ayniOlay = kopya_ayni_olay_bul($baslik, $kaynakBaslik, kategori_id_cozumle((string) ($veri['kategori'] ?? '')));
+
+        if ($ayniOlay !== null) {
+            return ['durum' => 'yinelenen', 'id' => $ayniOlay];
+        }
     }
 
     $ozet = trim((string) ($veri['ozet'] ?? ''));
@@ -1428,7 +1444,7 @@ function haber_toplu_taslak_ekle(array $haberler): array
         }
 
         try {
-            $sonuc = haber_taslak_ekle($haber);
+            $sonuc = haber_taslak_ekle($haber, true);
 
             if ($sonuc['durum'] === 'eklendi') {
                 $eklenen++;
@@ -2234,6 +2250,36 @@ function haber_manset(int $limit = 8, bool $anaAkis = false): array
     $ifade->execute();
 
     return $ifade->fetchAll();
+}
+
+/**
+ * Ana sayfanin butun haberleri (kaydirak + izgara), ayni olayin ikinci
+ * haberi cikarilmis (07.11.2026, site sahibi: "ana sayfadaki 20 haberin
+ * hicbirisi ayni olmamali"; bkz. includes/kopya.php). Birlestirme
+ * (api/kopya.php) ayni olayi zaten tek habere indiriyor; bu, birlestirme
+ * gelene kadar da ana sayfada tekrar olmasin diye. Sira haber_manset ile
+ * ayni; cikarilanlarin yerini siradaki haberler dolduruyor.
+ *
+ * @return list<array<string,mixed>>
+ */
+function haber_ana_sayfa_tekil(): array
+{
+    require_once __DIR__ . '/kopya.php';
+
+    $ifade = db()->prepare(
+        'SELECT h.*, k.ad AS kategori_adi, k.slug AS kategori_slug
+           FROM haberler h
+           LEFT JOIN kategoriler k ON k.id = h.kategori_id
+           ' . haber_okunma_birlesimi() . '
+          WHERE h.durum = :durum AND ' . haber_ana_akis_kosulu() . '
+          ORDER BY ' . haber_sirasi(true) . '
+          LIMIT :limit'
+    );
+    $ifade->bindValue('durum', HABER_YAYINDA);
+    $ifade->bindValue('limit', ANA_SAYFA_HABER_SINIRI + 40, PDO::PARAM_INT);
+    $ifade->execute();
+
+    return kopya_listeyi_tekille($ifade->fetchAll(), ANA_SAYFA_HABER_SINIRI);
 }
 
 /**
