@@ -259,7 +259,9 @@ function derleme_taslak_ekle(array $veri): array
     foreach ($kaynakHaberler as $k) {
         $onem = max($onem, (int) $k['onem']);
 
-        if ($gorsel === '' && trim((string) $k['gorsel_url']) !== '') {
+        // Lisansli yayinin gorseli ve konu gorseli atlaniyor: baska kaynagin gercek gorseli varsa o.
+        if ($gorsel === '' && trim((string) $k['gorsel_url']) !== ''
+            && !haber_gorseli_lisansli_mi($k) && !str_contains((string) $k['gorsel_url'], '/assets/kategori/')) {
             $gorsel = (string) $k['gorsel_url'];
         }
 

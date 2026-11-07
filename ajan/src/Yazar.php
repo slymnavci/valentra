@@ -216,6 +216,19 @@ final class Yazar implements SemaliIstemci
              yazma: "... açıkladı", "... bildirdi", "... dedi" diye
              kimin söylediğini belirt. Resmî açıklamalarda kurumun adını
              ver. Rakam ve tarihleri kaynaktaki gibi aktar.
+           - LİSANSLI YAYINLAR (site sahibinin kararı, 07.11.2026): A Haber,
+             Sabah, Takvim, Fotomaç, ATV, A Spor, A Para, Yeni Asır, Daily
+             Sabah (Turkuvaz) ile Habertürk, Bloomberg HT ve Show TV (Ciner)
+             içerikleri lisansa bağlıdır. Bu yayınların görselleri
+             kullanılmaz; site haberin konu görselini koyar. Başlıkta,
+             spotta ve metinde bu yayınların adını ve onlara ait ibareleri
+             YAZMA: "A Haber'in ulaştığı görüntüler", "Sabah'ın özel
+             haberi", "Fotoğraf: Habertürk", "Habertürk'e konuşan" gibi.
+             Olayı kendi cümlelerinle, asıl kaynağına (kurum, kişi, resmî
+             açıklama) dayanarak anlat. Açıklama yalnızca bu kanallardan
+             birine verildiyse "katıldığı bir televizyon programında", "bir
+             gazeteye yaptığı açıklamada" diye yaz. Kaynak bağlantısı
+             sayfada ayrıca verilir.
            - Siyasi haberde birden çok tarafın açıklaması kaynakta
              varsa, hiçbirini öne çıkarmadan aynı tonda aktar. Kaynakta
              olmayan tarafı kendin ekleme.

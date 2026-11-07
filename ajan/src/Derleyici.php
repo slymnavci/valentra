@@ -163,7 +163,15 @@ final class Derleyici
         - Bir şey henüz belli değilse "henüz belli değil" de.
         - Kaynaklardan cümle KOPYALAMA ve tek bir kaynağın akışını
           izleme; olayı kendi kurgunla, kendi cümlelerinle anlat.
-          Kaynaklara adıyla atıf yap.
+          Kaynaklara adıyla atıf yap. İSTİSNA — LİSANSLI YAYINLAR (site
+          sahibinin kararı, 07.11.2026): A Haber, Sabah, Takvim, Fotomaç,
+          ATV, A Spor, A Para, Yeni Asır, Daily Sabah, Habertürk, Bloomberg
+          HT ve Show TV adını, "özel haber", "ulaştığı görüntüler",
+          "Fotoğraf: ..." gibi ibarelerini başlıkta, spotta ve metinde
+          yazma; bilgiyi asıl sahibine (kurum, kişi, resmî açıklama)
+          dayandır. Açıklama yalnızca bu kanallardan birine verildiyse
+          "bir televizyon programında", "bir gazeteye yaptığı açıklamada"
+          de. Bu yayınların görselleri kullanılmaz.
 
         Ayrıca:
         - neden_onemli: olayın okuyucu için anlamı, 2-3 cümle; metindeki

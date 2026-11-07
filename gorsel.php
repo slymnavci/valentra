@@ -22,6 +22,16 @@ $id    = (int) ($_GET['id'] ?? 0);
 $haber = $id > 0 ? haber_bul($id) : null;
 $url   = guvenli_url((string) ($haber['gorsel_url'] ?? ''));
 
+// Lisansli yayinin gorseli indirilmiyor (bkz. HABER_LISANSLI_YAYINLAR): konunun hazir gorseli.
+if ($haber !== null && haber_gorseli_lisansli_mi($haber)) {
+    $konu = db()->prepare('SELECT slug FROM kategoriler WHERE id = :id');
+    $konu->execute(['id' => (int) ($haber['kategori_id'] ?? 0)]);
+    $haber['kategori_slug'] = (string) $konu->fetchColumn();
+    header('Cache-Control: public, max-age=3600');
+    header('Location: ' . haber_gorsel($haber), true, 302);
+    exit;
+}
+
 if ($url === '') {
     http_response_code(404);
     exit;
