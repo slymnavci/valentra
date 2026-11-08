@@ -179,12 +179,11 @@ function okur_dili(string $metin): string
 
     $kaliplar ??= [
         '/\bmalzemede\s+(?:henüz\s+)?belli\s+değil/ui'                          => 'henüz belli değil',
-        '/\bmalzemede\s+(?:yer\s+almıyor|geçmiyor|bulunmuyor|yok|belirtilmiyor)/ui' => 'haberlerde yer almıyor',
+        '/\bmalzemede\s+(?:yer\s+almıyor|geçmiyor|belirtilmiyor)/ui'               => 'haberlerde yer almıyor',
         '/\bmalzemede\s+(?:açıklanmıyor|netleşmiyor)/ui'                            => 'henüz açıklanmadı',
-        '/\bmalzemeye\s+göre\b/ui'                                                 => 'haberlere göre',
-        '/\bmalzemedeki\b/ui'                                                       => 'haberlerdeki',
-        '/\bmalzemeden\b/ui'                                                        => 'haberlerden',
-        '/\bmalzemede\b/ui'                                                         => 'haberlerde',
+        // Tek basina "malzemede/malzemeden/malzemeye gore" DEGISTIRILMIYOR:
+        // "geri donusturulmus malzemeden uretildi", "malzemedeki asbest",
+        // "kullanilan malzemeye gore degisiyor" gercek haber dili.
         '/\b(?:verilen|elimizdeki)\s+(?:haberlerde|kaynaklarda|metinlerde|bilgilerde)\b/ui' => 'haberlerde',
     ];
 
