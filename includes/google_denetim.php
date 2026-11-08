@@ -25,6 +25,9 @@ declare(strict_types=1);
 require_once __DIR__ . '/search_console.php';
 require_once __DIR__ . '/arama_bildirim.php';
 
+/** Sayfa denetiminde haber dışı sayfalardan indirilecek en çok adres (rastgele). */
+const GD_HABER_DISI_ORNEK = 200;
+
 /** Googlebot'un tarayıcı kimliği (sayfaları onun gibi indirmek için). */
 const GD_GOOGLEBOT = 'Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 '
                    . '(KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36 '
@@ -454,6 +457,12 @@ function google_denetimi(int $sureButcesi = 80): array
     // hep ayni sondakiler denetlenmeden kaliyordu; boylece her denetim
     // baska bir bolumunu kapsiyor.
     shuffle($digerleri);
+    // Haber disi sayfalardan da orneklem (08.11.2026): 592 sayfanin tamami
+    // ve 80 haber sure butcesine sigmiyordu (283/672 indirildi, "uyari").
+    // Bu sayfalar bir avuc sablondan (etiket, konu, kanun, rehber) uretiliyor;
+    // rastgele 200'u her denetimde farkli bir bolumu kapsiyor.
+    $digerToplam = count($digerleri);
+    $digerleri   = array_slice($digerleri, 0, GD_HABER_DISI_ORNEK);
     $secilen     = array_merge($digerleri, array_slice($haberler, 0, 40), array_slice($rastgele, 0, 40));
 
     $haberOrnegi = '';
@@ -461,7 +470,7 @@ function google_denetimi(int $sureButcesi = 80): array
     $basliklar   = [];
     $sureler     = [];
 
-    $denetlenen = gd_toplu_getir($secilen, 4, max(10, $sureButcesi - (time() - $baslangic) - 20),
+    $denetlenen = gd_toplu_getir($secilen, 6, max(10, $sureButcesi - (time() - $baslangic) - 20),
         static function (string $adres, array $s) use (&$haberOrnegi, &$sorunlu, &$basliklar, &$sureler): void {
             $sorunlar = [];
 
@@ -518,7 +527,7 @@ function google_denetimi(int $sureButcesi = 80): array
         // Indirilenlerin hepsi sorunsuz ve en az yarisi indirildiyse tamam:
         // eksik kalan sure butcesinden, sayfadan degil (08.11.2026).
         $sorunlu !== [] ? 'hata' : ($denetlenen * 2 >= count($secilen) ? 'tamam' : 'uyari'),
-        count($tumAdresler) . ' adresten ' . count($digerleri) . ' haber dışı sayfanın tamamı ve ' . min(80, count($haberler))
+        count($tumAdresler) . ' adresten ' . ($digerToplam > count($digerleri) ? $digerToplam . ' haber dışı sayfadan rastgele ' . count($digerleri) : count($digerleri) . ' haber dışı sayfanın tamamı') . ' ve ' . min(80, count($haberler))
         . ' haber (en yeni 40 + rastgele 40) seçildi; ' . $denetlenen . '/' . count($secilen) . ' indirildi; ' . ($denetlenen - count($sorunlu)) . ' sorunsuz (HTTP 200, dizine açık, kanonik kendisi, başlık ve açıklama var)'
         . ($sureler !== [] ? '; ortanca yanıt ' . $sureler[intdiv(count($sureler), 2)] . ' sn, en yavaş ' . end($sureler) . ' sn' : ''),
         $denetlenen < count($secilen) ? 'Süre yetmedi; sayfalar karışık sırayla seçildiği için kalanlar sonraki denetimlerde.' : '');

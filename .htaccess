@@ -329,6 +329,22 @@
     </FilesMatch>
 </IfModule>
 
+# --- Metin dosyalarinin sikistirilmasi (08.11.2026) -------------------
+#
+# Lighthouse mobil ilk icerik 3,9 sn: 230 KB'lik style.css ve HTML
+# sikistirilmadan gelirse yavas 4G'de tek basina 1,5 sn'yi asiyor; gzip
+# ile ~35 KB. Sunucu (LiteSpeed) kendisi sikistiriyorsa bu blok zararsiz.
+# IfModule: modul yoksa site dusmesin; AddOutputFilterByType Apache 2.4'te
+# mod_filter'in yonergesi, o da yoksa bilinmeyen yonerge 500 verirdi.
+<IfModule mod_filter.c>
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml application/javascript text/javascript application/json application/ld+json application/xml application/rss+xml application/manifest+json image/svg+xml
+</IfModule>
+<IfModule mod_brotli.c>
+    AddOutputFilterByType BROTLI_COMPRESS text/html text/css text/plain text/xml application/javascript text/javascript application/json application/ld+json application/xml application/rss+xml application/manifest+json image/svg+xml
+</IfModule>
+</IfModule>
+
 # Uygulama taniminin turu (03.11.2026). IfModule: modul yoksa site dusmesin.
 <IfModule mod_mime.c>
     AddType application/manifest+json .webmanifest
