@@ -13,10 +13,9 @@ require_once __DIR__ . '/includes/sayfa_onbellek.php';
 sayfa_onbellek(['sayfa']);
 require_once __DIR__ . '/includes/kose.php';
 
-// Gorsel denetiminin degistirdigi gorseller ozgun fotograflarina donuyor
-// (08.11.2026, site sahibi: "bu resim isi siteyi epey bozdu; gercek
-// fotograflari devreye sokman lazim"). Bir kez calisir.
-haber_gorsel_ozgunleri_geri_al();
+// #300'un tek seferlik geri almasi (haber_gorsel_ozgunleri_geri_al) burada
+// calisiyordu; yapildi. Cagri kaldirildi: yeniden acilan yumusak denetimin
+// (yalnizca logolu gorsel degisiyor) yeni degisikliklerini geri almasin.
 
 $sayfa = max(1, (int) ($_GET['sayfa'] ?? 1));
 

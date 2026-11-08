@@ -29,6 +29,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/ajan_yetki.php';
 require_once __DIR__ . '/../includes/seo.php';
+require_once __DIR__ . '/../includes/ayarlar.php';
 
 $anahtarId = ajan_anahtar_dogrula($neden);
 
@@ -50,6 +51,20 @@ $kendiGorseli = static function (string $url): bool {
 };
 
 if ($yontem === 'GET') {
+    /*
+     * Bir kez: son 3 gunun gorselleri yeniden denetlensin (08.11.2026).
+     * #300 geri almasi logolu gorselleri ozgunlerine dondurup "denetlendi"
+     * (1) isaretledi; logolu A Haber/NTV gorselleri boylece bir daha
+     * denetlenmiyordu. Ozgur lisansli gorselle degisenler (2) dokunulmuyor.
+     */
+    if (ayar_oku('gorsel_yeniden_denetim_v2') === '') {
+        ayar_yaz('gorsel_yeniden_denetim_v2', date('Y-m-d H:i:s'));
+        db()->exec(
+            "UPDATE haberler SET gorsel_denetim = NULL, guncellendi = guncellendi
+              WHERE gorsel_denetim IN (0, 1, 3) AND olusturuldu >= NOW() - INTERVAL 3 DAY"
+        );
+    }
+
     $gun  = max(1, min(60, (int) ($_GET['gun'] ?? 3)));
     $adet = max(1, min(400, (int) ($_GET['adet'] ?? 80)));
 
@@ -126,7 +141,14 @@ $degistir = db()->prepare(
       WHERE id = :id'
 );
 
-$sayac = ['temiz' => 0, 'degisen' => 0, 'konu_gorseli' => 0];
+$sayac = ['temiz' => 0, 'degisen' => 0, 'korunan' => 0, 'konu_gorseli' => 0];
+
+/*
+ * "koru": logolu ama yerine uygun fotograf bulunamadi; haberin kendi
+ * fotografi kaliyor (#300 sonrasi: gercek fotograflar gorunsun). Konu
+ * gorseli konmuyor. 3: bir daha listelenmesin.
+ */
+$koru = db()->prepare('UPDATE haberler SET gorsel_denetim = 3, guncellendi = guncellendi WHERE id = :id');
 
 foreach ((array) ($veri['sonuclar'] ?? []) as $s) {
     if (!is_array($s) || (int) ($s['id'] ?? 0) <= 0) {
@@ -144,6 +166,12 @@ foreach ((array) ($veri['sonuclar'] ?? []) as $s) {
     if (!empty($s['temiz'])) {
         $temizle->execute(['id' => $id]);
         $sayac['temiz']++;
+        continue;
+    }
+
+    if (!empty($s['koru']) && trim((string) ($s['yeni'] ?? '')) === '') {
+        $koru->execute(['id' => $id]);
+        $sayac['korunan']++;
         continue;
     }
 

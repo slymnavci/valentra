@@ -482,7 +482,9 @@ bir fotoğrafını kullan"): Haberin ana konusu tanınmış bir kamu figürüyse
 (devlet/hükümet başkanı, bakan, parti lideri, ünlü sporcu, teknik
 direktör, sanatçı) İLK sorgu o kişinin tam adı, Wikipedia'daki yazımıyla
 ("Recep Tayyip Erdoğan", "Ilham Aliyev", "Donald Trump", "Mohamed
-Salah"). Bu kişileri "kisiler" listesine de yaz. Tanınmamış sıradan
+Salah"). Haber bir ziyaret ya da iki ülke/lider ilişkisiyse ilk sorgu
+kişi + karşı taraf ("Erdoğan Aliyev", "Erdoğan Azerbaijan"), ikinci sorgu
+kişinin tam adı. Bu kişileri "kisiler" listesine de yaz. Tanınmamış sıradan
 kişilerin (kaza, suç haberindeki kişiler) adını YAZMA; kisiler boş kalsın.
 
 Sonra özgül yer/kurum/nesne (ör. "Grand National Assembly of Turkey",

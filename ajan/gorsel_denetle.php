@@ -92,7 +92,7 @@ $geminiModel = ayar('GEMINI_MODEL', false) ?: 'gemini-3.8-flash';
 $claudeModel = ayar('CLAUDE_MODEL', false) ?: 'claude-haiku-5-5';
 $denetci = new GorselDenetci(ayar('GEMINI_API_KEY', false), $geminiModel, ayar('ANTHROPIC_API_KEY', false), $claudeModel, $bitis);
 
-$toplam = ['temiz' => 0, 'degisen' => 0, 'konu_gorseli' => 0, 'karar_yok' => 0];
+$toplam = ['temiz' => 0, 'degisen' => 0, 'korunan' => 0, 'konu_gorseli' => 0, 'karar_yok' => 0];
 
 /**
  * Logolu görselin yerine konacak özgür lisanslı görseli arar.
@@ -215,8 +215,9 @@ foreach (array_chunk($haberler, PARTI) as $parti) {
     foreach ($parti as $i => $h) {
         if ($resimler[$i] === null) {
             // Ne kaynaktan ne siteden indirilebiliyor: gosterilemeyen gorsel yerine konu gorseli.
-            gunluk('#' . $h['id'] . ' görsel indirilemedi → konu görseli');
-            $sonuclar[] = ['id' => (int) $h['id'], 'temiz' => false, 'bulunan' => 'indirilemedi'];
+            // Haberin kendi fotografi kaliyor (site sahibi, 08.11.2026: gercek fotograflar gorunsun).
+            gunluk('#' . $h['id'] . ' görsel indirilemedi → olduğu gibi kalıyor');
+            $sonuclar[] = ['id' => (int) $h['id'], 'temiz' => false, 'koru' => true];
             continue;
         }
 
@@ -254,8 +255,10 @@ foreach (array_chunk($haberler, PARTI) as $parti) {
                 gunluk('   → yerine: ' . $bulunan['url'] . ' [' . $bulunan['atif'] . '] (sorgu: ' . implode(' | ', $sorgular[$i]['liste']) . ')');
                 $sonuclar[] = ['id' => (int) $h['id'], 'temiz' => false, 'yeni' => $bulunan['url'], 'atif' => $bulunan['atif']];
             } else {
-                gunluk('   → uygun özgür görsel bulunamadı, konu görseli (sorgu: ' . implode(' | ', $sorgular[$i]['liste']) . ')');
-                $sonuclar[] = ['id' => (int) $h['id'], 'temiz' => false];
+                // Konu gorseli KONMUYOR (#300: "gercek fotograflari devreye sok"):
+                // haberin kendi fotografi kaliyor.
+                gunluk('   → uygun özgür görsel bulunamadı, haberin kendi fotoğrafı kalıyor (sorgu: ' . implode(' | ', $sorgular[$i]['liste']) . ')');
+                $sonuclar[] = ['id' => (int) $h['id'], 'temiz' => false, 'koru' => true];
             }
         }
     }
@@ -266,7 +269,7 @@ foreach (array_chunk($haberler, PARTI) as $parti) {
 
     if ($kuru) {
         foreach ($sonuclar as $s) {
-            $toplam[!empty($s['temiz']) ? 'temiz' : (isset($s['yeni']) ? 'degisen' : 'konu_gorseli')]++;
+            $toplam[!empty($s['temiz']) ? 'temiz' : (isset($s['yeni']) ? 'degisen' : (!empty($s['koru']) ? 'korunan' : 'konu_gorseli'))]++;
         }
 
         continue;
@@ -276,7 +279,7 @@ foreach (array_chunk($haberler, PARTI) as $parti) {
         $yazilan = $site->gorselDenetimGonder($sonuclar);
 
         foreach ($yazilan as $k => $n) {
-            $toplam[$k] += $n;
+            $toplam[$k] = ($toplam[$k] ?? 0) + $n;
         }
     } catch (Throwable $e) {
         gunluk('Sonuçlar yazılamadı: ' . $e->getMessage());
@@ -285,8 +288,8 @@ foreach (array_chunk($haberler, PARTI) as $parti) {
 
 $s = $denetci->sayac();
 gunluk(sprintf(
-    'Bitti%s: %d temiz, %d görsel özgür lisanslı görselle değişti, %d konu görseli; %d karar alınamadı (istek: Gemini %d, Claude %d, başarısız %d).',
+    'Bitti%s: %d temiz, %d görsel özgür lisanslı görselle değişti, %d logolu görsel yerine uygun fotoğraf bulunamadığı için kaldı; %d karar alınamadı (istek: Gemini %d, Claude %d, başarısız %d).',
     $kuru ? ' (kuru)' : '',
-    $toplam['temiz'], $toplam['degisen'], $toplam['konu_gorseli'], $toplam['karar_yok'],
+    $toplam['temiz'], $toplam['degisen'], $toplam['korunan'] + $toplam['konu_gorseli'], $toplam['karar_yok'],
     $s['gemini'], $s['claude'], $s['hata']
 ));
