@@ -185,6 +185,33 @@ function haber_gorsel_denetimli_mi(array $haber): bool
     return isset($haber['gorsel_denetim']) && (int) $haber['gorsel_denetim'] > 0;
 }
 
+/**
+ * Görsel denetiminin değiştirdiği görselleri özgün fotoğraflarına döndürür (bir kez).
+ *
+ * Site sahibinin karari (08.11.2026): logolu gorselin yerine konan
+ * internet gorselleri ve konu gorselleri siteyi bozdu; gercek haber
+ * fotograflari geri gelsin. Eski adres gorsel_eski'de saklanmisti.
+ */
+function haber_gorsel_ozgunleri_geri_al(): void
+{
+    try {
+        if (ayar_oku('gorsel_ozgun_geri_alindi') !== '') {
+            return;
+        }
+
+        ayar_yaz('gorsel_ozgun_geri_alindi', date('Y-m-d H:i:s'));
+        $n = db()->exec(
+            "UPDATE haberler
+                SET gorsel_url = gorsel_eski, gorsel_eski = '', gorsel_atif = '', gorsel_denetim = 1,
+                    guncellendi = guncellendi
+              WHERE gorsel_denetim IN (0, 2) AND gorsel_eski <> ''"
+        );
+        error_log('[valentra] gorsel denetimi geri alindi: ' . (int) $n . ' haber');
+    } catch (Throwable $e) {
+        error_log('[valentra] gorsel geri alma: ' . $e->getMessage());
+    }
+}
+
 /** Konu görselinin dosya adı (assets/kategori/<ad>.jpg); tanınmayan konu Gündem. */
 function haber_gorsel_konu_adi(string $slug): string
 {
