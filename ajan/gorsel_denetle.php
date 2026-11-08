@@ -74,7 +74,8 @@ $bitis = time() + max(2, (int) ($secenekler['sure'] ?? 6)) * 60;
 $site = new Site(ayar('VALENTRA_SITE_URL'), ayar('VALENTRA_AGENT_KEY'));
 
 try {
-    $haberler = $site->gorselDenetimListesi($gun, $adet);
+    ['haberler' => $haberler, 'kullanilan' => $kullanilanListe] = $site->gorselDenetimListesi($gun, $adet);
+    $kullanilan = array_fill_keys($kullanilanListe, true);
 } catch (Throwable $e) {
     gunluk('Görsel listesi alınamadı: ' . $e->getMessage());
     exit(0);
@@ -106,7 +107,7 @@ $toplam = ['temiz' => 0, 'degisen' => 0, 'konu_gorseli' => 0, 'karar_yok' => 0];
  * @param array{liste:list<string>,kisiler:list<string>} $sorgular
  * @return ?array{url:string,ad:string,atif:string,sayfa:string}
  */
-function yedek_bul(GorselDenetci $denetci, array $haber, array $sorgular, int $bitis): ?array
+function yedek_bul(GorselDenetci $denetci, array $haber, array $sorgular, int $bitis, array &$kullanilan): ?array
 {
     // Soyadlari ("Recep Tayyip Erdoğan" -> "erdogan").
     $soyadlar = [];
@@ -125,7 +126,11 @@ function yedek_bul(GorselDenetci $denetci, array $haber, array $sorgular, int $b
             return null;
         }
 
-        $adaylar = $denetci->ara($sorgu, PARTI * 2);
+        // Ayni gorsel iki haberde olmasin (son iki haftada konulanlar dahil).
+        $adaylar = array_values(array_filter(
+            $denetci->ara($sorgu, PARTI * 2),
+            static fn (array $a): bool => !isset($kullanilan[$a['url']])
+        ));
         $katliSorgu = GorselDenetci::katla($sorgu);
         $sorgudakiler = array_values(array_filter($soyadlar, static fn (string $s): bool => str_contains($katliSorgu, $s)));
 
@@ -163,6 +168,8 @@ function yedek_bul(GorselDenetci $denetci, array $haber, array $sorgular, int $b
 
         foreach ($denetci->denetle($ogeler) as $i => $karar) {
             if ($karar !== null && $karar['temiz'] && $karar['uygun']) {
+                $kullanilan[$sira[$i]['url']] = true;
+
                 return $sira[$i];
             }
         }
@@ -241,7 +248,7 @@ foreach (array_chunk($haberler, PARTI) as $parti) {
         ));
 
         foreach ($logolu as $i => $h) {
-            $bulunan = $sorgular[$i]['liste'] !== [] ? yedek_bul($denetci, $h, $sorgular[$i], $bitis) : null;
+            $bulunan = $sorgular[$i]['liste'] !== [] ? yedek_bul($denetci, $h, $sorgular[$i], $bitis, $kullanilan) : null;
 
             if ($bulunan !== null) {
                 gunluk('   → yerine: ' . $bulunan['url'] . ' [' . $bulunan['atif'] . '] (sorgu: ' . implode(' | ', $sorgular[$i]['liste']) . ')');

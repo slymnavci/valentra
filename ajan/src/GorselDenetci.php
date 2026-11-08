@@ -616,14 +616,15 @@ METIN;
                 continue;
             }
 
-            $url = (string) ($b['thumburl'] ?? $b['url'] ?? '');
+            // thumburl "?utm_source=..." ekiyle geliyor; gorselin kendisi eksiz adreste.
+            $url = (string) preg_replace('/\?.*$/', '', (string) ($b['thumburl'] ?? $b['url'] ?? ''));
 
             if (!str_starts_with($url, 'https://upload.wikimedia.org/')) {
                 continue;
             }
 
             $sanatci = trim(html_entity_decode(strip_tags((string) ($m['Artist']['value'] ?? '')), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
-            $sanatci = mb_substr((string) preg_replace('/\s+/u', ' ', $sanatci), 0, 80, 'UTF-8');
+            $sanatci = self::kisaAd((string) preg_replace('/\s+/u', ' ', $sanatci));
             $kamu    = preg_match('/^(CC0|Public domain|PD)/i', $lisans) === 1;
 
             $sonuc[] = [
@@ -673,7 +674,7 @@ METIN;
             $lisans  = strtolower((string) ($r['license'] ?? ''));
             $surum   = (string) ($r['license_version'] ?? '');
             $kamu    = in_array($lisans, ['cc0', 'pdm'], true);
-            $sanatci = mb_substr(trim((string) ($r['creator'] ?? '')), 0, 80, 'UTF-8');
+            $sanatci = self::kisaAd(trim((string) ($r['creator'] ?? '')));
             $kaynak  = ucfirst((string) ($r['source'] ?? 'Openverse'));
 
             $sonuc[] = [
@@ -687,6 +688,22 @@ METIN;
         }
 
         return $sonuc;
+    }
+
+    /**
+     * Atıf satırı için yazar adı: Commons'ta "Artist" bazen uzun bir tanıtım
+     * cümlesi; ilk parça (virgül/nokta/parantez öncesi) ve en fazla 50 karakter.
+     */
+    private static function kisaAd(string $ad): string
+    {
+        $ad = trim((string) preg_split('/\s*(?:[,;(\[]|\.\s|\s-\s)/u', $ad)[0]);
+
+        if (mb_strlen($ad, 'UTF-8') > 50) {
+            $ad = rtrim(mb_substr($ad, 0, 50, 'UTF-8'));
+            $ad = mb_substr($ad, 0, (int) (mb_strrpos($ad, ' ', 0, 'UTF-8') ?: 50), 'UTF-8') . '…';
+        }
+
+        return $ad;
     }
 
     // ------------------------------------------------------------------
