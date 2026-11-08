@@ -13,9 +13,10 @@ require_once __DIR__ . '/includes/sayfa_onbellek.php';
 sayfa_onbellek(['sayfa']);
 require_once __DIR__ . '/includes/kose.php';
 
-// Ana sayfada haber sitesi adi/logosu olan gorsel yok: yalnizca denetimden
-// gecmis gorseller, digerlerinin yerine konu gorseli (bkz. haber_gorsel_denetimli_mi).
-const GORSEL_YALNIZ_DENETLENMIS = true;
+// Gorsel denetiminin degistirdigi gorseller ozgun fotograflarina donuyor
+// (08.11.2026, site sahibi: "bu resim isi siteyi epey bozdu; gercek
+// fotograflari devreye sokman lazim"). Bir kez calisir.
+haber_gorsel_ozgunleri_geri_al();
 
 $sayfa = max(1, (int) ($_GET['sayfa'] ?? 1));
 

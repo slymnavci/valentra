@@ -202,9 +202,6 @@ require __DIR__ . '/ust.php';
 
                 <button type="submit" name="islem" value="baslik_denetim"
                         class="dugme" title="Son iki haftanın başlıklarını okur; anlaşılmayan ya da çeviri kokan başlıkları doğal Türkçeyle yeniden yazar.">Başlıkların Türkçesini düzelt</button>
-
-                <button type="submit" name="islem" value="gorsel_denetim"
-                        class="dugme" title="Son iki haftanın görsellerine bakar; haber sitesi, kanal ya da ajans adı/logosu olanların yerine özgür lisanslı görsel, o da yoksa konu görseli koyar.">Görsellerdeki site logolarını temizle</button>
             </div>
 
             <p class="ipucu" style="margin:14px 0 0;">
