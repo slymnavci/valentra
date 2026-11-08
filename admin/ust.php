@@ -81,6 +81,8 @@
                 'Haberler'      => [
                     'Haberler'          => 'index.php',
                     'Videolu haberler'  => 'videolar.php',
+                    // Eski kopyalari birlestirme, 301 (08.11.2026).
+                    'Benzer haberler'   => 'birlestir.php',
                 ],
                 // Site sahibinin istegi (23.10.2026): okunma istatistigi
                 // ust menude, acilir listenin icinde kaybolmasin.
@@ -96,6 +98,8 @@
                  */
                 'İçerik'        => [
                     'Köşe yazıları'   => 'kose-yazilari.php',
+                    // Konu dosyalari: bastaki haber ve dosyadan cikarma (08.11.2026).
+                    'Gündem dosyaları' => 'konular.php',
                     // Canli anlatim (03.11.2026; bkz. includes/canli.php).
                     'Canlı anlatım'   => 'canli.php',
                     // YouTube mac ozetleri (04.11.2026).

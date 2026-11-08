@@ -179,7 +179,9 @@ function okur_dili(string $metin): string
 
     $kaliplar ??= [
         '/\bmalzemede\s+(?:henüz\s+)?belli\s+değil/ui'                          => 'henüz belli değil',
-        '/\bmalzemede\s+(?:yer\s+almıyor|geçmiyor|belirtilmiyor)/ui'               => 'haberlerde yer almıyor',
+        // "malzemede yer almiyor / gecmiyor / belirtilmiyor" artik
+        // DEGISTIRILMIYOR, cumleyle birlikte cikiyor (bkz. okur_dili_satir):
+        // "haberlerde yer almiyor" da okura bilgi vermiyordu.
         '/\bmalzemede\s+(?:açıklanmıyor|netleşmiyor)/ui'                            => 'henüz açıklanmadı',
         // Tek basina "malzemede/malzemeden/malzemeye gore" DEGISTIRILMIYOR:
         // "geri donusturulmus malzemeden uretildi", "malzemedeki asbest",
@@ -195,7 +197,85 @@ function okur_dili(string $metin): string
                 : $yerine, $metin);
     }
 
-    return $metin;
+    // Paragraf yapisi (bos satir, madde satirlari) korunuyor; cumleler
+    // satir satir ele aliniyor.
+    $satirlar = preg_split('/(\R)/u', $metin, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [$metin];
+    $gorulen  = [];
+
+    foreach ($satirlar as $i => $satir) {
+        if ($i % 2 === 1 || trim($satir) === '') {
+            continue;
+        }
+
+        $yeni = okur_dili_satir($satir, $gorulen);
+
+        // Tumuyle bos kalan satir ardindaki satir sonuyla birlikte gidiyor:
+        // madde listesinin arasinda bos satir kalip listeyi bolmesin.
+        if ($yeni === '') {
+            $satirlar[$i] = null;
+            if (isset($satirlar[$i + 1])) {
+                $satirlar[$i + 1] = null;
+            } elseif ($i > 0) {
+                $satirlar[$i - 1] = null;
+            }
+            continue;
+        }
+
+        $satirlar[$i] = $yeni;
+    }
+
+    return implode('', array_filter($satirlar, static fn (?string $s): bool => $s !== null));
+}
+
+/**
+ * Tek satirin cumleleri (bkz. okur_dili). 08.11.2026, okur denetimi:
+ * motorin haberinde "Malzemede motorindeki...", "malzemede
+ * degerlendirilmiyor", "Benzinde malzemede..." kalmisti; dar kaliplar
+ * bunlari yakalamiyordu.
+ *
+ *   1. "Malzemede/verilen metinde ... belirtilmiyor" gibi YALNIZCA bilgi
+ *      eksikligini soyleyen cumle tumuyle cikiyor: okura bilgi vermiyor.
+ *   2. Bilgi veren cumlenin basindaki (ya da "Benzinde malzemede" gibi bir
+ *      yer bildiren kelimeden sonraki) "malzemede" atiliyor. "Kullanilan
+ *      malzemede kusur" gibi gercek kullanim degismiyor.
+ *   3. Ayni metinde ikinci kez gecen ayni cumle cikiyor.
+ *
+ * @param array<string,true> $gorulen metnin onceki cumleleri (tekrar denetimi)
+ */
+function okur_dili_satir(string $satir, array &$gorulen): string
+{
+    $jargon = '/\b(?:malzemede|malzemeden\s+(?:anlaşıl|görül)\w*|malzemeye\s+göre|malzemedeki\s+bilgi\w*|kaynak\s+metin\w*|verilen\s+(?:haber|metin|bilgi|kaynak)\w*)\b/ui';
+    $eksik  = '/(?:belli\s+değil|belirsiz|yer\s+almıyor|yer\s+verilmiyor|geçmiyor|belirtilmiyor|belirtilmemiş|belirtilmedi|açıklanmıyor|'
+            . 'açıklanmadı|açıklanmamış|değerlendirilmiyor|değinilmiyor|söz\s+edilmiyor|bilgi\s+(?:yok|bulunmuyor|verilmiyor|verilmedi)|'
+            . 'bulunmuyor|netleşmiyor|bildirilmiyor|bildirilmedi|ayrıntı\s+(?:yok|verilmiyor))/ui';
+
+    $basBosluk = (string) preg_replace('/^(\s*(?:[-•]\s+)?).*$/us', '$1', $satir);
+    $cumleler  = preg_split('/(?<=[.!?…])\s+(?=\p{Lu}|\d|["“\'(])/u', trim(mb_substr($satir, mb_strlen($basBosluk)))) ?: [];
+    $kalan     = [];
+
+    foreach ($cumleler as $cumle) {
+        if (preg_match($jargon, $cumle) === 1 && preg_match($eksik, $cumle) === 1) {
+            continue;
+        }
+
+        // Cumle basinda ya da bulunma ekli bir kelimeden sonra "malzemede".
+        $cumle = (string) preg_replace_callback(
+            '/(^|\b\p{L}+(?:de|da|te|ta)\s+)malzemede\s+(\p{L})/ui',
+            static fn (array $m): string => $m[1] . ($m[1] === '' ? mb_strtoupper($m[2], 'UTF-8') : $m[2]),
+            $cumle
+        );
+
+        $anahtar = mb_strtolower((string) preg_replace('/[^\p{L}\p{N}]+/u', '', $cumle), 'UTF-8');
+
+        if ($anahtar !== '' && mb_strlen($anahtar) > 25 && isset($gorulen[$anahtar])) {
+            continue;
+        }
+
+        $gorulen[$anahtar] = true;
+        $kalan[]           = $cumle;
+    }
+
+    return $kalan === [] ? '' : $basBosluk . implode(' ', $kalan);
 }
 
 function bicimli_metin_html(string $icerik): string

@@ -78,8 +78,9 @@ $konu     = KONULAR[$slug];
 $baslik   = konu_basligi($slug);
 $haberler = konu_haberleri($slug);
 $enYeni   = $haberler[0] ?? null;
-// One cikan: basliginda dosyanin kelimesi gecen en yeni haber (bkz. konu_one_cikan_sira).
-$oneSira  = konu_one_cikan_sira($slug, $haberler);
+// One cikan: editorun sectigi, yoksa basliginda dosyanin kelimesi gecen
+// en yeni haber (bkz. konu_one_cikan).
+[$oneSira, $editorSecti] = konu_one_cikan($slug, $haberler);
 $son      = $haberler[$oneSira] ?? null;
 $digerleri = $haberler;
 unset($digerleri[$oneSira]);
@@ -87,7 +88,7 @@ $veriHtml = konu_veri_html($slug);
 
 $sayfaBasligi  = $baslik . ': Son Durum ve Bütün Gelişmeler — Valentra';
 $sayfaAciklama = $son !== null
-    ? mb_substr($baslik . ' son durum: ' . (string) $son['ozet'], 0, 300, 'UTF-8')
+    ? mb_substr($baslik . ' son durum: ' . okur_dili((string) $son['ozet']), 0, 300, 'UTF-8')
     : $baslik . ' ile ilgili bütün gelişmeler tek sayfada.';
 $seoAdres      = site_adresi() . konu_yolu($slug);
 
@@ -117,13 +118,13 @@ require __DIR__ . '/includes/sayfa_ust.php';
             </div>
         <?php else: ?>
             <section class="konu-son">
-                <h2><?= $oneSira === 0 ? 'Son gelişme' : 'Öne çıkan gelişme' ?></h2>
+                <h2><?= $oneSira === 0 && !$editorSecti ? 'Son gelişme' : 'Öne çıkan gelişme' ?></h2>
                 <?php if (konu_tahmin_mi((string) $son['baslik'])): ?><span class="konu-rozet tahmin">Tahmin</span><?php endif; ?>
                 <a class="konu-son-baslik" href="<?= e(haber_yolu((string) $son['slug'])) ?>"><?= e((string) $son['baslik']) ?></a>
                 <time><?= e($tarihYaz((string) $son['yayin_tarihi'])) ?></time>
-                <p><?= e((string) $son['ozet']) ?></p>
+                <p><?= e(okur_dili((string) $son['ozet'])) ?></p>
                 <?php if (trim((string) $son['neden_onemli']) !== ''): ?>
-                    <p class="konu-neden"><strong>Neden önemli?</strong> <?= e((string) $son['neden_onemli']) ?></p>
+                    <p class="konu-neden"><strong>Neden önemli?</strong> <?= e(okur_dili((string) $son['neden_onemli'])) ?></p>
                 <?php endif; ?>
             </section>
 
@@ -136,7 +137,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
                                 <time><?= e($tarihYaz((string) $h['yayin_tarihi'])) ?></time>
                                 <?php if (konu_tahmin_mi((string) $h['baslik'])): ?><span class="konu-rozet tahmin">Tahmin</span><?php endif; ?>
                                 <a href="<?= e(haber_yolu((string) $h['slug'])) ?>"><?= e((string) $h['baslik']) ?></a>
-                                <p><?= e((string) $h['ozet']) ?></p>
+                                <p><?= e(okur_dili((string) $h['ozet'])) ?></p>
                             </li>
                         <?php endforeach; ?>
                     </ol>

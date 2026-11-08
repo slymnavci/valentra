@@ -36,32 +36,57 @@ function konu_tahmin_mi(string $baslik): bool
 }
 
 /**
- * "Son gelişme" olarak öne çıkacak haber: yeni haberler içinde
- * BAŞLIĞINDA dosyanın kelimesi geçen ilk haber. Yalnızca etiketinde
- * geçen genel bir haber (enflasyon haberinin etiketinde "kira artışı")
- * dosyanın asıl konusunu anlatan haberin önüne geçmesin.
+ * "Son gelişme" olarak öne çıkacak haber.
  *
- * @param list<array<string,mixed>> $haberler yeniden eskiye
- * @return int dizideki sıra
+ * 1. Editörün panelden seçtiği haber (panel → Gündem dosyaları;
+ *    08.11.2026). Listede yoksa (40 haberden eski) yayındaysa ve hâlâ
+ *    dosyaya giriyorsa listenin sonuna eklenir.
+ * 2. Yoksa: yeni haberler içinde BAŞLIĞINDA dosyanın kelimesi geçen ilk
+ *    haber. Yalnızca spotta/etikette geçen genel bir haber dosyanın asıl
+ *    konusunu anlatan haberin önüne geçmesin.
+ *
+ * @param list<array<string,mixed>> $haberler yeniden eskiye; editörün
+ *        seçtiği eski haber gerekirse sona eklenir
+ * @return array{0:int,1:bool} dizideki sıra, editör seçimi mi
  */
-function konu_one_cikan_sira(string $slug, array $haberler): int
+function konu_one_cikan(string $slug, array &$haberler): array
 {
-    $kelimeler = array_map(
-        static fn (string $k): string => mb_strtolower(strtr($k, ['I' => 'ı', 'İ' => 'i']), 'UTF-8'),
-        KONULAR[$slug]['kelimeler'] ?? []
-    );
+    $secim = konu_editor_secimi($slug);
 
-    foreach (array_slice($haberler, 0, 10, true) as $i => $h) {
-        $baslik = mb_strtolower(strtr((string) $h['baslik'], ['I' => 'ı', 'İ' => 'i']), 'UTF-8');
-
-        foreach ($kelimeler as $k) {
-            if (str_contains($baslik, $k)) {
-                return (int) $i;
+    if ($secim > 0) {
+        foreach ($haberler as $i => $h) {
+            if ((int) $h['id'] === $secim) {
+                return [(int) $i, true];
             }
+        }
+
+        try {
+            $ifade = db()->prepare(
+                "SELECT h.id, h.baslik, h.slug, h.ozet, h.neden_onemli, h.gorsel_url, h.yayin_tarihi, h.kaynak_adi,
+                        h.kaynak_baslik, h.kaynak_url, h.onem, h.etiketler, k.slug AS kategori_slug
+                   FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
+                  WHERE h.id = :id AND h.durum = 'yayinda' LIMIT 1"
+            );
+            $ifade->execute(['id' => $secim]);
+            $h = $ifade->fetch();
+
+            if ($h && konu_eslesir($slug, $h)) {
+                $haberler[] = $h;
+
+                return [count($haberler) - 1, true];
+            }
+        } catch (PDOException $e) {
+            error_log('[valentra] konu editor secimi: ' . $e->getMessage());
         }
     }
 
-    return 0;
+    foreach (array_slice($haberler, 0, 10, true) as $i => $h) {
+        if (konu_kelimesi_var($slug, (string) $h['baslik'])) {
+            return [(int) $i, false];
+        }
+    }
+
+    return [0, false];
 }
 
 /**
@@ -103,6 +128,69 @@ function konu_veri_kaynak_html(array $bilgi): string
         . ' · <a href="' . e(pratik_bilgi_yolu((string) $bilgi['anahtar'])) . '">hesap ve grafik</a></p>';
 }
 
+/**
+ * Veri kutusundaki onaylı değerin TÜFE dönemi ("Y-m"): serinin son
+ * noktası, yoksa "Eylül 2026" gibi dönem metni. Bilinmiyorsa null.
+ */
+function konu_veri_donem_ayi(?string $donem, ?string $seriJson): ?string
+{
+    $seri = pratik_seri_oku($seriJson);
+
+    if ($seri !== []) {
+        $son = end($seri);
+
+        if (preg_match('/^\d{4}-\d{2}/', (string) ($son[0] ?? ''), $m)) {
+            return $m[0];
+        }
+    }
+
+    $aylar = ['ocak' => 1, 'şubat' => 2, 'mart' => 3, 'nisan' => 4, 'mayıs' => 5, 'haziran' => 6, 'temmuz' => 7,
+              'ağustos' => 8, 'eylül' => 9, 'ekim' => 10, 'kasım' => 11, 'aralık' => 12];
+
+    if (preg_match('/(\p{L}+)\s+(\d{4})/u', mb_strtolower(strtr((string) $donem, ['I' => 'ı', 'İ' => 'i']), 'UTF-8'), $m)
+        && isset($aylar[$m[1]])) {
+        return sprintf('%04d-%02d', (int) $m[2], $aylar[$m[1]]);
+    }
+
+    return null;
+}
+
+/**
+ * Yayın sonrası denetim (08.11.2026, okur denetimi: enflasyon dosyasının
+ * kutusu Eylül'ü gösterirken altındaki haberler Ekim verisini anlatıyordu).
+ *
+ * TÜİK bir ayın TÜFE'sini sonraki ayın 3'ünde açıklıyor. Ayın 5'inden
+ * sonra kutu hâlâ iki ay önceki dönemdeyse yeni veri açıklanmış ama
+ * panelde onaylanmamış demektir: okura kutunun hangi döneme ait olduğu ve
+ * yeni verinin onay beklediği açıkça yazılır. Rakam uydurulmaz.
+ */
+function konu_veri_eski_mi_html(?array $bilgi, ?DateTimeImmutable $simdi = null): string
+{
+    if ($bilgi === null) {
+        return '';
+    }
+
+    $ay = konu_veri_donem_ayi((string) ($bilgi['donem'] ?? ''), $bilgi['seri'] ?? null);
+
+    if ($ay === null) {
+        return '';
+    }
+
+    $simdi  ??= new DateTimeImmutable('now', new DateTimeZone('Europe/Istanbul'));
+    $beklenen = ekonomi_ay_kaydir($simdi->format('Y-m'), (int) $simdi->format('j') >= 5 ? -1 : -2);
+
+    if ($ay >= $beklenen) {
+        return '';
+    }
+
+    $aday = trim((string) ($bilgi['aday_donem'] ?? '')) !== '' && trim((string) ($bilgi['aday_deger'] ?? '')) !== '';
+
+    return '<p class="konu-veri-eski" role="note">Bu kutudaki veri <strong>' . e(ekonomi_ay_adi($ay)) . '</strong> dönemine ait. '
+        . e(ekonomi_ay_adi($beklenen)) . ' verisi TÜİK tarafından açıklandı'
+        . ($aday ? ' ve editör onayı bekliyor' : '; editör kontrolünden sonra burada güncellenecek')
+        . '. Aşağıdaki haberler daha yeni dönemi anlatıyor olabilir.</p>';
+}
+
 /** Dosyanın veri kutusu; bu dosyanın kutusu yoksa boş. */
 function konu_veri_html(string $slug): string
 {
@@ -133,22 +221,39 @@ function konu_kira_html(?array $bilgi): string
             . '<div class="konu-veri-buyuk"><strong>' . e($satir['Kira artış sınırı']) . '</strong>'
             . (isset($satir['Uygulandığı ay']) ? '<span>' . e($satir['Uygulandığı ay']) . '</span>' : '')
             . '</div>'
+            . konu_veri_eski_mi_html($bilgi)
             . konu_veri_kaynak_html($bilgi);
     } else {
+        // Okur denetimi (08.11.2026): "editor onayindan gecince yayimlanir"
+        // yazarken hemen altindaki haber kesin bir oran veriyordu. Kutu
+        // yalnizca onayli veriyi gosterir; haberle celiskili gorunmemesi
+        // icin okura oranin nereden teyit edilecegi soyleniyor.
         $html .= '<h2 id="konu-veri-baslik">Kira artış hesaplayıcı</h2>'
-            . '<p class="konu-veri-kaynak">Güncel oran TÜİK verisinden hesaplanıp editör onayından geçince burada yayımlanır.</p>';
+            . '<p class="konu-veri-kaynak">Bu ayın sınır oranı henüz editör onaylı veri olarak girilmedi. '
+            . 'Haberlerde geçen oranı TÜİK\'in açıkladığı TÜFE on iki aylık ortalamasından teyit ederek aşağıya kendiniz yazabilirsiniz.</p>';
     }
 
     $html .= '<p class="konu-veri-not">Konut kiralarında yenilenen kira yılındaki artış, bir önceki kira yılının '
         . 'TÜFE on iki aylık ortalama değişimini geçemez (Türk Borçlar Kanunu md. 344). Bu bir üst sınırdır; taraflar daha '
         . 'düşük oranda anlaşabilir. Beş yılı dolduran sözleşmelerde kira, hâkim tarafından emsal kiralara göre de belirlenebilir.</p>';
 
-    $html .= '<form class="konu-hesap" data-konu-hesap novalidate>'
+    /*
+     * Sonuc etiketi girilen orana gore (08.11.2026, okur denetimi): okur
+     * %50 yazinca da "Yeni aylik kira (en fazla)" yaziyordu. "En fazla"
+     * yalnizca onayli yasal sinirla hesaplanan tutar icin dogru; serbest
+     * oranda "girdiginiz orana gore". Onayli oran varsa ve okur baska oran
+     * girdiyse sinirla hesaplanan tutar ayrica gosteriliyor.
+     */
+    $sinirMetni = $oran !== null ? number_format($oran, 2, ',', '') : '';
+    $html .= '<form class="konu-hesap" data-konu-hesap' . ($oran !== null ? ' data-sinir="' . e((string) $oran) . '"' : '') . ' novalidate>'
         . '<label><span>Şu anki aylık kira (TL)</span><input type="text" name="kira" inputmode="decimal" placeholder="Örn. 20.000" autocomplete="off"></label>'
         . '<label><span>Artış oranı (%)</span><input type="text" name="oran" inputmode="decimal" value="'
-        . ($oran !== null ? e(number_format($oran, 2, ',', '')) : '') . '" placeholder="Örn. 35,5"></label>'
+        . e($sinirMetni) . '" placeholder="Örn. 35,5"></label>'
         . '<dl aria-live="polite"><div><dt>Artış tutarı</dt><dd data-alan="artis">—</dd></div>'
-        . '<div class="konu-hesap-toplam"><dt>Yeni aylık kira (en fazla)</dt><dd data-alan="yeni">—</dd></div></dl>'
+        . '<div class="konu-hesap-toplam"><dt data-alan="yeni-etiket">' . ($oran !== null ? 'Yasal sınıra göre en fazla yeni kira' : 'Girdiğiniz orana göre yeni aylık kira')
+        . '</dt><dd data-alan="yeni">—</dd></div>'
+        . ($oran !== null ? '<div data-alan="sinir-satir" hidden><dt>Yasal sınırla (%' . e($sinirMetni) . ') en fazla</dt><dd data-alan="sinir">—</dd></div>' : '')
+        . '</dl><p class="konu-hesap-uyari" data-alan="uyari" hidden></p>'
         . '</form>';
 
     $seri = array_reverse(array_slice(pratik_seri_oku($bilgi['seri'] ?? null), -12));
@@ -185,11 +290,26 @@ function konu_hesap_betigi(): string
         else if (/^\d{1,3}(\.\d{3})+$/.test(s)) { s = s.replace(/\./g, ''); }
         return /^-?\d+(\.\d+)?$/.test(s) ? parseFloat(s) : NaN;
     }
+    var sinir = f.dataset.sinir ? parseFloat(f.dataset.sinir) : NaN;
+    function alan(a) { return f.querySelector('[data-alan="' + a + '"]'); }
     function hesapla() {
         var kira = sayi(f.kira.value), oran = sayi(f.oran.value);
         var ok = kira > 0 && oran >= 0;
-        f.querySelector('[data-alan="artis"]').textContent = ok ? tl.format(kira * oran / 100) + ' TL' : '—';
-        f.querySelector('[data-alan="yeni"]').textContent = ok ? tl.format(kira * (1 + oran / 100)) + ' TL' : '—';
+        var sinirla = !isNaN(sinir) && ok && Math.abs(oran - sinir) < 0.005;
+        alan('artis').textContent = ok ? tl.format(kira * oran / 100) + ' TL' : '—';
+        alan('yeni').textContent = ok ? tl.format(kira * (1 + oran / 100)) + ' TL' : '—';
+        // "En fazla" yalnizca onayli yasal sinirla hesaplanan tutar icin.
+        alan('yeni-etiket').textContent = (sinirla || (!ok && !isNaN(sinir)))
+            ? 'Yasal sınıra göre en fazla yeni kira' : 'Girdiğiniz orana göre yeni aylık kira';
+        var satir = alan('sinir-satir');
+        if (satir) {
+            satir.hidden = !ok || sinirla;
+            alan('sinir').textContent = ok ? tl.format(kira * (1 + sinir / 100)) + ' TL' : '—';
+        }
+        var uyari = alan('uyari');
+        uyari.hidden = !(ok && !isNaN(sinir) && oran > sinir + 0.005);
+        uyari.textContent = uyari.hidden ? '' : 'Girdiğiniz oran onaylı yasal sınırın (%'
+            + sinir.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ') üzerinde. Konut kirasında yenileme artışı bu sınırı geçemez.';
     }
     f.addEventListener('input', hesapla);
     f.addEventListener('submit', function (e) { e.preventDefault(); });
@@ -227,6 +347,7 @@ function konu_enflasyon_html(?array $bilgi): string
 
     return '<section class="konu-veri" aria-labelledby="konu-veri-baslik">'
         . '<h2 id="konu-veri-baslik">Son açıklanan enflasyon</h2>'
+        . konu_veri_eski_mi_html($bilgi)
         . '<dl class="konu-veri-kutular">' . $html . '</dl>'
         . konu_veri_kaynak_html($bilgi)
         . '</section>';

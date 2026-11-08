@@ -355,7 +355,7 @@ function bulten_icerik(): array
             . ($gorsel !== '' ? '<a href="' . $e($u) . '"><img src="' . $e($gorsel) . '" alt="" width="472" style="display:block;width:100%;max-width:472px;height:auto;border-radius:8px;margin-bottom:10px"></a>' : '')
             . ((string) ($h['kategori_adi'] ?? '') !== '' ? '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#d7161f;margin-bottom:3px">' . $e((string) $h['kategori_adi']) . '</div>' : '')
             . '<a href="' . $e($u) . '" style="color:#18181b;text-decoration:none;font-size:' . ($i === 0 ? '20' : '16') . 'px;font-weight:700;line-height:1.35">' . $e((string) $h['baslik']) . '</a>'
-            . ((string) $h['ozet'] !== '' && $i < 3 ? '<div style="font-size:14px;line-height:1.55;color:#52525b;margin-top:5px">' . $e(kisalt((string) $h['ozet'], 180)) . '</div>' : '')
+            . ((string) $h['ozet'] !== '' && $i < 3 ? '<div style="font-size:14px;line-height:1.55;color:#52525b;margin-top:5px">' . $e(kisalt(okur_dili((string) $h['ozet']), 180)) . '</div>' : '')
             . '</td></tr>';
         $duz .= '• ' . $h['baslik'] . "\n  " . $u . "\n";
     }

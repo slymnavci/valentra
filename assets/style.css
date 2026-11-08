@@ -6560,6 +6560,8 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 .konu-hesap dt { font-size: .82rem; color: var(--metin-soluk); }
 .konu-hesap dd { margin: 0; font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .konu-hesap-toplam dd { color: var(--vurgu); }
+.konu-veri-eski { margin: 10px 0 0; padding: 8px 10px; border-left: 3px solid var(--vurgu); background: var(--zemin-ikincil, rgba(0,0,0,.04)); font-size: .85rem; line-height: 1.5; }
+.konu-hesap-uyari { grid-column: 1 / -1; margin: 0; font-size: .85rem; color: var(--metin-soluk); }
 .konu-gecmis { margin-top: 14px; }
 .konu-gecmis summary { cursor: pointer; font-weight: 700; font-size: .92rem; }
 .konu-gecmis table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .88rem; font-variant-numeric: tabular-nums; }

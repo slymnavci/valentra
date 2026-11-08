@@ -111,11 +111,33 @@ const KONULAR = [
  * gecse de (kiraci, emekli, benzin istasyonu) adli olay haberi dosyanin
  * konusu degil. Kisa kokler bilincli: "öldür" -> öldürdü/öldürüldü.
  * "kaza" YOK: "kazanç", "kazandı" da eslesirdi; "kazası"/"kazada" var.
+ *
+ * Genisletildi (08.11.2026, okur denetimi): enflasyon dosyasinda
+ * "pompali tüfekle saldiri", akaryakit dosyasinda "benzin bombali
+ * protesto" vardi. Kelimeler kelime BASINDA araniyor (bkz.
+ * konu_kelime_gecer): "silah" silahlı/silahla, "saldır" saldırı/saldırgan.
  */
 const KONU_HARIC = [
-    'yangın', 'cinayet', 'öldür', 'bıçak', 'ceset', 'cesed', 'silahlı', 'kazası', 'kazada',
-    'yaralandı', 'hayatını kaybet', 'gözaltı', 'tutuklan', 'dolandırıc', 'gasp', 'hırsız',
+    'yangın', 'cinayet', 'öldür', 'bıçak', 'ceset', 'cesed', 'silah', 'kazası', 'kazada',
+    'yaralandı', 'yaralı', 'hayatını kaybet', 'gözaltı', 'tutuklan', 'dolandırıc', 'gasp', 'hırsız',
+    'tüfek', 'tabanca', 'saldır', 'bomba', 'molotof', 'kurşun', 'vurul', 'rehin', 'darp', 'patlama',
+    'kundak', 'terör', 'katliam', 'cinnet',
 ];
+
+/*
+ * Bu kategorilerin haberi dosyaya girmiyor (08.11.2026). Dosyalarin hepsi
+ * Turkiye'deki bir rakami ya da takvimi izliyor; Glasgow'daki bir
+ * restoranin kira davasi (dunya) ya da bir bilgisayar oyununun
+ * ertelenmesi (teknoloji) kelime gecse de konunun haberi degil.
+ * Olmayan slug zararsiz.
+ */
+const KONU_KATEGORI_HARIC = ['dunya', 'spor', 'teknoloji', 'kultur-sanat', 'yemek-tarifleri', 'magazin', 'oyun'];
+
+/** SQL ön süzgeci bir seferde bu kadar aday okur; PHP süzgeci elemeyi yapar. */
+const KONU_ADAY_PARCA = 200;
+
+/** Bir dosya için en fazla taranacak aday (konu_ozetleri sayımı da bununla sınırlı). */
+const KONU_ADAY_TAVANI = 2000;
 
 /** Konu sayfasının adresi; boş slug: bütün dosyalar. */
 function konu_yolu(string $slug = ''): string
@@ -143,8 +165,132 @@ function konu_basligi(string $slug): string
     return $k['ad'] . ($k['yil'] ? ' ' . konu_yili() : '');
 }
 
+/** Türkçe küçük harf (I -> ı, İ -> i). */
+function konu_kucult(string $metin): string
+{
+    return mb_strtolower(strtr($metin, ['I' => 'ı', 'İ' => 'i']), 'UTF-8');
+}
+
 /**
- * SQL koşulu ve parametreleri (başlık ya da etiketlerde kelimelerden biri).
+ * Kelime metinde KELIME OLARAK geçiyor mu?
+ *
+ * Eskiden SQL'de "LIKE '%TÜFE%'" ile araniyordu. Veritabaninin
+ * karsilastirmasi (utf8mb4_unicode_ci) buyuk/kucuk harf ve aksan
+ * ayirmadigi icin "TÜFE" -> "tüfek", "ÜFE" -> "müfettiş", "ALES" ->
+ * "Wales" eslesiyordu. Simdi:
+ *   - her kelime bir kelimenin BASINDA aranir (Turkce ekler serbest:
+ *     "enflasyon" -> "enflasyonu", "kira artış" -> "kira artışı");
+ *   - kisaltmalar (TÜFE, ÜFE, PPK, YKS, LPG) TAM kelime olmali;
+ *     kesme isaretli ek serbest ("TÜFE'deki").
+ */
+function konu_kelime_gecer(string $kucukMetin, string $kelime): bool
+{
+    $kisaltma = mb_strlen($kelime, 'UTF-8') <= 5 && mb_strtoupper($kelime, 'UTF-8') === $kelime;
+    $desen    = '/(?<![\p{L}\p{N}])' . preg_quote(konu_kucult($kelime), '/') . ($kisaltma ? '(?![\p{L}\p{N}])' : '') . '/u';
+
+    return preg_match($desen, $kucukMetin) === 1;
+}
+
+/** Metinde dosyanın kelimelerinden biri geçiyor mu? */
+function konu_kelimesi_var(string $slug, string $metin): bool
+{
+    $kucuk = konu_kucult($metin);
+
+    foreach (KONULAR[$slug]['kelimeler'] as $kelime) {
+        if (konu_kelime_gecer($kucuk, $kelime)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/** Başlık adli olay haberi mi (dosyaya girmez)? */
+function konu_haric_mi(string $baslik): bool
+{
+    $kucuk = konu_kucult($baslik);
+
+    foreach (KONU_HARIC as $kelime) {
+        if (preg_match('/(?<![\p{L}\p{N}])' . preg_quote($kelime, '/') . '/u', $kucuk) === 1) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Editörün dosyadan çıkardığı haberler (panel → Gündem dosyaları).
+ *
+ * @return array<int,true>
+ */
+function konu_editor_haric(string $slug): array
+{
+    static $onbellek = [];
+
+    if (!isset($onbellek[$slug])) {
+        $onbellek[$slug] = [];
+
+        foreach (explode(',', ayar_oku('konu_haric_' . $slug)) as $id) {
+            if ((int) $id > 0) {
+                $onbellek[$slug][(int) $id] = true;
+            }
+        }
+    }
+
+    return $onbellek[$slug];
+}
+
+/** Editörün dosyanın başına seçtiği haber; yoksa 0 (otomatik). */
+function konu_editor_secimi(string $slug): int
+{
+    return max(0, (int) ayar_oku('konu_one_' . $slug));
+}
+
+/**
+ * Haber bu dosyaya giriyor mu? Kelimenin geçmesi yetmiyor; hepsi birlikte:
+ *
+ *   1. başlık adli olay haberi değil (KONU_HARIC);
+ *   2. kategori dosyanın alanında (KONU_KATEGORI_HARIC: dünya, spor,
+ *      teknoloji ...);
+ *   3. editör haberi bu dosyadan çıkarmamış;
+ *   4. haberin ANA KONUSU dosya: kelime başlıkta geçiyor, ya da hem
+ *      spotta hem etiketlerde geçiyor. Yalnızca etikette ya da yalnızca
+ *      metnin bir köşesinde geçen kelime yetmiyor.
+ *
+ * @param array<string,mixed> $haber baslik, ozet, etiketler, kategori_slug, id
+ */
+function konu_eslesir(string $slug, array $haber, bool $editorHaric = true): bool
+{
+    if (!isset(KONULAR[$slug])) {
+        return false;
+    }
+
+    $baslik = (string) ($haber['baslik'] ?? '');
+
+    if (konu_haric_mi($baslik)) {
+        return false;
+    }
+
+    if (in_array((string) ($haber['kategori_slug'] ?? ''), KONU_KATEGORI_HARIC, true)) {
+        return false;
+    }
+
+    if ($editorHaric && isset(konu_editor_haric($slug)[(int) ($haber['id'] ?? 0)])) {
+        return false;
+    }
+
+    if (konu_kelimesi_var($slug, $baslik)) {
+        return true;
+    }
+
+    return konu_kelimesi_var($slug, (string) ($haber['ozet'] ?? ''))
+        && konu_kelimesi_var($slug, (string) ($haber['etiketler'] ?? ''));
+}
+
+/**
+ * Geniş SQL ön süzgeci: başlıkta ya da etiketlerde kelimelerden biri
+ * GEÇEBİLİR. Kesin karar konu_eslesir'de; LIKE yalnızca adayları daraltıyor.
  *
  * @return array{0:string,1:array<string,string>}
  */
@@ -159,28 +305,62 @@ function konu_kosulu(string $slug, string $takma = 'h'): array
         $deger['k' . $i . 'e'] = '%' . $kelime . '%';
     }
 
-    $haric = [];
-
-    foreach (KONU_HARIC as $i => $kelime) {
-        $haric[]             = "{$takma}.baslik NOT LIKE :x{$i}";
-        $deger['x' . $i]     = '%' . $kelime . '%';
-    }
-
-    return ['(' . implode(' OR ', $parca) . ') AND ' . implode(' AND ', $haric), $deger];
+    return ['(' . implode(' OR ', $parca) . ')', $deger];
 }
 
-/** Başlık adli olay haberi mi (dosyaya girmez)? */
-function konu_haric_mi(string $baslik): bool
+/**
+ * Dosyaya giren haberler, yeniden eskiye. Ön süzgeçten parça parça
+ * okunur, konu_eslesir'den geçenler toplanır.
+ *
+ * @param string $sutunlar SELECT'e giren haber sütunları (h. önekli)
+ * @return list<array<string,mixed>>
+ */
+function konu_tara(string $slug, int $adet, string $sutunlar, bool $editorHaric = true): array
 {
-    $baslik = mb_strtolower(strtr($baslik, ['I' => 'ı', 'İ' => 'i']), 'UTF-8');
-
-    foreach (KONU_HARIC as $kelime) {
-        if (str_contains($baslik, $kelime)) {
-            return true;
-        }
+    if (!isset(KONULAR[$slug])) {
+        return [];
     }
 
-    return false;
+    [$kosul, $deger] = konu_kosulu($slug);
+    $sonuc = [];
+
+    try {
+        for ($atla = 0; $atla < KONU_ADAY_TAVANI && count($sonuc) < $adet; $atla += KONU_ADAY_PARCA) {
+            $ifade = db()->prepare(
+                "SELECT {$sutunlar}, h.etiketler, h.ozet AS eslesme_ozet, k.slug AS kategori_slug
+                   FROM haberler h
+                   LEFT JOIN kategoriler k ON k.id = h.kategori_id
+                  WHERE h.durum = 'yayinda' AND h.yayin_tarihi >= NOW() - INTERVAL " . KONU_GUN . " DAY
+                    AND {$kosul}
+                  ORDER BY h.yayin_tarihi DESC, h.id DESC
+                  LIMIT " . KONU_ADAY_PARCA . ' OFFSET ' . $atla
+            );
+            $ifade->execute($deger);
+            $satirlar = $ifade->fetchAll();
+
+            foreach ($satirlar as $s) {
+                // Spot, istenen sutunlarda olmasa da eslesme icin okunuyor.
+                $s += ['ozet' => $s['eslesme_ozet']];
+                unset($s['eslesme_ozet']);
+
+                if (konu_eslesir($slug, $s, $editorHaric)) {
+                    $sonuc[] = $s;
+
+                    if (count($sonuc) >= $adet) {
+                        break;
+                    }
+                }
+            }
+
+            if (count($satirlar) < KONU_ADAY_PARCA) {
+                break;
+            }
+        }
+    } catch (PDOException $e) {
+        error_log('[valentra] konu haberleri: ' . $e->getMessage());
+    }
+
+    return $sonuc;
 }
 
 /**
@@ -190,30 +370,12 @@ function konu_haric_mi(string $baslik): bool
  */
 function konu_haberleri(string $slug, int $adet = KONU_HABER_TAVANI): array
 {
-    if (!isset(KONULAR[$slug])) {
-        return [];
-    }
-
-    [$kosul, $deger] = konu_kosulu($slug);
-
-    try {
-        $ifade = db()->prepare(
-            "SELECT h.id, h.baslik, h.slug, h.ozet, h.neden_onemli, h.gorsel_url, h.yayin_tarihi, h.kaynak_adi,
-                    h.kaynak_baslik, h.kaynak_url, h.onem
-               FROM haberler h
-              WHERE h.durum = 'yayinda' AND h.yayin_tarihi >= NOW() - INTERVAL " . KONU_GUN . " DAY
-                AND {$kosul}
-              ORDER BY h.yayin_tarihi DESC
-              LIMIT " . max(1, $adet)
-        );
-        $ifade->execute($deger);
-
-        return $ifade->fetchAll();
-    } catch (PDOException $e) {
-        error_log('[valentra] konu haberleri: ' . $e->getMessage());
-
-        return [];
-    }
+    return konu_tara(
+        $slug,
+        max(1, $adet),
+        'h.id, h.baslik, h.slug, h.ozet, h.neden_onemli, h.gorsel_url, h.yayin_tarihi, h.kaynak_adi,
+         h.kaynak_baslik, h.kaynak_url, h.onem'
+    );
 }
 
 /**
@@ -226,20 +388,9 @@ function konu_ozetleri(): array
     $ozet = [];
 
     foreach (array_keys(KONULAR) as $slug) {
-        [$kosul, $deger] = konu_kosulu($slug);
+        $haberler = konu_tara($slug, KONU_ADAY_TAVANI, 'h.id, h.baslik, h.yayin_tarihi');
 
-        try {
-            $ifade = db()->prepare(
-                "SELECT COUNT(*) AS sayi, MAX(h.yayin_tarihi) AS son FROM haberler h
-                  WHERE h.durum = 'yayinda' AND h.yayin_tarihi >= NOW() - INTERVAL " . KONU_GUN . " DAY AND {$kosul}"
-            );
-            $ifade->execute($deger);
-            $r = $ifade->fetch() ?: [];
-        } catch (PDOException $e) {
-            $r = [];
-        }
-
-        $ozet[$slug] = ['sayi' => (int) ($r['sayi'] ?? 0), 'son' => (string) ($r['son'] ?? '')];
+        $ozet[$slug] = ['sayi' => count($haberler), 'son' => (string) ($haberler[0]['yayin_tarihi'] ?? '')];
     }
 
     return $ozet;
@@ -252,24 +403,9 @@ function konu_ozetleri(): array
  */
 function konu_haberin_konusu(array $haber): ?string
 {
-    if (konu_haric_mi((string) ($haber['baslik'] ?? ''))) {
-        return null;
-    }
-
-    $metin = mb_strtolower((string) ($haber['baslik'] ?? '') . ' | ' . (string) ($haber['etiketler'] ?? ''), 'UTF-8');
-
-    foreach (KONULAR as $slug => $k) {
-        foreach ($k['kelimeler'] as $kelime) {
-            $aranan = mb_strtolower($kelime, 'UTF-8');
-
-            // Kisaltmalar (TÜFE, PPK, YKS) tam kelime olarak.
-            $tam = mb_strlen($kelime, 'UTF-8') <= 4 && mb_strtoupper($kelime, 'UTF-8') === $kelime;
-
-            if ($tam
-                ? preg_match('/(^|[^\p{L}])' . preg_quote($aranan, '/') . '([^\p{L}]|$)/u', $metin) === 1
-                : str_contains($metin, $aranan)) {
-                return $slug;
-            }
+    foreach (array_keys(KONULAR) as $slug) {
+        if (konu_eslesir($slug, $haber)) {
+            return $slug;
         }
     }
 
