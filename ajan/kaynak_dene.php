@@ -387,6 +387,52 @@ if ($hamGirdi !== '') {
             foreach (array_slice($tff['haftanin_maclari'], 0, 3) as $m) {
                 yaz('     ' . $m['tarih'] . ' ' . $m['saat'] . '  ' . $m['ev'] . ' ' . ($m['skor'] ?: '-') . ' ' . $m['dep']);
             }
+        } elseif (str_contains($adres, 'espn.com') && str_contains($adres, '/summary')) {
+            // Mac ozeti: kadro ve olay cozumleyicisi (includes/futbol_kadro.php).
+            require_once __DIR__ . '/../includes/futbol_kadro.php';
+            $ozJson = json_decode($govde, true);
+
+            if (is_array($ozJson)) {
+                $oz = futbol_mac_ozeti_coz($ozJson);
+                yaz('  Kadro çözümleme: ' . ($oz === null ? 'BOŞ' : count($oz['kadro']) . ' takım, ' . count($oz['olaylar']) . ' olay'));
+
+                foreach ($oz['olaylar'] ?? [] as $o) {
+                    yaz(sprintf("     %d'%s %-10s takım %d: %s%s%s", $o['dk'], $o['ek'] ? '+' . $o['ek'] : '', $o['tip'], $o['takim'],
+                        $o['oyuncu'], $o['cikan'] !== '' ? ' / ' . $o['cikan'] : '', $o['detay'] !== '' ? ' (' . $o['detay'] . ')' : ''));
+                }
+
+                foreach ($oz['kadro'] ?? [] as $tid => $k) {
+                    yaz('     takım ' . $tid . ' (' . ($k['ev'] ? 'ev' : 'dep') . ') ' . $k['dizilis'] . ': ilk 11 ' . count($k['ilk11']) . ', yedek ' . count($k['yedek']));
+
+                    foreach (array_merge($k['ilk11'], $k['yedek']) as $p) {
+                        if ($p['gol'] || $p['sari'] || $p['kirmizi'] || $p['girdi'] || $p['cikti'] || $p['sira'] === 1) {
+                            yaz(sprintf('        #%s %s %s gol%d sarı%d kırmızı%d girdi:%s çıktı:%s', $p['no'], $p['ad'], $p['mevki'],
+                                $p['gol'], $p['sari'], (int) $p['kirmizi'], (string) $p['girdi'], (string) $p['cikti']));
+                        }
+                    }
+                }
+
+                // Ham yapi: kadro oyuncusu ve degisiklik olayi ornekleri.
+                $sayac = 0;
+                $ornek = ['rosters[0] ust' => array_diff_key((array) ($ozJson['rosters'][0] ?? []), ['roster' => 1]),
+                          'roster[0]' => $ozJson['rosters'][0]['roster'][0] ?? null];
+
+                foreach ((array) ($ozJson['rosters'][0]['roster'] ?? []) as $r) {
+                    if (empty($r['starter'])) {
+                        $ornek['yedek oyuncu'] = $r;
+                        break;
+                    }
+                }
+
+                foreach ((array) ($ozJson['keyEvents'] ?? []) as $k) {
+                    $t = (string) ($k['type']['text'] ?? '');
+                    $ornek['olay ' . $t] ??= $k;
+                }
+
+                foreach ($ornek as $ad => $deger) {
+                    yaz('  ÖRNEK ' . $ad . ': ' . mb_substr((string) json_encode($deger, JSON_UNESCAPED_UNICODE), 0, 900));
+                }
+            }
         } elseif (str_contains($adres, 'finance.yahoo.com')) {
             require_once __DIR__ . '/../includes/piyasalar.php';
 

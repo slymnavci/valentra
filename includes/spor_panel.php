@@ -755,7 +755,16 @@ function spor_mac_html(int $macId, string $lig, string $gun): string
             </div>
         </div>
 
-        <?php if ($m['olaylar'] !== []): ?>
+        <?php
+        // Kadrolar, yedekler, oyuncu degisiklikleri (08.11.2026; includes/futbol_kadro.php).
+        require_once __DIR__ . '/futbol_kadro.php';
+        $ozet = $m['durum'] === 'NS' && $m['zaman'] - time() > 3 * 3600
+            ? null // Kadro mactan ~1 saat once aciklaniyor; erken istek bosuna.
+            : futbol_mac_ozeti($macId, $lig, (string) $m['durum'])['veri'];
+        ?>
+        <?php if ($ozet !== null): ?>
+            <?= futbol_kadro_html($m, $ozet) ?>
+        <?php elseif ($m['olaylar'] !== []): ?>
             <div class="spor-kutu">
                 <h3>Goller ve kartlar</h3>
                 <ul class="olay-listesi">
