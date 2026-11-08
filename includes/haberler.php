@@ -1930,7 +1930,7 @@ function haber_baslik_ayirt(string $baslik, int $haricId, ?string $tarih): strin
 function haber_ayni_basliklari_ayir(int $enFazla = 50): array
 {
     $satirlar = db()->query(
-        "SELECT h.id, h.baslik, COALESCE(h.yayin_tarihi, h.olusturuldu) AS tarih
+        "SELECT h.id, h.baslik, k.baslik AS grup, COALESCE(h.yayin_tarihi, h.olusturuldu) AS tarih
            FROM haberler h
            JOIN (SELECT baslik FROM haberler
                   WHERE durum = 'yayinda' AND " . haber_dizinlenir_kosulu() . "
@@ -1946,10 +1946,15 @@ function haber_ayni_basliklari_ayir(int $enFazla = 50): array
 
     foreach ($satirlar as $s) {
         $baslik = (string) $s['baslik'];
+        // Grup anahtari veritabaninin karsilastirmasi (08.11.2026): harmanlama
+        // buyuk-kucuk harf ve aksan farkini gozetmiyor; "İstanbul'da" ile
+        // "istanbul'da" ayni baslik sayiliyor ama PHP'de farkli dizgeydi,
+        // ikisi de "ilk" sanilip ayrilmiyordu.
+        $grup = (string) $s['grup'];
 
         // Her baslikta ilk (en eski) haber oldugu gibi kaliyor.
-        if (!isset($gorulen[$baslik])) {
-            $gorulen[$baslik] = true;
+        if (!isset($gorulen[$grup])) {
+            $gorulen[$grup] = true;
             continue;
         }
 
