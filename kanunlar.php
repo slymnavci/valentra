@@ -13,7 +13,10 @@ require_once __DIR__ . '/includes/kanunlar.php';
 
 $kanunlar      = kanun_listesi();
 $aktifKategori = 'kanunlar';
-$sayfaBasligi  = 'Vergi Kanunları — Valentra';
+// Kategori sayfasi /kategori/vergi-kanunlari ile ayni baslik Google'da
+// kopya gibi gorunuyordu (Google denetimi, 08.11.2026). Bu sayfa kanun
+// METINLERI; oradaki ise bu konudaki haberler.
+$sayfaBasligi  = 'Vergi Kanunları: Güncel Resmî Metinler — Valentra';
 $sayfaAciklama = 'Temel vergi kanunlarının güncel resmî metinlerine hızlı erişim.';
 
 require __DIR__ . '/includes/sayfa_ust.php';
