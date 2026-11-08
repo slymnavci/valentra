@@ -82,7 +82,11 @@ const KONULAR = [
     'kira-artisi' => [
         'ad'        => 'Kira Artış Oranı',
         'yil'       => false,
-        'kelimeler' => ['kira artış', 'kira zammı', 'kira artışı', 'kiracı', 'ev sahibi'],
+        // "kiracı" / "ev sahibi" CIKARILDI (08.11.2026): kiraci ailenin
+        // evindeki yangin haberi dosyaya giriyordu. Yalnizca kira artisi,
+        // sozlesme ve tespit davasi gibi dosyanin asil konusu.
+        'kelimeler' => ['kira artış', 'kira zam', 'kira tavan', 'kira sınır', 'kira oranı', 'kira sözleşme',
+                        'kira bedel', 'kira tespit', 'kira yardım', 'kira desteği'],
         'giris'     => 'Konut kiralarında yıllık artış, Türk Borçlar Kanunu\'na göre bir önceki kira yılının tüketici fiyat endeksindeki on iki aylık ortalama değişimle sınırlıdır. '
             . 'Bu sayfada kira artış oranı ve kiracı-ev sahibi ilişkisiyle ilgili gelişmeler yer alıyor.',
     ],
@@ -100,6 +104,17 @@ const KONULAR = [
         'giris'     => 'Okulların açılış, ara tatil ve yarıyıl tatili tarihleri Milli Eğitim Bakanlığı\'nın çalışma takvimiyle belirlenir; '
             . 'kar ve olağanüstü durumlarda valilikler ayrıca tatil kararı alabilir. Bu sayfada tatil kararları ve takvim duyuruları yer alıyor.',
     ],
+];
+
+/*
+ * Basliginda bunlardan biri gecen haber hicbir dosyaya girmiyor: kelime
+ * gecse de (kiraci, emekli, benzin istasyonu) adli olay haberi dosyanin
+ * konusu degil. Kisa kokler bilincli: "öldür" -> öldürdü/öldürüldü.
+ * "kaza" YOK: "kazanç", "kazandı" da eslesirdi; "kazası"/"kazada" var.
+ */
+const KONU_HARIC = [
+    'yangın', 'cinayet', 'öldür', 'bıçak', 'ceset', 'cesed', 'silahlı', 'kazası', 'kazada',
+    'yaralandı', 'hayatını kaybet', 'gözaltı', 'tutuklan', 'dolandırıc', 'gasp', 'hırsız',
 ];
 
 /** Konu sayfasının adresi; boş slug: bütün dosyalar. */
@@ -144,7 +159,28 @@ function konu_kosulu(string $slug, string $takma = 'h'): array
         $deger['k' . $i . 'e'] = '%' . $kelime . '%';
     }
 
-    return ['(' . implode(' OR ', $parca) . ')', $deger];
+    $haric = [];
+
+    foreach (KONU_HARIC as $i => $kelime) {
+        $haric[]             = "{$takma}.baslik NOT LIKE :x{$i}";
+        $deger['x' . $i]     = '%' . $kelime . '%';
+    }
+
+    return ['(' . implode(' OR ', $parca) . ') AND ' . implode(' AND ', $haric), $deger];
+}
+
+/** Başlık adli olay haberi mi (dosyaya girmez)? */
+function konu_haric_mi(string $baslik): bool
+{
+    $baslik = mb_strtolower(strtr($baslik, ['I' => 'ı', 'İ' => 'i']), 'UTF-8');
+
+    foreach (KONU_HARIC as $kelime) {
+        if (str_contains($baslik, $kelime)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -163,7 +199,7 @@ function konu_haberleri(string $slug, int $adet = KONU_HABER_TAVANI): array
     try {
         $ifade = db()->prepare(
             "SELECT h.id, h.baslik, h.slug, h.ozet, h.neden_onemli, h.gorsel_url, h.yayin_tarihi, h.kaynak_adi,
-                    h.kaynak_baslik, h.kaynak_url
+                    h.kaynak_baslik, h.kaynak_url, h.onem
                FROM haberler h
               WHERE h.durum = 'yayinda' AND h.yayin_tarihi >= NOW() - INTERVAL " . KONU_GUN . " DAY
                 AND {$kosul}
@@ -216,6 +252,10 @@ function konu_ozetleri(): array
  */
 function konu_haberin_konusu(array $haber): ?string
 {
+    if (konu_haric_mi((string) ($haber['baslik'] ?? ''))) {
+        return null;
+    }
+
     $metin = mb_strtolower((string) ($haber['baslik'] ?? '') . ' | ' . (string) ($haber['etiketler'] ?? ''), 'UTF-8');
 
     foreach (KONULAR as $slug => $k) {

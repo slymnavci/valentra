@@ -77,6 +77,45 @@ function ekonomi_seriler(): array
             'yedek_kazima' => true,
         ],
 
+        /*
+         * Kira artis siniri (TBK 344): bir onceki kira yilinin TUFE'deki
+         * on iki aylik ortalama degisimi. TUIK bu orani her ay bultende
+         * ayrica veriyor; burada AYNI endeksten hesaplaniyor ki onaylayan
+         * kisi iki rakami karsilastirabilsin. 24 aylik gecmis icin her
+         * noktanin 24 ay oncesine kadar endeksi gerekiyor: 48 ay.
+         */
+        'kira-artis-orani' => [
+            'saglayici'  => 'evds',
+            'seri'       => 'TP.TUKFIY2025.GENEL',
+            'hesap'      => 'kira',
+            'birim'      => 'yuzde',
+            'gerigit'    => 1500,
+            'grafik'     => ['tur' => 'cizgi', 'baslik' => 'Kira artış sınırı (TÜFE 12 aylık ortalama), son 24 ay'],
+            'kaynak_adi' => 'TÜİK — TCMB EVDS üzerinden',
+            'kaynak_url' => 'https://evds3.tcmb.gov.tr/',
+            'aciklama'   => 'TÜFE on iki aylık ortalama değişimi (konut kira artış sınırı)',
+            'yedek_kazima' => false,
+        ],
+
+        /*
+         * SSK ve Bag-Kur aylik artisi (5510 md. 55): alti aylik TUFE
+         * degisimi. Haziran ve Aralik verisiyle KESINLESIYOR; arada
+         * gecen aylarin birikimi "simdiye kadar" olarak gosteriliyor.
+         * Seri: gecmis donemlerin kesinlesen alti aylik oranlari.
+         */
+        'emekli-enflasyon-farki' => [
+            'saglayici'  => 'evds',
+            'seri'       => 'TP.TUKFIY2025.GENEL',
+            'hesap'      => 'emekli',
+            'birim'      => 'yuzde',
+            'gerigit'    => 2200,
+            'grafik'     => ['tur' => 'cizgi', 'baslik' => 'Altı aylık TÜFE değişimi (SSK ve Bağ-Kur zammı)'],
+            'kaynak_adi' => 'TÜİK — TCMB EVDS üzerinden',
+            'kaynak_url' => 'https://evds3.tcmb.gov.tr/',
+            'aciklama'   => 'Emekli aylık artışına esas altı aylık TÜFE değişimi',
+            'yedek_kazima' => false,
+        ],
+
         /* ---- Dunya Bankasi (anahtar istemez) --------------------------- */
 
         'gsyh' => [
@@ -300,8 +339,14 @@ function ekonomi_evds_cozumle(array $seri, array $veri): array
         $dizi  = $devam['gozlemler'];
     }
 
-    if ((string) ($seri['hesap'] ?? '') === 'tufe') {
-        $sonuc = ekonomi_tufe_hesapla($dizi);
+    $hesap = (string) ($seri['hesap'] ?? '');
+
+    if (in_array($hesap, ['tufe', 'kira', 'emekli'], true)) {
+        $sonuc = match ($hesap) {
+            'kira'   => ekonomi_kira_hesapla($dizi),
+            'emekli' => ekonomi_emekli_hesapla($dizi),
+            default  => ekonomi_tufe_hesapla($dizi),
+        };
 
         if (!empty($sonuc['tamam']) && ($devam['not'] !== '' || $devam['uyari'] !== '')) {
             $sonuc['not'] = trim($sonuc['not'] . ' ' . $devam['not'] . ' ' . $devam['uyari']);
@@ -663,11 +708,14 @@ function ekonomi_tufe_hesapla(array $dizi): array
 
     $aylik  = ($son['deger'] / $onceki['deger'] - 1) * 100;
     $yillik = ($son['deger'] / $gecenYil['deger'] - 1) * 100;
+    // 12 aylik ortalama: 24 ayin hepsi varsa (yoksa satir yazilmiyor).
+    $ortalama = ekonomi_on_iki_ay_ortalama($ayGore, $sonAy);
 
     return [
         'tamam' => true,
         'deger' => 'Aylık: ' . ekonomi_bicimle($aylik, 'yuzde') . "\n"
-                 . 'Yıllık: ' . ekonomi_bicimle($yillik, 'yuzde'),
+                 . 'Yıllık: ' . ekonomi_bicimle($yillik, 'yuzde')
+                 . ($ortalama !== null ? "\n" . '12 aylık ortalama: ' . ekonomi_bicimle($ortalama, 'yuzde') : ''),
         'donem' => ekonomi_evds_donem($son['tarih']),
         'not'   => 'TÜFE endeksinden hesaplandı: '
                  . ekonomi_evds_donem($son['tarih']) . ' = '
@@ -677,6 +725,166 @@ function ekonomi_tufe_hesapla(array $dizi): array
                  . '. TÜİK bülteniyle karşılaştırın.',
         'hata'  => '',
         'seri'  => ekonomi_yillik_degisim_serisi($ayGore, 24),
+    ];
+}
+
+/**
+ * TÜFE'nin on iki aylık ortalama değişimi (yüzde).
+ *
+ * Son 12 ayin endeks ortalamasinin, ondan onceki 12 ayin ortalamasina
+ * gore degisimi. 24 ayin biri eksikse NULL: eksik ayla hesaplanan
+ * ortalama sessizce yanlis olurdu.
+ *
+ * @param array<string,array{iso:string,deger:float}> $ayGore 'Y-m' => gozlem
+ */
+function ekonomi_on_iki_ay_ortalama(array $ayGore, string $ay): ?float
+{
+    $toplamSon = 0.0;
+    $toplamOnc = 0.0;
+
+    for ($i = 0; $i < 12; $i++) {
+        $a = $ayGore[ekonomi_ay_kaydir($ay, -$i)] ?? null;
+        $b = $ayGore[ekonomi_ay_kaydir($ay, -$i - 12)] ?? null;
+
+        if ($a === null || $b === null || $a['deger'] <= 0.0 || $b['deger'] <= 0.0) {
+            return null;
+        }
+
+        $toplamSon += $a['deger'];
+        $toplamOnc += $b['deger'];
+    }
+
+    return ($toplamSon / $toplamOnc - 1) * 100;
+}
+
+/** "Kasım 2026" */
+function ekonomi_ay_adi(string $ay): string
+{
+    static $adlar = [1 => 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz',
+                     'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
+    return $adlar[(int) substr($ay, 5, 2)] . ' ' . substr($ay, 0, 4);
+}
+
+/**
+ * Kira artış sınırı: TÜFE on iki aylık ortalama değişimi.
+ *
+ * Deger iki satir: oran ve hangi aydaki yenilemelere uygulandigi. TBK
+ * 344'e gore yenilenen kira yilinin BIR ONCEKI ayinin verisi gecerli:
+ * Ekim verisi Kasim'da yenilenen sozlesmelere uygulanir.
+ *
+ * @param list<array{tarih:string,iso:string,deger:float}> $dizi
+ * @return array<string,mixed>
+ */
+function ekonomi_kira_hesapla(array $dizi): array
+{
+    $ayGore = ekonomi_ay_sonlari($dizi);
+
+    if ($ayGore === []) {
+        return ['tamam' => false, 'deger' => '', 'donem' => '', 'not' => '',
+                'hata' => 'Endeks gözlemi yok.', 'tekrar' => false];
+    }
+
+    $sonAy = (string) array_key_last($ayGore);
+    $oran  = ekonomi_on_iki_ay_ortalama($ayGore, $sonAy);
+
+    if ($oran === null) {
+        return ['tamam' => false, 'deger' => '', 'donem' => '', 'not' => '',
+                'hata' => 'On iki aylık ortalama için son 24 ayın endeksi tam gelmedi; hesap yapılmadı.',
+                'tekrar' => false];
+    }
+
+    $seri = [];
+
+    foreach (array_keys($ayGore) as $ay) {
+        $o = ekonomi_on_iki_ay_ortalama($ayGore, (string) $ay);
+
+        if ($o !== null) {
+            $seri[] = [$ay . '-01', round($o, 4)];
+        }
+    }
+
+    $uygulanan = ekonomi_ay_adi(ekonomi_ay_kaydir($sonAy, 1));
+
+    return [
+        'tamam' => true,
+        'deger' => 'Kira artış sınırı: ' . ekonomi_bicimle($oran, 'yuzde') . "\n"
+                 . 'Uygulandığı ay: ' . $uygulanan . ' içinde yenilenen konut kira sözleşmeleri',
+        'donem' => ekonomi_ay_adi($sonAy) . ' TÜFE verisi',
+        'not'   => 'TÜFE endeksinden hesaplandı: son 12 ayın ortalaması / önceki 12 ayın ortalaması ('
+                 . ekonomi_ay_adi(ekonomi_ay_kaydir($sonAy, -23)) . ' – ' . ekonomi_ay_adi($sonAy)
+                 . '). TÜİK bültenindeki "12 aylık ortalamalara göre değişim" ile karşılaştırın.',
+        'hata'  => '',
+        'seri'  => array_slice($seri, -24),
+    ];
+}
+
+/**
+ * Emekli (SSK, Bağ-Kur) aylık artışına esas altı aylık TÜFE değişimi.
+ *
+ * Donem Haziran ya da Aralik'ta kapaniyor. Son veri Haziran/Aralik ise
+ * oran KESIN; degilse donemin basindan bugune birikim ("simdiye
+ * kadar"). Seri: kapanmis donemlerin kesin oranlari (Haziran ve
+ * Aralik sonlari).
+ *
+ * @param list<array{tarih:string,iso:string,deger:float}> $dizi
+ * @return array<string,mixed>
+ */
+function ekonomi_emekli_hesapla(array $dizi): array
+{
+    $ayGore = ekonomi_ay_sonlari($dizi);
+
+    if ($ayGore === []) {
+        return ['tamam' => false, 'deger' => '', 'donem' => '', 'not' => '',
+                'hata' => 'Endeks gözlemi yok.', 'tekrar' => false];
+    }
+
+    $sonAy  = (string) array_key_last($ayGore);
+    $sonNo  = (int) substr($sonAy, 5, 2);
+    // Donemin baz ayi: Ocak-Haziran icin onceki Aralik, Temmuz-Aralik icin Haziran.
+    $baz    = $sonNo <= 6 ? (((int) substr($sonAy, 0, 4)) - 1) . '-12' : substr($sonAy, 0, 4) . '-06';
+    $kesin  = in_array($sonNo, [6, 12], true);
+
+    if (!isset($ayGore[$baz]) || $ayGore[$baz]['deger'] <= 0.0) {
+        return ['tamam' => false, 'deger' => '', 'donem' => '', 'not' => '',
+                'hata' => 'Dönemin baz ayı (' . $baz . ') endeksi gelmedi; hesap yapılmadı.', 'tekrar' => false];
+    }
+
+    $oran = ($ayGore[$sonAy]['deger'] / $ayGore[$baz]['deger'] - 1) * 100;
+    // Zammin uygulanacagi ay: Haziran sonu -> Temmuz, Aralik sonu -> Ocak.
+    $zamAyi = $sonNo <= 6 ? substr($sonAy, 0, 4) . '-07' : (((int) substr($sonAy, 0, 4)) + 1) . '-01';
+    $ilkAy  = ekonomi_ay_kaydir($baz, 1);
+    $aralik = $ilkAy === $sonAy ? ekonomi_ay_adi($sonAy) : ekonomi_ay_adi($ilkAy) . ' – ' . ekonomi_ay_adi($sonAy);
+
+    $seri = [];
+
+    foreach ($ayGore as $ay => $g) {
+        $no = (int) substr((string) $ay, 5, 2);
+
+        if (!in_array($no, [6, 12], true)) {
+            continue;
+        }
+
+        $b = $ayGore[ekonomi_ay_kaydir((string) $ay, -6)] ?? null;
+
+        if ($b !== null && $b['deger'] > 0.0) {
+            $seri[] = [$ay . '-01', round(($g['deger'] / $b['deger'] - 1) * 100, 4)];
+        }
+    }
+
+    return [
+        'tamam' => true,
+        'deger' => ($kesin ? 'Kesinleşen enflasyon farkı: ' : 'Şimdiye kadar biriken: ')
+                 . ekonomi_bicimle($oran, 'yuzde') . "\n"
+                 . 'Dönem: ' . $aralik . ($kesin ? '' : ' (' . (6 - (($sonNo - 1) % 6 + 1)) . ' ay verisi daha bekleniyor)') . "\n"
+                 . 'Uygulanacağı ay: ' . ekonomi_ay_adi($zamAyi),
+        'donem' => ekonomi_ay_adi($sonAy) . ' TÜFE verisi',
+        'not'   => 'TÜFE endeksinden hesaplandı: ' . ekonomi_ay_adi($sonAy) . ' = '
+                 . number_format($ayGore[$sonAy]['deger'], 2, ',', '.') . ', ' . ekonomi_ay_adi($baz) . ' = '
+                 . number_format($ayGore[$baz]['deger'], 2, ',', '.')
+                 . '. SSK ve Bağ-Kur aylıkları 5510 md. 55 gereği altı aylık TÜFE değişimi kadar artırılır.',
+        'hata'  => '',
+        'seri'  => array_slice($seri, -10),
     ];
 }
 

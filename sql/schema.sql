@@ -2638,3 +2638,24 @@ UPDATE haberler SET guncellendi = yayin_tarihi
  WHERE yayin_tarihi IS NOT NULL AND guncellendi > yayin_tarihi + INTERVAL 1 MINUTE
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_guncellendi_sifirla_2026_11_08');
 INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_guncellendi_sifirla_2026_11_08', '08.11.2026');
+
+
+-- ---------------------------------------------------------------------------
+-- Kira artis siniri ve emekli enflasyon farki (08.11.2026).
+--
+-- Site sahibinin istegi: kira dosyasinin ustunde "guncel donemin
+-- dogrulanmis orani, hesaplayici, gecmis aylar"; emekli zammi dosyasinda
+-- "kesinlesen bilgi ile tahminin acik ayrimi". Iki rakam da TUFE
+-- endeksinden (EVDS) hesaplaniyor; hesap includes/ekonomi.php icinde.
+-- Deger BOS: ajan aday getiriyor, panelden onaylanmadan gorunmuyor.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO pratik_bilgiler (anahtar, baslik, aciklama, grup, sira, kaynak_url, kaynak_adi, arama_ipucu) VALUES
+    ('kira-artis-orani', 'Kira Artış Oranı (12 aylık ortalama TÜFE)',
+     'Konut kiralarında yasal artış sınırı: TÜFE on iki aylık ortalama değişimi', 'ekonomi', 22,
+     'https://evds3.tcmb.gov.tr/', 'TÜİK — TCMB EVDS üzerinden',
+     'TÜFE on iki aylık ortalamalara göre değişim oranı ve ait olduğu ay.'),
+
+    ('emekli-enflasyon-farki', 'Emekli Zammı: Altı Aylık Enflasyon Farkı',
+     'SSK ve Bağ-Kur aylık artışına esas altı aylık TÜFE değişimi', 'ekonomi', 24,
+     'https://evds3.tcmb.gov.tr/', 'TÜİK — TCMB EVDS üzerinden',
+     'Ocak–Haziran ya da Temmuz–Aralık dönemindeki birikimli TÜFE değişimi.');
