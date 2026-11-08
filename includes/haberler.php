@@ -739,7 +739,7 @@ const HABER_ANA_SAYFA_EN_FAZLA_GUN = 14;
  * (yemek tarifi gibi akis disi bir baslikta olmayan), kaynak tarihi
  * bilinen haber. Tarih penceresi yok; siniri haber sayisi koyuyor.
  */
-function haber_ana_akis_kosulu(bool $yerelDahil = false): string
+function haber_ana_akis_kosulu(bool $yerelDahil = false, bool $konuSiniri = true): string
 {
     $disarida = implode(', ', array_map(
         static fn (string $slug): string => db()->quote($slug),
@@ -777,7 +777,22 @@ function haber_ana_akis_kosulu(bool $yerelDahil = false): string
         . ' AND h.kaynak_tarihi IS NOT NULL'
         . ' AND h.olusturuldu >= NOW() - INTERVAL ' . HABER_ANA_SAYFA_EN_FAZLA_GUN . ' DAY'
         // Dusuk onemli yerel haber ana akista yok ($yerelDahil: "Senin Icin" sehir bolumu).
-        . ($yerelDahil ? '' : ' AND ' . haber_yerel_kosulu());
+        . ($yerelDahil ? '' : ' AND ' . haber_yerel_kosulu())
+        . ($konuSiniri ? haber_konu_siniri_kosulu() : '');
+}
+
+/**
+ * Ayni konudan en fazla 2 (cok onemliyse 3) haber (site sahibinin
+ * istegi, 08.11.2026; bkz. includes/konu_siniri.php). Konusunun tavanini
+ * asan haberler ana sayfa akisindan cikiyor.
+ */
+function haber_konu_siniri_kosulu(): string
+{
+    require_once __DIR__ . '/konu_siniri.php';
+
+    $fazla = konu_fazlasi_idler();
+
+    return $fazla === [] ? '' : ' AND h.id NOT IN (' . implode(', ', array_map('intval', $fazla)) . ')';
 }
 
 /**
@@ -2448,7 +2463,9 @@ function kategori_bloklari(int $grupBasiHaber = 4, int $enFazlaGrup = 6): array
           WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . '
             AND k.aktif = 1
             AND NOT (' . HABER_RG_KOSULU . ')
-            AND ' . haber_akis_kategori_kosulu() . '
+            AND ' . haber_akis_kategori_kosulu()
+            // Ana sayfanin "Konu Basliklari" kutulari: konu tavani burada da (08.11.2026).
+            . haber_konu_siniri_kosulu() . '
           ORDER BY k.sira, k.ad, ' . haber_sirasi()
     )->fetchAll();
 

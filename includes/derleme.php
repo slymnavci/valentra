@@ -19,6 +19,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/haberler.php';
+require_once __DIR__ . '/konu_siniri.php';
 
 /** Günde en fazla bu kadar derleme (reddedilen sayılmaz). */
 // 20'den 40'a (03.11.2026, site sahibi: "%70 ozgun icerik olsun").
