@@ -236,6 +236,8 @@ function sema_yukselt(array &$hatalar = []): array
     $sutunEkle('haberler', 'derleme_kaynaklari', 'TEXT NULL');
     // Tek kaynakli haber Google kotasinda mi (03.11.2026; bkz. haber_ozgun_kotasini_dagit).
     $sutunEkle('haberler', 'google_kota', 'TINYINT(1) NOT NULL DEFAULT 0');
+    // Tek konu, tek haber: yayindaki esi (08.11.2026; bkz. haber_tekrar_bekletilir).
+    $sutunEkle('haberler', 'tekrar_id', 'INT UNSIGNED NULL');
 
     /*
      * V Network sosyal alan (31.10.2026; bkz. includes/network.php):
@@ -691,6 +693,7 @@ function sema_guncel_mi(): bool
             ['haberler', 'derleme'],
             ['haberler', 'derleme_kaynaklari'],
             ['haberler', 'google_kota'],
+            ['haberler', 'tekrar_id'],
             ['ziyaretler', 'kampanya'],
         ];
 

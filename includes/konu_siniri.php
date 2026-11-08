@@ -280,3 +280,233 @@ function derleme_oncelikli_konular(): array
 
     return $liste;
 }
+
+/* -------------------------------------------------------------------------
+ * Tek konu, tek haber (site sahibinin istegi, 08.11.2026): "bir konu ile
+ * ilgili birden cok haber varsa birlestir ve tek haber haline getir;
+ * digerlerini yayinlama. Ya da bir haber var ve yeterliyse onu tekrar
+ * yayinlama."
+ *
+ *   1. Yayimlanmis bir derlemenin kaynak haberleri ana sayfadan cikiyor
+ *      (derleme hepsini anlatiyor). Haber sayfalari ve konu sayfalari
+ *      yerinde.
+ *   2. Yeni gelen haber, son TEKRAR_SAAT saatte yayimlanmis bir haberin
+ *      neredeyse aynisiysa ya da konusu dolmussa (KONU_TAVANI kadar
+ *      haber ya da derlemesi var) OTOMATIK YAYINLANMIYOR: taslakta
+ *      kaliyor (tekrar_id), derleme ajani onu malzeme olarak goruyor
+ *      (derleme_malzeme taslaklari da aliyor). Panelden elle
+ *      yayimlanabilir. Konunun yayindakilerinden daha onemli ve "cok
+ *      onemli" (KONU_COK_ONEMLI) bir gelisme bekletilmiyor.
+ * ---------------------------------------------------------------------- */
+
+/** Tekrar denetiminde geriye bakılan süre (saat). */
+const TEKRAR_SAAT = 24;
+
+/**
+ * Başlıktaki sayılar ("%36,5" -> "36,5"; "1-0" -> "1", "0").
+ *
+ * @return list<string>
+ */
+function konu_sayilari(string $baslik): array
+{
+    preg_match_all('/\d+(?:[.,]\d+)?/u', $baslik, $m);
+
+    return array_values(array_unique($m[0]));
+}
+
+/** Bekletme için konu ölçüsü: en az 3 ortak kök ve kısa başlığın yarısı. */
+function konu_ayni_mi_siki(array $a, array $b): bool
+{
+    if ($a === [] || $b === []) {
+        return false;
+    }
+
+    $ortak = count(array_intersect($a, $b));
+
+    return $ortak >= 3 && $ortak / min(count($a), count($b)) >= 0.5;
+}
+
+/** İki başlık neredeyse aynı haberi mi veriyor? (konu_ayni_mi'den sıkı) */
+function konu_cok_benzer_mi(array $a, array $b): bool
+{
+    if ($a === [] || $b === []) {
+        return false;
+    }
+
+    $ortak = count(array_intersect($a, $b));
+
+    return $ortak >= 3 && $ortak / min(count($a), count($b)) >= 0.6;
+}
+
+/**
+ * Yayımlanmış derlemelerin kaynak haberleri (son 3 gün).
+ *
+ * @return list<int>
+ */
+function derleme_yayindaki_kaynak_idler(): array
+{
+    static $idler = null;
+
+    if ($idler !== null) {
+        return $idler;
+    }
+
+    $idler = [];
+
+    if (!haber_sutun_var('derleme_kaynaklari')) {
+        return $idler;
+    }
+
+    try {
+        $ifade = db()->prepare(
+            "SELECT derleme_kaynaklari FROM haberler
+              WHERE derleme = 1 AND durum = :y AND olusturuldu >= NOW() - INTERVAL 3 DAY
+                AND derleme_kaynaklari IS NOT NULL AND derleme_kaynaklari <> ''"
+        );
+        $ifade->execute(['y' => HABER_YAYINDA]);
+
+        foreach ($ifade->fetchAll(PDO::FETCH_COLUMN) as $json) {
+            foreach ((array) json_decode((string) $json, true) as $k) {
+                if (is_array($k) && (int) ($k['id'] ?? 0) > 0) {
+                    $idler[(int) $k['id']] = (int) $k['id'];
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('[valentra] derleme kaynaklari: ' . $e->getMessage());
+    }
+
+    $idler = array_values($idler);
+
+    return $idler;
+}
+
+/**
+ * Son TEKRAR_SAAT saatin yayımlanmış haberleri ve başlık kökleri (istek
+ * başına bir kez). $ekle: bu istekte yayına alınan haber listeye eklenir
+ * (aynı teslimdeki iki kopya ikisi birden yayımlanmasın).
+ *
+ * @param array<string,mixed>|null $ekle
+ * @return list<array{id:int,baslik:string,onem:int,derleme:int,kokler:list<string>}>
+ */
+function konu_son_yayindakiler(?array $ekle = null): array
+{
+    static $liste = null;
+
+    if ($liste !== null) {
+        if ($ekle !== null) {
+            array_unshift($liste, [
+                'id'      => (int) $ekle['id'],
+                'baslik'  => (string) $ekle['baslik'],
+                'onem'    => (int) $ekle['onem'],
+                'derleme' => (int) $ekle['derleme'],
+                'kokler'  => konu_kokleri((string) $ekle['baslik']),
+            ]);
+        }
+
+        return $liste;
+    }
+
+    // Liste henuz yuklenmediyse yeni haber zaten sorguda gelecek.
+    $liste = [];
+
+    try {
+        $ifade = db()->prepare(
+            'SELECT id, baslik, onem, derleme FROM haberler
+              WHERE durum = :y AND yayin_tarihi >= NOW() - INTERVAL ' . TEKRAR_SAAT . ' HOUR
+              ORDER BY yayin_tarihi DESC
+              LIMIT 600'
+        );
+        $ifade->execute(['y' => HABER_YAYINDA]);
+
+        foreach ($ifade->fetchAll() as $h) {
+            $liste[] = [
+                'id'      => (int) $h['id'],
+                'baslik'  => (string) $h['baslik'],
+                'onem'    => (int) $h['onem'],
+                'derleme' => (int) $h['derleme'],
+                'kokler'  => konu_kokleri((string) $h['baslik']),
+            ];
+        }
+    } catch (Throwable $e) {
+        error_log('[valentra] tekrar denetimi: ' . $e->getMessage());
+    }
+
+    return $liste;
+}
+
+/**
+ * Haber yayımlanmadan bekletilmeli mi? Bekletilecekse yayındaki eşini ve
+ * nedenini döndürür.
+ *
+ * @param array{id?:int,baslik:string,onem?:int} $haber
+ * @return array{id:int,baslik:string,neden:string}|null
+ */
+function konu_tekrar_bul(array $haber): ?array
+{
+    $kokler = konu_kokleri((string) $haber['baslik']);
+    $onem   = (int) ($haber['onem'] ?? 0);
+    $kendi  = (int) ($haber['id'] ?? 0);
+
+    if ($kokler === []) {
+        return null;
+    }
+
+    $benzer  = null;
+    $uyeler  = [];
+    $sayilar = konu_sayilari((string) $haber['baslik']);
+
+    foreach (konu_son_yayindakiler() as $y) {
+        // Yayindakinde olmayan bir sayi (faiz %36 -> %40, skor 1-0 -> 2-0)
+        // yeni bilgi: tekrar sayilmiyor.
+        if ($sayilar !== [] && array_diff($sayilar, konu_sayilari($y['baslik'])) !== []) {
+            continue;
+        }
+
+        // Bekletmek yayimlamamak demek: ana sayfa sinirindan (konu_ayni_mi)
+        // siki olcu. "Galatasaray Kasimpasa deplasmaninda..." ile
+        // "Fenerbahce deplasmanda Kasimpasa..." ayni konu sayilmasin.
+        if ($y['id'] === $kendi || !konu_ayni_mi_siki($kokler, $y['kokler'])) {
+            continue;
+        }
+
+        $uyeler[] = $y;
+
+        if ($benzer === null && konu_cok_benzer_mi($kokler, $y['kokler'])) {
+            $benzer = $y;
+        }
+    }
+
+    if ($uyeler === []) {
+        return null;
+    }
+
+    $derleme = null;
+
+    foreach ($uyeler as $y) {
+        if ($y['derleme'] === 1) {
+            $derleme = $y;
+            break;
+        }
+    }
+
+    $neden = match (true) {
+        $benzer !== null                => ['es' => $benzer, 'neden' => 'aynı haber son ' . TEKRAR_SAAT . ' saatte yayımlandı'],
+        $derleme !== null               => ['es' => $derleme, 'neden' => 'konunun derlemesi yayında'],
+        count($uyeler) >= KONU_TAVANI   => ['es' => $uyeler[0], 'neden' => 'konudan son ' . TEKRAR_SAAT . ' saatte ' . count($uyeler) . ' haber yayımlandı'],
+        default                         => null,
+    };
+
+    if ($neden === null) {
+        return null;
+    }
+
+    // Konunun yayindakilerinden onemli, cok onemli yeni gelisme bekletilmiyor.
+    $enYuksek = max(array_map(static fn (array $y): int => $y['onem'], $uyeler));
+
+    if ($onem >= KONU_COK_ONEMLI && $onem > $enYuksek) {
+        return null;
+    }
+
+    return ['id' => $neden['es']['id'], 'baslik' => $neden['es']['baslik'], 'neden' => $neden['neden']];
+}
