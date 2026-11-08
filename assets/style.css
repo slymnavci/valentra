@@ -1503,7 +1503,7 @@ a.menu-oge.aktif::after,
     .vitrin-manset,
     .vitrin-piyasa { grid-column: 1 / -1; }
 
-    .vitrin > .hava-kart,
+    .vitrin > .bes-gelisme,
     .vitrin > .kose-kutu { display: flex; flex-direction: column; }
 }
 
@@ -1515,7 +1515,7 @@ a.menu-oge.aktif::after,
     }
 
     .vitrin-manset   { grid-column: 1; grid-row: 1; }
-    .vitrin > .hava-kart { grid-column: 2; grid-row: 1; }
+    .vitrin > .bes-gelisme { grid-column: 2; grid-row: 1; }
     .vitrin > .kose-kutu { grid-column: 3; grid-row: 1; }
     /* Sehirler hava seridi kalkti, piyasa seridi tum sirayi aliyor (30.10.2026). */
     .vitrin-piyasa   { grid-column: 1 / -1; grid-row: 2; }
@@ -1542,7 +1542,7 @@ a.menu-oge.aktif::after,
     }
 
     /* Yan kutular kendi iclerinde kayiyor; sira yuksekligi sabit. */
-    .vitrin > .hava-kart,
+    .vitrin > .bes-gelisme,
     .vitrin > .kose-kutu { overflow: hidden; }
 
     /* Icerik kutu boyunca esit aralikli: ortada ya da altta bosluk kalmasin.
@@ -1638,13 +1638,13 @@ a.menu-oge.aktif::after,
  *   - 981-1399 arasi (iPad yatay) ikisi ayni sirada, yazarlara genis yer.
  */
 @media (max-width: 1399px) {
-    .vitrin > .hava-kart,
+    .vitrin > .bes-gelisme,
     .vitrin > .kose-kutu { padding: 12px 14px; position: relative; }
 
-    .vitrin > .hava-kart .pencere-baslik,
+    .vitrin > .bes-gelisme .pencere-baslik,
     .vitrin > .kose-kutu .pencere-baslik { margin-bottom: 8px; padding-bottom: 8px; }
 
-    .vitrin > .hava-kart .hava-sec { top: 8px; right: 14px; }
+    .vitrin > .bes-gelisme .hava-sec { top: 8px; right: 14px; }
 
     .vitrin .hava-kart-sehirler { flex-direction: row; gap: 6px; }
 
@@ -6608,3 +6608,69 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
     .mac-bant-takim img { display: none; }
     .mac-bant-skor { min-width: 44px; font-size: .92rem; padding: 1px 6px; }
 }
+
+/* --- Bugun bilmeniz gereken 5 gelisme (vitrin; 08.11.2026) -------------- */
+.bes-gelisme { display: flex; flex-direction: column; }
+.bes-liste { list-style: none; margin: 0; padding: 0; flex: 1; display: flex; flex-direction: column; counter-reset: bes; }
+.bes-liste li { flex: 1 1 0; display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--cizgi); padding: 6px 0; min-height: 0; overflow: hidden; }
+.bes-liste li:first-child { border-top: none; }
+.bes-no {
+    flex: none; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    background: var(--altin); color: #fff; font-weight: 800; font-size: .9rem;
+}
+.bes-liste a { display: flex; flex-direction: column; gap: 2px; min-width: 0; color: var(--metin); }
+.bes-baslik {
+    font-weight: 700; font-size: .92rem; line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.bes-liste a:hover .bes-baslik { color: var(--altin); }
+.bes-konu { font-size: .68rem; font-weight: 800; color: var(--altin); text-transform: uppercase; letter-spacing: .05em; margin-right: 2px; }
+.bes-bulten { display: block; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--cizgi); font-size: .82rem; font-weight: 700; color: var(--vurgu); }
+.bes-bulten:hover { text-decoration: underline; }
+@media (max-width: 1399px) {
+    .bes-liste li { flex: none; }
+}
+
+/* --- Ince kayan hava seridi (piyasa seridinin altinda; 08.11.2026) ------ */
+.vitrin-piyasa { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.hava-serit {
+    display: flex; align-items: stretch; min-height: 34px; border: 1px solid var(--cizgi); border-radius: 10px;
+    background: var(--kart); overflow: hidden;
+}
+.hava-serit-etiket {
+    flex: none; display: inline-flex; align-items: center; padding: 0 12px; background: var(--lacivert); color: #fff;
+    font-size: .74rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+}
+.hava-serit-pencere { flex: 1; min-width: 0; overflow: hidden; mask-image: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%); }
+.hava-serit-akis { display: flex; width: max-content; animation: sd-kay var(--sure, 80s) linear infinite; }
+.hava-serit:hover .hava-serit-akis { animation-play-state: paused; }
+.hava-serit-liste { display: flex; align-items: center; gap: 22px; margin: 0; padding: 0 22px 0 14px; list-style: none; white-space: nowrap; }
+.hava-serit-liste li { display: inline-flex; align-items: center; gap: 6px; height: 34px; font-size: .86rem; }
+.hava-serit-ikon { display: inline-flex; color: var(--altin); }
+.hava-serit-ikon .hava-simge { width: 20px; height: 20px; }
+.hava-serit-ad { font-weight: 600; }
+.hava-serit-derece { font-weight: 800; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) {
+    .hava-serit-akis { animation: none; }
+    .hava-serit-pencere { overflow-x: auto; mask-image: none; }
+    .hava-serit-liste[aria-hidden="true"] { display: none; }
+}
+
+/* --- Hesaplamalar ve Rehberler (ana sayfa ustu; 08.11.2026) ------------- */
+.hesap-rehber { margin: 18px 0 6px; }
+.hesap-rehber h2 { font-size: .82rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--metin-soluk); margin: 0 0 8px; }
+.hesap-rehber ul {
+    list-style: none; margin: 0; padding: 0; display: grid; gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+}
+.hesap-rehber a {
+    display: flex; flex-direction: column; gap: 2px; height: 100%; padding: 9px 12px; border: 1px solid var(--cizgi); border-radius: 10px;
+    background: var(--kart); color: var(--metin);
+}
+.hesap-rehber a:hover { border-color: var(--altin); }
+.hesap-rehber strong { font-size: .9rem; line-height: 1.25; }
+.hesap-rehber span { font-size: .78rem; color: var(--metin-soluk); }
+@media (max-width: 560px) {
+    .hesap-rehber ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.vitrin-piyasa .piyasa-serit { height: auto; }

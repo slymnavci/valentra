@@ -31,13 +31,13 @@ $sonSayfa  = max(1, (int) ceil($sonuc['toplam'] / $adet));
 require_once __DIR__ . '/includes/seo.php';
 $seoAdres = site_adresi() . etiket_yolu($etiketAdi, $sayfa);
 
-// Az haberli etiket ince sayfa; 2. ve sonraki sayfalar da (kategoriyle ayni)
-// Google'a sunulmuyor. "follow": haberlere giden baglantilar yine taraniyor.
-if ($sonuc['toplam'] < ETIKET_DIZIN_ASGARI || $sayfa > 1) {
+// Az haberli etiket ince sayfa: Google'a sunulmuyor. "follow": haberlere
+// giden baglantilar yine taraniyor. Arsiv sayfalari (2., 3. ...) acik (08.11.2026).
+if ($sonuc['toplam'] < ETIKET_DIZIN_ASGARI) {
     $seoRobots = 'noindex, follow';
 }
 
-$sayfaBasligi  = $etiketAdi . ' haberleri — Valentra';
+$sayfaBasligi  = $etiketAdi . ' haberleri' . ($sayfa > 1 ? ' — Sayfa ' . $sayfa : '') . ' — Valentra';
 $sayfaAciklama = $etiketAdi . ' ile ilgili son haberler ve gelişmeler.';
 
 require __DIR__ . '/includes/sayfa_ust.php';

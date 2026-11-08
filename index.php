@@ -124,13 +124,26 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <?php require __DIR__ . '/includes/kaydirak.php'; ?>
         </div>
 
-        <?php require __DIR__ . '/includes/hava_kutu.php'; ?>
+        <?php
+        /* Hava kutusunun yerinde "Bugun bilmeniz gereken 5 gelisme"; hava piyasa
+           seridinin altinda ince kayan seritte (site sahibi, 08.11.2026). */
+        require_once __DIR__ . '/includes/bes_gelisme.php';
+        echo bes_gelisme_html();
+        ?>
         <?php require __DIR__ . '/includes/kose_kutu.php'; ?>
 
         <div class="vitrin-piyasa">
             <?php require __DIR__ . '/includes/piyasa_serit.php'; ?>
+            <?php require __DIR__ . '/includes/hava_seridi.php'; ?>
         </div>
     </section>
+
+    <?php
+    /* Dosyalar ve hesaplamalar ustte (08.11.2026); alt bantta tekrar edilmiyor. */
+    require_once __DIR__ . '/includes/hesap_rehber.php';
+    echo hesap_rehber_html();
+    $hesapRehberUstte = true;
+    ?>
 
     <?php endif; ?>
 

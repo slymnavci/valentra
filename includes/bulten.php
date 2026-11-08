@@ -295,6 +295,14 @@ function bulten_icerik(): array
     $ifade->execute(['d' => HABER_YAYINDA]);
     $haberler = $ifade->fetchAll();
 
+    /*
+     * CEBINIZI ETKILEYENLER (08.11.2026, site sahibi: bulten vaadi "her sabah
+     * bes dakikada gundem ve cebinizi etkileyen gelismeler"). Son 24 saatin
+     * kira, emekli ve memur zammi, asgari ucret, enflasyon, akaryakit ve faiz
+     * haberleri (bkz. includes/konu.php); ustteki listede olanlar tekrar edilmiyor.
+     */
+    $cep = bulten_cep_haberleri(array_map(static fn (array $h): int => (int) $h['id'], $haberler));
+
     $kose = [];
 
     try {
@@ -352,6 +360,18 @@ function bulten_icerik(): array
         $duz .= '• ' . $h['baslik'] . "\n  " . $u . "\n";
     }
 
+    if ($cep !== []) {
+        $satirlar .= '<tr><td style="padding:4px 24px 6px"><div style="border-top:1px solid #e4e4e7;padding-top:14px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#0b7a3b">Cebinizi etkileyenler</div></td></tr>';
+        $duz .= "\nCEBİNİZİ ETKİLEYENLER\n";
+
+        foreach ($cep as $h) {
+            $u = $izle(haber_yolu((string) $h['slug']));
+            $satirlar .= '<tr><td style="padding:0 24px 10px"><a href="' . $e($u) . '" style="color:#18181b;text-decoration:none;font-size:15px;font-weight:700;line-height:1.35">'
+                . $e((string) $h['baslik']) . '</a></td></tr>';
+            $duz .= '• ' . $h['baslik'] . "\n  " . $u . "\n";
+        }
+    }
+
     if ($kose !== []) {
         $k = $kose[0];
         $u = $izle(kose_yolu((string) $k['slug']));
@@ -360,7 +380,7 @@ function bulten_icerik(): array
         $duz .= "\nKöşe yazısı: " . $k['baslik'] . "\n" . $u . "\n";
     }
 
-    if ($haberler === [] && $kose === [] && $canli === []) {
+    if ($haberler === [] && $kose === [] && $canli === [] && $cep === []) {
         $satirlar .= '<tr><td style="padding:0 24px 18px;color:#52525b">Bugün öne çıkan yeni haber yok. Güncel haberler için siteyi ziyaret edin.</td></tr>';
     }
 
@@ -540,6 +560,38 @@ function bulten_isle(int $sureButcesi = 90): array
     return $sonuc;
 }
 
+/**
+ * Son 24 saatin "cebinizi etkileyen" haberleri: kira, zam, asgari ucret,
+ * enflasyon, akaryakit, faiz dosyalarina giren haberler (bkz. includes/konu.php).
+ *
+ * @param list<int> $haric ustteki listede olanlar
+ * @return list<array<string,mixed>>
+ */
+function bulten_cep_haberleri(array $haric, int $adet = 4): array
+{
+    require_once __DIR__ . '/konu.php';
+
+    $sonuc = [];
+
+    foreach (['kira-artisi', 'emekli-zammi', 'memur-maasi', 'asgari-ucret', 'enflasyon', 'akaryakit', 'faiz-karari'] as $slug) {
+        foreach (konu_haberleri($slug, 3) as $h) {
+            if (in_array((int) $h['id'], $haric, true) || isset($sonuc[(int) $h['id']])
+                || strtotime((string) $h['yayin_tarihi']) < time() - 86400) {
+                continue;
+            }
+
+            $sonuc[(int) $h['id']] = $h;
+            break;
+        }
+
+        if (count($sonuc) >= $adet) {
+            break;
+        }
+    }
+
+    return array_values($sonuc);
+}
+
 /** Sitedeki "Gunun ozeti e-postaniza" kutusu. */
 function bulten_kutu_html(string $konum = 'haber'): string
 {
@@ -548,8 +600,10 @@ function bulten_kutu_html(string $konum = 'haber'): string
     }
 
     return '<aside class="bulten-kutu bulten-kutu-' . e($konum) . '">'
-        . '<div class="bulten-kutu-metin"><strong>Günün özeti her sabah e-postanızda</strong>'
-        . '<span>En önemli haberler, saat ' . str_pad((string) BULTEN_SAAT, 2, '0', STR_PAD_LEFT) . ':00\'de tek e-postada. Ücretsiz, istediğiniz an çıkabilirsiniz.</span></div>'
+        // Yayin vaadi (08.11.2026, site sahibi): "Her sabah bes dakikada gundem
+        // ve cebinizi etkileyen gelismeler."
+        . '<div class="bulten-kutu-metin"><strong>Her sabah 5 dakikada gündem ve cebinizi etkileyen gelişmeler</strong>'
+        . '<span>Günün en önemli haberleri; zam, kira, akaryakıt, faiz ve enflasyondaki değişiklikler. Saat ' . str_pad((string) BULTEN_SAAT, 2, '0', STR_PAD_LEFT) . ':00\'de tek e-postada, ücretsiz; istediğiniz an çıkabilirsiniz.</span></div>'
         . '<form method="post" action="' . e(bulten_yolu()) . '" class="bulten-form">'
         . '<label class="gizli-etiket" for="bulten-eposta-' . e($konum) . '">E-posta adresiniz</label>'
         . '<input type="email" id="bulten-eposta-' . e($konum) . '" name="eposta" required maxlength="190" placeholder="E-posta adresiniz" autocomplete="email">'
