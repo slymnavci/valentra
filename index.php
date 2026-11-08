@@ -88,6 +88,13 @@ if ($sayfa > 1) {
 
 // Ilk manset gorseli <head>'de onceden isteniyor (bkz. includes/sayfa_ust.php);
 // adresler includes/kaydirak.php'deki ilk slaytla ayni.
+//
+// seo.php ONCE (08.11.2026): haber_gorsel() site_adresi()'ni cagiriyor ve
+// o seo.php'de. seo.php normalde sayfa_ust.php ile yukleniyordu; bu blok
+// ondan once calistigi icin ana sayfa "Call to undefined function
+// site_adresi()" ile 500 veriyordu (ilk mansetin gorseli varsa).
+require_once __DIR__ . '/includes/seo.php';
+
 if (isset($mansetler[0]) && haber_gorsel($mansetler[0]) !== '') {
     $lcpGorsel = [
         'src'    => haber_gorsel_kucuk($mansetler[0], 960),
