@@ -42,11 +42,12 @@ $mansetAdet = ANA_SAYFA_MANSET_ADEDI;   // 20; kaydiraktaki haber sayisi
  * (bkz. haber_ana_akis_kosulu). Sayi, manset ve izgara ayni kosulu
  * kullaniyor ki sayfalama tutarli kalsin.
  */
-$toplam = haber_yayinda_sayisi(true);
+// Ayni olayin ikinci haberi ana sayfada yok (07.11.2026, bkz. haber_ana_sayfa_tekil).
+$anaListe = haber_ana_sayfa_tekil();
+$toplam   = count($anaListe);
 
 // Kaydirak yalnizca ilk sayfada; tukettigi haberler izgarada tekrarlanmaz.
-// Iki sorgu da ayni siralamayi (one_cikan, yayin_tarihi) kullandigi icin
-// kaydiragin tukettigi kadar atlamak yeterli.
+// Ikisi de ayni tekil listeden geliyor; kaydiragin tukettigi kadar atlamak yeterli.
 // Taslakta kalan haberler (otomatik yayin acikken; bkz. haber_bugunku_taslaklari_yayinla).
 haber_bugunku_taslaklari_yayinla_arada();
 
@@ -64,10 +65,10 @@ ajan_teslim_sayfa_sonunda();
 require_once __DIR__ . '/includes/deprem.php';
 deprem_denetle_sayfa_sonunda();
 
-$mansetler = $sayfa === 1 ? haber_manset($mansetAdet, true) : [];
+$mansetler = $sayfa === 1 ? array_slice($anaListe, 0, $mansetAdet) : [];
 $tuketilen = min($mansetAdet, $toplam);
 
-$haberler = haber_yayindakiler($adet, $tuketilen + ($sayfa - 1) * $adet, true);
+$haberler = array_slice($anaListe, $tuketilen + ($sayfa - 1) * $adet, $adet);
 
 $kalan    = max(0, $toplam - $tuketilen);
 $sonSayfa = max(1, (int) ceil($kalan / $adet));

@@ -152,6 +152,9 @@ CREATE TABLE IF NOT EXISTS haberler (
     -- %70 OZGUN (03.11.2026): tek kaynakli haber Google kotasina girdi mi
     -- (bkz. haber_ozgun_kotasini_dagit). Ozgun haberde kullanilmiyor.
     google_kota        TINYINT(1)   NOT NULL DEFAULT 0,
+    -- AYNI OLAY (07.11.2026, bkz. includes/kopya.php): bu haber ayni olayi
+    -- veren baska habere katildi; yayindan kalkti, adresi ona yonleniyor.
+    birlesti_id        INT UNSIGNED NULL,
 
     onaylayan_id    INT UNSIGNED  NULL,
     onay_tarihi     DATETIME      NULL,

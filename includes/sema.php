@@ -387,6 +387,8 @@ function sema_yukselt(array &$hatalar = []): array
     $sutunEkle('haberler', 'sehir', 'VARCHAR(40) NULL AFTER onem');
     // Yapay zekanin son dakika karari (04.11.2026; bkz. haber_son_dakika_mi).
     $sutunEkle('haberler', 'son_dakika', 'TINYINT(1) NOT NULL DEFAULT 0 AFTER sehir');
+    // Ayni olayin haberi birlestirildi (07.11.2026; bkz. includes/kopya.php).
+    $sutunEkle('haberler', 'birlesti_id', 'INT UNSIGNED NULL AFTER son_dakika');
     $adim('haberler.ix_haber_sehir indeksi', static function (): bool {
         if (!sema_sutun_var('haberler', 'sehir') || sema_indeks_var('haberler', 'ix_haber_sehir')) {
             return false;
@@ -692,6 +694,8 @@ function sema_guncel_mi(): bool
             ['haberler', 'derleme_kaynaklari'],
             ['haberler', 'google_kota'],
             ['ziyaretler', 'kampanya'],
+            // Kopya haber birlestirme (includes/kopya.php) sorguluyor.
+            ['haberler', 'birlesti_id'],
         ];
 
         foreach ($beklenenSutunlar as [$tablo, $sutun]) {
