@@ -6518,6 +6518,40 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 .konu-liste li { padding: 14px 16px; border: 1px solid var(--cizgi); border-radius: 10px; background: var(--kart, #fff); }
 .konu-liste a { display: block; font-weight: 700; color: var(--metin); font-size: 1.05rem; }
 .konu-liste span { font-size: .85rem; color: var(--metin-soluk); }
+/* Dosya veri kutusu (08.11.2026; includes/konu_veri.php) */
+.konu-veri { padding: 16px 18px; border: 2px solid var(--vurgu); border-radius: 10px; background: var(--kart, #fff); margin-bottom: 22px; }
+.konu-veri h2 { font-size: 1.05rem; margin: 0 0 8px; }
+.konu-veri h3 { font-size: .95rem; margin: 14px 0 6px; }
+.konu-veri-buyuk strong { display: block; font-size: 2rem; line-height: 1.1; font-weight: 800; color: var(--vurgu); font-variant-numeric: tabular-nums; }
+.konu-veri-buyuk span { display: block; font-size: .92rem; color: var(--metin); margin-top: 4px; }
+.konu-veri-kaynak { font-size: .8rem; color: var(--metin-soluk); margin: 8px 0 0; }
+.konu-veri-kaynak a { color: var(--vurgu); }
+.konu-veri-not { font-size: .88rem; color: var(--metin-soluk); margin: 10px 0 0; line-height: 1.5; }
+.konu-veri-kutular { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0; }
+.konu-veri-kutular div { padding: 10px 12px; border: 1px solid var(--cizgi); border-radius: 8px; }
+.konu-veri-kutular dt { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--metin-soluk); }
+.konu-veri-kutular dd { margin: 2px 0; font-size: 1.5rem; font-weight: 800; color: var(--metin); font-variant-numeric: tabular-nums; }
+.konu-veri-kutular small { font-size: .78rem; color: var(--metin-soluk); }
+.konu-hesap { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 14px; }
+.konu-hesap label span { display: block; font-size: .82rem; font-weight: 600; margin-bottom: 4px; }
+.konu-hesap input { width: 100%; padding: 9px 10px; border: 1px solid var(--cizgi); border-radius: 6px; font-size: 1rem; background: var(--zemin, #fff); color: var(--metin); box-sizing: border-box; }
+.konu-hesap dl { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 4px 0 0; }
+.konu-hesap dt { font-size: .82rem; color: var(--metin-soluk); }
+.konu-hesap dd { margin: 0; font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.konu-hesap-toplam dd { color: var(--vurgu); }
+.konu-gecmis { margin-top: 14px; }
+.konu-gecmis summary { cursor: pointer; font-weight: 700; font-size: .92rem; }
+.konu-gecmis table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .88rem; font-variant-numeric: tabular-nums; }
+.konu-gecmis th, .konu-gecmis td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--cizgi); }
+.konu-gecmis td { white-space: nowrap; }
+.konu-gecmis th { font-size: .78rem; color: var(--metin-soluk); }
+.konu-takvim { margin: 0; padding-left: 18px; font-size: .9rem; }
+.konu-takvim li { margin: 3px 0; }
+.konu-takvim em { color: var(--vurgu); font-style: normal; font-weight: 700; }
+.konu-rozet { display: inline-block; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 1px 6px; border-radius: 4px; margin-right: 6px; vertical-align: middle; }
+.konu-rozet.tahmin { background: #fff3cd; color: #7a5a00; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="acik"]) .konu-rozet.tahmin { background: #4a3b00; color: #ffe08a; } }
+:root[data-tema="koyu"] .konu-rozet.tahmin { background: #4a3b00; color: #ffe08a; }
 .alt-bant-konular { flex-wrap: wrap; }
 
 /* Kayan mansette "Haberi oku" cagrisi (03.11.2026; bkz. includes/kaydirak.php). */

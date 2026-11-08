@@ -15,6 +15,7 @@ sayfa_onbellek(['k']);
 
 require_once __DIR__ . '/includes/seo.php';
 require_once __DIR__ . '/includes/konu.php';
+require_once __DIR__ . '/includes/konu_veri.php';
 
 $slug = (string) ($_GET['k'] ?? '');
 $tr   = new DateTimeZone('Europe/Istanbul');
@@ -76,7 +77,13 @@ if (!isset(KONULAR[$slug])) {
 $konu     = KONULAR[$slug];
 $baslik   = konu_basligi($slug);
 $haberler = konu_haberleri($slug);
-$son      = $haberler[0] ?? null;
+$enYeni   = $haberler[0] ?? null;
+// One cikan: basliginda dosyanin kelimesi gecen en yeni haber (bkz. konu_one_cikan_sira).
+$oneSira  = konu_one_cikan_sira($slug, $haberler);
+$son      = $haberler[$oneSira] ?? null;
+$digerleri = $haberler;
+unset($digerleri[$oneSira]);
+$veriHtml = konu_veri_html($slug);
 
 $sayfaBasligi  = $baslik . ': Son Durum ve Bütün Gelişmeler — Valentra';
 $sayfaAciklama = $son !== null
@@ -95,12 +102,14 @@ require __DIR__ . '/includes/sayfa_ust.php';
     <h1><?= e($baslik) ?>: Son Durum</h1>
     <p><?= e($konu['giris']) ?></p>
     <?php if ($son !== null): ?>
-        <p class="konu-guncel">Son güncelleme: <?= e($tarihYaz((string) $son['yayin_tarihi'])) ?> · <?= count($haberler) ?> gelişme</p>
+        <p class="konu-guncel">Son güncelleme: <?= e($tarihYaz((string) $enYeni['yayin_tarihi'])) ?> · <?= count($haberler) ?> gelişme</p>
     <?php endif; ?>
 </div>
 
 <div class="ana-duzen tam">
     <div class="ana-kolon">
+        <?= $veriHtml ?>
+
         <?php if ($son === null): ?>
             <div class="bos-durum">
                 <strong>Bu konuda henüz haber yok.</strong>
@@ -108,7 +117,8 @@ require __DIR__ . '/includes/sayfa_ust.php';
             </div>
         <?php else: ?>
             <section class="konu-son">
-                <h2>Son gelişme</h2>
+                <h2><?= $oneSira === 0 ? 'Son gelişme' : 'Öne çıkan gelişme' ?></h2>
+                <?php if (konu_tahmin_mi((string) $son['baslik'])): ?><span class="konu-rozet tahmin">Tahmin</span><?php endif; ?>
                 <a class="konu-son-baslik" href="<?= e(haber_yolu((string) $son['slug'])) ?>"><?= e((string) $son['baslik']) ?></a>
                 <time><?= e($tarihYaz((string) $son['yayin_tarihi'])) ?></time>
                 <p><?= e((string) $son['ozet']) ?></p>
@@ -117,13 +127,14 @@ require __DIR__ . '/includes/sayfa_ust.php';
                 <?php endif; ?>
             </section>
 
-            <?php if (count($haberler) > 1): ?>
+            <?php if ($digerleri !== []): ?>
                 <section class="konu-zaman">
                     <h2>Bütün gelişmeler</h2>
                     <ol>
-                        <?php foreach (array_slice($haberler, 1) as $h): ?>
+                        <?php foreach ($digerleri as $h): ?>
                             <li>
                                 <time><?= e($tarihYaz((string) $h['yayin_tarihi'])) ?></time>
+                                <?php if (konu_tahmin_mi((string) $h['baslik'])): ?><span class="konu-rozet tahmin">Tahmin</span><?php endif; ?>
                                 <a href="<?= e(haber_yolu((string) $h['slug'])) ?>"><?= e((string) $h['baslik']) ?></a>
                                 <p><?= e((string) $h['ozet']) ?></p>
                             </li>
