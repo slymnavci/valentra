@@ -233,37 +233,78 @@ function okur_dili(string $metin): string
  * degerlendirilmiyor", "Benzinde malzemede..." kalmisti; dar kaliplar
  * bunlari yakalamiyordu.
  *
- *   1. "Malzemede/verilen metinde ... belirtilmiyor" gibi YALNIZCA bilgi
- *      eksikligini soyleyen cumle tumuyle cikiyor: okura bilgi vermiyor.
- *   2. Bilgi veren cumlenin basindaki (ya da "Benzinde malzemede" gibi bir
- *      yer bildiren kelimeden sonraki) "malzemede" atiliyor. "Kullanilan
- *      malzemede kusur" gibi gercek kullanim degismiyor.
- *   3. Ayni metinde ikinci kez gecen ayni cumle cikiyor.
+ *   1. Calisma dili: "malzemede/malzemeye gore" YALNIZCA cumle ya da yan
+ *      cumle basinda ya da "Benzinde malzemede" gibi bulunma ekli bir
+ *      kelimeden sonra; "verilen metinde", "kaynak metinde" her yerde.
+ *      "Kullanilan malzemede zararli madde bulunmuyor" gercek kullanim,
+ *      dokunulmuyor (PR incelemesi).
+ *   2. Calisma dili ile bilgi eksikligini ("belirtilmiyor", "belli degil")
+ *      AYNI YAN CUMLEDE soyleyen parca cikiyor; ayni cumlenin bilgi veren
+ *      parcasi kaliyor: "Malzemede motorine zam geldigi belirtiliyor,
+ *      ancak yururluk tarihi belirtilmiyor." -> "Motorine zam geldigi
+ *      belirtiliyor, ancak yururluk tarihi belirtilmiyor."
+ *   3. Bilgi veren parcanin basindaki "malzemede" atiliyor.
+ *   4. Ayni metinde ikinci kez gecen ayni cumle cikiyor.
  *
  * @param array<string,true> $gorulen metnin onceki cumleleri (tekrar denetimi)
  */
 function okur_dili_satir(string $satir, array &$gorulen): string
 {
-    $jargon = '/\b(?:malzemede|malzemeden\s+(?:anlaşıl|görül)\w*|malzemeye\s+göre|malzemedeki\s+bilgi\w*|kaynak\s+metin\w*|verilen\s+(?:haber|metin|bilgi|kaynak)\w*)\b/ui';
-    $eksik  = '/(?:belli\s+değil|belirsiz|yer\s+almıyor|yer\s+verilmiyor|geçmiyor|belirtilmiyor|belirtilmemiş|belirtilmedi|açıklanmıyor|'
-            . 'açıklanmadı|açıklanmamış|değerlendirilmiyor|değinilmiyor|söz\s+edilmiyor|bilgi\s+(?:yok|bulunmuyor|verilmiyor|verilmedi)|'
-            . 'bulunmuyor|netleşmiyor|bildirilmiyor|bildirilmedi|ayrıntı\s+(?:yok|verilmiyor))/ui';
+    $eksikKok = '(?:belli\s+değil|belirsiz|yer\s+almıyor|yer\s+verilmiyor|geçmiyor|belirtilmiyor|belirtilmemiş|belirtilmedi|açıklanmıyor|'
+              . 'açıklanmadı|açıklanmamış|değerlendirilmiyor|değinilmiyor|söz\s+edilmiyor|bilgi\s+(?:yok|bulunmuyor|verilmiyor|verilmedi)|'
+              . 'bulunmuyor|netleşmiyor|bildirilmiyor|bildirilmedi|ayrıntı\s+(?:yok|verilmiyor))';
+    // Calisma dili konumu: cumle/yan cumle basi, iki nokta ya da tireden
+    // sonra, ya da "Benzinde malzemede" gibi bulunma ekli kelimeden sonra.
+    $yer    = '(?:^|(?<=[:–—-]\s)|(?<=^|\s)\p{L}+(?:de|da|te|ta)\s+)';
+    $jargon = '/(?:' . $yer . '(?:malzemede|malzemeden\s+(?:anlaşıl|görül)\w*|malzemeye\s+göre|malzemedeki\s+bilgi\w*)\b'
+            // "Gerekcesi malzemede degerlendirilmiyor": malzemede dogrudan
+            // eksiklik fiiline bagli (arada ozne yok) -> calisma dili.
+            // "Malzemede zararli madde bulunmuyor" ise gercek kullanim.
+            . '|\bmalzemede\s+(?:(?:henüz|ayrıca|hiç|açıkça|net\s+olarak)\s+)?' . $eksikKok
+            . '|\b(?:kaynak\s+metin\w*|verilen\s+(?:haber|metin|bilgi|kaynak)\w*)\b)/ui';
+    $eksik  = '/' . $eksikKok . '/ui';
 
     $basBosluk = (string) preg_replace('/^(\s*(?:[-•]\s+)?).*$/us', '$1', $satir);
     $cumleler  = preg_split('/(?<=[.!?…])\s+(?=\p{Lu}|\d|["“\'(])/u', trim(mb_substr($satir, mb_strlen($basBosluk)))) ?: [];
     $kalan     = [];
 
     foreach ($cumleler as $cumle) {
-        if (preg_match($jargon, $cumle) === 1 && preg_match($eksik, $cumle) === 1) {
+        // Yan cumleler: virgul/noktali virgul + bosluk ("1,25" bolunmuyor).
+        $parcalar = preg_split('/([,;]\s+)/u', $cumle, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [$cumle];
+        $tut      = [];
+
+        for ($i = 0; $i < count($parcalar); $i += 2) {
+            $parca = $parcalar[$i];
+            $ayrac = $parcalar[$i - 1] ?? '';
+            $yalin = (string) preg_replace('/^(?:ancak|fakat|ama|ve|ise)\s+/ui', '', $parca);
+
+            if (preg_match($jargon, $yalin) === 1 && preg_match($eksik, $yalin) === 1) {
+                continue;
+            }
+
+            // Basta (ya da bulunma ekli kelimeden sonra) "malzemede".
+            $parca = (string) preg_replace_callback(
+                '/(^|(?:^|(?<=\s))(?:(?:ancak|fakat|ama|ve)\s+)?\p{L}+(?:de|da|te|ta)\s+|^(?:ancak|fakat|ama|ve)\s+)malzemede\s+(\p{L})/ui',
+                static fn (array $m): string => $m[1] . ($m[1] === '' ? mb_strtoupper($m[2], 'UTF-8') : $m[2]),
+                $parca
+            );
+
+            $tut[] = [$ayrac, $parca];
+        }
+
+        if ($tut === []) {
             continue;
         }
 
-        // Cumle basinda ya da bulunma ekli bir kelimeden sonra "malzemede".
-        $cumle = (string) preg_replace_callback(
-            '/(^|\b\p{L}+(?:de|da|te|ta)\s+)malzemede\s+(\p{L})/ui',
-            static fn (array $m): string => $m[1] . ($m[1] === '' ? mb_strtoupper($m[2], 'UTF-8') : $m[2]),
-            $cumle
-        );
+        // Ilk parca atildiysa: bastaki baglac ve ayrac gider, buyuk harf.
+        $tut[0][0] = '';
+        $tut[0][1] = (string) preg_replace('/^(?:ancak|fakat|ama|ve|ise)\s+/ui', '', $tut[0][1]);
+        $tut[0][1] = mb_strtoupper(mb_substr($tut[0][1], 0, 1), 'UTF-8') . mb_substr($tut[0][1], 1);
+        $cumle     = implode('', array_map(static fn (array $p): string => $p[0] . $p[1], $tut));
+
+        if (preg_match('/[.!?…]["”\')]?$/u', $cumle) !== 1) {
+            $cumle = rtrim($cumle, ' ,;') . '.';
+        }
 
         $anahtar = mb_strtolower((string) preg_replace('/[^\p{L}\p{N}]+/u', '', $cumle), 'UTF-8');
 

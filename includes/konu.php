@@ -125,6 +125,13 @@ const KONU_HARIC = [
 ];
 
 /*
+ * KONU_HARIC kelime basinda aradigi icin bunlari da yakaliyordu; haric
+ * denetiminden once basliktan siliniyor. "kurşun" -> "kurşunsuz benzin"
+ * akaryakit dosyasinin asil haberi.
+ */
+const KONU_HARIC_ISTISNA = ['kurşunsuz'];
+
+/*
  * Bu kategorilerin haberi dosyaya girmiyor (08.11.2026). Dosyalarin hepsi
  * Turkiye'deki bir rakami ya da takvimi izliyor; Glasgow'daki bir
  * restoranin kira davasi (dunya) ya da bir bilgisayar oyununun
@@ -209,6 +216,10 @@ function konu_kelimesi_var(string $slug, string $metin): bool
 function konu_haric_mi(string $baslik): bool
 {
     $kucuk = konu_kucult($baslik);
+
+    foreach (KONU_HARIC_ISTISNA as $istisna) {
+        $kucuk = (string) preg_replace('/(?<![\p{L}\p{N}])' . preg_quote($istisna, '/') . '\p{L}*/u', ' ', $kucuk);
+    }
 
     foreach (KONU_HARIC as $kelime) {
         if (preg_match('/(?<![\p{L}\p{N}])' . preg_quote($kelime, '/') . '/u', $kucuk) === 1) {
