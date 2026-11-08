@@ -224,14 +224,26 @@ function futbol_onbellekli(string $yol, array $parametre, int $sure, callable $k
         return ['veri' => null, 'zaman' => 0];
     }
 
-    ksort($parametre);
-    $anahtar = 'es_' . substr(md5($yol . '?' . http_build_query($parametre)), 0, 24);
+    $anahtar = futbol_onbellek_anahtari($yol, $parametre);
 
     return canli_onbellek($anahtar, $sure, static function () use ($yol, $parametre, $kirp): ?array {
         $cevap = futbol_istek($yol, $parametre);
 
         return $cevap === null ? null : $kirp($cevap);
     });
+}
+
+/**
+ * Önbellek anahtarı (futbol_onbellekli ile aynı): aynı istek her yerden
+ * aynı kayda düşsün.
+ *
+ * @param array<string,scalar> $parametre
+ */
+function futbol_onbellek_anahtari(string $yol, array $parametre): string
+{
+    ksort($parametre);
+
+    return 'es_' . substr(md5($yol . '?' . http_build_query($parametre)), 0, 24);
 }
 
 // --- Lig bilgisi --------------------------------------------------------------
@@ -619,11 +631,21 @@ function futbol_tarih_maclari(string $lig, string $aralik): array
  *
  * @return array{veri:?array{maclar:list<array>},zaman:int}
  */
-function futbol_gun_maclari(string $lig, string $gun): array
+function futbol_gun_maclari(string $lig, string $gun, ?int $sure = null): array
 {
-    $sure = $gun < date('Ymd', time() - 86400) ? 7 * 86400 : 120;
+    $sure ??= $gun < date('Ymd', time() - 86400) ? 7 * 86400 : 120;
 
-    return futbol_onbellekli('/site/v2/sports/soccer/' . $lig . '/scoreboard', ['dates' => $gun, 'limit' => 200], $sure, static function (array $c) use ($lig): ?array {
+    return futbol_onbellekli('/site/v2/sports/soccer/' . $lig . '/scoreboard', ['dates' => $gun, 'limit' => 200], $sure, futbol_gun_kirpici($lig));
+}
+
+/**
+ * Günün maçları cevabını (scoreboard) saklanacak biçime çeviren işlev.
+ *
+ * @return callable(array):(?array)
+ */
+function futbol_gun_kirpici(string $lig): callable
+{
+    return static function (array $c) use ($lig): ?array {
         if (!isset($c['events']) || !is_array($c['events'])) {
             return null;
         }
@@ -636,7 +658,7 @@ function futbol_gun_maclari(string $lig, string $gun): array
         }
 
         return ['maclar' => $maclar];
-    });
+    };
 }
 
 /**
