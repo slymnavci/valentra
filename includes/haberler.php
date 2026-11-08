@@ -2613,6 +2613,61 @@ function haber_dizinlenir_kosulu(string $takma = ''): string
     return $kosul;
 }
 
+/**
+ * Ayni basligi tasiyan yayindaki haberler (08.11.2026, Google tam
+ * denetimi "Ayni baslikli haberler" uyarisi).
+ *
+ * Basliklarin Turkce denetimi (api/baslik-denetim.php) iki farkli
+ * haberin basligini ayni cumleye cevirebiliyordu; Google bunlari kopya
+ * sayfa sayiyor. Her grupta ilk yayimlanan haber basligini koruyor;
+ * sonrakilerden basligi denetimle degismis olanlar eski basligina
+ * donuyor (o da baska haberde yoksa). Geri donulemeyenler elle ayrilsin
+ * diye listede kaliyor.
+ *
+ * @return array{duzeltilen:int,kalan:list<array{baslik:string,idler:list<int>}>}
+ */
+function haber_kopya_basliklari_ayir(): array
+{
+    $gruplar = db()->query(
+        "SELECT baslik, GROUP_CONCAT(id ORDER BY id) AS idler
+           FROM haberler
+          WHERE durum = 'yayinda' AND " . haber_dizinlenir_kosulu() . "
+          GROUP BY baslik HAVING COUNT(*) > 1
+          LIMIT 100"
+    )->fetchAll();
+
+    $eskiOku = db()->prepare('SELECT eski_baslik FROM haberler WHERE id = :id');
+    $varMi   = db()->prepare("SELECT COUNT(*) FROM haberler WHERE durum = 'yayinda' AND baslik = :b");
+    $dondur  = db()->prepare("UPDATE haberler SET baslik = eski_baslik, eski_baslik = '' WHERE id = :id");
+    $duzeltilen = 0;
+    $kalan = [];
+
+    foreach ($gruplar as $g) {
+        $idler = array_map('intval', explode(',', (string) $g['idler']));
+        $kalanIdler = [$idler[0]];
+
+        foreach (array_slice($idler, 1) as $id) {
+            $eskiOku->execute(['id' => $id]);
+            $eski = trim((string) $eskiOku->fetchColumn());
+            $varMi->execute(['b' => $eski]);
+
+            if ($eski !== '' && $eski !== (string) $g['baslik'] && (int) $varMi->fetchColumn() === 0) {
+                $dondur->execute(['id' => $id]);
+                $duzeltilen += $dondur->rowCount();
+                continue;
+            }
+
+            $kalanIdler[] = $id;
+        }
+
+        if (count($kalanIdler) > 1) {
+            $kalan[] = ['baslik' => (string) $g['baslik'], 'idler' => $kalanIdler];
+        }
+    }
+
+    return ['duzeltilen' => $duzeltilen, 'kalan' => $kalan];
+}
+
 /* ------------------------------------------------------------------ *
  * TURKIYE'YLE ILGISI ZAYIF DIS HABERLER GOOGLE'A SUNULMUYOR (site
  * sahibinin karari, 04.11.2026).

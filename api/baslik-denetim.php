@@ -69,6 +69,7 @@ $veri = json_decode((string) file_get_contents('php://input'), true);
 $oku      = db()->prepare('SELECT baslik FROM haberler WHERE id = :id');
 $duzelt   = db()->prepare('UPDATE haberler SET eski_baslik = baslik, baslik = :b, baslik_denetlendi = NOW() WHERE id = :id');
 $isaretle = db()->prepare('UPDATE haberler SET baslik_denetlendi = NOW() WHERE id = :id');
+$cakisma  = db()->prepare("SELECT COUNT(*) FROM haberler WHERE baslik = :b AND id <> :id AND durum = 'yayinda'");
 $duzeltilen = 0;
 
 require_once __DIR__ . '/../includes/adres.php';
@@ -91,7 +92,11 @@ foreach ((array) ($veri['basliklar'] ?? []) as $b) {
     // Yeni baslik gercekten farkliysa ve makul uzunluktaysa yaziliyor.
     $uzunluk = mb_strlen($yeni, 'UTF-8');
 
-    if ($yeni !== '' && $uzunluk >= 15 && $uzunluk <= 110 && $yeni !== (string) $eski) {
+    // Baska bir haberde ayni baslik varsa yazilmiyor: Google iki sayfayi
+    // kopya sayiyor (08.11.2026, tam denetim uyarisi).
+    $cakisma->execute(['b' => $yeni, 'id' => $id]);
+
+    if ($yeni !== '' && $uzunluk >= 15 && $uzunluk <= 110 && $yeni !== (string) $eski && (int) $cakisma->fetchColumn() === 0) {
         $duzelt->execute(['b' => $yeni, 'id' => $id]);
         $duzeltilen += $duzelt->rowCount();
         arama_bildir_kayit('haber', $id);
