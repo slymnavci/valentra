@@ -65,14 +65,31 @@ function olcum_head_html(): string
         . "try { if (localStorage.getItem('vz_cerez') === 'evet') { gtag('consent', 'update', {ad_storage: 'granted', analytics_storage: 'granted', ad_user_data: 'granted', ad_personalization: 'granted'}); } } catch (e) {}\n"
         . "</script>\n";
 
+    /*
+     * Betikler sayfa yuklendikten sonra (08.11.2026, Lighthouse mobil: toplam
+     * engelleme 226 ms, ilk icerik 3,9 sn). async olsalar da gtag.js ve
+     * adsbygoogle.js sayfanin kendisiyle yarisip ana is parcacigini
+     * tutuyordu. Kuyruklar (dataLayer, adsbygoogle) hazir; betik gelince
+     * birikenleri isliyor, olcum ve reklam kaybolmuyor. Okur daha once
+     * dokunur ya da kaydirirsa hemen yukleniyor.
+     */
+    $betikler = [];
+
     if ($ga !== '') {
-        $html .= '<script async src="https://www.googletagmanager.com/gtag/js?id=' . e($ga) . '"></script>' . "\n"
-            . "<script>gtag('js', new Date()); gtag('config', " . json_encode($ga) . ");</script>\n";
+        $html .= "<script>gtag('js', new Date()); gtag('config', " . json_encode($ga) . ");</script>\n";
+        $betikler[] = ['src' => 'https://www.googletagmanager.com/gtag/js?id=' . rawurlencode($ga)];
     }
 
     if ($ad !== '') {
-        $html .= '<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' . e($ad) . '" crossorigin="anonymous"></script>' . "\n";
+        $betikler[] = ['src' => 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' . rawurlencode($ad), 'co' => 1];
     }
+
+    $html .= '<script>(function(){var b=' . json_encode($betikler, JSON_UNESCAPED_SLASHES) . ',y=false;'
+        . 'function yukle(){if(y){return;}y=true;b.forEach(function(x){var s=document.createElement("script");s.async=true;s.src=x.src;if(x.co){s.crossOrigin="anonymous";}document.head.appendChild(s);});}'
+        . 'function sonra(){setTimeout(function(){if(window.requestIdleCallback){requestIdleCallback(yukle,{timeout:3000});}else{yukle();}},1500);}'
+        . 'if(document.readyState==="complete"){sonra();}else{addEventListener("load",sonra);}'
+        . '["pointerdown","keydown","scroll","touchstart"].forEach(function(o){addEventListener(o,yukle,{once:true,passive:true});});'
+        . "})();</script>\n";
 
     return $html;
 }

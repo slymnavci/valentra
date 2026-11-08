@@ -400,7 +400,16 @@ function haber_gorsel_kucuk(array $haber, int $genislik): string
     $url  = guvenli_url((string) ($haber['gorsel_url'] ?? ''));
     $id   = (int) ($haber['id'] ?? 0);
 
-    if ($asil === '' || str_starts_with($asil, '/assets/') || $id <= 0
+    // Sitenin kendi gorselleri (kategori ve ozgun haber gorselleri, 1200 piksel
+    // JPEG): yanlarinda hazir 480/960 WebP kopyasi var (08.11.2026, Lighthouse
+    // mobil LCP 6,5 sn; ana sayfa kaydiraginda 40-130 KB JPEG iniyordu).
+    if (str_starts_with($asil, '/assets/')) {
+        $kopya = preg_replace('/\.jpe?g$/', '-' . $genislik . '.webp', $asil);
+
+        return is_string($kopya) && $kopya !== $asil && is_file(dirname(__DIR__) . $kopya) ? $kopya : $asil;
+    }
+
+    if ($asil === '' || $id <= 0
         || !in_array($genislik, HABER_GORSEL_GENISLIKLER, true)) {
         return $asil;
     }
@@ -423,6 +432,12 @@ function haber_gorsel_srcset(array $haber, array $genislikler = HABER_GORSEL_KAR
         $adres = haber_gorsel_kucuk($haber, $g);
 
         if ($adres === haber_gorsel($haber)) {
+            // Sitenin kendi gorselinde buyuk boy asil JPEG (1200 piksel).
+            if ($parcalar !== [] && str_starts_with($adres, '/assets/')) {
+                $parcalar[] = $adres . ' 1200w';
+                break;
+            }
+
             return '';
         }
 

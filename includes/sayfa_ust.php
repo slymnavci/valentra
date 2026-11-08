@@ -72,6 +72,14 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
              ONCE uygulaniyor, yoksa sayfa bir an yanlis renkte gorunup
              sonra degisirdi. Secim yoksa sistem ayari gecerli. */ ?>
     <script>(function(){try{var t=localStorage.getItem('valentra-tema');if(t==='koyu'||t==='acik'){document.documentElement.setAttribute('data-tema',t);}}catch(e){}})();</script>
+    <?php
+    /* En buyuk icerik gorseli (LCP) erken istensin (08.11.2026, Lighthouse
+       mobil LCP 6,5 sn): tarayici gorseli ancak 230 KB'lik stil dosyasi ve
+       HTML'in ust bolumu islendikten sonra fark ediyordu. Sayfa doldurur
+       (ana sayfa: ilk manset; haber: haber gorseli). */
+    if (!empty($lcpGorsel['src'])): ?>
+    <link rel="preload" as="image" fetchpriority="high" href="<?= e((string) $lcpGorsel['src']) ?>"<?php if (!empty($lcpGorsel['srcset'])): ?> imagesrcset="<?= e((string) $lcpGorsel['srcset']) ?>" imagesizes="<?= e((string) ($lcpGorsel['sizes'] ?? '100vw')) ?>"<?php endif; ?>>
+    <?php endif; ?>
     <link rel="stylesheet" href="<?= e(varlik('/assets/style.css')) ?>">
 
     <?php /* Ayni icerige birden fazla adresten ulasiliyorsa hangisinin
