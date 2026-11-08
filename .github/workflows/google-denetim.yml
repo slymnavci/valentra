@@ -22,21 +22,16 @@ concurrency:
 jobs:
   denetle:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Repository kodlarini al
         uses: actions/checkout@v5
         with:
-          sparse-checkout: ajan/google_denetim.php
+          sparse-checkout: |
+            ajan/google_denetim.php
+            ajan/hiz_olcum.php
           sparse-checkout-cone-mode: false
-
-      - name: Google tam denetimi
-        working-directory: ajan
-        env:
-          VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
-          VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}
-        run: php google_denetim.php
 
       # Google'in hiz ve sayfa kalitesi olcumu (PageSpeed Insights'in
       # kullandigi Lighthouse). PSI'nin anahtarsiz ortak kotasi cogu gun
@@ -74,3 +69,23 @@ jobs:
           done
           echo "== Canli robots.txt =="
           curl -sS --max-time 20 "$site/robots.txt" | cat -A | head -60
+
+      # Olcumu siteye yaz (08.11.2026): Lighthouse sonucu + PageSpeed
+      # Insights gercek kullanici verisi (CrUX). Google tam denetiminin
+      # "Hiz (Core Web Vitals)" bolumu bunu gosteriyor; bu yuzden denetimden once.
+      - name: Hiz olcumunu siteye yaz
+        if: ${{ !cancelled() }}
+        env:
+          VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}
+          PAGESPEED_API_KEY:  ${{ secrets.PAGESPEED_API_KEY }}
+        run: php ajan/hiz_olcum.php || echo "::warning::Hiz olcumu siteye yazilamadi"
+
+      - name: Google tam denetimi
+        if: ${{ !cancelled() }}
+        working-directory: ajan
+        env:
+          VALENTRA_SITE_URL:  ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY: ${{ secrets.VALENTRA_AGENT_KEY }}
+        run: php google_denetim.php
+

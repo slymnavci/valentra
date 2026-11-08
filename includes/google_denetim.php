@@ -753,6 +753,13 @@ function google_denetimi(int $sureButcesi = 80): array
             (string) ($son['zaman'] ?? '') . (!empty($son['hata']) ? ' — ' . $son['hata'] : ''));
     }
 
+    /* -------------------------------------------------------------- *
+     * 8. Hiz ve kayma (Core Web Vitals; bkz. api/hiz-olcum.php)
+     * -------------------------------------------------------------- */
+    foreach (hiz_olcum_maddeleri(hiz_olcum_oku()) as $m) {
+        $ekle('Hız (Core Web Vitals)', $m['ad'], $m['durum'], $m['ayrinti'], $m['oneri']);
+    }
+
     $ozet = ['tamam' => 0, 'uyari' => 0, 'hata' => 0, 'bilgi' => 0];
 
     foreach ($maddeler as $m) {
@@ -764,3 +771,173 @@ function google_denetimi(int $sureButcesi = 80): array
 
     return $sonuc;
 }
+
+/* ------------------------------------------------------------------ *
+ * Hiz olcumu (08.11.2026). Esikler Google'in Core Web Vitals esikleri:
+ *   LCP  iyi <= 2,5 sn, gelistirilmeli <= 4 sn
+ *   CLS  iyi <= 0,1,    gelistirilmeli <= 0,25
+ *   INP  iyi <= 200 ms, gelistirilmeli <= 500 ms
+ *   TBT  (laboratuvarda INP'nin yerine) iyi <= 200 ms, <= 600 ms
+ * Gercek kullanici verisi (CrUX) Google'in siralamada kullandigi; yoksa
+ * laboratuvar (Lighthouse) olcumu gosteriliyor.
+ * ------------------------------------------------------------------ */
+
+const HIZ_ESIK = [
+    'lcp' => [2500, 4000],
+    'cls' => [0.1, 0.25],
+    'inp' => [200, 500],
+    'tbt' => [200, 600],
+    'fcp' => [1800, 3000],
+];
+
+/** @return array<string,mixed>|null */
+function hiz_olcum_oku(): ?array
+{
+    $v = json_decode(ayar_oku('hiz_olcum_son'), true);
+
+    return is_array($v) && isset($v['mobil']) ? $v : null;
+}
+
+/**
+ * Gelen ölçümü süzer (yalnızca bilinen sayısal alanlar).
+ *
+ * @param array<string,mixed> $veri
+ * @return array<string,mixed>|null
+ */
+function hiz_olcum_temizle(array $veri): ?array
+{
+    $sayi = static fn (mixed $x): ?float => is_numeric($x) && is_finite((float) $x) && (float) $x >= 0 ? (float) $x : null;
+    $lab  = static function (mixed $o) use ($sayi): ?array {
+        if (!is_array($o)) {
+            return null;
+        }
+
+        $r = [];
+
+        foreach (['puan', 'lcp', 'cls', 'tbt', 'fcp', 'si'] as $k) {
+            $r[$k] = $sayi($o[$k] ?? null);
+        }
+
+        return $r['puan'] === null && $r['lcp'] === null ? null : $r;
+    };
+
+    $mobil = $lab($veri['mobil'] ?? null);
+
+    if ($mobil === null) {
+        return null;
+    }
+
+    $alan = null;
+
+    if (is_array($veri['alan'] ?? null)) {
+        $alan = ['kapsam' => in_array($veri['alan']['kapsam'] ?? '', ['sayfa', 'site'], true) ? $veri['alan']['kapsam'] : 'site'];
+
+        foreach (['lcp', 'cls', 'inp', 'fcp', 'ttfb'] as $k) {
+            $alan[$k] = $sayi($veri['alan'][$k] ?? null);
+        }
+    }
+
+    return [
+        'zaman'     => date('Y-m-d H:i:s'),
+        'adres'     => mb_substr((string) ($veri['adres'] ?? ''), 0, 300, 'UTF-8'),
+        'mobil'     => $mobil,
+        'masaustu'  => $lab($veri['masaustu'] ?? null),
+        'alan'      => $alan,
+        'alan_not'  => mb_substr((string) ($veri['alan_not'] ?? ''), 0, 300, 'UTF-8'),
+    ];
+}
+
+/** Değerin eşiğe göre durumu: tamam / uyari (geliştirilmeli) / hata (yavaş). */
+function hiz_durum(string $olcut, float $deger): string
+{
+    [$iyi, $orta] = HIZ_ESIK[$olcut];
+
+    return $deger <= $iyi ? 'tamam' : ($deger <= $orta ? 'uyari' : 'hata');
+}
+
+function hiz_bicim(string $olcut, float $deger): string
+{
+    return match ($olcut) {
+        'cls'   => number_format($deger, 3, ',', '.'),
+        'inp', 'tbt', 'ttfb' => number_format($deger, 0, ',', '.') . ' ms',
+        default => number_format($deger / 1000, 1, ',', '.') . ' sn',
+    };
+}
+
+/**
+ * Denetim maddeleri.
+ *
+ * @return list<array{ad:string,durum:string,ayrinti:string,oneri:string}>
+ */
+function hiz_olcum_maddeleri(?array $o): array
+{
+    if ($o === null) {
+        return [['ad' => 'Hız ölçümü', 'durum' => 'bilgi', 'ayrinti' => 'Henüz ölçülmedi.',
+                 'oneri' => 'GitHub → Actions → "Google denetimi" çalıştırıldığında Lighthouse ve PageSpeed ölçümü buraya yazılır.']];
+    }
+
+    $m    = [];
+    $yas  = (time() - (int) strtotime((string) $o['zaman'])) / 86400;
+    $adlar = ['lcp' => 'En büyük içerik (LCP)', 'cls' => 'Düzen kayması (CLS)', 'inp' => 'Etkileşim gecikmesi (INP)',
+              'tbt' => 'Toplam engelleme (TBT)', 'fcp' => 'İlk içerik (FCP)'];
+    $oneri = [
+        'lcp' => 'Üstteki büyük görsel ve yazı tipi erken yüklenmeli (preload, sıkıştırılmış görsel); sunucu yanıtı (önbellek) hızlı olmalı.',
+        'cls' => 'Görsellerin, reklam ve kayan şeritlerin yeri önceden ayrılmalı (genişlik/yükseklik ya da min-height).',
+        'inp' => 'Uzun JavaScript işleri bölünmeli; üçüncü taraf betikleri (reklam, ölçüm) geciktirilmeli.',
+        'tbt' => 'Uzun JavaScript işleri bölünmeli; üçüncü taraf betikleri (reklam, ölçüm) geciktirilmeli.',
+        'fcp' => 'Sayfayı engelleyen CSS ve betikler azaltılmalı.',
+    ];
+
+    $m[] = ['ad' => 'Ölçüm zamanı', 'durum' => $yas > 10 ? 'uyari' : 'bilgi',
+            'ayrinti' => (string) $o['zaman'] . ($o['adres'] !== '' ? ' · ' . $o['adres'] : ''),
+            'oneri' => $yas > 10 ? 'Ölçüm 10 günden eski; "Google denetimi" iş akışı çalışmıyor olabilir.' : ''];
+
+    // Gercek kullanici verisi (CrUX, son 28 gun, 75. yuzdelik).
+    $alan = $o['alan'] ?? null;
+
+    if (is_array($alan) && ($alan['lcp'] !== null || $alan['cls'] !== null || $alan['inp'] !== null)) {
+        $kapsam = $alan['kapsam'] === 'sayfa' ? 'ana sayfa' : 'bütün site';
+
+        foreach (['lcp', 'cls', 'inp'] as $k) {
+            if ($alan[$k] === null) {
+                continue;
+            }
+
+            $d   = hiz_durum($k, (float) $alan[$k]);
+            $m[] = ['ad' => 'Gerçek kullanıcı, mobil: ' . $adlar[$k], 'durum' => $d,
+                    'ayrinti' => hiz_bicim($k, (float) $alan[$k]) . ' (Chrome kullanıcıları, son 28 gün, ' . $kapsam . ', 75. yüzdelik)',
+                    'oneri' => $d === 'tamam' ? '' : $oneri[$k]];
+        }
+    } else {
+        $m[] = ['ad' => 'Gerçek kullanıcı verisi (CrUX)', 'durum' => 'bilgi',
+                'ayrinti' => $o['alan_not'] !== '' ? $o['alan_not'] : 'Google\'ın Chrome kullanıcı raporunda bu site için yeterli veri yok.',
+                'oneri' => ''];
+    }
+
+    // Laboratuvar olcumu (Lighthouse, mobil: yavas 4G, orta telefon).
+    $lab = $o['mobil'];
+
+    if ($lab['puan'] !== null) {
+        $p   = (int) round((float) $lab['puan']);
+        $m[] = ['ad' => 'Lighthouse mobil performans puanı', 'durum' => $p >= 90 ? 'tamam' : 'uyari',
+                'ayrinti' => $p . '/100 (laboratuvar: yavaş 4G, orta seviye telefon)'
+                    . (isset($o['masaustu']['puan']) && $o['masaustu']['puan'] !== null ? ' · masaüstü ' . (int) round((float) $o['masaustu']['puan']) . '/100' : ''),
+                'oneri' => ''];
+    }
+
+    foreach (['lcp', 'cls', 'tbt', 'fcp'] as $k) {
+        if (($lab[$k] ?? null) === null) {
+            continue;
+        }
+
+        // Laboratuvar olcumu yapay (yavas ag benzetimi): en kotu "uyari".
+        // Google'in degerlendirdigi gercek kullanici verisi "hata" verebilir.
+        $d   = hiz_durum($k, (float) $lab[$k]);
+        $d   = $d === 'hata' ? 'uyari' : $d;
+        $m[] = ['ad' => 'Laboratuvar, mobil: ' . $adlar[$k], 'durum' => $d,
+                'ayrinti' => hiz_bicim($k, (float) $lab[$k]), 'oneri' => $d === 'tamam' ? '' : $oneri[$k]];
+    }
+
+    return $m;
+}
+
