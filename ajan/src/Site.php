@@ -701,7 +701,9 @@ final class Site
     /**
      * Görseli henüz denetlenmemiş haberler (api/gorsel-denetim.php), ana sayfadakiler önce.
      *
-     * @return list<array{id:int,baslik:string,ozet:string,kategori:string,gorsel:string,yedek:string}>
+     * kullanilan: son iki haftada logolu görselin yerine konmuş adresler (tekrar konmasın).
+     *
+     * @return array{haberler:list<array{id:int,baslik:string,ozet:string,kategori:string,gorsel:string,yedek:string}>,kullanilan:list<string>}
      */
     public function gorselDenetimListesi(int $gun = 3, int $adet = 80): array
     {
@@ -712,7 +714,10 @@ final class Site
             throw new \RuntimeException('Görsel listesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
         }
 
-        return array_values((array) ($veri['haberler'] ?? []));
+        return [
+            'haberler'   => array_values((array) ($veri['haberler'] ?? [])),
+            'kullanilan' => array_values(array_map('strval', (array) ($veri['kullanilan'] ?? []))),
+        ];
     }
 
     /**

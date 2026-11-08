@@ -15,7 +15,8 @@ declare(strict_types=1);
  * Wikimedia Commons; o gorsel de ayni denetimden geciyor) ve buraya
  * gonderiyor; bulamazsa haberin konu gorseli (assets/kategori) konuyor.
  *
- *   GET  ?gun=3&adet=80 -> {"haberler": [{"id","baslik","ozet","kategori","gorsel","yedek"}]}
+ *   GET  ?gun=3&adet=80 -> {"haberler": [{"id","baslik","ozet","kategori","gorsel","yedek"}],
+ *                           "kullanilan": [son iki haftada yerine konmus adresler]}
  *   POST {"sonuclar": [{"id": 1, "temiz": true}
  *                     | {"id": 2, "temiz": false, "yeni": "https://...", "atif": "...", "bulunan": "AA logosu"}
  *                     | {"id": 3, "temiz": false, "bulunan": "..."}]}
@@ -97,7 +98,14 @@ if ($yontem === 'GET') {
         db()->exec('UPDATE haberler SET gorsel_denetim = 1, guncellendi = guncellendi WHERE id IN (' . implode(',', $kendi) . ')');
     }
 
-    ajan_json(200, ['haberler' => $liste]);
+    // Son iki haftada logolu gorselin yerine konanlar: ajan ayni gorseli
+    // ikinci bir habere koymasin.
+    $kullanilan = db()->query(
+        "SELECT DISTINCT gorsel_url FROM haberler
+          WHERE gorsel_denetim = 2 AND olusturuldu >= NOW() - INTERVAL 14 DAY"
+    )->fetchAll(PDO::FETCH_COLUMN);
+
+    ajan_json(200, ['haberler' => $liste, 'kullanilan' => array_map('strval', $kullanilan)]);
 }
 
 if ($yontem !== 'POST') {
