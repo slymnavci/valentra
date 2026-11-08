@@ -46,7 +46,7 @@ mb_internal_encoding('UTF-8');
 const PARTI = 6;
 
 /** Bir haber için en fazla kaç arama sorgusu denenir. */
-const EN_FAZLA_SORGU = 2;
+const EN_FAZLA_SORGU = 3;
 
 function gunluk(string $mesaj): void
 {
@@ -96,18 +96,55 @@ $toplam = ['temiz' => 0, 'degisen' => 0, 'konu_gorseli' => 0, 'karar_yok' => 0];
 /**
  * Logolu görselin yerine konacak özgür lisanslı görseli arar.
  *
+ * KİŞİ ÖNCE (site sahibi, 08.11.2026: "Erdoğan Bakü'de diyorsa Bakü'deki
+ * bir Erdoğan resmi varsa onu kullan; başlıkta A Haber yazıyorsa kullanma,
+ * benzer bir fotoğraf bul"). Haberdeki tanınmış kişinin adıyla yapılan
+ * aramada aday, arşivdeki dosya adında o kişinin soyadını taşımalı;
+ * yoksa başka birinin fotoğrafı olabilir.
+ *
  * @param array{id:int,baslik:string,ozet:string} $haber
- * @param list<string> $sorgular
- * @return ?array{url:string,atif:string,sayfa:string}
+ * @param array{liste:list<string>,kisiler:list<string>} $sorgular
+ * @return ?array{url:string,ad:string,atif:string,sayfa:string}
  */
 function yedek_bul(GorselDenetci $denetci, array $haber, array $sorgular, int $bitis): ?array
 {
-    foreach (array_slice($sorgular, 0, EN_FAZLA_SORGU) as $sorgu) {
+    // Soyadlari ("Recep Tayyip Erdoğan" -> "erdogan").
+    $soyadlar = [];
+
+    foreach ($sorgular['kisiler'] as $kisi) {
+        $parcalar = preg_split('/\s+/', GorselDenetci::katla($kisi)) ?: [];
+        $soyad = (string) end($parcalar);
+
+        if (strlen($soyad) >= 3) {
+            $soyadlar[] = $soyad;
+        }
+    }
+
+    foreach (array_slice($sorgular['liste'], 0, EN_FAZLA_SORGU) as $sorgu) {
         if (time() >= $bitis - 45) {
             return null;
         }
 
-        $adaylar = $denetci->ara($sorgu, PARTI);
+        $adaylar = $denetci->ara($sorgu, PARTI * 2);
+        $katliSorgu = GorselDenetci::katla($sorgu);
+        $sorgudakiler = array_values(array_filter($soyadlar, static fn (string $s): bool => str_contains($katliSorgu, $s)));
+
+        // Kisi aramasi: dosya adinda o kisi gecmeyen aday elenir.
+        if ($sorgudakiler !== []) {
+            $adaylar = array_values(array_filter($adaylar, static function (array $a) use ($sorgudakiler): bool {
+                $ad = GorselDenetci::katla($a['ad']);
+
+                foreach ($sorgudakiler as $s) {
+                    if (!str_contains($ad, $s)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }));
+        }
+
+        $adaylar = array_slice($adaylar, 0, PARTI);
 
         if ($adaylar === []) {
             continue;
@@ -119,7 +156,7 @@ function yedek_bul(GorselDenetci $denetci, array $haber, array $sorgular, int $b
 
         foreach ($adaylar as $i => $a) {
             if ($resimler[$i] !== null) {
-                $ogeler[] = ['resim' => $resimler[$i], 'baslik' => $haber['baslik']];
+                $ogeler[] = ['resim' => $resimler[$i], 'baslik' => $haber['baslik'], 'ad' => $a['ad']];
                 $sira[]   = $a;
             }
         }
@@ -204,13 +241,13 @@ foreach (array_chunk($haberler, PARTI) as $parti) {
         ));
 
         foreach ($logolu as $i => $h) {
-            $bulunan = $sorgular[$i] !== [] ? yedek_bul($denetci, $h, $sorgular[$i], $bitis) : null;
+            $bulunan = $sorgular[$i]['liste'] !== [] ? yedek_bul($denetci, $h, $sorgular[$i], $bitis) : null;
 
             if ($bulunan !== null) {
-                gunluk('   → yerine: ' . $bulunan['url'] . ' [' . $bulunan['atif'] . '] (sorgu: ' . implode(' | ', $sorgular[$i]) . ')');
+                gunluk('   → yerine: ' . $bulunan['url'] . ' [' . $bulunan['atif'] . '] (sorgu: ' . implode(' | ', $sorgular[$i]['liste']) . ')');
                 $sonuclar[] = ['id' => (int) $h['id'], 'temiz' => false, 'yeni' => $bulunan['url'], 'atif' => $bulunan['atif']];
             } else {
-                gunluk('   → uygun özgür görsel bulunamadı, konu görseli (sorgu: ' . implode(' | ', $sorgular[$i]) . ')');
+                gunluk('   → uygun özgür görsel bulunamadı, konu görseli (sorgu: ' . implode(' | ', $sorgular[$i]['liste']) . ')');
                 $sonuclar[] = ['id' => (int) $h['id'], 'temiz' => false];
             }
         }
