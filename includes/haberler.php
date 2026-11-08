@@ -336,12 +336,41 @@ function haber_son_dakika_seridi(int $adet = 12): array
                FROM haberler h
               WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . haber_ana_akis_kosulu() . '
               ORDER BY LEAST(h.olusturuldu, COALESCE(h.kaynak_tarihi, h.olusturuldu)) DESC, h.id DESC
-              LIMIT ' . max(1, min(30, $adet))
+              LIMIT ' . max(1, min(30, $adet)) * 3
         )->fetchAll();
     } catch (Throwable $e) {
         error_log('[valentra] son dakika seridi: ' . $e->getMessage());
         $satirlar = [];
     }
+
+    /*
+     * Ayni konu seritte bir kez (site sahibinin istegi, 08.11.2026: "cok
+     * sayida gundem basligi yerine birbirini tekrar etmeyen gundem"). En
+     * yeni haber kaliyor; ayni konunun eski acilari atlaniyor.
+     */
+    require_once __DIR__ . '/konu_siniri.php';
+
+    $kokler = [];
+    $tekil  = [];
+
+    foreach ($satirlar as $s) {
+        $k = konu_kokleri((string) $s['baslik']);
+
+        foreach ($kokler as $onceki) {
+            if (konu_ayni_mi($k, $onceki)) {
+                continue 2;
+            }
+        }
+
+        $kokler[] = $k;
+        $tekil[]  = $s;
+
+        if (count($tekil) >= $adet) {
+            break;
+        }
+    }
+
+    $satirlar = $tekil;
 
     return $onbellek = array_map(static fn (array $s): array => [
         'baslik' => (string) $s['baslik'],

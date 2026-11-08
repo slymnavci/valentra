@@ -41,13 +41,14 @@ foreach (haber_akis_kategorileri() as $k) {
 
 $kategoriAdi   = $sekmeler[$kategori] ?? '';
 $aktifKategori = 'video';
-$sayfaBasligi  = ($kategoriAdi !== '' ? $kategoriAdi . ' Videoları' : 'Video Haberler') . ' — Valentra';
+$sayfaBasligi  = ($kategoriAdi !== '' ? $kategoriAdi . ' Videoları' : 'Video Haberler') . ($sayfa > 1 ? ' — Sayfa ' . $sayfa : '') . ' — Valentra';
 $sayfaAciklama = 'Güncel haberlerin videoları: Türkiye ve dünyadan gelişmeleri izleyin.';
 $seoAdres      = site_adresi() . video_yolu($kategori, $sayfa);
 
-if ($sayfa > 1) {
-    $seoRobots = 'noindex, follow';
-}
+// Arsiv sayfalari (2., 3. ...) Google'a acik (08.11.2026, site sahibi:
+// "gercek arsiv sayfalarinin taranabilir baglantilari ve kendilerine ait
+// canonical adresleri olmali"; Google'in sayfalama onerisi). Canonical
+// sayfanin kendisi (sayfa numarasiyla); robots.txt artik ?sayfa= engellemiyor.
 
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>

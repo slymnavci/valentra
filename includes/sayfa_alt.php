@@ -17,12 +17,15 @@
         </nav>
         <?php /* Gundem dosyalari ve son depremler (03.11.2026): Google'in bulmasi icin her sayfadan baglanti. */ ?>
         <?php require_once __DIR__ . '/konu.php'; ?>
+        <?php /* Ana sayfada bu satir ustte, "Hesaplamalar ve Rehberler"de (08.11.2026). */ ?>
+        <?php if (empty($hesapRehberUstte)): ?>
         <nav class="sinirli alt-bant-baglar alt-bant-konular" aria-label="Gündem dosyaları">
             <a href="<?= e(konu_yolu()) ?>"><strong>Gündem Dosyaları:</strong></a>
             <?php foreach (array_keys(KONULAR) as $altKonu): ?>
                 <a href="<?= e(konu_yolu($altKonu)) ?>"><?= e(konu_basligi($altKonu)) ?></a>
             <?php endforeach; ?>
         </nav>
+        <?php endif; ?>
         <div class="sinirli">
             <span>&copy; <?= date('Y') ?> Valentra — Güncel Haberler</span>
             <span>Haberler, kaynaklarına atıf ve bağlantıyla özet olarak yayımlanır.</span>

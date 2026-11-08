@@ -52,13 +52,14 @@ $bolumAd = $bolum === 'haberler' ? 'Tüm Haberler' : (string) ($b['baslik'] ?? $
 $aktifKategori = gazete_bolum_anahtari($gazete, $bolum);
 $sayfaBasligi  = $onSayfa
     ? $g['ad'] . ' — ' . $g['slogan']
-    : $bolumAd . ' Haberleri — ' . $g['ad'];
+    : $bolumAd . ' Haberleri' . ($sayfa > 1 ? ' — Sayfa ' . $sayfa : '') . ' — ' . $g['ad'];
 $sayfaAciklama = $onSayfa || $bolum === 'haberler' ? $g['aciklama'] : (string) $b['aciklama'];
 $seoAdres      = site_adresi() . gazete_yolu($gazete, $bolum, $sayfa);
 
-if ($sayfa > 1) {
-    $seoRobots = 'noindex, follow';
-}
+// Arsiv sayfalari (2., 3. ...) Google'a acik (08.11.2026, site sahibi:
+// "gercek arsiv sayfalarinin taranabilir baglantilari ve kendilerine ait
+// canonical adresleri olmali"; Google'in sayfalama onerisi). Canonical
+// sayfanin kendisi (sayfa numarasiyla); robots.txt artik ?sayfa= engellemiyor.
 
 /*
  * On sayfa: alti haberlik manset (gazetenin butun basliklarindan), sonra her haber

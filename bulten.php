@@ -102,7 +102,8 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <?php elseif ($durum === 'cok'): ?>
             <p class="uyari uyari-hata">Bu bağlantıdan çok fazla abonelik isteği geldi; bir saat sonra yeniden deneyin.</p>
         <?php endif; ?>
-        <p class="spot">Günün en önemli haberleri, köşe yazısı ve varsa canlı anlatım; her sabah tek bir e-postada.
+        <p class="spot"><strong>Her sabah 5 dakikada gündem ve cebinizi etkileyen gelişmeler.</strong>
+           Günün en önemli haberleri; zam, kira, akaryakıt, faiz ve enflasyondaki değişiklikler, köşe yazısı ve varsa canlı anlatım; her sabah tek bir e-postada.
            Ücretsizdir, reklam içermez, istediğiniz an tek tıkla çıkabilirsiniz.</p>
         <?= bulten_kutu_html('sayfa') ?>
         <p class="ipucu">E-posta adresiniz yalnızca bülten için kullanılır, kimseyle paylaşılmaz.

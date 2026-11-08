@@ -38,11 +38,10 @@ $sayfaBasligi  = $yazar['ad'] . ' — Yazıları' . ($sayfa > 1 ? ' — Sayfa ' 
 $sayfaAciklama = $yazar['ad'] . ': ' . $yazar['tanitim'];
 $seoAdres      = site_adresi() . yazar_yolu($yazar['anahtar'], $sayfa);
 
-// Liste sayfalarinin 2., 3. ... sayfalari Google'a sunulmuyor (26.10.2026):
-// icerikleri haberlerin kendisinde; 'follow' ile baglantilar yine taraniyor.
-if ($sayfa > 1) {
-    $seoRobots = 'noindex, follow';
-}
+// Arsiv sayfalari (2., 3. ...) Google'a acik (08.11.2026, site sahibi:
+// "gercek arsiv sayfalarinin taranabilir baglantilari ve kendilerine ait
+// canonical adresleri olmali"; Google'in sayfalama onerisi). Canonical
+// sayfanin kendisi (sayfa numarasiyla); robots.txt artik ?sayfa= engellemiyor.
 
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>

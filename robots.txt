@@ -15,8 +15,9 @@ Disallow: /egitim/api/
 Disallow: /egitim/materyaller/
 Disallow: /egitim/content/
 
-# Sayfalama ayni haberleri tekrar gosteriyor; asil deger ana sayfada.
-Disallow: /*?sayfa=
+# Sayfalama (?sayfa=) ACIK (08.11.2026): arsivdeki haberlerin kesfi konu
+# ve yazar sayfalarinin 2., 3. ... sayfalarina dayaniyor; her biri kendi
+# canonical adresini tasiyor.
 
 Sitemap: https://valentra.com.tr/sitemap.php
 Sitemap: https://valentra.com.tr/haber-haritasi.php
