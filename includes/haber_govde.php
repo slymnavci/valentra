@@ -83,7 +83,11 @@ foreach (($govdeVeri ?? []) as $ad => $deger) {
         <img src="<?= e(haber_gorsel_kucuk($haber, 960)) ?>" alt="" referrerpolicy="no-referrer"
              <?= isset($_GET['sonraki']) ? 'loading="lazy"' : 'fetchpriority="high"' ?>
              <?php if ($haberSet !== ''): ?>srcset="<?= e($haberSet) ?>" sizes="(max-width: 960px) 100vw, 960px"<?php endif; ?>
-             onerror="this.remove()" style="border-radius:8px;margin-bottom:22px;">
+             onerror="this.remove()" style="border-radius:8px;margin-bottom:<?= trim((string) ($haber['gorsel_atif'] ?? '')) !== '' ? '6' : '22' ?>px;">
+        <?php // Internetten bulunan ozgur lisansli gorselin atfi (bkz. api/gorsel-denetim.php). ?>
+        <?php if (trim((string) ($haber['gorsel_atif'] ?? '')) !== ''): ?>
+            <p class="gorsel-atif"><?= e((string) $haber['gorsel_atif']) ?></p>
+        <?php endif; ?>
     <?php endif; ?>
 
     <?php if ($haber['ozet'] !== ''): ?>

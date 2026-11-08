@@ -404,7 +404,7 @@ function kose_gorselleri(array $yazilar): array
 
     $yer = implode(',', array_fill(0, count($hepsi), '?'));
     $ifade = db()->prepare(
-        'SELECT id, gorsel_url, kaynak_adi FROM haberler
+        'SELECT id, gorsel_url, gorsel_denetim, kaynak_adi FROM haberler
           WHERE id IN (' . $yer . ') AND gorsel_url IS NOT NULL AND gorsel_url <> \'\''
     );
     $ifade->execute($hepsi);

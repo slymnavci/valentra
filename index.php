@@ -13,6 +13,10 @@ require_once __DIR__ . '/includes/sayfa_onbellek.php';
 sayfa_onbellek(['sayfa']);
 require_once __DIR__ . '/includes/kose.php';
 
+// Ana sayfada haber sitesi adi/logosu olan gorsel yok: yalnizca denetimden
+// gecmis gorseller, digerlerinin yerine konu gorseli (bkz. haber_gorsel_denetimli_mi).
+const GORSEL_YALNIZ_DENETLENMIS = true;
+
 $sayfa = max(1, (int) ($_GET['sayfa'] ?? 1));
 
 /*
