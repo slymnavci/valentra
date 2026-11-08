@@ -458,6 +458,13 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
             </span>
         </a>
     <?php endif; ?>
+
+    <?php
+    /* BUYUK MAC CANLI SKORU (08.11.2026; bkz. includes/buyuk_mac.php):
+       Galatasaray, Fenerbahce ya da Besiktas oynarken her sayfanin ustunde. */
+    require_once __DIR__ . '/buyuk_mac.php';
+    echo buyuk_mac_bandi();
+    ?>
 <?php endif; ?>
 
     <main class="sinirli">
