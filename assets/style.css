@@ -4490,6 +4490,27 @@ a.rg-madde:hover { color: var(--vurgu); }
 .olay-listesi li.dep { flex-direction: row-reverse; text-align: right; }
 .olay-listesi .dk { min-width: 42px; color: var(--metin-soluk); font-variant-numeric: tabular-nums; }
 .olay-listesi small { color: var(--metin-soluk); }
+/* Mac kadrolari (08.11.2026; includes/futbol_kadro.php) */
+.olay-listesi .kim small { margin-left: 4px; }
+.kadro-giris { color: #1a7f37; font-weight: 600; white-space: nowrap; }
+.kadro-cikis { color: #c62828; font-weight: 600; white-space: nowrap; }
+.kadro-izgara { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+.kadro-takim h4 { margin: 0 0 6px; font-size: 1rem; }
+.kadro-takim h4 small { font-weight: 600; color: var(--metin-soluk); margin-left: 6px; }
+.kadro-takim h5 { margin: 10px 0 4px; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--metin-soluk); }
+.kadro-liste { list-style: none; margin: 0; padding: 0; font-size: .9rem; }
+.kadro-liste li { display: flex; align-items: center; gap: 6px; padding: 5px 0; border-bottom: 1px solid var(--cizgi); flex-wrap: wrap; }
+.kadro-liste li:last-child { border-bottom: 0; }
+.kadro-liste li.cikti .kadro-ad { color: var(--metin-soluk); }
+.kadro-liste.yedek li:not(.girdi) { color: var(--metin-soluk); }
+.kadro-no { min-width: 26px; text-align: right; font-variant-numeric: tabular-nums; color: var(--metin-soluk); font-size: .82rem; }
+.kadro-ad { font-weight: 600; }
+.kadro-mevki { font-size: .72rem; color: var(--metin-soluk); border: 1px solid var(--cizgi); border-radius: 3px; padding: 0 4px; }
+.kadro-simge { font-size: .85rem; line-height: 1; }
+.kadro-liste .kadro-giris, .kadro-liste .kadro-cikis { font-size: .78rem; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="acik"]) .kadro-giris { color: #5fd17a; } :root:not([data-tema="acik"]) .kadro-cikis { color: #ff7b7b; } }
+:root[data-tema="koyu"] .kadro-giris { color: #5fd17a; }
+:root[data-tema="koyu"] .kadro-cikis { color: #ff7b7b; }
 
 .mac-istatistik td { width: 30%; font-weight: 700; }
 .mac-istatistik th[scope="row"] { font-weight: 500; color: var(--metin-soluk); }

@@ -252,15 +252,20 @@ function futbol_ozet_ayni_oyuncu(array $p, int $id, string $ad): bool
 
 /* ------------------------------------------------------------------ HTML */
 
-/** Mevki kısaltması: G/D/M/F -> Türkçe. */
+/**
+ * Mevki kısaltması. ESPN: G, CB/LB/RB/CD-L (defans), DM/CM-L/LM/RM/AM
+ * (orta saha), F/CF/LW/RW/ST (forvet); yedekler "SUB".
+ */
 function futbol_mevki_kisa(string $m): string
 {
-    return match (strtoupper(substr($m, 0, 1))) {
-        'G'     => 'K',
-        'D'     => 'D',
-        'M'     => 'OS',
-        'F', 'A' => 'F',
-        default => '',
+    $m = strtoupper(trim($m));
+
+    return match (true) {
+        $m === '' || $m === 'SUB'                            => '',
+        $m === 'G' || $m === 'GK'                            => 'K',
+        str_contains($m, 'B') || str_starts_with($m, 'CD') || $m === 'D' => 'D',
+        str_contains($m, 'M')                                => 'OS',
+        default                                              => 'F',
     };
 }
 
