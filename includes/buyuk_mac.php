@@ -2,13 +2,20 @@
 declare(strict_types=1);
 
 /**
- * Büyük maç canlı skoru: Galatasaray, Fenerbahçe ve Beşiktaş.
+ * Canlı skor bandı: Süper Lig'in bütün maçları, Avrupa kupalarında
+ * Galatasaray, Fenerbahçe ve Beşiktaş.
  *
  * Site sahibinin istegi (08.11.2026): "ESPN'den alsin ve skoru versin;
  * gol olunca hemen gostersin." Uc buyuk kulubun maci oynanirken her
  * sayfanin ustunde skor bandi (includes/sayfa_ust.php); bant skoru
  * api/canli-skor.php'den 20 saniyede bir soruyor, gol olunca yanip
  * soner. Mac goruntusu YOK: yayin haklari yayincida.
+ *
+ * Kapsam (site sahibinin istegi, 08.11.2026): "sadece buyuk takimlar
+ * degil, o an oynanan Super Lig maclarinin tamami; Avrupa maclarinda
+ * buyuk kuluplerin maclari". Super Lig'de butun maclar, Avrupa
+ * kupalarinda yalnizca BUYUK_MAC_KULUPLER. Bantta buyuk ucun maci
+ * basta, sonra baslama saatine gore.
  *
  * ESPN'e yuk:
  *   - Gunun fiksturu (ligler x bugun) 30 dakikada bir okunuyor; maci
@@ -70,7 +77,7 @@ function buyuk_maclar(bool $taze = false): array
     foreach (BUYUK_MAC_LIGLER as $lig) {
         foreach ($gunler as $gun) {
             $kayit  = futbol_gun_maclari($lig, $gun, BUYUK_MAC_FIKSTUR);
-            $adaylar = buyuk_mac_adaylari($kayit['veri']['maclar'] ?? [], $simdi);
+            $adaylar = buyuk_mac_adaylari($kayit['veri']['maclar'] ?? [], $simdi, $lig);
 
             if ($adaylar === []) {
                 continue;
@@ -84,7 +91,7 @@ function buyuk_maclar(bool $taze = false): array
 
                 if ($yeni !== null) {
                     $kayit   = $yeni;
-                    $adaylar = buyuk_mac_adaylari($kayit['veri']['maclar'] ?? [], $simdi);
+                    $adaylar = buyuk_mac_adaylari($kayit['veri']['maclar'] ?? [], $simdi, $lig);
                 }
             }
 
@@ -95,28 +102,35 @@ function buyuk_maclar(bool $taze = false): array
     }
 
     $sonuc = array_values($sonuc);
-    usort($sonuc, static fn (array $a, array $b): int => $a['zaman'] <=> $b['zaman']);
+    usort($sonuc, static fn (array $a, array $b): int => [!$a['buyuk'], $a['zaman']] <=> [!$b['buyuk'], $b['zaman']]);
 
     return $sonuc;
 }
 
 /**
- * Büyük üçten birinin oynadığı ve zaman penceresindeki maçlar.
+ * Zaman penceresindeki maçlar: Süper Lig'de hepsi, diğer liglerde büyük
+ * üçten birinin oynadığı.
  *
  * @param list<array<string,mixed>> $maclar
  * @return list<array<string,mixed>>
  */
-function buyuk_mac_adaylari(array $maclar, int $simdi): array
+function buyuk_mac_adaylari(array $maclar, int $simdi, string $lig): array
 {
-    return array_values(array_filter($maclar, static function (array $m) use ($simdi): bool {
+    return array_values(array_filter($maclar, static function (array $m) use ($simdi, $lig): bool {
         $zaman = (int) ($m['zaman'] ?? 0);
 
         return $zaman > 0
             && $simdi >= $zaman - BUYUK_MAC_ONCE
             && $simdi <= $zaman + BUYUK_MAC_SONRA
             && !in_array($m['durum'] ?? '', ['PST', 'CANC', 'ABD'], true)
-            && preg_match(BUYUK_MAC_KULUPLER, ($m['ev'] ?? '') . ' ' . ($m['dep'] ?? '')) === 1;
+            && ($lig === 'tur.1' || buyuk_mac_buyuk_mu($m));
     }));
+}
+
+/** Büyük üçten biri oynuyor mu? */
+function buyuk_mac_buyuk_mu(array $m): bool
+{
+    return preg_match(BUYUK_MAC_KULUPLER, ($m['ev'] ?? '') . ' ' . ($m['dep'] ?? '')) === 1;
 }
 
 /**
@@ -191,6 +205,7 @@ function buyuk_mac_ozeti(array $m, string $lig): array
             default                                  => 'Başlıyor',
         },
         'canli'    => in_array($durum, FUTBOL_CANLI, true),
+        'buyuk'    => buyuk_mac_buyuk_mu($m),
         'lig'      => (string) $m['lig'],
         'ev'       => futbol_kisa_takim((string) $m['ev']),
         'dep'      => futbol_kisa_takim((string) $m['dep']),
@@ -252,7 +267,7 @@ function buyuk_mac_bandi_html(array $maclar): string
         $html .= '<a class="mac-bant-mac' . ($m['canli'] ? ' canli' : '') . '" href="' . e((string) $m['adres']) . '"'
             . ' data-mac="' . (int) $m['id'] . '" data-gol="' . ($oynandi ? (int) $m['ev_gol'] + (int) $m['dep_gol'] : 0) . '"'
             . ' data-golcu="' . e($gol) . '">'
-            . ($m['canli'] ? '<span class="canli-rozet">Canlı</span>' : '<span class="mac-bant-lig">' . e((string) $m['lig']) . '</span>')
+            . ($m['canli'] ? '<span class="mac-bant-nokta" title="Canlı"></span>' : '<span class="mac-bant-lig">' . e((string) $m['lig']) . '</span>')
             . '<span class="mac-bant-takim ev">' . ($m['ev_logo'] !== '' ? '<img src="' . e((string) $m['ev_logo']) . '" alt="" width="20" height="20" loading="lazy">' : '')
             . e((string) $m['ev']) . '</span>'
             . '<b class="mac-bant-skor' . ($oynandi ? '' : ' oynanmadi') . '">' . e($skor) . '</b>'

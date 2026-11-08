@@ -6574,11 +6574,16 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 
 /* --- Buyuk mac canli skor bandi (08.11.2026; includes/buyuk_mac.php) --- */
 .mac-bant { background: color-mix(in srgb, #0b7a3b 8%, var(--kart)); border-bottom: 1px solid color-mix(in srgb, #0b7a3b 28%, var(--cizgi)); }
-.mac-bant-ic { display: flex; flex-wrap: wrap; gap: 6px 22px; padding-top: 8px; padding-bottom: 8px; }
+/* Super Lig haftasinda 9 mac ayni anda: tek satir, yana kayan serit. */
+.mac-bant-ic {
+    display: flex; flex-wrap: nowrap; gap: 8px; padding-top: 7px; padding-bottom: 7px;
+    overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: thin; -webkit-overflow-scrolling: touch;
+}
 .mac-bant-mac {
-    display: flex; align-items: center; gap: 10px; min-width: 0; padding: 4px 10px; margin: 0 -10px;
+    display: flex; flex: 0 0 auto; align-items: center; gap: 9px; padding: 4px 10px; scroll-snap-align: start;
     border-radius: 8px; color: var(--metin); text-decoration: none; font-weight: 700;
 }
+.mac-bant-mac + .mac-bant-mac { border-left: 1px solid color-mix(in srgb, #0b7a3b 22%, var(--cizgi)); border-radius: 0 8px 8px 0; }
 .mac-bant-mac:hover { background: color-mix(in srgb, #0b7a3b 10%, transparent); }
 .mac-bant-takim { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .mac-bant-takim img { width: 20px; height: 20px; object-fit: contain; }
@@ -6587,6 +6592,7 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
     font-variant-numeric: tabular-nums; font-size: 1.02rem;
 }
 .mac-bant-skor.oynanmadi { background: transparent; color: var(--metin-soluk); border: 1px solid var(--cizgi); font-size: .9rem; }
+.mac-bant-nokta { width: 9px; height: 9px; flex: 0 0 9px; border-radius: 50%; background: #d50000; animation: canli-nabiz 1.4s ease-in-out infinite; }
 .mac-bant-lig { color: var(--metin-soluk); font-size: .76rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .mac-bant-durum { color: #0b7a3b; font-size: .86rem; font-weight: 800; white-space: nowrap; }
 .mac-bant-mac.canli .mac-bant-durum { color: #c40000; }
@@ -6598,6 +6604,7 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 @media (prefers-reduced-motion: reduce) { .mac-bant-mac.gol-oldu { animation: none; background: color-mix(in srgb, #d50000 14%, transparent); } }
 @media (max-width: 560px) {
     .mac-bant-lig { display: none; }
-    .mac-bant-mac { gap: 7px; font-size: .9rem; flex-wrap: wrap; }
-    .mac-bant-takim img { width: 16px; height: 16px; }
+    .mac-bant-mac { gap: 6px; font-size: .86rem; padding: 3px 8px; }
+    .mac-bant-takim img { display: none; }
+    .mac-bant-skor { min-width: 44px; font-size: .92rem; padding: 1px 6px; }
 }
