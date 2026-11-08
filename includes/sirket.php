@@ -148,8 +148,8 @@ function sirket_seri_tanimi(string $donem): array
  * secili donem; ustune BIST 100'un 10 yili). Sirayla cekildiginde
  * paylasimli sunucudan her biri 1-3 saniye surdugu icin sayfa 10-15
  * saniyede aciliyordu ve "sirket analizi calismiyor" diye gorunuyordu
- * (23.10.2026). Burada bayat ya da hic olmayan seriler tek seferde
- * paralel indiriliyor; ardindan sirket_seri() her birini onbellekten
+ * (23.10.2026). Burada hic olmayan seriler tek seferde paralel
+ * indiriliyor (bayatlar sayfadan sonra; bkz. asagidaki not); ardindan sirket_seri() her birini onbellekten
  * buluyor. Deneme araligi (canli_deneme_izni) aynen gecerli; indirilemeyen
  * seri eskisi gibi "alinamadi" olur.
  *
@@ -164,8 +164,16 @@ function sirket_serileri_hazirla(array $istenen): void
         $anahtar = 'sirket_' . $kod . '_' . $tanim['aralik'];
         $kayit   = canli_onbellek_oku($anahtar);
 
+        /*
+         * Yalnizca HIC verisi olmayan seri burada (ziyaretci beklerken)
+         * indiriliyor. Bayat seri sirket_seri() -> canli_onbellek ile eski
+         * veriyle gosteriliyor, sayfa gonderildikten sonra tazeleniyor
+         * (canli_sonra_tazele). Onceden bayat seriler de burada bekletiliyordu;
+         * Yahoo yavas oldugunda sayfa 8 saniyede acildi (Google denetimi,
+         * /sirket/EKGYO 8,11 sn, 08.11.2026).
+         */
         if (isset($adresler[$anahtar])
-            || ($kayit !== null && time() - $kayit['zaman'] < $tanim['sure'])
+            || $kayit !== null
             || !canli_deneme_izni($anahtar)) {
             continue;
         }
