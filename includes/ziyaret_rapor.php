@@ -429,7 +429,9 @@ function zr_kanal_ifadesi(string $t = 'z'): string
     $yz     = $alan(['chatgpt\\.com', 'chat\\.openai\\.com', 'openai\\.com', 'perplexity\\.ai', 'gemini\\.google\\.com',
                      'copilot\\.microsoft\\.com', 'claude\\.ai', 'chat\\.deepseek\\.com', 'deepseek\\.com', 'you\\.com']);
     $eposta = $alan(['mail\\.google\\.com', 'outlook\\.live\\.com', 'outlook\\.office\\.com', 'outlook\\.office365\\.com',
-                     'mail\\.yahoo\\.com', 'mail\\.yandex\\.com\\.tr', 'mail\\.yandex\\.ru', 'mail\\.ru', 'webmail\\.[a-z.]+']);
+                     'mail\\.yahoo\\.com', 'mail\\.yandex\\.com\\.tr', 'mail\\.yandex\\.ru', 'mail\\.ru', 'webmail\\.[a-z.]+',
+                     // Android Gmail uygulamasi (android-app://com.google.android.gm).
+                     'com\\.google\\.android\\.gm']);
     $arama  = $alan(['google\\.[a-z.]+', 'bing\\.com', 'yandex\\.[a-z.]+', 'duckduckgo\\.com', 'yahoo\\.com', 'search\\.yahoo\\.com',
                      'ecosia\\.org', 'search\\.brave\\.com', 'qwant\\.com', 'baidu\\.com', 'yaani\\.com', 'startpage\\.com',
                      'googleapis\\.com', 'msn\\.com', 'search\\.aol\\.com']);
@@ -441,8 +443,18 @@ function zr_kanal_ifadesi(string $t = 'z'): string
     $p = $t . '.';
     $kampanya = ziyaret_yeni_sema() ? 'WHEN ' . $p . "kampanya <> '' THEN 'kampanya' " : '';
 
+    /*
+     * Google uygulamasi ve Discover (07.11.2026, site sahibi: "Google'dan
+     * gelen 23 normal mi"). Bu uygulamadan acilan haber cogu zaman
+     * yonlendiren adresi gondermiyor ve "dogrudan" sayiliyordu. Tarayici
+     * kimligi Google uygulamasiysa (bkz. ziyaret_ua_coz) arama/Google.
+     */
+    $googleUyg = ziyaret_yeni_sema()
+        ? 'WHEN ' . $p . "yonlendiren = '' AND " . $p . "tarayici = 'Google' THEN 'arama' " : '';
+
     return '(CASE ' . $kampanya
         . 'WHEN ' . $p . "yonlendiren = '" . ZIYARET_IC_GECIS . "' THEN 'ic' "
+        . $googleUyg
         . 'WHEN ' . $p . "yonlendiren = '' THEN 'dogrudan' "
         . 'WHEN ' . $p . 'yonlendiren REGEXP ' . $yz . " THEN 'yz' "
         . 'WHEN ' . $p . 'yonlendiren REGEXP ' . $eposta . " THEN 'eposta' "
@@ -737,7 +749,18 @@ function zr_kaynak_gruplari(): array
 /** Google'dan gelen satır mı (SQL; kanal ifadesi "arama" iken). */
 function zr_google_kosulu(string $t = 'z'): string
 {
-    return $t . '.yonlendiren REGEXP ' . db()->quote('^([a-z0-9-]+\\.)*google\\.[a-z.]+$');
+    /*
+     * google.com.tr, news.google.com, Android Google uygulamasi
+     * (com.google.android.googlequicksearchbox) ve googleapis.com; ayrica
+     * yonlendireni bos gelen Google uygulamasi ziyaretleri (07.11.2026).
+     */
+    $kosul = $t . '.yonlendiren REGEXP ' . db()->quote('^([a-z0-9-]+\\.)*(google\\.[a-z.]+|googleapis\\.com)$');
+
+    if (ziyaret_yeni_sema()) {
+        $kosul = '(' . $kosul . ' OR (' . $t . ".yonlendiren = '' AND " . $t . ".tarayici = 'Google'))";
+    }
+
+    return $kosul;
 }
 
 /** Satırın gösterge kaynak grubu (SQL CASE). */

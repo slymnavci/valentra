@@ -1880,6 +1880,90 @@ function haber_durum_degistir(int $id, string $durum): bool
     return $ifade->rowCount() > 0;
 }
 
+/*
+ * AYNI BASLIKLI HABERLER (07.11.2026; Google denetimi: "3 baslik birden
+ * fazla haberde"). Ayni baslik Google'da kopya sayfa gibi gorunuyor.
+ * Ajan ayni basligi ikinci kez eklemiyor (haber_kopya_bul), ama baslik
+ * sonradan kisaltilinca (api/baslik-denetim.php) iki farkli gunun haberi
+ * ayni basliga dusebiliyor ("Altin fiyatlari yukseliste" gibi). Sonraki
+ * habere gunu ekleniyor: "... (7 Kasım)"; o da varsa saat. Adres (slug)
+ * degismiyor.
+ */
+const HABER_AYLAR = [1 => 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
+/** Başlık başka bir haberde (reddedilenler hariç) kullanılıyor mu. */
+function haber_baslik_kullaniliyor(string $baslik, int $haricId): bool
+{
+    $ifade = db()->prepare(
+        'SELECT 1 FROM haberler WHERE baslik = :b AND id <> :id AND durum <> :r LIMIT 1'
+    );
+    $ifade->execute(['b' => $baslik, 'id' => $haricId, 'r' => HABER_REDDEDILDI]);
+
+    return $ifade->fetchColumn() !== false;
+}
+
+/** Başlık başka haberde varsa gününü (gerekirse saatini) ekleyerek ayırır. */
+function haber_baslik_ayirt(string $baslik, int $haricId, ?string $tarih): string
+{
+    if ($baslik === '' || !haber_baslik_kullaniliyor($baslik, $haricId)) {
+        return $baslik;
+    }
+
+    $an  = strtotime((string) $tarih) ?: time();
+    $gun = (int) date('j', $an) . ' ' . HABER_AYLAR[(int) date('n', $an)];
+
+    foreach ([$baslik . ' (' . $gun . ')', $baslik . ' (' . $gun . ', ' . date('H.i', $an) . ')'] as $aday) {
+        if (!haber_baslik_kullaniliyor($aday, $haricId)) {
+            return $aday;
+        }
+    }
+
+    return $baslik . ' (' . $haricId . ')';
+}
+
+/**
+ * Google'a sunulan yayındaki haberlerde aynı başlıklıları ayırır: en eski
+ * başlığını korur, sonrakilere gün eklenir. Google denetimi çağırıyor.
+ *
+ * @return list<array{id:int,eski:string,yeni:string}>
+ */
+function haber_ayni_basliklari_ayir(int $enFazla = 50): array
+{
+    $satirlar = db()->query(
+        "SELECT h.id, h.baslik, COALESCE(h.yayin_tarihi, h.olusturuldu) AS tarih
+           FROM haberler h
+           JOIN (SELECT baslik FROM haberler
+                  WHERE durum = 'yayinda' AND " . haber_dizinlenir_kosulu() . "
+                  GROUP BY baslik HAVING COUNT(*) > 1) k ON k.baslik = h.baslik
+          WHERE h.durum = 'yayinda'
+          ORDER BY h.baslik, COALESCE(h.yayin_tarihi, h.olusturuldu), h.id
+          LIMIT " . max(1, min(500, $enFazla * 3))
+    )->fetchAll();
+
+    $duzelt = db()->prepare('UPDATE haberler SET baslik = :b WHERE id = :id');
+    $gorulen = [];
+    $yapilan = [];
+
+    foreach ($satirlar as $s) {
+        $baslik = (string) $s['baslik'];
+
+        // Her baslikta ilk (en eski) haber oldugu gibi kaliyor.
+        if (!isset($gorulen[$baslik])) {
+            $gorulen[$baslik] = true;
+            continue;
+        }
+
+        $yeni = haber_baslik_ayirt($baslik, (int) $s['id'], (string) $s['tarih']);
+
+        if ($yeni !== $baslik && count($yapilan) < $enFazla) {
+            $duzelt->execute(['b' => mb_substr($yeni, 0, 300, 'UTF-8'), 'id' => (int) $s['id']]);
+            $yapilan[] = ['id' => (int) $s['id'], 'eski' => $baslik, 'yeni' => $yeni];
+        }
+    }
+
+    return $yapilan;
+}
+
 /**
  * Yonetici duzenlemesi.
  */
@@ -2611,61 +2695,6 @@ function haber_dizinlenir_kosulu(string $takma = ''): string
     }
 
     return $kosul;
-}
-
-/**
- * Ayni basligi tasiyan yayindaki haberler (08.11.2026, Google tam
- * denetimi "Ayni baslikli haberler" uyarisi).
- *
- * Basliklarin Turkce denetimi (api/baslik-denetim.php) iki farkli
- * haberin basligini ayni cumleye cevirebiliyordu; Google bunlari kopya
- * sayfa sayiyor. Her grupta ilk yayimlanan haber basligini koruyor;
- * sonrakilerden basligi denetimle degismis olanlar eski basligina
- * donuyor (o da baska haberde yoksa). Geri donulemeyenler elle ayrilsin
- * diye listede kaliyor.
- *
- * @return array{duzeltilen:int,kalan:list<array{baslik:string,idler:list<int>}>}
- */
-function haber_kopya_basliklari_ayir(): array
-{
-    $gruplar = db()->query(
-        "SELECT baslik, GROUP_CONCAT(id ORDER BY id) AS idler
-           FROM haberler
-          WHERE durum = 'yayinda' AND " . haber_dizinlenir_kosulu() . "
-          GROUP BY baslik HAVING COUNT(*) > 1
-          LIMIT 100"
-    )->fetchAll();
-
-    $eskiOku = db()->prepare('SELECT eski_baslik FROM haberler WHERE id = :id');
-    $varMi   = db()->prepare("SELECT COUNT(*) FROM haberler WHERE durum = 'yayinda' AND baslik = :b");
-    $dondur  = db()->prepare("UPDATE haberler SET baslik = eski_baslik, eski_baslik = '' WHERE id = :id");
-    $duzeltilen = 0;
-    $kalan = [];
-
-    foreach ($gruplar as $g) {
-        $idler = array_map('intval', explode(',', (string) $g['idler']));
-        $kalanIdler = [$idler[0]];
-
-        foreach (array_slice($idler, 1) as $id) {
-            $eskiOku->execute(['id' => $id]);
-            $eski = trim((string) $eskiOku->fetchColumn());
-            $varMi->execute(['b' => $eski]);
-
-            if ($eski !== '' && $eski !== (string) $g['baslik'] && (int) $varMi->fetchColumn() === 0) {
-                $dondur->execute(['id' => $id]);
-                $duzeltilen += $dondur->rowCount();
-                continue;
-            }
-
-            $kalanIdler[] = $id;
-        }
-
-        if (count($kalanIdler) > 1) {
-            $kalan[] = ['baslik' => (string) $g['baslik'], 'idler' => $kalanIdler];
-        }
-    }
-
-    return ['duzeltilen' => $duzeltilen, 'kalan' => $kalan];
 }
 
 /* ------------------------------------------------------------------ *

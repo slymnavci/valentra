@@ -266,6 +266,10 @@ function ziyaret_ua_coz(string $ua): array
     $tarayici = match (true) {
         str_contains($k, 'fban') || str_contains($k, 'fbav') => 'Facebook',
         str_contains($k, 'instagram') => 'Instagram',
+        // Google uygulamasi (Discover akisi dahil); kimliginde "GSA/" var
+        // (07.11.2026). Bkz. zr_kanal_ifadesi: yonlendireni bos olsa da
+        // Google'dan gelmis sayiliyor.
+        str_contains($k, ' gsa/') || str_contains($k, '(gsa') => 'Google',
         str_contains($k, 'edg/') || str_contains($k, 'edga/') || str_contains($k, 'edgios/') => 'Edge',
         str_contains($k, 'opr/') || str_contains($k, 'opera') => 'Opera',
         str_contains($k, 'samsungbrowser') => 'Samsung',

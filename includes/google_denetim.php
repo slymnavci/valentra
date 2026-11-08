@@ -693,22 +693,23 @@ function google_denetimi(int $sureButcesi = 80): array
                     SUM(" . haber_dizinlenir_kosulu() . " AND TRIM(ozet) = '') AS ozetsiz
                FROM haberler WHERE durum = 'yayinda'"
         )->fetch();
-        // Basligi denetimde ayniye donmus haberler once eski basligina
-        // donuyor; kalanlar haber numarasiyla yaziliyor (08.11.2026).
-        $ayir  = haber_kopya_basliklari_ayir();
-        $kopya = count($ayir['kalan']);
-        $kopyaOrnek = implode('; ', array_map(
-            static fn (array $k): string => '"' . kisalt($k['baslik'], 70) . '" (haber no ' . implode(', ', $k['idler']) . ')',
-            array_slice($ayir['kalan'], 0, 5)
-        ));
+        // Once ayir (07.11.2026): denetim sonucu hemen duzelir.
+        $ayrilan = haber_ayni_basliklari_ayir();
+
+        foreach ($ayrilan as $a) {
+            $ekle('İçerik', 'Aynı başlık ayrıldı', 'tamam', '#' . $a['id'] . ': "' . $a['eski'] . '" → "' . $a['yeni'] . '"');
+        }
+
+        $kopya = (int) db()->query(
+            "SELECT COUNT(*) FROM (SELECT baslik FROM haberler WHERE durum = 'yayinda' AND " . haber_dizinlenir_kosulu()
+            . " GROUP BY baslik HAVING COUNT(*) > 1) t"
+        )->fetchColumn();
 
         $ekle('İçerik', 'Yayındaki haberler', 'bilgi',
             (int) $s['toplam'] . ' haber; Google\'a sunulan ' . (int) $s['dizinlenir'] . ', sunulmayan (kısa ya da tek kaynağın özeti; okuyucuya açık) '
             . ((int) $s['toplam'] - (int) $s['dizinlenir']));
-        $ekle('İçerik', 'Aynı başlıklı haberler (Google\'a sunulanlar)', $kopya === 0 ? 'tamam' : 'uyari',
-            ($kopya === 0 ? 'Her haberin başlığı farklı' : $kopya . ' başlık birden fazla haberde: ' . $kopyaOrnek)
-            . ($ayir['duzeltilen'] > 0 ? '; ' . $ayir['duzeltilen'] . ' haber eski başlığına döndürüldü' : ''),
-            $kopya === 0 ? '' : 'Haberi panelde /admin/duzenle.php?id=NUMARA adresiyle açın; sonraki haberin başlığını değiştirin ya da aynı olayın ikinci haberiyse yayından kaldırın.');
+        $ekle('İçerik', 'Aynı başlıklı haberler (Google\'a sunulanlar)', $kopya === 0 ? 'tamam' : 'uyari', $kopya . ' başlık birden fazla haberde',
+            $kopya === 0 ? '' : 'Aynı başlık Google\'da kopya sayfa gibi görünür; başlıkları ayırın ya da birini kaldırın.');
         $ekle('İçerik', 'Görselsiz / özetsiz haber (Google\'a sunulanlar)', ((int) $s['gorselsiz'] + (int) $s['ozetsiz']) === 0 ? 'tamam' : 'uyari',
             (int) $s['gorselsiz'] . ' görselsiz, ' . (int) $s['ozetsiz'] . ' özetsiz',
             ((int) $s['gorselsiz'] + (int) $s['ozetsiz']) === 0 ? '' : 'Discover ve Haberler görselsiz haberi göstermez; özet arama sonucundaki açıklamadır.');
