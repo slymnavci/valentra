@@ -145,12 +145,13 @@ final class Derleyici
           "- " ile başlar. Başka biçimlendirme YOK: kalın, italik,
           bağlantı, tablo, emoji kullanma.
 
-        BAŞLIK — KISA, VURUCU, MERAK UYANDIRAN (site sahibinin kararı,
-        03.11.2026; okur habere tıklasın, ayrıntı içeride):
-        - En fazla 60 karakter, ideali 6-8 kelime. Kim ne yaptı / ne oldu,
-          net ve canlı. En çarpıcı ayrıntıyı (rakam, sonuç) başlıkta
-          vermek ŞART DEĞİL; habere bırakabilirsin. Örnek: "TÜİK ekim
-          enflasyonunu açıkladı", "Fed'den sürpriz faiz hamlesi".
+        BAŞLIK — NET, SOMUT, MERAK UYANDIRAN (site sahibinin kararı,
+        08.11.2026: "orta yol"):
+        - En fazla 80 karakter, ideali 8-11 kelime. Kim ne yaptı / ne
+          oldu, net ve canlı. Derlemenin EN ÖNEMLİ somut bilgisini (rakam,
+          oran, tarih) ya da okura doğrudan etkisini başlığa koy. Örnek:
+          "TÜİK: Ekim enflasyonu yüzde 2,8, yıllık yüzde 32", "Emekli
+          aylığında yeni model masada: üç senaryo ve takvim".
         - Hiçbir kaynağın başlığını kopyalama ya da çevirme.
         - Merak, metinde KARŞILIĞI OLAN bilgiyle giderilmeli: yanıltmaz,
           abartmaz, metinde olmayanı vaat etmez. Kişi ya da kurum hakkında
@@ -221,7 +222,7 @@ final class Derleyici
                     'type' => 'object',
                     'properties' => [
                         'sira'          => ['type' => 'integer', 'description' => 'Her zaman 1'],
-                        'baslik'        => ['type' => 'string',  'description' => 'Başlık: kısa, vurucu, merak uyandıran; en fazla 60 karakter, ayrıntı metinde, yanıltıcı değil'],
+                        'baslik'        => ['type' => 'string',  'description' => 'Başlık: net, somut, merak uyandıran; en fazla 80 karakter; varsa ana rakam ya da okura etkisi başlıkta; yanıltıcı değil'],
                         'ozet'          => ['type' => 'string',  'description' => 'Spot: haberin özü, 1-2 cümle, en fazla 240 karakter'],
                         'icerik'        => ['type' => 'string',  'description' => '450-900 kelime; paragraflar boş satırla, ara başlıklar "## " ile'],
                         'neden_onemli'  => ['type' => 'string',  'description' => 'Okuyucu için anlamı, 2-3 cümle'],

@@ -203,6 +203,13 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         <priority>0.8</priority>
     </url>
 
+    <?php require_once __DIR__ . '/includes/kelime_oyunu.php'; ?>
+    <url>
+        <loc><?= e($taban . kelime_oyunu_yolu()) ?></loc>
+        <changefreq>daily</changefreq>
+        <priority>0.5</priority>
+    </url>
+
     <url>
         <loc><?= e($taban . piyasalar_yolu()) ?></loc>
         <changefreq>hourly</changefreq>
