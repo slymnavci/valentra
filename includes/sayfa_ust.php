@@ -124,7 +124,12 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
     <?php /* Yapisal veri: arama motoruna sayfanin ne oldugunu acikca
              soyler. Haber siteleri icin belirleyici — haber olarak
              taninmayan sayfa Haberler sekmesine hic girmez. */ ?>
-    <script type="application/ld+json"><?= $seoSema ?></script>
+    <?php
+    // Sema icindeki metin (kaynak basliklari, SSS) "</script>" ile betigi
+    // kapatamasin. JSON'da < > & yalnizca dizgi icinde gecebilir; \u003c
+    // bicimi gecerli JSON, anlam degismiyor.
+    ?>
+    <script type="application/ld+json"><?= str_replace(['<', '>', '&'], ['\u003c', '\u003e', '\u0026'], (string) $seoSema) ?></script>
 
     <?php /* Google Analytics ve AdSense (panelden; bos ise hicbir sey yok). */ ?>
     <?php require_once __DIR__ . '/olcum_reklam.php'; ?>
