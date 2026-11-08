@@ -68,7 +68,7 @@ $veri = json_decode((string) file_get_contents('php://input'), true);
 
 $oku      = db()->prepare('SELECT baslik FROM haberler WHERE id = :id');
 $duzelt   = db()->prepare('UPDATE haberler SET eski_baslik = baslik, baslik = :b, baslik_denetlendi = NOW() WHERE id = :id');
-$isaretle = db()->prepare('UPDATE haberler SET baslik_denetlendi = NOW() WHERE id = :id');
+$isaretle = db()->prepare('UPDATE haberler SET baslik_denetlendi = NOW(), guncellendi = guncellendi WHERE id = :id');
 $duzeltilen = 0;
 
 require_once __DIR__ . '/../includes/adres.php';

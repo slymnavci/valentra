@@ -2619,3 +2619,22 @@ UPDATE haberler SET durum = 'reddedildi'
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_dw_video_kapali_2026_11_04');
 INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_dw_video_kapali_2026_11_04', '04.11.2026');
 
+
+-- ---------------------------------------------------------------------------
+-- Haberlerin "guncellendi" zamani sifirlaniyor (08.11.2026).
+--
+-- Sutun ON UPDATE CURRENT_TIMESTAMP tasiyor; sitenin teknik isleri (Google
+-- kotasi dagitimi -- her site haritasi isteginde --, parmak izi, sehir,
+-- onay, one cikarma, tarih denetimi) onu da ileri atiyordu. Sonuc: site
+-- haritasinda eski haberlerin hepsi her gun "degisti" gorunuyor (Google
+-- lastmod'a guvenmeyi birakiyor, yeni haberi one alamiyor) ve haber
+-- sayfasinda okura gercekte olmayan bir "Guncelleme" yaziliyordu. Teknik
+-- isler artik sutunu koruyor (guncellendi = guncellendi); bugune kadar
+-- bozulmus degerler yayin zamanina cekiliyor. Panelde elle yapilmis
+-- duzeltmelerin zamani da bu arada siliniyor; ayirt etmenin yolu yok.
+-- Tek seferlik.
+-- ---------------------------------------------------------------------------
+UPDATE haberler SET guncellendi = yayin_tarihi
+ WHERE yayin_tarihi IS NOT NULL AND guncellendi > yayin_tarihi + INTERVAL 1 MINUTE
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_guncellendi_sifirla_2026_11_08');
+INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_guncellendi_sifirla_2026_11_08', '08.11.2026');

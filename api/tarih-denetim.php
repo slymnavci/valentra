@@ -60,11 +60,11 @@ $veri = json_decode((string) file_get_contents('php://input'), true);
 // dilimi bilinmiyor. Gelecek ya da bir yildan eski zaman yok sayiliyor.
 $duzelt = db()->prepare(
     'UPDATE haberler
-        SET kaynak_tarihi = NOW() - INTERVAL :gecikme MINUTE
+        SET kaynak_tarihi = NOW() - INTERVAL :gecikme MINUTE, guncellendi = guncellendi
       WHERE id = :id
         AND (kaynak_tarihi IS NULL OR kaynak_tarihi > NOW() - INTERVAL :gecikme2 MINUTE)'
 );
-$isaretle = db()->prepare('UPDATE haberler SET tarih_denetlendi = NOW() WHERE id = :id');
+$isaretle = db()->prepare('UPDATE haberler SET tarih_denetlendi = NOW(), guncellendi = guncellendi WHERE id = :id');
 
 $duzeltilen = 0;
 
