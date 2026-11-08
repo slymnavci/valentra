@@ -26,7 +26,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/ayarlar.php';
 
 /** Bir istekte ilk acilis cekimlerine ayrilan sure (saniye). */
-const CANLI_ESZAMANLI_BUTCE = 6.0;
+const CANLI_ESZAMANLI_BUTCE = 3.0;
 
 /** Ayni anahtar icin iki deneme arasi en az bu kadar saniye. */
 const CANLI_DENEME_ARALIGI = 60;
@@ -64,12 +64,23 @@ function canli_onbellek(string $anahtar, int $sure, callable $uret): array
         return $kayit;
     }
 
+    // Daha once denenip hic veri alinamamis seri (08.11.2026, tam denetim:
+    // /valpapel/kripto 8,9 sn): ilk acilis bekletmesi yalnizca ilk denemede;
+    // kaynak o seriyi vermiyorsa her dakika bir ziyaretci beklemesin.
+    $oncedenDenendi = $kayit === null && canli_son_deneme($anahtar) > 0;
+
     if (!canli_deneme_izni($anahtar)) {
         return $kayit ?? ['veri' => null, 'zaman' => 0];
     }
 
-    if ($kayit === null && canli_butce_var()) {
-        return canli_onbellek_uret($anahtar, $uret) ?? ['veri' => null, 'zaman' => 0];
+    if ($kayit === null && !$oncedenDenendi && canli_butce_var()) {
+        canli_esz_kip(true);
+
+        try {
+            return canli_onbellek_uret($anahtar, $uret) ?? ['veri' => null, 'zaman' => 0];
+        } finally {
+            canli_esz_kip(false);
+        }
     }
 
     canli_sonra_tazele($anahtar, $uret);
@@ -191,6 +202,41 @@ function canli_deneme_izni(string $anahtar): bool
     return true;
 }
 
+/** Bu anahtar için son denemenin zamanı (0: hiç denenmemiş). */
+function canli_son_deneme(string $anahtar): int
+{
+    try {
+        return (int) ayar_oku('canli_deneme_' . $anahtar, '0');
+    } catch (Throwable $e) {
+        return 0;
+    }
+}
+
+/**
+ * Ziyaretciyi bekleten (ilk acilis) cekim kipi: argumanla acilir/kapanir.
+ * Acikken canli_indir zaman asimini kalan butceyle sinirliyor; yoksa butce
+ * yalnizca cekim baslarken bakiliyor, 8 sn'lik zaman asimi sayfayi 6+8 sn
+ * bekletebiliyordu.
+ */
+function canli_esz_kip(?bool $ac = null): bool
+{
+    static $acik = false;
+
+    if ($ac !== null) {
+        $acik = $ac;
+    }
+
+    return $acik;
+}
+
+/** İlk açılış bütçesinden kalan saniye. */
+function canli_butce_kalan(): float
+{
+    $baslangic = (float) ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true));
+
+    return CANLI_ESZAMANLI_BUTCE - (microtime(true) - $baslangic);
+}
+
 /** İlk açılış çekimleri için süre kaldı mı? */
 function canli_butce_var(): bool
 {
@@ -232,6 +278,16 @@ function canli_indir(string $url, int $zamanAsimi = 8): ?string
 {
     require_once __DIR__ . '/http_ortak.php';
 
+    if (canli_esz_kip()) {
+        $kalan = canli_butce_kalan();
+
+        if ($kalan < 0.5) {
+            return null;
+        }
+
+        $zamanAsimi = max(1, min($zamanAsimi, (int) ceil($kalan)));
+    }
+
     $sonuc = http_getir($url, $zamanAsimi);
 
     return $sonuc['tamam'] ? (string) $sonuc['govde'] : null;
@@ -247,6 +303,10 @@ function canli_indir(string $url, int $zamanAsimi = 8): ?string
 function canli_coklu_indir(array $adresler, int $zamanAsimi = 8): array
 {
     require_once __DIR__ . '/http_ortak.php';
+
+    if (canli_esz_kip()) {
+        $zamanAsimi = max(1, min($zamanAsimi, (int) ceil(max(0.0, canli_butce_kalan()))));
+    }
 
     $coklu   = curl_multi_init();
     $tutamac = [];

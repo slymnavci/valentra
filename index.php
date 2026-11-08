@@ -86,6 +86,16 @@ if ($sayfa > 1) {
     $seoRobots = 'noindex, follow';
 }
 
+// Ilk manset gorseli <head>'de onceden isteniyor (bkz. includes/sayfa_ust.php);
+// adresler includes/kaydirak.php'deki ilk slaytla ayni.
+if (isset($mansetler[0]) && haber_gorsel($mansetler[0]) !== '') {
+    $lcpGorsel = [
+        'src'    => haber_gorsel_kucuk($mansetler[0], 960),
+        'srcset' => haber_gorsel_srcset($mansetler[0], [480, 960, 1440]),
+        'sizes'  => '(min-width: 1400px) calc(100vw - 780px), calc(100vw - 48px)',
+    ];
+}
+
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
 

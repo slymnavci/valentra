@@ -125,6 +125,16 @@ if ($haberGorseli !== '') {
  */
 $govdeSinifi = 'okuma';
 
+// Haber gorseli <head>'de onceden isteniyor (bkz. includes/sayfa_ust.php);
+// adresler includes/haber_govde.php'dekiyle ayni.
+if ($haberGorseli !== '' && !isset($_GET['sonraki'])) {
+    $lcpGorsel = [
+        'src'    => haber_gorsel_kucuk($haber, 960),
+        'srcset' => haber_gorsel_srcset($haber),
+        'sizes'  => '(max-width: 960px) 100vw, 960px',
+    ];
+}
+
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
 
