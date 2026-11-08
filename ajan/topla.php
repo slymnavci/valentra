@@ -46,7 +46,7 @@ require_once __DIR__ . '/src/SemaliIstemci.php';
 require_once __DIR__ . '/src/Yazar.php';
 require_once __DIR__ . '/src/Bildirim.php';
 
-use Valentra\Ajan\{Besleme, Bildirim, Depo, Getirici, HaberAkisi, Http, Kazima, KotaBittiException, ModelErisimYokException, ResmiGazete, Sayfa, Site, TohumYapilandirma, Yazar};
+use Valentra\Ajan\{Besleme, Bildirim, Depo, Getirici, Gundem, HaberAkisi, Http, Kazima, KotaBittiException, ModelErisimYokException, ResmiGazete, Sayfa, Site, TohumYapilandirma, Yazar};
 
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
