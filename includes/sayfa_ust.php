@@ -414,8 +414,8 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
      * KAYAN SON DAKIKA SERIDI (site sahibinin istegi, 24.10.2026: "en
      * ustte de kayan son dakika haberleri gecsin"; 30.10.2026: "son
      * dakikayi asagiya alalim": artik logo ve menunun altinda). Kaynakta bugun
-     * yayimlanmis en yeni haberler; liste iki kez basiliyor ki kayma
-     * kesintisiz donsun (ikinci kopya ekran okuyucudan gizli). Uzerine
+     * yayimlanmis en yeni haberler; kayma kesintisiz donsun diye listenin
+     * ikinci kopyasini tarayici ekliyor (ekran okuyucudan gizli). Uzerine
      * gelince ya da odaklaninca duruyor; hareket azaltma tercihinde
      * kaymiyor, yatay kaydirilabiliyor.
      */
@@ -426,18 +426,21 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
             <div class="sinirli sd-satir">
                 <span class="sd-etiket">Son Dakika</span>
                 <div class="sd-pencere">
-                    <div class="sd-akis" style="--sure: <?= max(30, count($sonDakikaSeridi) * 7) ?>s">
-                        <?php foreach ([false, true] as $kopya): ?>
-                            <ul class="sd-liste" <?= $kopya ? 'aria-hidden="true"' : '' ?>>
-                                <?php foreach ($sonDakikaSeridi as $sd): ?>
-                                    <li>
-                                        <span class="sd-saat"><?= e($sd['zaman']) ?></span>
-                                        <a href="<?= e(haber_yolu($sd['slug'])) ?>" <?= $kopya ? 'tabindex="-1"' : '' ?>><?= e($sd['baslik']) ?></a>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ul>
-                        <?php endforeach; ?>
+                    <div class="sd-akis" id="sdAkis" style="--sure: <?= max(30, count($sonDakikaSeridi) * 7) ?>s">
+                        <ul class="sd-liste">
+                            <?php foreach ($sonDakikaSeridi as $sd): ?>
+                                <li>
+                                    <span class="sd-saat"><?= e($sd['zaman']) ?></span>
+                                    <a href="<?= e(haber_yolu($sd['slug'])) ?>"><?= e($sd['baslik']) ?></a>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
                     </div>
+                    <?php /* Kesintisiz kayma icin ikinci kopya tarayicida (08.11.2026, dis
+                             denetim raporu): sayfaya iki kez yazilinca arama motoru her son
+                             dakika bagini iki kez goruyordu. Kopya ekran okuyucudan ve
+                             klavyeden gizli. */ ?>
+                    <script>(function(){var a=document.getElementById('sdAkis');if(!a){return;}var k=a.firstElementChild.cloneNode(true);k.setAttribute('aria-hidden','true');k.querySelectorAll('a').forEach(function(b){b.setAttribute('tabindex','-1');});a.appendChild(k);})();</script>
                 </div>
             </div>
         </div>

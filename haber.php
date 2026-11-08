@@ -62,7 +62,7 @@ if (mb_strlen($sayfaAciklama, 'UTF-8') < 110) {
     }
 }
 
-$sayfaAciklama = kisalt($sayfaAciklama, 155);
+$sayfaAciklama = kisalt(okur_dili($sayfaAciklama), 155);
 $aktifKategori = (string) ($haber['kategori_slug'] ?? '');
 
 // Panelde "hangi haberler okundu" listesini besler; sayfa_ust.php

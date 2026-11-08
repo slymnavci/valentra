@@ -162,7 +162,73 @@ function seo_haber_semasi(array $haber): string
         $sema['keywords'] = implode(', ', $etiketler);
     }
 
-    return json_encode($sema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    /*
+     * Kaynaklar ve sik sorulan sorular (08.11.2026, dis denetim raporu).
+     * Derleme haberin dayandigi yayinlar "citation" olarak; metnin
+     * "## Sıkça sorulan sorular" bolumu ayrica FAQPage olarak. Google
+     * SSS zengin sonucunu 2023'ten beri yalnizca resmi/saglik sitelerine
+     * gosteriyor; isaretleme yine de soru-cevabi arama ve yapay zeka
+     * ozetleri icin acikca tanimliyor.
+     */
+    if (!empty($haber['derleme_kaynaklari'])) {
+        require_once __DIR__ . '/derleme.php';
+        $atif = [];
+
+        foreach (derleme_kaynaklari_coz((string) $haber['derleme_kaynaklari']) as $k) {
+            $atif[] = array_filter([
+                '@type'     => 'CreativeWork',
+                'name'      => $k['baslik'] !== '' ? $k['baslik'] : $k['ad'],
+                'url'       => $k['url'] !== '' ? $k['url'] : null,
+                'publisher' => ['@type' => 'Organization', 'name' => $k['ad']],
+            ]);
+        }
+
+        if ($atif !== []) {
+            $sema['citation'] = $atif;
+        }
+    }
+
+    $sss = seo_sss_cikar(okur_dili((string) ($haber['icerik'] ?? '')));
+
+    if ($sss === []) {
+        return json_encode($sema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    unset($sema['@context']);
+
+    return json_encode([
+        '@context' => 'https://schema.org',
+        '@graph'   => [$sema, [
+            '@type'      => 'FAQPage',
+            'mainEntity' => array_map(static fn (array $s): array => [
+                '@type'          => 'Question',
+                'name'           => $s['soru'],
+                'acceptedAnswer' => ['@type' => 'Answer', 'text' => $s['cevap']],
+            ], $sss),
+        ]],
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+}
+
+/**
+ * Metnin "## Sıkça sorulan sorular" bölümünden soru-cevaplar ("- Soru? Cevap").
+ *
+ * @return list<array{soru:string,cevap:string}>
+ */
+function seo_sss_cikar(string $icerik): array
+{
+    if (!preg_match('/^#{2,3}\s*S[ıi]k[çc]a sorulan sorular\s*$(.*?)(?=^#{2,3}\s|\z)/umsi', $icerik, $m)) {
+        return [];
+    }
+
+    $sonuc = [];
+
+    foreach (preg_split('/\n/u', $m[1]) ?: [] as $satir) {
+        if (preg_match('/^\s*[-•]\s*(.+?\?)\s+(.+)$/u', trim($satir), $p)) {
+            $sonuc[] = ['soru' => trim(str_replace('**', '', $p[1])), 'cevap' => trim(str_replace('**', '', $p[2]))];
+        }
+    }
+
+    return count($sonuc) >= 2 ? $sonuc : [];
 }
 
 /**

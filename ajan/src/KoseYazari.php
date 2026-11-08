@@ -97,6 +97,13 @@ final class KoseYazari
           kullanılmaz. Hiçbir halk, din ya da etnik grup topyekûn hedef
           alınmaz; eleştiri politikalara ve eylemlere yöneliktir.
           Diplomasi, barış ve istikrar vurgulanır.
+
+        OKURA DÖNÜK DİL (08.11.2026, dış denetim raporu): Yazdığın metni
+        okur okuyacak. "Malzeme", "malzemede", "verilen haberler",
+        "kaynak metin", "elimizdeki bilgiler", "sana verilen" gibi senin
+        çalışma düzenini ele veren ifadeleri ASLA kullanma. Bir bilgi
+        yoksa "henüz açıklanmadı", "resmî bir açıklama yapılmadı" ya da
+        "haberlerde yer almıyor" de; kaynak gerekiyorsa yayının adını yaz.
         METIN;
 
     private const SECIM_YONERGE = self::ORTAK . <<<'METIN'

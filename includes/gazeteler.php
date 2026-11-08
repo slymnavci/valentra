@@ -110,19 +110,37 @@ function gazeteler(): array
                         ['kategoriler' => ['dunya'], 'kelimeler' => GAZETE_EKONOMI_KELIMELERI],
                     ],
                 ],
+                /*
+                 * Doviz ve Altin (08.11.2026, dis denetim raporu): tek basina
+                 * "dolar" ve "altin" kelime basi eslesmesi "500 milyar dolar
+                 * yatirim" haberini Doviz'e, "motorin 100 liranin altina indi"
+                 * haberini Altin'a koyuyordu. Simdi ya etiket TAM olarak o
+                 * konu ('etiketler', ajan haberi etiketliyor) ya da baslikta
+                 * kur/fiyat bildiren ifade gerekiyor.
+                 */
                 'doviz' => [
                     'ad'       => 'Döviz',
                     'aciklama' => 'Dolar, euro ve diğer döviz kurlarındaki gelişmeler; canlı kurlar ve pariteler.',
-                    'kosullar' => [['kategoriler' => ['ekonomi'], 'kelimeler' => [
-                        'dolar', 'euro ', "euro'", 'avro', 'sterlin', 'döviz', 'kur ', 'kurlar', 'kurda',
-                        'kuru ', 'yen ', 'yuan', 'parite',
-                    ], 'haric' => ['bitcoin', 'kripto', 'ethereum']]],
+                    'kosullar' => [['kategoriler' => ['ekonomi'],
+                        'etiketler' => ['döviz', 'dolar', 'euro', 'avro', 'sterlin', 'kur', 'döviz kuru', 'dolar/tl', 'euro/tl', 'parite'],
+                        'kelimeler' => [
+                            'döviz', 'dolar/tl', 'euro/tl', 'dolar kuru', 'euro kuru', 'avro kuru', 'sterlin kuru',
+                            'dolar güne', 'euro güne', 'doların kuru', 'dolar rekor', 'dolar yükseldi', 'dolar geriledi',
+                            'dolar düştü', 'kurlar', 'kurda', 'kur ', 'parite', 'yuan', 'yen ',
+                        ], 'haric' => ['bitcoin', 'kripto', 'ethereum']]],
                     'piyasa'   => 'doviz',
                 ],
                 'altin' => [
                     'ad'       => 'Altın',
                     'aciklama' => 'Gram, çeyrek ve ons altın, gümüş: haberler ve canlı fiyatlar.',
-                    'kosullar' => [['kategoriler' => ['ekonomi'], 'kelimeler' => ['altın', 'ons ', 'gümüş', 'değerli maden']]],
+                    'kosullar' => [['kategoriler' => ['ekonomi'],
+                        'etiketler' => ['altın', 'gram altın', 'çeyrek altın', 'ons altın', 'gümüş', 'değerli madenler', 'değerli maden'],
+                        'kelimeler' => [
+                            'gram altın', 'çeyrek altın', 'yarım altın', 'tam altın', 'cumhuriyet altını', 'ons altın',
+                            'altın fiyat', 'altının ons', 'altının gram', 'altın rekor', 'altında rekor', 'altında yükseliş',
+                            'altında düşüş', 'altın yükseldi', 'altın geriledi', 'altın düştü', 'altın piyasa',
+                            'gümüş', 'değerli maden', 'ons ',
+                        ]]],
                     'piyasa'   => 'altin',
                 ],
                 'kripto' => [
@@ -368,6 +386,13 @@ function gazete_kosulu(string $gazete, string $bolum): string
         $kelimeler
     ));
 
+    // Etiket tam eslesmesi: ",enflasyon, faiz," icinde ",faiz," (bosluklar atiliyor).
+    $etiketler = "CONCAT(',', REPLACE(h.etiketler, ', ', ','), ',')";
+    $etiketTam = static fn (array $adlar): string => implode(' OR ', array_map(
+        static fn (string $a): string => $etiketler . ' LIKE ' . db()->quote('%,' . addcslashes($a, '%_\\') . ',%'),
+        $adlar
+    ));
+
     $parcalar = [];
 
     foreach ($kosullar as $k) {
@@ -376,8 +401,13 @@ function gazete_kosulu(string $gazete, string $bolum): string
             $k['kategoriler']
         )) . ')';
 
+        // 'etiketler' verilmisse: etiket TAM eslesmesi VEYA kelime eslesmesi.
+        $etiketKosulu = !empty($k['etiketler']) ? $etiketTam($k['etiketler']) : '';
+
         if (!empty($k['kelimeler'])) {
-            $parca .= ' AND (' . $benzer($k['kelimeler']) . ')';
+            $parca .= ' AND (' . $benzer($k['kelimeler']) . ($etiketKosulu !== '' ? ' OR ' . $etiketKosulu : '') . ')';
+        } elseif ($etiketKosulu !== '') {
+            $parca .= ' AND (' . $etiketKosulu . ')';
         }
 
         if (!empty($k['haric'])) {

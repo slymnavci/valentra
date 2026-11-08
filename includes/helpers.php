@@ -166,6 +166,39 @@ function e_varlik(string $yol): string
  * ornegi" bu bicimde. Model ve panel yalnizca bunu uretiyor; ham HTML
  * kabul edilmiyor, her sey kacisliyor.
  */
+/**
+ * Yapay zeka metnindeki "calisma dili" kalintilari (08.11.2026, dis denetim
+ * raporu: "Bu tablonun surup surmeyecegi malzemede belli degil").
+ * Yonergeler artik bunu yasakliyor; bu suzgec onceden yayimlanmis
+ * metinleri de okura uygun hale getiriyor. Yemek tariflerinde
+ * kullanilmiyor: orada "malzeme" gercek kelime.
+ */
+function okur_dili(string $metin): string
+{
+    static $kaliplar = null;
+
+    $kaliplar ??= [
+        '/\bmalzemede\s+(?:henüz\s+)?belli\s+değil/ui'                          => 'henüz belli değil',
+        '/\bmalzemede\s+(?:yer\s+almıyor|geçmiyor|bulunmuyor|yok|belirtilmiyor)/ui' => 'haberlerde yer almıyor',
+        '/\bmalzemede\s+(?:açıklanmıyor|netleşmiyor)/ui'                            => 'henüz açıklanmadı',
+        '/\bmalzemeye\s+göre\b/ui'                                                 => 'haberlere göre',
+        '/\bmalzemedeki\b/ui'                                                       => 'haberlerdeki',
+        '/\bmalzemeden\b/ui'                                                        => 'haberlerden',
+        '/\bmalzemede\b/ui'                                                         => 'haberlerde',
+        '/\b(?:verilen|elimizdeki)\s+(?:haberlerde|kaynaklarda|metinlerde|bilgilerde)\b/ui' => 'haberlerde',
+    ];
+
+    foreach ($kaliplar as $kalip => $yerine) {
+        // Cumle basindaysa buyuk harfle ("Malzemede yer almiyor" -> "Haberlerde ...").
+        $metin = (string) preg_replace_callback($kalip, static fn (array $m): string =>
+            mb_strtoupper(mb_substr($m[0], 0, 1)) === mb_substr($m[0], 0, 1)
+                ? mb_strtoupper(mb_substr($yerine, 0, 1)) . mb_substr($yerine, 1)
+                : $yerine, $metin);
+    }
+
+    return $metin;
+}
+
 function bicimli_metin_html(string $icerik): string
 {
     $html = '';
