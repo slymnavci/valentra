@@ -671,14 +671,35 @@ function google_denetimi(int $sureButcesi = 80): array
             $dizinde = ($ix['verdict'] ?? '') === 'PASS';
             $kanonikFarkli = !empty($ix['googleCanonical']) && !empty($ix['userCanonical']) && $ix['googleCanonical'] !== $ix['userCanonical'];
 
-            $ekle('URL denetimi (Google)', $ad, $dizinde && !$kanonikFarkli ? 'tamam' : 'uyari',
+            /*
+             * "Google henuz gormedi / buldu, taramadi" bir site hatasi degil
+             * (site sahibinin istegi, 08.11.2026: "hata kalmasin"). Sayfa
+             * Google'a acik (getirme hatasi yok, robots.txt engellemiyor)
+             * ve adres site haritasindaysa yapilacak bir sey yok: Google
+             * sirasi gelince tariyor. Bilgi olarak yaziliyor; taranip
+             * reddedilen, getirilemeyen, engellenen ya da kanonigi farkli
+             * cikan adres UYARI olarak kaliyor.
+             */
+            $getirme = (string) ($ix['pageFetchState'] ?? '');
+            $robots  = (string) ($ix['robotsTxtState'] ?? '');
+            [$kapsamAdi] = gsc_kapsam_acikla((string) ($ix['coverageState'] ?? ''));
+            $siradaBekliyor = !$dizinde && !$kanonikFarkli
+                && in_array($kapsamAdi, ['Google henüz görmedi', 'Bulundu, henüz taranmadı'], true)
+                && in_array($getirme, ['', 'PAGE_FETCH_STATE_UNSPECIFIED', 'SUCCESSFUL'], true)
+                && $robots !== 'DISALLOWED'
+                && in_array($adres, $tumAdresler, true);
+
+            $ekle('URL denetimi (Google)', $ad, $dizinde && !$kanonikFarkli ? 'tamam' : ($siradaBekliyor ? 'bilgi' : 'uyari'),
                 (string) ($ix['coverageState'] ?? 'bilinmiyor')
                 . '; tarama: ' . (!empty($ix['lastCrawlTime']) ? date('d.m.Y H:i', (int) strtotime((string) $ix['lastCrawlTime'])) : 'yok')
                 . '; getirme: ' . (string) ($ix['pageFetchState'] ?? '-')
                 . '; robots.txt: ' . (string) ($ix['robotsTxtState'] ?? '-')
                 . ($kanonikFarkli ? '; Google kanonik olarak ' . $ix['googleCanonical'] . ' seçmiş' : '')
                 . ($zenginTurler !== [] ? '; zengin sonuç: ' . implode(', ', $zenginTurler) . ' (' . (string) ($zengin['verdict'] ?? '') . ')' : ''),
-                $dizinde ? '' : 'Search Console\'da bu adres için "Dizine eklenmesini iste" kullanılabilir: ' . gsc_denetim_adresi($adres));
+                $dizinde ? '' : ($siradaBekliyor
+                    ? 'Sitede engel yok: adres site haritasında, robots.txt izin veriyor; Google sırası gelince tarar. '
+                      . 'Hızlandırmak için Search Console\'da "Dizine eklenmesini iste": ' . gsc_denetim_adresi($adres)
+                    : 'Search Console\'da bu adres için "Dizine eklenmesini iste" kullanılabilir: ' . gsc_denetim_adresi($adres)));
         }
     }
 

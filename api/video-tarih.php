@@ -47,7 +47,7 @@ $veri = json_decode((string) file_get_contents('php://input'), true);
 // Gecikme olarak yaziliyor (bkz. haber_taslak_ekle): veritabaninin saat
 // dilimi bilinmiyor. Gelecek ya da bir yildan eski zaman yok sayiliyor.
 $ifade = db()->prepare(
-    "UPDATE haberler SET kaynak_tarihi = NOW() - INTERVAL :gecikme MINUTE
+    "UPDATE haberler SET kaynak_tarihi = NOW() - INTERVAL :gecikme MINUTE, guncellendi = guncellendi
       WHERE id = :id AND kaynak_tarihi IS NULL AND kaynak_url LIKE 'https://www.youtube.com/%'"
 );
 

@@ -983,7 +983,7 @@ function haber_parmaklari_tamamla(int $adet = 400): int
     }
 
     $guncelle = db()->prepare(
-        'UPDATE haberler SET url_parmak = :u, baslik_parmak = :b WHERE id = :id'
+        'UPDATE haberler SET url_parmak = :u, baslik_parmak = :b, guncellendi = guncellendi WHERE id = :id'
     );
 
     foreach ($satirlar as $satir) {
@@ -1176,7 +1176,8 @@ function haber_kategori_gorsellerini_doldur(int $limit = 1000): int
         "UPDATE haberler h
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
             SET h.gorsel_url = CONCAT(:taban, '/assets/kategori/',
-                    CASE WHEN k.slug IN (" . $liste . ") THEN k.slug ELSE 'gundem' END, '.jpg')
+                    CASE WHEN k.slug IN (" . $liste . ") THEN k.slug ELSE 'gundem' END, '.jpg'),
+                h.guncellendi = h.guncellendi
           WHERE COALESCE(h.gorsel_url, '') = ''"
     );
     $ifade->execute(['taban' => site_adresi()]);
@@ -1340,7 +1341,7 @@ function haber_taslak_ekle(array $veri): array
     try {
         db()->prepare(
             'UPDATE haberler h JOIN kaynaklar k ON (k.id = h.kaynak_id OR (h.kaynak_id IS NULL AND k.ad = h.kaynak_adi))
-                SET h.sehir = k.sehir
+                SET h.sehir = k.sehir, h.guncellendi = h.guncellendi
               WHERE h.id = :id AND k.sehir IS NOT NULL AND k.sehir <> \'\''
         )->execute(['id' => $id]);
     } catch (PDOException $e) {
@@ -1391,7 +1392,7 @@ function haber_kaynak_listesi_yaz(int $id, array $veri, string $kaynakUrl): void
         return;
     }
 
-    db()->prepare('UPDATE haberler SET derleme_kaynaklari = :k WHERE id = :id')
+    db()->prepare('UPDATE haberler SET derleme_kaynaklari = :k, guncellendi = guncellendi WHERE id = :id')
         ->execute(['k' => json_encode($liste, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'id' => $id]);
 }
 
@@ -1673,7 +1674,8 @@ function haber_onayla(int $id, int $yoneticiId): bool
             SET durum = :durum,
                 onaylayan_id = :yonetici,
                 onay_tarihi = NOW(),
-                yayin_tarihi = COALESCE(yayin_tarihi, NOW())
+                yayin_tarihi = COALESCE(yayin_tarihi, NOW()),
+                guncellendi = guncellendi
           WHERE id = :id'
     );
     $ifade->execute(['durum' => HABER_YAYINDA, 'yonetici' => $yoneticiId, 'id' => $id]);
@@ -1771,7 +1773,8 @@ function haber_otomatik_yayinla(int $id): bool
         'UPDATE haberler
             SET durum = :yayinda,
                 onay_tarihi = NOW(),
-                yayin_tarihi = COALESCE(yayin_tarihi, olusturuldu, NOW())
+                yayin_tarihi = COALESCE(yayin_tarihi, olusturuldu, NOW()),
+                guncellendi = guncellendi
           WHERE id = :id AND durum = :taslak AND ' . haber_guven_esigi_kosulu()
     );
     $ifade->execute(['yayinda' => HABER_YAYINDA, 'taslak' => HABER_TASLAK, 'id' => $id]);
@@ -1863,7 +1866,7 @@ function haber_durum_degistir(int $id, string $durum): bool
         throw new InvalidArgumentException('Gecersiz durum.');
     }
 
-    $ifade = db()->prepare('UPDATE haberler SET durum = :durum WHERE id = :id');
+    $ifade = db()->prepare('UPDATE haberler SET durum = :durum, guncellendi = guncellendi WHERE id = :id');
     $ifade->execute(['durum' => $durum, 'id' => $id]);
 
     if ($ifade->rowCount() > 0 && $durum === HABER_YAYINDA) {
@@ -2070,7 +2073,7 @@ function haber_format_alanlari(array $veri): array
  */
 function haber_one_cikar(int $id, bool $one): void
 {
-    db()->prepare('UPDATE haberler SET one_cikan = :o WHERE id = :id')
+    db()->prepare('UPDATE haberler SET one_cikan = :o, guncellendi = guncellendi WHERE id = :id')
         ->execute(['o' => $one ? 1 : 0, 'id' => $id]);
 }
 
@@ -2946,7 +2949,7 @@ function haber_ozgun_kotasini_dagit(bool $zorla = false): ?array
 
     foreach ([1 => $ac, 0 => $kapat] as $deger => $idler) {
         foreach (array_chunk($idler, 500) as $parca) {
-            db()->exec('UPDATE haberler SET google_kota = ' . $deger . ' WHERE id IN (' . implode(',', $parca) . ')');
+            db()->exec('UPDATE haberler SET google_kota = ' . $deger . ', guncellendi = guncellendi WHERE id IN (' . implode(',', $parca) . ')');
         }
     }
 

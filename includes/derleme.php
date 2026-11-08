@@ -294,7 +294,8 @@ function derleme_taslak_ekle(array $veri): array
 
     db()->prepare(
         'UPDATE haberler
-            SET derleme = 1, derleme_kaynaklari = :k, kategori_id = COALESCE(kategori_id, :kat)
+            SET derleme = 1, derleme_kaynaklari = :k, kategori_id = COALESCE(kategori_id, :kat),
+                guncellendi = guncellendi
           WHERE id = :id'
     )->execute([
         'k'   => json_encode($kaynaklar, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
