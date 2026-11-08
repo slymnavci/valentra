@@ -101,6 +101,12 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
     <?php if ($googleKodu !== ''): ?>
         <meta name="google-site-verification" content="<?= e($googleKodu) ?>">
     <?php endif; ?>
+    <?php
+    // Bing ve Yandex dogrulamasi (08.11.2026; panel: Arama motoru).
+    foreach (['msvalidate.01' => ayar_oku('bing_dogrulama'), 'yandex-verification' => ayar_oku('yandex_dogrulama')] as $dAd => $dKod):
+        if ($dKod !== ''): ?>
+        <meta name="<?= e($dAd) ?>" content="<?= e($dKod) ?>">
+    <?php endif; endforeach; ?>
 
     <meta property="og:type" content="<?= e($seoTur) ?>">
     <meta property="og:site_name" content="Valentra">

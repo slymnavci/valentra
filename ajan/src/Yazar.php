@@ -416,6 +416,17 @@ final class Yazar implements SemaliIstemci
         dışında: büyük maçlar her sitede yer aldığı için spor haberi
         yukarıdaki spor aralığında kalır.
 
+        GOOGLE'DA ÇOK ARANAN: Bazı adaylarda "Google'da şu an çok aranan"
+        satırı ve aranan ifade yazar. Türkiye'de o an binlerce kişi bu
+        ifadeyi Google'da arıyor. Böyle bir haberi elemek için çok güçlü
+        bir sebep gerekir (konu dışı, kaynak güvenilmez, sayfa boş).
+        Önem puanı en az 65 olsun (spor dahil). Aranan ifade (ya da doğal
+        Türkçe ekli hali: "Galatasaray'ın", "depremde") başlıkta ve ilk
+        cümlede doğal biçimde geçsin; okur aradığını başlıkta görsün.
+        Başlığı ifadeyle doldurma, tıklama tuzağı yapma; olayı açıkça söyle.
+        Aranan ifade bu haberle gerçekten ilgili değilse (adaş, başka
+        olay) bu kuralı uygulama.
+
         KONU GRUBU: Haberi, kullanıcı mesajında verilen gruplardan birine
         ata. Yanıtta grubun slug değerini TAM olarak yaz. Eşleme:
         - Türkiye siyaseti, TBMM, hükümet, partiler, seçimler, Türkiye'nin
@@ -1175,7 +1186,7 @@ final class Yazar implements SemaliIstemci
      * kotayı hemen tüketiyor. Beş adaylık bir grup tek istekte işlenince
      * aynı iş beşte bir istekle yapılır.
      *
-     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string,kapsam?:int,ekKaynaklar?:list<array{kaynakAdi:string,baglanti:string,metin:string}>}> $adaylar
+     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string,kapsam?:int,gundem?:array{sorgu:string,trafik:int}|null,ekKaynaklar?:list<array{kaynakAdi:string,baglanti:string,metin:string}>}> $adaylar
      * @param list<array<string,mixed>> $kategoriler
      * @return array<int,array<string,mixed>> sira => sonuc
      */
@@ -1330,7 +1341,7 @@ final class Yazar implements SemaliIstemci
     }
 
     /**
-     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string,kapsam?:int,ekKaynaklar?:list<array{kaynakAdi:string,baglanti:string,metin:string}>}> $adaylar
+     * @param list<array{girdi:array{baslik:string,ozet:string,baglanti:string},sayfaMetni:string,kaynakAdi:string,kaynakTuru:string,kapsam?:int,gundem?:array{sorgu:string,trafik:int}|null,ekKaynaklar?:list<array{kaynakAdi:string,baglanti:string,metin:string}>}> $adaylar
      * @param list<array<string,mixed>> $kategoriler
      */
     private function topluIstemHazirla(array $adaylar, array $kategoriler, array $onceki = []): string
@@ -1362,6 +1373,11 @@ final class Yazar implements SemaliIstemci
                 : '(Sayfa metni alınamadı; yalnızca başlık ve özet mevcut.)';
 
             $kapsam = max(1, (int) ($aday['kapsam'] ?? 1));
+            // Google Trends'te su an cok aranan konu (ajan/topla.php, GUNDEM_TAVANI).
+            $gundemSatiri = !empty($aday['gundem']['sorgu'])
+                ? "\nGoogle'da şu an çok aranan: \"" . $aday['gundem']['sorgu'] . '"'
+                    . ((int) ($aday['gundem']['trafik'] ?? 0) > 0 ? ' (yaklaşık ' . number_format((int) $aday['gundem']['trafik'], 0, ',', '.') . '+ arama)' : '')
+                : '';
 
             // Ayni olayi veren baska yayincilarin metni (ajan/topla.php,
             // EK_KAYNAK_TAVANI); her biri ayri sinirla.
@@ -1398,7 +1414,7 @@ final class Yazar implements SemaliIstemci
             ### ADAY {$no}
             Kaynak: {$aday['kaynakAdi']} — {$tur}
             Kaynaktaki yayın zamanı: {$yayin}
-            Bu olayı veren kaynak sayısı (bu taramada): {$kapsam}
+            Bu olayı veren kaynak sayısı (bu taramada): {$kapsam}{$gundemSatiri}
             Adres: {$girdi['baglanti']}
             Başlık: {$girdi['baslik']}
             Özet: {$girdi['ozet']}

@@ -61,6 +61,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    /*
+     * Bing ve Yandex dogrulamasi (08.11.2026, site sahibi: "Google'dan
+     * baska aramalardan da trafik gelsin"). Bing Webmaster Tools
+     * Search Console'dan ice aktarmayla da dogruluyor; meta etiketi
+     * isteyenler (ve Yandex) icin. Ikisi tek formda.
+     */
+    if ($islem === 'diger_dogrulama') {
+        $kodlar = [];
+
+        foreach (['bing' => 'Bing', 'yandex' => 'Yandex'] as $anahtar => $ad) {
+            $ham = trim((string) ($_POST[$anahtar] ?? ''));
+
+            if (preg_match('/content=["\']([^"\']+)["\']/', $ham, $es) === 1) {
+                $ham = trim($es[1]);
+            }
+
+            if ($ham !== '' && preg_match('/^[A-Za-z0-9_\-]{8,120}$/', $ham) !== 1) {
+                $hata = $ad . ' doğrulama kodu beklenen biçimde değil; verilen meta etiketini olduğu gibi yapıştırabilirsiniz.';
+                break;
+            }
+
+            $kodlar[$anahtar] = $ham;
+        }
+
+        if ($hata === '') {
+            ayar_yaz('bing_dogrulama', $kodlar['bing']);
+            ayar_yaz('yandex_dogrulama', $kodlar['yandex']);
+            $bildirim = 'Bing ve Yandex doğrulama kodları kaydedildi. İlgili panelde "Doğrula" deyin (sayfa önbelleği yüzünden bir dakika bekleyin).';
+        }
+    }
+
     // Google Analytics ve AdSense kimlikleri (29.10.2026; bkz. includes/olcum_reklam.php).
     if ($islem === 'olcum') {
         $ga  = strtoupper(trim((string) ($_POST['ga4'] ?? '')));
@@ -194,6 +225,34 @@ require __DIR__ . '/ust.php';
             <code>google-site-verification</code> etiketi yayınlanıyor.
         </p>
     <?php endif; ?>
+</div>
+
+<div class="kutu" style="margin-top:22px;">
+    <h2 style="margin-top:0;">Bing ve Yandex</h2>
+    <p class="ipucu" style="margin-top:0;">
+        Yeni haberler bu arama motorlarına zaten anında bildiriliyor (IndexNow). Kendi panellerine
+        kaydolunca hangi aramalarda çıktığınızı görür, site haritasını gönderirsiniz.
+    </p>
+    <ol class="ipucu">
+        <li><a href="https://www.bing.com/webmasters" target="_blank" rel="noopener">Bing Webmaster Tools</a>:
+            Google hesabınızla girip <strong>"Google Search Console'dan içe aktar"</strong> deyin; kod gerekmez.
+            İçe aktarma olmazsa "HTML Meta Etiketi" yöntemindeki etiketi aşağıya yapıştırın.</li>
+        <li><a href="https://webmaster.yandex.com" target="_blank" rel="noopener">Yandex Webmaster</a>:
+            siteyi ekleyin, "Meta tag" yöntemindeki etiketi aşağıya yapıştırın, sonra site haritası olarak
+            <code><?= e(site_adresi()) ?>/sitemap.php</code> adresini ekleyin.</li>
+    </ol>
+    <form method="post">
+        <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+        <input type="hidden" name="islem" value="diger_dogrulama">
+        <label for="bing">Bing doğrulama etiketi ya da kodu</label>
+        <input type="text" id="bing" name="bing" style="width:100%;" value="<?= e(ayar_oku('bing_dogrulama')) ?>"
+               placeholder='<meta name="msvalidate.01" content="..." />'>
+        <label for="yandex" style="margin-top:10px;display:block;">Yandex doğrulama etiketi ya da kodu</label>
+        <input type="text" id="yandex" name="yandex" style="width:100%;" value="<?= e(ayar_oku('yandex_dogrulama')) ?>"
+               placeholder='<meta name="yandex-verification" content="..." />'>
+        <p class="ipucu">Etiketin tamamını yapıştırabilirsiniz; içinden kod ayıklanır. Boş bırakılan etiket sayfalardan kaldırılır.</p>
+        <button class="dugme dugme-ana" type="submit">Kaydet</button>
+    </form>
 </div>
 
 <div class="kutu" style="margin-top:22px;">

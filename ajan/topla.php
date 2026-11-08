@@ -38,6 +38,7 @@ require_once __DIR__ . '/src/Sayfa.php';
 require_once __DIR__ . '/src/Kazima.php';
 require_once __DIR__ . '/src/ResmiGazete.php';
 require_once __DIR__ . '/src/HaberAkisi.php';
+require_once __DIR__ . '/src/Gundem.php';
 require_once __DIR__ . '/src/Site.php';
 require_once __DIR__ . '/src/KotaBittiException.php';
 require_once __DIR__ . '/src/ModelErisimYokException.php';
@@ -1397,10 +1398,86 @@ if ($adaylar === []) {
     exit(0);
 }
 
-// Önce çok kaynakta geçenler (kapsam), sonra en yeniler; bütçe sınırına
-// takılırsa gündemdeki ve güncel olanlar işlensin.
+/*
+ * GOOGLE'DA SU AN COK ARANANLAR (08.11.2026, site sahibi: "Google'dan
+ * gelen trafigi artiralim"; bkz. src/Gundem.php).
+ *
+ * Google Trends'in Turkiye listesindeki aramalarla eslesen adaylar en one
+ * geciyor, kaynak tavanina ve baslik kontenjanina takilmiyor (en fazla
+ * GUNDEM_TAVANI). Kaynaklarimizda hic haberi olmayan cok aranan konuda
+ * Trends'in o aramayla gosterdigi haber aday oluyor. Model bu adaylarda
+ * aranan ifadeyi bilerek yaziyor (Yazar: GOOGLE'DA COK ARANAN).
+ */
+const GUNDEM_TAVANI = 6;
+const GUNDEM_YENI_ADAY = 4;
+
+$gundem = ($videoModu || $konular !== []) ? [] : Gundem::oku($http);
+
+if ($gundem !== []) {
+    gunluk('Google\'da şu an çok arananlar: ' . implode(', ', array_map(
+        static fn (array $g): string => $g['sorgu'] . ($g['trafik'] > 0 ? ' (' . number_format($g['trafik'], 0, ',', '.') . '+)' : ''),
+        array_slice($gundem, 0, 12)
+    )));
+
+    $karsilanan = [];
+
+    foreach ($adaylar as $i => $aday) {
+        $g = Gundem::bul($gundem, (string) $aday['girdi']['baslik'], strip_tags((string) ($aday['girdi']['ozet'] ?? '')));
+
+        if ($g !== null) {
+            $adaylar[$i]['gundem'] = ['sorgu' => $g['sorgu'], 'trafik' => $g['trafik']];
+            $karsilanan[$g['sorgu']] = true;
+        }
+    }
+
+    // Kaynaklarda karsiligi olmayan cok aranan konular: Trends'in haberi.
+    $yeniGundem = 0;
+
+    foreach ($gundem as $g) {
+        if ($yeniGundem >= GUNDEM_YENI_ADAY || isset($karsilanan[$g['sorgu']])) {
+            continue;
+        }
+
+        foreach ($g['haberler'] as $h) {
+            $kume = baslik_kumesi($h['baslik']);
+            $sitedeVar = isset($bilinenUrl[url_parmak($h['adres'])]) || isset($bilinenBaslik[baslik_parmak($h['baslik'])])
+                || isset($elenenler[url_parmak($h['adres'])]);
+
+            foreach ($sitedeVar ? [] : $bilinenKumeler as $eskiKume) {
+                if (baslik_benzer($kume, $eskiKume)) {
+                    $sitedeVar = true;
+                    break;
+                }
+            }
+
+            if ($sitedeVar) {
+                // Konu zaten sitede: ayni aramanin baska haberini almaya gerek yok.
+                continue 2;
+            }
+
+            $bilinenUrl[url_parmak($h['adres'])] = true;
+            $bilinenKumeler[] = $kume;
+            $adaylar[] = [
+                'girdi'     => ['baslik' => $h['baslik'], 'baglanti' => $h['adres'], 'ozet' => '', 'tarih' => null, 'gorsel' => '', 'yazar' => ''],
+                'kaynak'    => ['id' => null, 'ad' => $h['kaynak'] !== '' ? $h['kaynak'] : 'Google Gündem', 'tur' => 'rss', 'kategori' => 'gundem'],
+                'kapsam'    => 1,
+                'kaynaklar' => ['google-gundem' => true],
+                'puan'      => time(),
+                'gundem'    => ['sorgu' => $g['sorgu'], 'trafik' => $g['trafik']],
+            ];
+            $karsilanan[$g['sorgu']] = true;
+            $yeniGundem++;
+            break;
+        }
+    }
+
+    gunluk('  ' . count($karsilanan) . ' çok aranan konu adaylarda var' . ($yeniGundem > 0 ? ' (' . $yeniGundem . ' tanesi Google Trends haberinden eklendi)' : '') . '; bunlar öne alındı.');
+}
+
+// Önce Google'da çok arananlar, sonra çok kaynakta geçenler (kapsam), sonra
+// en yeniler; bütçe sınırına takılırsa gündemdeki ve güncel olanlar işlensin.
 usort($adaylar, static fn (array $a, array $b): int =>
-    [$b['kapsam'], $b['puan']] <=> [$a['kapsam'], $a['puan']]);
+    [(int) ($b['gundem']['trafik'] ?? -1), $b['kapsam'], $b['puan']] <=> [(int) ($a['gundem']['trafik'] ?? -1), $a['kapsam'], $a['puan']]);
 
 $cokKaynakli = array_values(array_filter($adaylar, static fn (array $a): bool => $a['kapsam'] > 1));
 
@@ -1496,7 +1573,8 @@ foreach ($adaylar as $aday) {
     $ad = (string) $aday['kaynak']['ad'];
     $kaynakSayaci[$ad] = ($kaynakSayaci[$ad] ?? 0) + 1;
 
-    if ($kaynakSayaci[$ad] > $kaynakBasinaTavan) {
+    // Google'da cok aranan konu kaynak tavanina takilmiyor (bkz. GUNDEM_TAVANI).
+    if ($kaynakSayaci[$ad] > $kaynakBasinaTavan && !isset($aday['gundem'])) {
         continue;
     }
 
@@ -1535,12 +1613,23 @@ if ($kopyaElenen > 0) {
 $konuPaylari = $konular !== []
     ? array_intersect_key(HaberAkisi::PAYLAR, array_flip($konular))
     : HaberAkisi::PAYLAR;
+
+// Google'da cok arananlar kontenjandan once (en fazla GUNDEM_TAVANI).
+$gundemTekil = array_slice(array_values(array_filter($digerTekil, static fn (array $a): bool => isset($a['gundem']))), 0, GUNDEM_TAVANI);
+$digerTekil  = array_values(array_filter($digerTekil, static fn (array $a): bool => !in_array($a, $gundemTekil, true)));
+
+if ($gundemTekil !== []) {
+    gunluk('  Google\'da çok aranan ' . count($gundemTekil) . ' aday kontenjan dışında, öncelikle modele gidiyor: '
+        . implode('; ', array_map(static fn (array $a): string => $a['gundem']['sorgu'] . ' → ' . mb_substr((string) $a['girdi']['baslik'], 0, 60), $gundemTekil)));
+}
+
 $adaylar     = array_merge(
     $rgTekil,
+    $gundemTekil,
     // Video modunda baslik paylari yok: en yeni videolar (puan = yayim zamani).
     $videoModu
         ? array_slice($digerTekil, 0, $enFazlaAday)
-        : konu_kontenjani($digerTekil, $konuPaylari, max(0, $enFazlaAday - count($rgTekil)))
+        : konu_kontenjani($digerTekil, $konuPaylari, max(0, $enFazlaAday - count($rgTekil) - count($gundemTekil)))
 );
 
 if ($rgTekil !== []) {
@@ -1845,6 +1934,8 @@ foreach ($gruplar as $grupNo => $grup) {
             'kaynakAdi'  => (string) $aday['kaynak']['ad'],
             'kaynakTuru' => (string) ($aday['kaynak']['tur'] ?? 'rss'),
             'kapsam'     => (int) ($aday['kapsam'] ?? 1),
+            // Google'da cok aranan konu (bkz. GUNDEM_TAVANI).
+            'gundem'     => $aday['gundem'] ?? null,
             // Adayin kendisi bir video (YouTube kanal beslemesi): model
             // kisa video haberi yazar (Yazar::YONERGE, VIDEO HABERLERI).
             'video'      => $baglantiVideo !== '',
@@ -1972,7 +2063,8 @@ foreach ($gruplar as $grupNo => $grup) {
             'kategori'    => in_array((string) ($sonuc['kategori'] ?? ''), HaberAkisi::KATEGORILER, true)
                 ? (string) $sonuc['kategori']
                 : 'gundem',
-            'kaynak_id'   => (int) $kaynak['id'],
+            // Google Trends'ten gelen adayin kayitli kaynagi yok (bkz. GUNDEM_TAVANI).
+            'kaynak_id'   => (int) ($kaynak['id'] ?? 0) > 0 ? (int) $kaynak['id'] : null,
             'kaynak_adi'  => (string) $kaynak['ad'],
             'kaynak_url'  => $girdi['baglanti'],
             // Beslemedeki ozgun baslik: site kopya denetiminde bunu da
