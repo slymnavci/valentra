@@ -55,6 +55,7 @@ on:
           - yazar-portre
           - topluluk
           - baslik-denetim
+          - gorsel-denetim
       kuru:
         description: 'Kuru calisma (siteye gonderme, sadece ciktiyi goster)'
         type: boolean
@@ -117,7 +118,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: curl, mbstring, simplexml, json
+          extensions: curl, mbstring, simplexml, json, gd
           coverage: none
 
       - name: Composer onbellegi
@@ -356,6 +357,26 @@ jobs:
           ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
         run: php baslik_denetle.php ${{ inputs.mod == 'baslik-denetim' && '--gun=14 --sure=15' || '--sure=4' }} ${{ inputs.kuru == true && '--kuru' || '' }} || true
+
+      # Haber gorsellerinde haber sitesi adi/logosu (08.11.2026, site sahibi:
+      # "ana sayfada bir haberdeki resimde kesinlikle bir haber sitesinin
+      # adi olmayacak; uygun resim yoksa internetten konuya uygun, haber
+      # sitesi adi olmayan bir resim bulup yerlestirelim"). Her gorsel
+      # yapay zekaya bakturuluyor; logolu olanin yerine Wikimedia Commons /
+      # Openverse'ten ozgur lisansli gorsel, o da yoksa konu gorseli.
+      # Denetlenmemis gorsel ana sayfada gosterilmiyor. Elle
+      # "gorsel-denetim" modu son iki haftayi tariyor (ilk temizlik).
+      - name: Gorsellerde haber sitesi adi denetle
+        if: ${{ !cancelled() && (((inputs.mod == 'topla' || inputs.mod == 'gunluk' || inputs.mod == '') && inputs.kuru != true) || inputs.mod == 'gorsel-denetim') }}
+        working-directory: ajan
+        env:
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
+        run: php gorsel_denetle.php ${{ inputs.mod == 'gorsel-denetim' && '--gun=14 --adet=400 --sure=25' || '--sure=7' }} ${{ inputs.kuru == true && '--kuru' || '' }} || true
 
       # Siteye gonderilemeyen haberler: site bu eseri GitHub API'den
       # kendisi indiriyor (includes/ajan_teslim.php). GitHub'dan siteye

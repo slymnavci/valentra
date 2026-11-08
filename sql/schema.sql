@@ -165,6 +165,12 @@ CREATE TABLE IF NOT EXISTS haberler (
     -- ve duzeltildiyse onceki baslik (geri almak icin).
     baslik_denetlendi DATETIME    NULL,
     eski_baslik     VARCHAR(300)  NOT NULL DEFAULT '',
+    -- Gorsel denetimi (08.11.2026, ajan/gorsel_denetle.php): NULL bakilmadi,
+    -- 1 temiz, 2 internetten ozgur lisansli gorselle degisti, 0 uygun gorsel
+    -- bulunamadi (konu gorseli). Degisen gorselin eski adresi ve atif satiri.
+    gorsel_denetim  TINYINT       NULL,
+    gorsel_eski     VARCHAR(1000) NOT NULL DEFAULT '',
+    gorsel_atif     VARCHAR(300)  NOT NULL DEFAULT '',
 
     olusturuldu     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     guncellendi     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

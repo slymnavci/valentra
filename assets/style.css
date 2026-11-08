@@ -6795,3 +6795,6 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
     .kelime-kutu { font-size: 1.5rem; }
 }
 .kelime-klavye[hidden], .kelime-sonuc[hidden], .kelime-haber[hidden] { display: none; }
+
+/* Ozgur lisansli gorselin atfi (08.11.2026; bkz. api/gorsel-denetim.php) */
+.gorsel-atif { margin: 0 0 22px; font-size: 12px; color: var(--metin-soluk); }

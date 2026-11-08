@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bildirim = 'GitHub anahtarı silindi.';
 
     } elseif ($islem === 'calistir' || $islem === 'calistir_kuru' || $islem === 'kaynak_testi'
-               || $islem === 'kanun_testi' || $islem === 'pratik_topla' || $islem === 'baslik_denetim') {
+               || $islem === 'kanun_testi' || $islem === 'pratik_topla' || $islem === 'baslik_denetim' || $islem === 'gorsel_denetim') {
         // Suren bir calisma varken yenisini gondermek ise yaramaz:
         // GitHub ayni eszamanlilik grubunda sirada tek bir calisma
         // tutuyor, yeni istek bekleyeni IPTAL ediyor. Dugmeye art arda
@@ -78,6 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'pratik_topla' => 'pratik-bilgiler',
                     // Son iki haftanin basliklarini Turkce denetle (04.11.2026; bkz. ajan/baslik_denetle.php).
                     'baslik_denetim' => 'baslik-denetim',
+                    // Son iki haftanin gorsellerinde haber sitesi adi/logosu (08.11.2026; bkz. ajan/gorsel_denetle.php).
+                    'gorsel_denetim' => 'gorsel-denetim',
                     default        => 'topla',
                 },
                 (string) ($_POST['konu'] ?? ''),
@@ -200,6 +202,9 @@ require __DIR__ . '/ust.php';
 
                 <button type="submit" name="islem" value="baslik_denetim"
                         class="dugme" title="Son iki haftanın başlıklarını okur; anlaşılmayan ya da çeviri kokan başlıkları doğal Türkçeyle yeniden yazar.">Başlıkların Türkçesini düzelt</button>
+
+                <button type="submit" name="islem" value="gorsel_denetim"
+                        class="dugme" title="Son iki haftanın görsellerine bakar; haber sitesi, kanal ya da ajans adı/logosu olanların yerine özgür lisanslı görsel, o da yoksa konu görseli koyar.">Görsellerdeki site logolarını temizle</button>
             </div>
 
             <p class="ipucu" style="margin:14px 0 0;">

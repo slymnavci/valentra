@@ -699,6 +699,41 @@ final class Site
     }
 
     /**
+     * Görseli henüz denetlenmemiş haberler (api/gorsel-denetim.php), ana sayfadakiler önce.
+     *
+     * @return list<array{id:int,baslik:string,ozet:string,kategori:string,gorsel:string,yedek:string}>
+     */
+    public function gorselDenetimListesi(int $gun = 3, int $adet = 80): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/gorsel-denetim.php?gun=' . max(1, min(60, $gun)) . '&adet=' . max(1, min(400, $adet)));
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Görsel listesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return array_values((array) ($veri['haberler'] ?? []));
+    }
+
+    /**
+     * Görsel denetimi sonuçlarını yazar.
+     *
+     * @param list<array{id:int,temiz:bool,yeni?:string,atif?:string,bulunan?:string}> $sonuclar
+     * @return array{temiz:int,degisen:int,konu_gorseli:int}
+     */
+    public function gorselDenetimGonder(array $sonuclar): array
+    {
+        [$kod, $govde] = $this->istek('POST', '/api/gorsel-denetim.php', (string) json_encode(['sonuclar' => $sonuclar], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Görsel denetimi yazılamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return ['temiz' => (int) ($veri['temiz'] ?? 0), 'degisen' => (int) ($veri['degisen'] ?? 0), 'konu_gorseli' => (int) ($veri['konu_gorseli'] ?? 0)];
+    }
+
+    /**
      * Maç özeti kanalları ve son günlerde kaydedilmiş videolar (api/mac-ozeti.php).
      *
      * @return array{kanallar:list<string>,bilinen:list<string>}

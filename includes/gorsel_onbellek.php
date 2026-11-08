@@ -153,6 +153,11 @@ function haber_gorsel(array $haber): string
         }
     }
 
+    // Ana sayfada yalnizca denetlenmis gorsel (bkz. haber_gorsel_denetimli_mi).
+    if (defined('GORSEL_YALNIZ_DENETLENMIS') && !haber_gorsel_denetimli_mi($haber)) {
+        return '/assets/kategori/' . haber_gorsel_konu_adi((string) ($haber['kategori_slug'] ?? '')) . '.jpg';
+    }
+
     $yerel = haber_gorsel_yerel($url);
 
     if ($yerel !== '') {
@@ -162,6 +167,31 @@ function haber_gorsel(array $haber): string
     $id = (int) ($haber['id'] ?? 0);
 
     return $id > 0 ? '/gorsel.php?id=' . $id : $url;
+}
+
+/**
+ * Kaynaktan gelen gorsel denetimden gecti mi?
+ *
+ * Site sahibinin karari (08.11.2026): "ana sayfada bir haberdeki resimde
+ * kesinlikle bir haber sitesinin adi olmayacak." Ajan her gorseli yapay
+ * zekaya bakturiyor (ajan/gorsel_denetle.php, api/gorsel-denetim.php):
+ * haber sitesi, kanal ya da ajans adi/logosu/filigrani olan gorsel
+ * internetteki ozgur lisansli bir gorselle, o da yoksa konu gorseliyle
+ * degisiyor. Denetim sonucu gelmemis (gorsel_denetim NULL ya da satirda
+ * hic yok) gorsel ana sayfada gosterilmiyor; yerine konu gorseli.
+ */
+function haber_gorsel_denetimli_mi(array $haber): bool
+{
+    return isset($haber['gorsel_denetim']) && (int) $haber['gorsel_denetim'] > 0;
+}
+
+/** Konu görselinin dosya adı (assets/kategori/<ad>.jpg); tanınmayan konu Gündem. */
+function haber_gorsel_konu_adi(string $slug): string
+{
+    $konular = ['gundem', 'genel', 'politika', 'ekonomi', 'dunya', 'spor',
+                'teknoloji', 'saglik', 'kultur-sanat', 'yemek-tarifleri'];
+
+    return in_array($slug, $konular, true) ? $slug : 'gundem';
 }
 
 /** Adresin butun IP'leri genel internette mi? (ic aga istek atilmasin) */

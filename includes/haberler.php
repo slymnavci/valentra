@@ -2113,6 +2113,7 @@ function haber_guncelle(int $id, array $veri): bool
                 slug = :slug,
                 ozet = :ozet,
                 icerik = :icerik,
+                gorsel_denetim = IF(gorsel_url <=> :gorsel_onceki, gorsel_denetim, NULL),
                 gorsel_url = :gorsel_url,
                 iframe_url = :iframe_url,
                 etiketler = :etiketler,
@@ -2138,6 +2139,8 @@ function haber_guncelle(int $id, array $veri): bool
         'ozet'       => mb_substr($ozet !== '' ? $ozet : kisalt($icerik, 220), 0, 600, 'UTF-8'),
         'icerik'     => $icerik,
         'gorsel_url' => guvenli_url((string) ($veri['gorsel_url'] ?? '')) ?: null,
+        // Gorsel degistiyse yeniden denetlensin (bkz. haber_gorsel_denetimli_mi).
+        'gorsel_onceki' => guvenli_url((string) ($veri['gorsel_url'] ?? '')) ?: null,
         'iframe_url' => ($iframeUrl = guvenli_url((string) ($veri['iframe_url'] ?? ''))) !== ''
             ? mb_substr($iframeUrl, 0, 1000, 'UTF-8')
             : null,
