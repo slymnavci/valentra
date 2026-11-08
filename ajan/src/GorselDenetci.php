@@ -195,6 +195,14 @@ Birebir aynı olay olması gerekmez; konuyu temsil etmesi yeter. Konuyla
 ilgisiz, yanıltıcı ya da başka bir olayı/kişiyi gösteriyormuş gibi
 duruyorsa uygun=false. Uygunsuz, şiddet içeren, çıplaklık içeren görsel
 uygun=false.
+KİŞİ: Haber bir kişiyle ilgiliyse (ör. "Erdoğan Bakü'de") o kişinin
+başka bir yerde/tarihte çekilmiş fotoğrafı UYGUNDUR. Başka bir kişiyi
+gösteren fotoğraf uygun=false. Görselin arşivdeki adı verildiyse ona da
+bak: adında haberdeki kişinin adı geçmiyorsa ve görselde bir kişi ön
+plandaysa uygun=false.
+YAZI VE SLOGAN: Üstünde okunur slogan, pankart, siyasi mesaj ya da taraf
+tutan ifade olan görsel (ör. adında ya da üstünde "occupied", "işgal",
+"... is ..." gibi) uygun=false.
 
 "bulunan": temiz=false ise ne gördüğün (ör. "sağ altta AA logosu").
 METIN;
@@ -274,7 +282,8 @@ METIN;
         $parcalar = [['text' => 'Aşağıda ' . count($ogeler) . ' görsel var. Her biri için karar ver.']];
 
         foreach ($ogeler as $i => $o) {
-            $parcalar[] = ['text' => 'Görsel ' . ($i + 1) . ' — haber başlığı: ' . $o['baslik']];
+            $parcalar[] = ['text' => 'Görsel ' . ($i + 1) . ' — haber başlığı: ' . $o['baslik']
+                . (($o['ad'] ?? '') !== '' ? "\n   Görselin arşivdeki adı: " . $o['ad'] : '')];
             $parcalar[] = ['inlineData' => ['mimeType' => $o['resim']['tur'], 'data' => base64_encode($o['resim']['veri'])]];
         }
 
@@ -355,7 +364,8 @@ METIN;
         $icerik = [['type' => 'text', 'text' => 'Aşağıda ' . count($ogeler) . ' görsel var. Her biri için karar ver.']];
 
         foreach ($ogeler as $i => $o) {
-            $icerik[] = ['type' => 'text', 'text' => 'Görsel ' . ($i + 1) . ' — haber başlığı: ' . $o['baslik']];
+            $icerik[] = ['type' => 'text', 'text' => 'Görsel ' . ($i + 1) . ' — haber başlığı: ' . $o['baslik']
+                . (($o['ad'] ?? '') !== '' ? "\n   Görselin arşivdeki adı: " . $o['ad'] : '')];
             $icerik[] = ['type' => 'image', 'source' => [
                 'type' => 'base64', 'media_type' => $o['resim']['tur'], 'data' => base64_encode($o['resim']['veri']),
             ]];
@@ -439,24 +449,46 @@ METIN;
     // Arama
     // ------------------------------------------------------------------
 
+    /** Türkçe/aksanlı harfleri sadeleştirip küçültür ("Erdoğan" → "erdogan"). */
+    public static function katla(string $metin): string
+    {
+        $metin = mb_strtolower(strtr($metin, ['İ' => 'i', 'I' => 'ı']), 'UTF-8');
+
+        return strtr($metin, [
+            'ç' => 'c', 'ğ' => 'g', 'ı' => 'i', 'ö' => 'o', 'ş' => 's', 'ü' => 'u', 'ə' => 'a',
+            'á' => 'a', 'à' => 'a', 'â' => 'a', 'ä' => 'a', 'ã' => 'a', 'é' => 'e', 'è' => 'e',
+            'ê' => 'e', 'ë' => 'e', 'í' => 'i', 'î' => 'i', 'ï' => 'i', 'ó' => 'o', 'ô' => 'o',
+            'õ' => 'o', 'ú' => 'u', 'û' => 'u', 'ñ' => 'n',
+        ]);
+    }
+
     /**
      * Haberler için görsel arama sözcükleri (İngilizce; Commons ve Openverse
      * İngilizce etiketli).
      *
      * @param list<array{baslik:string,ozet:string}> $haberler
-     * @return list<list<string>> aynı sırada, her haber için 1-3 sorgu
+     * @return list<array{liste:list<string>,kisiler:list<string>}> aynı sırada:
+     *         1-3 sorgu ve haberdeki tanınmış kişiler (bkz. yedek_bul)
      */
     public function sorgular(array $haberler): array
     {
         $yonerge = <<<'METIN'
 Sen bir haber sitesinin görsel editörüsün. Her haber için, özgür lisanslı
 fotoğraf arşivlerinde (Wikimedia Commons, Openverse) aranacak İngilizce
-arama sözcükleri yaz. Sırayla 2-3 sorgu: önce özgül (olayın yeri, kurumu,
-binası, nesnesi; ör. "Grand National Assembly of Turkey", "Borsa Istanbul"),
-sonra genel ve kesin sonuç veren (ör. "gold bars", "football stadium",
-"wheat field", "hospital corridor"). Her sorgu 1-4 kelime.
-Kişi adı KULLANMA (yanlış kişinin fotoğrafı gelebilir); yer, kurum,
-nesne ya da sahne yaz. Haber sitesi, kanal ya da ajans adı yazma.
+arama sözcükleri yaz. Sırayla 2-3 sorgu. Her sorgu 1-4 kelime.
+
+KİŞİ ÖNCE (site sahibinin kuralı: "Erdoğan Bakü'de diyorsa Erdoğan'ın
+bir fotoğrafını kullan"): Haberin ana konusu tanınmış bir kamu figürüyse
+(devlet/hükümet başkanı, bakan, parti lideri, ünlü sporcu, teknik
+direktör, sanatçı) İLK sorgu o kişinin tam adı, Wikipedia'daki yazımıyla
+("Recep Tayyip Erdoğan", "Ilham Aliyev", "Donald Trump", "Mohamed
+Salah"). Bu kişileri "kisiler" listesine de yaz. Tanınmamış sıradan
+kişilerin (kaza, suç haberindeki kişiler) adını YAZMA; kisiler boş kalsın.
+
+Sonra özgül yer/kurum/nesne (ör. "Grand National Assembly of Turkey",
+"Borsa Istanbul", "Baku"), en son genel ve kesin sonuç veren (ör. "gold
+bars", "football stadium", "wheat field"). Haber sitesi, kanal ya da
+ajans adı yazma. Bayrak ya da slogan aratma.
 METIN;
 
         $sema = [
@@ -467,10 +499,12 @@ METIN;
                     'items' => [
                         'type'       => 'object',
                         'properties' => [
-                            'sira'  => ['type' => 'integer'],
-                            'liste' => ['type' => 'array', 'items' => ['type' => 'string']],
+                            'sira'    => ['type' => 'integer'],
+                            'liste'   => ['type' => 'array', 'items' => ['type' => 'string']],
+                            'kisiler' => ['type' => 'array', 'items' => ['type' => 'string'],
+                                          'description' => 'Haberdeki tanınmış kamu figürlerinin tam adları; yoksa boş'],
                         ],
-                        'required' => ['sira', 'liste'],
+                        'required' => ['sira', 'liste', 'kisiler'],
                     ],
                 ],
             ],
@@ -493,16 +527,20 @@ METIN;
             $veri = $this->claudeJson([['type' => 'text', 'text' => $istem]], $sema, $yonerge);
         }
 
-        $sonuc = array_fill(0, count($haberler), []);
+        $sonuc = array_fill(0, count($haberler), ['liste' => [], 'kisiler' => []]);
+        $temizle = static fn (array $l, int $n): array => array_values(array_slice(array_filter(array_map(
+            static fn ($q): string => trim(mb_substr((string) $q, 0, 60, 'UTF-8')),
+            $l
+        ), static fn (string $q): bool => $q !== ''), 0, $n));
 
         foreach ((array) ($veri['sorgular'] ?? []) as $s) {
             $i = (int) ($s['sira'] ?? 0) - 1;
 
             if ($i >= 0 && $i < count($haberler)) {
-                $sonuc[$i] = array_values(array_slice(array_filter(array_map(
-                    static fn ($q): string => trim(mb_substr((string) $q, 0, 60, 'UTF-8')),
-                    (array) ($s['liste'] ?? [])
-                ), static fn (string $q): bool => $q !== ''), 0, 3));
+                $sonuc[$i] = [
+                    'liste'   => $temizle((array) ($s['liste'] ?? []), 3),
+                    'kisiler' => $temizle((array) ($s['kisiler'] ?? []), 3),
+                ];
             }
         }
 
@@ -512,7 +550,7 @@ METIN;
     /**
      * Özgür lisanslı aday görseller (önce Wikimedia Commons, sonra Openverse).
      *
-     * @return list<array{url:string,atif:string,sayfa:string}>
+     * @return list<array{url:string,ad:string,atif:string,sayfa:string}>
      */
     public function ara(string $sorgu, int $enFazla = 6): array
     {
@@ -535,7 +573,7 @@ METIN;
         return array_slice($sonuc, 0, $enFazla);
     }
 
-    /** @return list<array{url:string,atif:string,sayfa:string}> */
+    /** @return list<array{url:string,ad:string,atif:string,sayfa:string}> */
     private function commons(string $sorgu): array
     {
         $adres = 'https://commons.wikimedia.org/w/api.php?' . http_build_query([
@@ -591,6 +629,8 @@ METIN;
 
             $sonuc[] = [
                 'url'   => $url,
+                // Dosya adi ("File:Recep Tayyip Erdogan 2023.jpg"): kisi eslesmesi icin.
+                'ad'    => mb_substr(preg_replace('/^File:|\.[a-z]+$/i', '', (string) ($s['title'] ?? '')) ?? '', 0, 160, 'UTF-8'),
                 'atif'  => 'Fotoğraf: ' . ($sanatci !== '' ? $sanatci . ', ' : '')
                          . ($kamu ? 'kamu malı' : $lisans) . ' (Wikimedia Commons)',
                 'sayfa' => (string) ($b['descriptionurl'] ?? ''),
@@ -600,7 +640,7 @@ METIN;
         return $sonuc;
     }
 
-    /** @return list<array{url:string,atif:string,sayfa:string}> */
+    /** @return list<array{url:string,ad:string,atif:string,sayfa:string}> */
     private function openverse(string $sorgu): array
     {
         $adres = 'https://api.openverse.org/v1/images/?' . http_build_query([
@@ -639,6 +679,7 @@ METIN;
 
             $sonuc[] = [
                 'url'   => $url,
+                'ad'    => mb_substr(trim((string) ($r['title'] ?? '')), 0, 160, 'UTF-8'),
                 'atif'  => 'Fotoğraf: ' . ($sanatci !== '' ? $sanatci . ', ' : '')
                          . ($kamu ? 'kamu malı' : 'CC ' . strtoupper($lisans) . ($surum !== '' ? ' ' . $surum : ''))
                          . ' (' . $kaynak . ')',
