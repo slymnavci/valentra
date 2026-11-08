@@ -198,6 +198,65 @@ function yazar_foto(string $anahtar): ?string
     return null;
 }
 
+/**
+ * Yazar fotoğrafının küçük kopyası (kare WebP); üretilemezse asıl fotoğraf.
+ *
+ * 08.11.2026, Lighthouse "gorselleri dogru boyutlandirin": ana sayfadaki
+ * Yazarlarimiz kutusunda 52 piksel gorunen portreler 480x480 JPEG
+ * (her biri ~40 KB) olarak iniyordu. Kopya asil dosyanin yaninda bir kez
+ * uretiliyor; klasor yazilamazsa ya da GD yoksa asil dosya.
+ */
+function yazar_foto_kucuk(string $anahtar, int $boy): ?string
+{
+    $asil = yazar_foto($anahtar);
+
+    if ($asil === null) {
+        return null;
+    }
+
+    $yol   = (string) strtok($asil, '?');
+    $kopya = preg_replace('/\.jpg$/', '-' . $boy . '.webp', $yol);
+    $kok   = dirname(__DIR__);
+
+    if (!is_string($kopya) || $kopya === $yol) {
+        return $asil;
+    }
+
+    $asilDosya  = $kok . $yol;
+    $kopyaDosya = $kok . $kopya;
+
+    $var = is_file($kopyaDosya);
+
+    // Asil foto yenilendiyse kopya da yenileniyor; yazilamiyorsa (deploy
+    // sonrasi dosya tarihleri karisik olabilir) mevcut kopya kullaniliyor.
+    if (!$var || (filemtime($kopyaDosya) < filemtime($asilDosya) && is_writable(dirname($kopyaDosya)))) {
+        if (!function_exists('imagewebp') || !is_writable(dirname($kopyaDosya))) {
+            return $var ? $kopya . '?s=' . filemtime($kopyaDosya) : $asil;
+        }
+
+        $kaynak = @imagecreatefromjpeg($asilDosya);
+
+        if ($kaynak === false) {
+            return $asil;
+        }
+
+        $g = imagesx($kaynak);
+        $y = imagesy($kaynak);
+        $k = min($g, $y);
+        $hedef = imagecreatetruecolor($boy, $boy);
+        imagecopyresampled($hedef, $kaynak, 0, 0, intdiv($g - $k, 2), intdiv($y - $k, 2), $boy, $boy, $k, $k);
+        $tamam = @imagewebp($hedef, $kopyaDosya, 80);
+        imagedestroy($kaynak);
+        imagedestroy($hedef);
+
+        if (!$tamam) {
+            return $asil;
+        }
+    }
+
+    return $kopya . '?s=' . filemtime($kopyaDosya);
+}
+
 /** Varsayılan yazar (eski yazılar, bilinmeyen anahtar). */
 const KOSE_VARSAYILAN_YAZAR = 'valentra';
 
@@ -234,7 +293,9 @@ function yazar_portre_svg(string $anahtar, int $boy = 64): string
 {
     $yazar = yazar_bul($anahtar);
     $p     = $yazar['portre'] ?? null;
-    $foto  = $yazar !== null ? yazar_foto($anahtar) : null;
+    // Kucuk gosterimde (kutular, kunye) ekranin iki kati piksellik kopya;
+    // buyuk portrede (yazar sayfasi) asil fotograf.
+    $foto  = $yazar === null ? null : ($boy <= 80 ? yazar_foto_kucuk($anahtar, $boy <= 48 ? 96 : 160) : yazar_foto($anahtar));
 
     if ($foto !== null) {
         return '<img class="yazar-portre foto" src="' . e($foto) . '" alt="' . e((string) $yazar['ad']) . '" width="'
