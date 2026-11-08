@@ -1930,13 +1930,13 @@ function haber_baslik_ayirt(string $baslik, int $haricId, ?string $tarih): strin
 function haber_ayni_basliklari_ayir(int $enFazla = 50): array
 {
     $satirlar = db()->query(
-        "SELECT h.id, h.baslik, COALESCE(h.yayin_tarihi, h.olusturuldu) AS tarih
+        "SELECT h.id, h.baslik, k.baslik AS grup, COALESCE(h.yayin_tarihi, h.olusturuldu) AS tarih
            FROM haberler h
            JOIN (SELECT baslik FROM haberler
                   WHERE durum = 'yayinda' AND " . haber_dizinlenir_kosulu() . "
                   GROUP BY baslik HAVING COUNT(*) > 1) k ON k.baslik = h.baslik
           WHERE h.durum = 'yayinda'
-          ORDER BY h.baslik, COALESCE(h.yayin_tarihi, h.olusturuldu), h.id
+          ORDER BY k.baslik, COALESCE(h.yayin_tarihi, h.olusturuldu), h.id
           LIMIT " . max(1, min(500, $enFazla * 3))
     )->fetchAll();
 
@@ -1947,9 +1947,16 @@ function haber_ayni_basliklari_ayir(int $enFazla = 50): array
     foreach ($satirlar as $s) {
         $baslik = (string) $s['baslik'];
 
-        // Her baslikta ilk (en eski) haber oldugu gibi kaliyor.
-        if (!isset($gorulen[$baslik])) {
-            $gorulen[$baslik] = true;
+        /*
+         * Grup veritabaninin karsilastirmasiyla (utf8mb4_unicode_ci): buyuk
+         * kucuk harf ve sondaki bosluk farki ayni baslik sayiliyor. PHP'de
+         * tam esitlige bakmak boyle bir grubu ayirmadan birakiyordu.
+         * Her grupta ilk (en eski) haber oldugu gibi kaliyor.
+         */
+        $grup = (string) $s['grup'];
+
+        if (!isset($gorulen[$grup])) {
+            $gorulen[$grup] = true;
             continue;
         }
 
