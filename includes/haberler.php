@@ -818,10 +818,16 @@ function haber_ana_akis_kosulu(bool $yerelDahil = false, bool $konuSiniri = true
 function haber_konu_siniri_kosulu(): string
 {
     require_once __DIR__ . '/konu_siniri.php';
+    require_once __DIR__ . '/mac_oncesi.php';
 
-    // Konusunun tavanini asanlar ve yayindaki bir derlemenin kaynaklari
-    // (derleme hepsini anlatiyor; bkz. derleme_yayindaki_kaynak_idler).
-    $fazla = array_values(array_unique(array_merge(konu_fazlasi_idler(), derleme_yayindaki_kaynak_idler())));
+    // Konusunun tavanini asanlar, yayindaki bir derlemenin kaynaklari
+    // (derleme hepsini anlatiyor; bkz. derleme_yayindaki_kaynak_idler) ve
+    // maci bitmis mac oncesi haberleri ("ilk 11 belli oldu"; bkz. mac_oncesi_bayat_idler).
+    $fazla = array_values(array_unique(array_merge(
+        konu_fazlasi_idler(),
+        derleme_yayindaki_kaynak_idler(),
+        mac_oncesi_bayat_idler()
+    )));
 
     return $fazla === [] ? '' : ' AND h.id NOT IN (' . implode(', ', array_map('intval', $fazla)) . ')';
 }
