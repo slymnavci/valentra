@@ -11,10 +11,9 @@ declare(strict_types=1);
  * (includes/hava_seridi.php).
  *
  * Secim: ana sayfa sirasi (panelden one cikarilan bugunun haberleri
- * basta, sonra gunun onem puani; bkz. haber_sirasi) ve her konudan TEK
- * haber (konu_ayni_mi; bkz. includes/konu_siniri.php). Kaydirakla ayni
- * sirayi kullaniyor ama kaydirak ayni konunun iki acisini gosterebilir;
- * burada her satir ayri bir gelisme.
+ * basta, sonra gunun onem puani; bkz. haber_sirasi), her olaydan TEK
+ * haber (konu_ayni_mi; bkz. includes/konu_siniri.php) ve alan yuvalari
+ * (BES_GELISME_YUVALAR): kutu mansetin ilk bes haberinin kopyasi degil.
  */
 
 require_once __DIR__ . '/haberler.php';
@@ -22,23 +21,64 @@ require_once __DIR__ . '/konu_siniri.php';
 
 const BES_GELISME_ADET = 5;
 
+/*
+ * Yuvalar (08.11.2026, okur denetimi): kutu manset kaydiracinin ilk bes
+ * haberini tekrar ediyordu, ucu politikaydi. Artik secilmis bir ozet:
+ * her yuvaya o alanin en onemli haberi, sonuncusu gunun kalan en onemli
+ * gelismesi. Bir yuvanin haberi yoksa bos kalmiyor; "diger" gibi
+ * dolduruluyor ama ayni alandan en fazla iki haber.
+ *
+ *   gundem     Gündem ve politika birlikte (tek madde)
+ *   ekonomi
+ *   dunya
+ *   yasam      Günlük yaşam: gündem dosyalarından biri (akaryakıt, kira,
+ *              emekli, asgari ücret ...) ya da sağlık
+ *   diger      Kalan en önemli gelişme
+ */
+const BES_GELISME_YUVALAR = ['gundem', 'ekonomi', 'dunya', 'yasam', 'diger'];
+
+/** Haberin vitrin alanı. */
+function bes_gelisme_alani(array $h): string
+{
+    require_once __DIR__ . '/konu.php';
+
+    $kategori = (string) ($h['kategori_slug'] ?? '');
+
+    if (in_array($kategori, ['spor', 'magazin', 'kultur-sanat', 'teknoloji', 'yemek-tarifleri'], true)) {
+        return 'diger';
+    }
+
+    if ($kategori === 'saglik' || konu_haberin_konusu($h) !== null) {
+        return 'yasam';
+    }
+
+    return match ($kategori) {
+        'gundem', 'politika' => 'gundem',
+        'ekonomi'            => 'ekonomi',
+        'dunya'              => 'dunya',
+        default              => 'diger',
+    };
+}
+
 /**
- * Birbirini tekrar etmeyen en önemli gelişmeler.
+ * Birbirini tekrar etmeyen, alanlara dağılmış en önemli gelişmeler.
  *
  * @return list<array<string,mixed>>
  */
 function bes_gelisme(int $adet = BES_GELISME_ADET): array
 {
     try {
-        $adaylar = haber_manset(40, true);
+        $adaylar = haber_manset(60, true);
     } catch (Throwable $e) {
         error_log('[valentra] bes gelisme: ' . $e->getMessage());
 
         return [];
     }
 
-    $secilen = [];
-    $kokler  = [];
+    // Ayni olayin farkli aciklamalari tek madde: konu_ayni_mi ile
+    // tekrar edenler bastan ayiklaniyor (sira korunuyor).
+    $tekil  = [];
+    $kokler = [];
 
     foreach ($adaylar as $h) {
         $k = konu_kokleri((string) $h['baslik']);
@@ -49,15 +89,51 @@ function bes_gelisme(int $adet = BES_GELISME_ADET): array
             }
         }
 
-        $secilen[] = $h;
-        $kokler[]  = $k;
+        $h['_alan'] = bes_gelisme_alani($h);
+        $tekil[]    = $h;
+        $kokler[]   = $k;
+    }
 
-        if (count($secilen) >= $adet) {
-            break;
+    $secilen = [];
+    $kullan  = [];
+
+    // 1. Her yuvaya o alanin en ust sirada gelen haberi.
+    foreach (BES_GELISME_YUVALAR as $yuva) {
+        foreach ($tekil as $i => $h) {
+            if (!isset($kullan[$i]) && ($yuva === 'diger' || $h['_alan'] === $yuva)) {
+                $secilen[$yuva] = $i;
+                $kullan[$i]     = true;
+                break;
+            }
         }
     }
 
-    return $secilen;
+    // 2. Bos kalan yuvalar: siradaki haber, ayni alandan en fazla iki.
+    $alanSayisi = array_count_values(array_map(static fn (int $i): string => $tekil[$i]['_alan'], $secilen));
+
+    foreach ($tekil as $i => $h) {
+        if (count($secilen) >= $adet) {
+            break;
+        }
+
+        if (isset($kullan[$i]) || ($alanSayisi[$h['_alan']] ?? 0) >= 2) {
+            continue;
+        }
+
+        $secilen[] = $i;
+        $kullan[$i] = true;
+        $alanSayisi[$h['_alan']] = ($alanSayisi[$h['_alan']] ?? 0) + 1;
+    }
+
+    // Gosterim sirasi: yuva sirasi (gundem, ekonomi, dunya, yasam, diger).
+    $liste = [];
+
+    foreach (array_slice($secilen, 0, $adet, true) as $i) {
+        unset($tekil[$i]['_alan']);
+        $liste[] = $tekil[$i];
+    }
+
+    return $liste;
 }
 
 /** Vitrindeki kutu. */

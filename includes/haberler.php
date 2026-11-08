@@ -1312,6 +1312,19 @@ function haber_taslak_ekle(array $veri): array
         $ozet = kisalt($icerik, 220);
     }
 
+    /*
+     * Yapay zeka calisma dili kayit aninda temizleniyor (08.11.2026, okur
+     * denetimi): haber sayfasi temizlenmisti ama ayni ozet dosya
+     * kartlarinda, bultende ve Telegram'da eski haliyle duruyordu. Govde,
+     * spot ve "neden onemli" birlikte (bkz. okur_dili). Tariflerde degil:
+     * orada "malzeme" gercek kelime.
+     */
+    if (trim((string) ($veri['kategori'] ?? '')) !== 'yemek-tarifleri') {
+        $icerik = okur_dili($icerik);
+        $ozet   = okur_dili($ozet);
+        $veri['neden_onemli'] = okur_dili((string) ($veri['neden_onemli'] ?? ''));
+    }
+
     $ifade = db()->prepare(
         'INSERT INTO haberler
             (baslik, slug, ozet, icerik, gorsel_url, etiketler, durum, kategori_id,

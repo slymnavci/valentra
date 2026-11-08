@@ -2665,3 +2665,21 @@ INSERT IGNORE INTO pratik_bilgiler (anahtar, baslik, aciklama, grup, sira, kayna
      'SSK ve Bağ-Kur aylık artışına esas altı aylık TÜFE değişimi', 'ekonomi', 24,
      'https://evds3.tcmb.gov.tr/', 'TÜİK — TCMB EVDS üzerinden',
      'Ocak–Haziran ya da Temmuz–Aralık dönemindeki birikimli TÜFE değişimi.');
+
+-- ---------------------------------------------------------------------------
+-- Birlestirilen haberlerin eski adresleri (08.11.2026, okur denetimi:
+-- ayni gelismenin iki motorin haberi ayri ayri 200 donuyor, ikisi de
+-- kendi canonical adresini tasiyordu). Panel -> Benzer haberler'de bir
+-- haber digerine birlestirilince eski adres buraya yazilir ve haber
+-- sayfasi kalici (301) yonlendirme verir. Eski kayit "reddedildi" olur:
+-- listelerden ve site haritasindan cikar, kopya denetimi onu gormeye
+-- devam eder (ajan ayni haberi yeniden getirmez).
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS haber_yonlendirmeleri (
+    eski_slug   VARCHAR(320) NOT NULL,
+    eski_id     INT UNSIGNED NOT NULL,
+    hedef_id    INT UNSIGNED NOT NULL,
+    olusturuldu DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (eski_slug),
+    KEY ix_yonlendirme_hedef (hedef_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

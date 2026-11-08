@@ -34,7 +34,7 @@ if (($izgaraHaberleri ?? []) === []) {
                     <?php endif; ?>
 
                     <h3><?= e($haber['baslik']) ?></h3>
-                    <p class="ozet"><?= e(kisalt($haber['ozet'], 120)) ?></p>
+                    <p class="ozet"><?= e(kisalt(($haber['kategori_slug'] ?? '') === 'yemek-tarifleri' ? (string) $haber['ozet'] : okur_dili((string) $haber['ozet']), 120)) ?></p>
 
                     <div class="kart-alt">
                         <span><?= e(tarih_bicimle($haber['yayin_tarihi'])) ?></span>

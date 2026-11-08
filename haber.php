@@ -24,6 +24,18 @@ if (($_GET['sonraki'] ?? '') === '1') {
     exit;
 }
 
+// Birlestirilmis haberin eski adresi: kalici olarak yasayan habere
+// (08.11.2026; bkz. includes/haber_birlestir.php).
+if ($haber === null && $slug !== '') {
+    require_once __DIR__ . '/includes/haber_birlestir.php';
+    $hedefSlug = haber_yonlendirme_hedefi($slug);
+
+    if ($hedefSlug !== null) {
+        header('Location: ' . haber_yolu($hedefSlug), true, 301);
+        exit;
+    }
+}
+
 if ($haber === null) {
     http_response_code(404);
     $sayfaBasligi = 'Haber bulunamadı — Valentra';

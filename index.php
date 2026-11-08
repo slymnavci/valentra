@@ -220,7 +220,10 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
             <?php if ($haberler !== []): ?>
                 <div class="bolum-basligi">
-                    <h2><?= $sayfa > 1 ? 'Haberler' : 'Son Haberler' ?></h2>
+                    <?php /* "Son Haberler" degil (08.11.2026, okur denetimi): izgara
+                       kronolojik degil, mansetle ayni onem sirasinin devami;
+                       sabah haberi aksam haberinin onunde gorunebiliyor. */ ?>
+                    <h2><?= $sayfa > 1 ? 'Haberler' : 'Diğer Haberler' ?></h2>
                     <span class="cizgi"></span>
                 </div>
 
