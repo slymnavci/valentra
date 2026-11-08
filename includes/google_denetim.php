@@ -687,6 +687,13 @@ function google_denetimi(int $sureButcesi = 80): array
                     SUM(" . haber_dizinlenir_kosulu() . " AND TRIM(ozet) = '') AS ozetsiz
                FROM haberler WHERE durum = 'yayinda'"
         )->fetch();
+        // Once ayir (07.11.2026): denetim sonucu hemen duzelir.
+        $ayrilan = haber_ayni_basliklari_ayir();
+
+        foreach ($ayrilan as $a) {
+            $ekle('İçerik', 'Aynı başlık ayrıldı', 'tamam', '#' . $a['id'] . ': "' . $a['eski'] . '" → "' . $a['yeni'] . '"');
+        }
+
         $kopya = (int) db()->query(
             "SELECT COUNT(*) FROM (SELECT baslik FROM haberler WHERE durum = 'yayinda' AND " . haber_dizinlenir_kosulu()
             . " GROUP BY baslik HAVING COUNT(*) > 1) t"

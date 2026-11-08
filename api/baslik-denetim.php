@@ -92,6 +92,8 @@ foreach ((array) ($veri['basliklar'] ?? []) as $b) {
     $uzunluk = mb_strlen($yeni, 'UTF-8');
 
     if ($yeni !== '' && $uzunluk >= 15 && $uzunluk <= 110 && $yeni !== (string) $eski) {
+        // Baska haberde ayni baslik varsa gunu ekleniyor (bkz. haber_baslik_ayirt).
+        $yeni = haber_baslik_ayirt($yeni, $id, null);
         $duzelt->execute(['b' => $yeni, 'id' => $id]);
         $duzeltilen += $duzelt->rowCount();
         arama_bildir_kayit('haber', $id);
