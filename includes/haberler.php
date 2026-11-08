@@ -819,7 +819,9 @@ function haber_konu_siniri_kosulu(): string
 {
     require_once __DIR__ . '/konu_siniri.php';
 
-    $fazla = konu_fazlasi_idler();
+    // Konusunun tavanini asanlar ve yayindaki bir derlemenin kaynaklari
+    // (derleme hepsini anlatiyor; bkz. derleme_yayindaki_kaynak_idler).
+    $fazla = array_values(array_unique(array_merge(konu_fazlasi_idler(), derleme_yayindaki_kaynak_idler())));
 
     return $fazla === [] ? '' : ' AND h.id NOT IN (' . implode(', ', array_map('intval', $fazla)) . ')';
 }
@@ -1813,6 +1815,10 @@ function haber_otomatik_yayin_acik(): bool
  */
 function haber_otomatik_yayinla(int $id): bool
 {
+    if (haber_tekrar_bekletilir($id)) {
+        return false;
+    }
+
     $ifade = db()->prepare(
         'UPDATE haberler
             SET durum = :yayinda,
@@ -1827,6 +1833,16 @@ function haber_otomatik_yayinla(int $id): bool
         return false;
     }
 
+    // Ayni teslimdeki sonraki haberler bunu da "yayinda" gorsun.
+    if (function_exists('konu_son_yayindakiler')) {
+        $yeni = db()->prepare('SELECT id, baslik, onem, derleme FROM haberler WHERE id = :id');
+        $yeni->execute(['id' => $id]);
+
+        if (($satir = $yeni->fetch()) !== false) {
+            konu_son_yayindakiler($satir);
+        }
+    }
+
     require_once __DIR__ . '/arama_bildirim.php';
     arama_bildir_kayit('haber', $id);
     // Son dakika ya da onemli haber: tarayici bildirimi (03.11.2026; bkz. includes/web_push.php).
@@ -1837,6 +1853,66 @@ function haber_otomatik_yayinla(int $id): bool
     telegram_haber_yayinlandi($id);
 
     return true;
+}
+
+/**
+ * Tek konu, tek haber (08.11.2026; bkz. konu_tekrar_bul): haber yayindaki
+ * bir haberin tekrariysa ya da konusu dolmussa taslakta birakilir ve
+ * isaretlenir (tekrar_id); sonraki otomatik yayin turlarinda yeniden
+ * denenmez. Ozgun veri haberleri (valentra-*) ve derlemeler bekletilmez.
+ */
+function haber_tekrar_bekletilir(int $id): bool
+{
+    if (!haber_sutun_var('tekrar_id')) {
+        return false;
+    }
+
+    try {
+        $ifade = db()->prepare(
+            'SELECT id, baslik, onem, derleme, tekrar_id, ajan_modeli, durum FROM haberler WHERE id = :id'
+        );
+        $ifade->execute(['id' => $id]);
+        $h = $ifade->fetch();
+
+        if ($h === false || $h['durum'] !== HABER_TASLAK) {
+            return false;
+        }
+
+        if ($h['tekrar_id'] !== null) {
+            return true;
+        }
+
+        if ((int) $h['derleme'] === 1 || str_starts_with((string) $h['ajan_modeli'], 'valentra-')) {
+            return false;
+        }
+
+        require_once __DIR__ . '/konu_siniri.php';
+
+        $es = konu_tekrar_bul(['id' => (int) $h['id'], 'baslik' => (string) $h['baslik'], 'onem' => (int) $h['onem']]);
+
+        if ($es === null) {
+            return false;
+        }
+
+        db()->prepare(
+            "UPDATE haberler
+                SET tekrar_id = :es,
+                    ajan_notu = LEFT(TRIM(CONCAT(:not, ' ', COALESCE(ajan_notu, ''))), 600),
+                    guncellendi = guncellendi
+              WHERE id = :id"
+        )->execute([
+            'es'  => $es['id'],
+            'not' => mb_substr('[Yayımlanmadı: ' . $es['neden'] . ' — #' . $es['id'] . ' ' . $es['baslik']
+                . '. Derlemeye malzeme; gerekirse elle yayımlayın.]', 0, 400, 'UTF-8'),
+            'id'  => $id,
+        ]);
+
+        return true;
+    } catch (Throwable $e) {
+        error_log('[valentra] tekrar bekletme: ' . $e->getMessage());
+
+        return false;
+    }
 }
 
 /**
@@ -1856,6 +1932,7 @@ function haber_bugunku_taslaklari_yayinla(): int
         'SELECT id FROM haberler
           WHERE durum = :taslak
             AND ' . haber_guven_esigi_kosulu() . '
+            ' . (haber_sutun_var('tekrar_id') ? 'AND tekrar_id IS NULL' : '') . '
           ORDER BY id'
     );
     $ifade->execute(['taslak' => HABER_TASLAK]);
