@@ -14,6 +14,13 @@ require_once __DIR__ . '/seo.php';
 require_once __DIR__ . '/kurumsal.php';
 require_once __DIR__ . '/etiket.php';
 
+// Yapay zeka calisma dili kalintilari (bkz. okur_dili); tariflerde degil.
+if (($haber['kategori_slug'] ?? '') !== 'yemek-tarifleri') {
+    $haber['icerik'] = okur_dili((string) $haber['icerik']);
+    $haber['ozet']   = okur_dili((string) $haber['ozet']);
+    $haber['neden_onemli'] = okur_dili((string) ($haber['neden_onemli'] ?? ''));
+}
+
 $nedenOnemli  = trim((string) ($haber['neden_onemli'] ?? ''));
 $haberGorseli = haber_gorsel($haber);
 $govdeNitelik = '';

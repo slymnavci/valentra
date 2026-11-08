@@ -52,6 +52,13 @@ final class Aciklayici
         - Ara başlık satırı "## " ile başlar ve tek satırdır.
         - Madde listesinde her satır "- " ile başlar.
         - Kalın, italik, bağlantı, tablo, emoji yok.
+
+        OKURA DÖNÜK DİL (08.11.2026, dış denetim raporu): Yazdığın metni
+        okur okuyacak. "Malzeme", "malzemede", "verilen haberler",
+        "kaynak metin", "elimizdeki bilgiler", "sana verilen" gibi senin
+        çalışma düzenini ele veren ifadeleri ASLA kullanma. Bir bilgi
+        yoksa "henüz açıklanmadı", "resmî bir açıklama yapılmadı" ya da
+        "haberlerde yer almıyor" de; kaynak gerekiyorsa yayının adını yaz.
         METIN;
 
     private const ACIKLAYICI_YAZI = self::ORTAK . <<<'METIN'

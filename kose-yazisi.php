@@ -99,7 +99,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
     <?php endif; ?>
 
     <div class="icerik">
-        <?= kose_icerik_html((string) $yazi['icerik']) ?>
+        <?= kose_icerik_html(okur_dili((string) $yazi['icerik'])) ?>
     </div>
 
     <?php /* Paylasim ve WhatsApp kanali (03.11.2026; bkz. includes/paylas.php). */ ?>

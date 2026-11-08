@@ -3117,6 +3117,7 @@ function haber_ilgililer(array $haber, int $adet = 4): array
         static fn (string $e): string => mb_strtolower($e, 'UTF-8'),
         etiketleri_coz((string) ($haber['etiketler'] ?? ''))
     );
+    $kokler = haber_baslik_kokleri((string) ($haber['baslik'] ?? ''));
 
     try {
         $ifade = db()->prepare(
@@ -3126,10 +3127,10 @@ function haber_ilgililer(array $haber, int $adet = 4): array
           LEFT JOIN kategoriler k ON k.id = h.kategori_id
               WHERE h.durum = :d
                 AND h.id <> :id
-                AND h.yayin_tarihi >= NOW() - INTERVAL 30 DAY
+                AND h.yayin_tarihi >= NOW() - INTERVAL 14 DAY
                 AND (h.baslik_parmak IS NULL OR CHAR_LENGTH(:bp) = 0 OR h.baslik_parmak <> :bp2)
               ORDER BY h.yayin_tarihi DESC
-              LIMIT 200'
+              LIMIT 500'
         );
         $bp = (string) ($haber['baslik_parmak'] ?? '');
         $ifade->execute(['d' => HABER_YAYINDA, 'id' => (int) $haber['id'], 'bp' => $bp, 'bp2' => $bp]);
@@ -3138,20 +3139,70 @@ function haber_ilgililer(array $haber, int $adet = 4): array
         return [];
     }
 
+    /*
+     * ALAKA ESIGI (08.11.2026, dis denetim raporu: motorin indirimi
+     * haberinin "Bunu da okuyun"unda AKOM soguk hava haberi). Eskiden
+     * puani en yuksek aday ne kadar alakasiz olursa olsun seciliyordu.
+     * Simdi aday ya ortak etiket ya basliklarinda ortak iki kelime ya da
+     * ayni baslik (kategori) + ortak bir kelime tasimali; yoksa hic
+     * onerilmiyor. Baslik kelimeleri koklerinden (ilk 5 harf: "motorin",
+     * "motorinde" ayni) karsilastiriliyor.
+     */
     $puanli = [];
 
     foreach ($adaylar as $sira => $aday) {
-        $ortak = array_intersect(
+        $ortak = count(array_intersect(
             $etiketler,
             array_map(static fn (string $e): string => mb_strtolower($e, 'UTF-8'), etiketleri_coz((string) $aday['etiketler']))
-        );
-        $ayniBaslik = (string) ($aday['kategori_id'] ?? '') === (string) ($haber['kategori_id'] ?? '');
-        // Ortak etiket once, sonra ayni baslik; esitse daha yeni olan
+        ));
+        $ortakKelime = count(array_intersect($kokler, haber_baslik_kokleri((string) $aday['baslik'])));
+        $ayniBaslik  = (string) ($aday['kategori_id'] ?? '') === (string) ($haber['kategori_id'] ?? '');
+
+        if ($ortak === 0 && $ortakKelime < 2 && !($ayniBaslik && $ortakKelime >= 1)) {
+            continue;
+        }
+
+        // Ortak etiket ve kelime once, sonra ayni baslik; esitse daha yeni olan
         // (sira zaten yeniden eskiye).
-        $puanli[] = ['puan' => count($ortak) * 1000 + ($ayniBaslik ? 500 : 0) - $sira, 'haber' => $aday];
+        $puanli[] = ['puan' => $ortak * 1000 + $ortakKelime * 400 + ($ayniBaslik ? 150 : 0) - $sira * 0.5, 'haber' => $aday];
     }
 
     usort($puanli, static fn (array $a, array $b): int => $b['puan'] <=> $a['puan']);
 
     return array_slice(array_column($puanli, 'haber'), 0, $adet);
+}
+
+/**
+ * Basligin anlamli kelimelerinin kokleri (ilk 5 harf; 4 harften kisa ve
+ * cok genel kelimeler disarida). haber_ilgililer'in alaka olcusu.
+ *
+ * @return list<string>
+ */
+function haber_baslik_kokleri(string $baslik): array
+{
+    static $genel = [
+        'yüzd', 'mily', 'türk', 'sonr', 'olar', 'için', 'açık', 'dedi', 'yeni', 'büyü', 'artt',
+        'düşt', 'geld', 'oldu', 'olan', 'olac', 'kişi', 'gün', 'bugü', 'yarı', 'karş', 'hakk',
+        'üzer', 'ilk', 'son', 'daha', 'kada', 'göre', 'sond', 'flaş', 'iddi', 'açıkl',
+        'yüks', 'geri', 'başl', 'bell', 'etti', 'yapt', 'yapı', 'ilgi', 'nası', 'nede',
+    ];
+
+    // Turkce buyuk harf: "İ" -> "i", "I" -> "ı" (mb_strtolower "İ"yi noktali iki karaktere boluyor).
+    $baslik = strtr($baslik, ['İ' => 'i', 'I' => 'ı']);
+    $kelimeler = preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($baslik, 'UTF-8')) ?: [];
+    $kokler = [];
+
+    foreach ($kelimeler as $k) {
+        if (mb_strlen($k, 'UTF-8') < 4 || ctype_digit($k) || in_array($k, ['indi', 'çıktı', 'kaldı', 'verdi', 'aldı'], true)) {
+            continue;
+        }
+
+        $kok = mb_substr($k, 0, 5, 'UTF-8');
+
+        if (!in_array(mb_substr($kok, 0, 4, 'UTF-8'), $genel, true)) {
+            $kokler[] = $kok;
+        }
+    }
+
+    return array_values(array_unique($kokler));
 }
