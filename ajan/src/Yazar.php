@@ -248,15 +248,18 @@ final class Yazar implements SemaliIstemci
              bildirdi") ve ajan notuna yaz. Yalnızca BİR kaynakta geçen
              iddiayı kesin bilgi gibi yazma, kime ait olduğunu söyle.
            - Paragrafları BOŞ SATIRLA ayır.
-           - BAŞLIK — KISA, VURUCU, MERAK UYANDIRAN (site sahibinin
-             kararı, 03.11.2026; okur habere tıklasın, ayrıntı içeride):
-             * En fazla 60 karakter, ideali 6-8 kelime.
-             * Kim ne yaptı / ne oldu, net ve canlı. En çarpıcı ayrıntıyı
-               (rakam, sonuç, isim) başlıkta vermek ŞART DEĞİL; habere
-               bırakabilirsin. Örnekler: "TÜİK ekim enflasyonunu
-               açıkladı", "Merkez Bankası faiz kararını verdi",
-               "Fenerbahçe'de Kartal dönemi bitti", "Akaryakıta yeni zam
-               kapıda", "Asgari ücrette ilk rakam masada".
+           - BAŞLIK — NET, SOMUT, MERAK UYANDIRAN (site sahibinin
+             kararı, 08.11.2026: "orta yol"; 03.11.2026'daki 60 karakter
+             sınırı genişledi):
+             * En fazla 80 karakter, ideali 8-11 kelime.
+             * Kim ne yaptı / ne oldu, net ve canlı. Haberde varsa EN
+               ÖNEMLİ somut bilgiyi (rakam, oran, tarih) ya da okura
+               doğrudan etkisini başlığa koy; ajans bülteni kuruluğunda
+               kalma. Örnekler: "Motorine 5,47 TL indirim: depo maliyeti ne
+               kadar düştü?", "TÜİK: Ekim enflasyonu yüzde 2,8 oldu",
+               "Merkez Bankası faizi yüzde 36'da sabit tuttu",
+               "Asgari ücrette ilk rakam masada: işçi tarafı 30 bin TL
+               istedi". Soru biçimi ancak metin cevabı veriyorsa.
              * Kaynağın başlığını kopyalama ya da çevirme; kendi başlığını
                yaz.
              * ANLAŞILIR, DOĞAL TÜRKÇE (site sahibi, 04.11.2026: "başlığın
@@ -484,7 +487,7 @@ final class Yazar implements SemaliIstemci
         - YAZIM — KISA: Bu bir video haberidir, uzun haber değil.
           "TÜM AYRINTILAR" ve "UZUNLUK" kuralları burada UYGULANMAZ.
           * baslik: olayı ve yerini söyleyen kısa, vurucu bir başlık (en
-            fazla 60 karakter). Örnek: "Malatya'da kurt sürüsü köye indi".
+            fazla 80 karakter). Örnek: "Malatya'da kurt sürüsü köye indi".
           * ozet: tek cümle.
           * icerik: 2-4 cümle, tek paragraf (açıklama zenginse en fazla
             iki kısa paragraf). Ne oldu, nerede, ne zaman (biliniyorsa),
@@ -555,7 +558,7 @@ final class Yazar implements SemaliIstemci
             'sira'        => ['type' => 'integer', 'description' => 'Adayin kullanici mesajindaki sira numarasi'],
             'ilgili'      => ['type' => 'boolean', 'description' => 'Haber yayın politikasına göre yayımlanabilir mi'],
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
-            'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı: kısa, vurucu, merak uyandıran, doğal ve tek okumada anlaşılır Türkçe (çeviri kalıbı yok, eksik tümleç yok); en fazla 60 karakter, ayrıntı metinde'],
+            'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı: net, somut, merak uyandıran, doğal ve tek okumada anlaşılır Türkçe (çeviri kalıbı yok, eksik tümleç yok); en fazla 80 karakter; varsa ana rakam ya da okura etkisi başlıkta'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
             'icerik'      => ['type' => 'string',  'description' => 'Tarafsız, özgün cümlelerle yeniden yazılmış haber metni: kaynaktaki bütün ayrıntılar (rakam, tarih, isim, açıklama, arka plan); kaynak zenginse 5-10, kısaysa 3 paragraf; paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
             'etiketler'   => [
@@ -599,7 +602,7 @@ final class Yazar implements SemaliIstemci
         'properties' => [
             'ilgili'      => ['type' => 'boolean', 'description' => 'Haber yayın politikasına göre yayımlanabilir mi'],
             'red_nedeni'  => ['type' => 'string',  'description' => 'İlgili değilse tek cümlelik gerekçe, ilgiliyse boş'],
-            'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı: kısa, vurucu, merak uyandıran, doğal ve tek okumada anlaşılır Türkçe (çeviri kalıbı yok, eksik tümleç yok); en fazla 60 karakter, ayrıntı metinde'],
+            'baslik'      => ['type' => 'string',  'description' => 'Haber başlığı: net, somut, merak uyandıran, doğal ve tek okumada anlaşılır Türkçe (çeviri kalıbı yok, eksik tümleç yok); en fazla 80 karakter; varsa ana rakam ya da okura etkisi başlıkta'],
             'ozet'        => ['type' => 'string',  'description' => 'Tek cümlelik spot, en fazla 200 karakter'],
             'icerik'      => ['type' => 'string',  'description' => 'Tarafsız, özgün cümlelerle yeniden yazılmış haber metni: kaynaktaki bütün ayrıntılar (rakam, tarih, isim, açıklama, arka plan); kaynak zenginse 5-10, kısaysa 3 paragraf; paragraflar boş satırla ayrılmış; kaynakta olmayan bilgi yok. Yemek tarifinde: giriş, Malzemeler, Yapılışı (bkz. YEMEK TARİFLERİ)'],
             'etiketler'   => [

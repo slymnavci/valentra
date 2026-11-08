@@ -6729,3 +6729,69 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
     .hesap-rehber ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .vitrin-piyasa .piyasa-serit { height: auto; }
+
+/* --- Gunun Kelimesi oyunu (08.11.2026; gunun-kelimesi.php) ----------------
+ * Dogru yer yesil, baska yerde sari, yok gri: kelime oyunlarinin bilinen
+ * dili. Renk tek basina degil: kutularin aria-label'inde de yaziyor. */
+.kelime-oyun {
+    --k2: #2f8f4e; --k1: #c99a06; --k0: #787c86;
+    max-width: 520px; margin: 0 auto 28px; display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.kelime-izgara { display: grid; gap: 6px; width: min(100%, 330px); }
+.kelime-satir { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.kelime-kutu {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--cizgi); border-radius: 6px; background: var(--kart);
+    font-size: 1.75rem; font-weight: 800; color: var(--metin); text-transform: uppercase;
+    transition: transform .12s ease, background .2s ease;
+}
+.kelime-kutu.dolu { border-color: var(--metin-soluk); transform: scale(1.03); }
+.kelime-kutu.k2, .kelime-kutu.k1, .kelime-kutu.k0 { color: #fff; transform: none; }
+.kelime-kutu.k2 { background: var(--k2); border-color: var(--k2); }
+.kelime-kutu.k1 { background: var(--k1); border-color: var(--k1); }
+.kelime-kutu.k0 { background: var(--k0); border-color: var(--k0); }
+.kelime-mesaj { min-height: 1.4em; margin: 0; font-weight: 600; color: var(--metin); text-align: center; }
+
+.kelime-klavye { width: 100%; display: grid; gap: 7px; user-select: none; }
+.kelime-klavye-satir { display: flex; gap: 5px; justify-content: center; }
+.kelime-klavye button {
+    flex: 1 1 0; min-width: 0; max-width: 46px; height: 54px; padding: 0;
+    border: 0; border-radius: 6px; background: var(--cizgi); color: var(--metin);
+    font: 700 1.05rem/1 inherit; cursor: pointer;
+}
+.kelime-klavye button.genis { max-width: 72px; flex-grow: 1.6; font-size: .86rem; }
+.kelime-klavye button.k2 { background: var(--k2); color: #fff; }
+.kelime-klavye button.k1 { background: var(--k1); color: #fff; }
+.kelime-klavye button.k0 { background: var(--k0); color: #fff; opacity: .75; }
+.kelime-klavye button:focus-visible { outline: 2px solid var(--vurgu); outline-offset: 2px; }
+
+.kelime-sonuc { width: 100%; background: var(--kart); border: 1px solid var(--cizgi); border-radius: var(--yuvarlak);
+    padding: 18px; text-align: center; box-shadow: var(--golge); }
+.kelime-sonuc-baslik { font-size: 1.2rem; font-weight: 800; margin: 0 0 8px; }
+.kelime-haber { margin: 0 0 14px; }
+.kelime-haber a { font-weight: 700; color: var(--vurgu); }
+.kelime-paylas { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+.kelime-paylas .dugme-ana, .kelime-wa {
+    padding: 10px 16px; border-radius: 8px; font-weight: 700; border: 0; cursor: pointer; text-decoration: none;
+    background: var(--altin); color: #fff; font: inherit; font-weight: 700;
+}
+.kelime-wa { background: #1f8a4c; }
+.kelime-istatistik { display: flex; justify-content: center; gap: 18px; margin: 0 0 8px; }
+.kelime-istatistik div { display: flex; flex-direction: column-reverse; align-items: center; }
+.kelime-istatistik dd { margin: 0; font-size: 1.5rem; font-weight: 800; }
+.kelime-istatistik dt { font-size: .8rem; color: var(--metin-soluk); }
+
+.kelime-nasil { max-width: 620px; margin: 0 auto 30px; }
+.kelime-nasil ul { list-style: none; padding: 0; display: grid; gap: 8px; }
+.kelime-nasil li { display: flex; align-items: center; gap: 10px; }
+.kelime-ornek { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 5px; color: #fff; font-weight: 800; flex: none; }
+.kelime-ornek.k2 { background: #2f8f4e; }
+.kelime-ornek.k1 { background: #c99a06; }
+.kelime-ornek.k0 { background: #787c86; }
+
+@media (max-width: 400px) {
+    .kelime-klavye button { height: 48px; font-size: .95rem; }
+    .kelime-kutu { font-size: 1.5rem; }
+}
+.kelime-klavye[hidden], .kelime-sonuc[hidden], .kelime-haber[hidden] { display: none; }

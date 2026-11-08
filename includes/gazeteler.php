@@ -301,6 +301,8 @@ function gazeteler(): array
                     'aciklama' => 'Pratik ve geleneksel yemek tarifleri.',
                     'kosullar' => [['kategoriler' => ['yemek-tarifleri']]],
                 ],
+                // Gunluk kelime oyunu (08.11.2026; bkz. includes/kelime_oyunu.php).
+                'kelime' => ['ad' => 'Günün Kelimesi', 'yol' => ['kelime_oyunu_yolu'], 'anahtar' => 'kelime'],
             ],
         ],
     ];
@@ -336,6 +338,8 @@ function gazete_bolum_yolu(string $gazete, string $bolum, int $sayfa = 1): strin
             require_once __DIR__ . '/burclar.php';
         } elseif ($islev === 'mac_ozetleri_yolu') {
             require_once __DIR__ . '/mac_ozeti.php';
+        } elseif ($islev === 'kelime_oyunu_yolu') {
+            require_once __DIR__ . '/kelime_oyunu.php';
         }
 
         return $arguman !== null ? $islev($arguman) : $islev();

@@ -62,6 +62,10 @@ function site_menusu(): array
     require_once __DIR__ . '/deprem.php';
     $menu[] = ['ad' => 'Son Depremler', 'anahtar' => 'deprem', 'href' => deprem_yolu(), 'altlar' => []];
 
+    // Gunluk kelime oyunu (08.11.2026): okur her gun geri gelsin.
+    require_once __DIR__ . '/kelime_oyunu.php';
+    $menu[] = ['ad' => 'Günün Kelimesi', 'anahtar' => 'kelime', 'href' => kelime_oyunu_yolu(), 'altlar' => []];
+
     $menu[] = gazete_menu_ogesi('valmagazin', ['kultur-sanat', 'magazin', 'yemek-tarifleri', 'burc', 'burclar']);
 
     /*

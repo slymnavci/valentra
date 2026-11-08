@@ -215,6 +215,9 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^son-depremler/?$ deprem.php [L,QSA]
+
+    # Gunun kelimesi oyunu (08.11.2026)
+    RewriteRule ^gunun-kelimesi/?$ gunun-kelimesi.php [L,QSA]
     # Gundem dosyalari (03.11.2026; bkz. includes/konu.php)
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
