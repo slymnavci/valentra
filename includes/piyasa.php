@@ -737,7 +737,20 @@ function piyasa_sayiya_cevir(string $ham): ?float
 function piyasa_indir(string $url): ?string
 {
     // Bu istek ziyaretcinin sayfasini bekletiyor; kisa tutuluyor.
-    $sonuc = http_getir($url, 8);
+    $zamanAsimi = 8;
+
+    // Ilk acilis cekiminde kalan butceyle sinirli (bkz. includes/canli_onbellek.php).
+    if (function_exists('canli_esz_kip') && canli_esz_kip()) {
+        $kalan = canli_butce_kalan();
+
+        if ($kalan < 0.5) {
+            return null;
+        }
+
+        $zamanAsimi = max(1, min(8, (int) ceil($kalan)));
+    }
+
+    $sonuc = http_getir($url, $zamanAsimi);
 
     return $sonuc['tamam'] ? $sonuc['govde'] : null;
 }
