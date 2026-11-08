@@ -366,11 +366,16 @@ jobs:
       # Openverse'ten ozgur lisansli gorsel, o da yoksa konu gorseli.
       # Denetlenmemis gorsel ana sayfada gosterilmiyor. Elle
       # "gorsel-denetim" modu son iki haftayi tariyor (ilk temizlik).
+      #
+      # YENIDEN ACIK, YUMUSAK HALIYLE (08.11.2026, site sahibi: "A Haber
+      # yazinca baska bir Azerbaycan bayragi onunde konusan Erdogan resmi
+      # koyamiyor musun?"). Ilk surum denetlenmemis her gorseli ana sayfada
+      # gizliyordu ("siteyi epey bozdu", #300). Artik hicbir gorsel
+      # gizlenmiyor; yalnizca haber sitesi logosu olan gorsel, once haberdeki
+      # kisinin, o yoksa konunun ozgur lisansli fotografiyla degisiyor.
+      # Uygun fotograf bulunamazsa haberin kendi fotografi kaliyor.
       - name: Gorsellerde haber sitesi adi denetle
-        # KAPALI (08.11.2026, site sahibi: "bu resim isi siteyi epey bozdu;
-        # gercek fotograflari devreye sokman lazim"). Elle "gorsel-denetim"
-        # modu yalnizca rapor veriyor (--kuru), hicbir gorseli degistirmiyor.
-        if: ${{ !cancelled() && inputs.mod == 'gorsel-denetim' }}
+        if: ${{ !cancelled() && (((inputs.mod == 'topla' || inputs.mod == 'gunluk' || inputs.mod == '') && inputs.kuru != true) || inputs.mod == 'gorsel-denetim') }}
         working-directory: ajan
         env:
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
@@ -379,7 +384,7 @@ jobs:
           GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
           ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
-        run: php gorsel_denetle.php --gun=3 --adet=120 --sure=15 --kuru || true
+        run: php gorsel_denetle.php ${{ inputs.mod == 'gorsel-denetim' && '--gun=3 --adet=200 --sure=25' || '--sure=7' }} ${{ inputs.kuru == true && '--kuru' || '' }} || true
 
       # Siteye gonderilemeyen haberler: site bu eseri GitHub API'den
       # kendisi indiriyor (includes/ajan_teslim.php). GitHub'dan siteye
