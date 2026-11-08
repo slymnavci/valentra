@@ -167,8 +167,38 @@ if (count($haberler) < Derleyici::ASGARI_YAYIN) {
 
 $hedef = min($enFazla, $kalan);
 
+/*
+ * ONCELIKLI KONULAR (site sahibinin istegi, 08.11.2026: "ayni konudan ana
+ * sayfada 2, cok onemliyse 3 haber; baska onemli haberler varsa bunlari
+ * toplayip bir ozgun haber haline getirelim"). Site, ana sayfada konu
+ * tavanini asan ve derlemesi olmayan konulari veriyor (bkz.
+ * includes/konu_siniri.php). Bunlar model secimine sorulmadan, malzemenin
+ * basina alinip ilk olaylar olarak derleniyor; en az iki farkli yayina
+ * dayanmayan konu atlaniyor.
+ */
+$oncelikliIdler = [];
+
+foreach ($malzeme['oncelikli'] as $konu) {
+    foreach ((array) ($konu['haber_idleri'] ?? []) as $id) {
+        $oncelikliIdler[(int) $id] = true;
+    }
+}
+
+if ($oncelikliIdler !== []) {
+    // Oncelikli haberler basa (usort kararli: kendi aralarinda onem sirasi).
+    usort($haberler, static fn (array $a, array $b): int
+        => (int) !isset($oncelikliIdler[(int) $a['id']]) <=> (int) !isset($oncelikliIdler[(int) $b['id']]));
+}
+
 // Malzeme onem sirasiyla geliyor (bkz. derleme_malzeme): secime en onemlileri.
 $haberler = array_slice($haberler, 0, SECIM_HABER_TAVANI);
+
+$oncelikli = oncelikli_olaylar($malzeme['oncelikli'], $haberler, $malzeme['kategoriler']);
+
+if ($oncelikli !== []) {
+    gunluk(count($oncelikli) . ' konu ana sayfada tavanı aştı; önce bunlar derlenecek: '
+        . implode(' | ', array_map(static fn (array $o): string => $o['olay'], $oncelikli)));
+}
 
 /*
  * MODEL SIRASI (29.10.2026): haber toplamadaki gibi Claude -> Luna ->
@@ -190,18 +220,45 @@ $sayfa     = new Sayfa(new Http());
 
 $adimBas = time();
 
-try {
-    $olaylar = $derleyici->olaySec($haberler, $malzeme['onceki'], $malzeme['kategoriler'], $hedef);
-} catch (ModelErisimYokException $e) {
-    gunluk('Modele erişilemedi: ' . $e->getMessage());
-    Bildirim::sorun($e->getMessage());
-    exit(0);
-} catch (KotaBittiException $e) {
-    gunluk('Günlük model kotası dolu: ' . $e->getMessage());
-    exit(0);
-} catch (Throwable $e) {
-    gunluk('Olaylar seçilemedi: ' . $e->getMessage());
-    exit(0);
+$olaylar = array_slice($oncelikli, 0, $hedef);
+
+if (count($olaylar) < $hedef) {
+    // Kalan yer icin model secimi; oncelikli konulara giren haberler disarida.
+    // Secim basarisiz olsa da oncelikli konular yaziliyor.
+    $kullanilan = [];
+
+    foreach ($olaylar as $o) {
+        foreach ($o['haberler'] as $i) {
+            $kullanilan[$i] = true;
+        }
+    }
+
+    try {
+        foreach ($derleyici->olaySec($haberler, $malzeme['onceki'], $malzeme['kategoriler'], $hedef - count($olaylar)) as $o) {
+            if (array_intersect_key(array_flip($o['haberler']), $kullanilan) === []) {
+                $olaylar[] = $o;
+            }
+        }
+    } catch (ModelErisimYokException $e) {
+        gunluk('Modele erişilemedi: ' . $e->getMessage());
+        Bildirim::sorun($e->getMessage());
+
+        if ($olaylar === []) {
+            exit(0);
+        }
+    } catch (KotaBittiException $e) {
+        gunluk('Günlük model kotası dolu: ' . $e->getMessage());
+
+        if ($olaylar === []) {
+            exit(0);
+        }
+    } catch (Throwable $e) {
+        gunluk('Olaylar seçilemedi: ' . $e->getMessage());
+
+        if ($olaylar === []) {
+            exit(0);
+        }
+    }
 }
 
 if ($olaylar === []) {
@@ -350,3 +407,53 @@ gunluk(sprintf(
     $gonderilemeyen !== [] ? ', ' . count($gonderilemeyen) . ' bekletiliyor' : '',
     intdiv(time() - $baslangic, 60)
 ));
+
+/**
+ * Sitenin öncelikli konuları -> derleyicinin olay biçimi (malzemedeki
+ * sıraya göre). Malzemede olmayan haber atlanıyor; iki farklı yayına
+ * dayanmayan konu düşüyor.
+ *
+ * @param list<array<string,mixed>> $konular
+ * @param list<array<string,mixed>> $haberler
+ * @param list<string> $kategoriler
+ * @return list<array{olay:string,haberler:list<int>,aci:string,baslik_onerisi:string,kategori:string}>
+ */
+function oncelikli_olaylar(array $konular, array $haberler, array $kategoriler): array
+{
+    $sira = [];
+
+    foreach ($haberler as $i => $h) {
+        $sira[(int) ($h['id'] ?? 0)] = $i;
+    }
+
+    $olaylar = [];
+
+    foreach ($konular as $konu) {
+        $indisler = [];
+        $yayinlar = [];
+
+        foreach ((array) ($konu['haber_idleri'] ?? []) as $id) {
+            if (isset($sira[(int) $id])) {
+                $i          = $sira[(int) $id];
+                $indisler[] = $i;
+                $yayinlar[mb_strtolower((string) ($haberler[$i]['yayin'] ?? $haberler[$i]['kaynak_adi'] ?? ''), 'UTF-8')] = true;
+            }
+        }
+
+        if (count($yayinlar) < Derleyici::ASGARI_YAYIN) {
+            continue;
+        }
+
+        $kategori = (string) ($konu['kategori'] ?? '');
+
+        $olaylar[] = [
+            'olay'           => mb_substr((string) ($konu['baslik'] ?? ''), 0, 200, 'UTF-8'),
+            'haberler'       => $indisler,
+            'aci'            => 'Ana sayfada bu konuda çok sayıda haber var: hepsini tek, kapsamlı ve özgün bir haberde topla.',
+            'baslik_onerisi' => '',
+            'kategori'       => in_array($kategori, $kategoriler, true) ? $kategori : '',
+        ];
+    }
+
+    return $olaylar;
+}

@@ -522,6 +522,8 @@ final class Site
             'haberler'     => array_values((array) ($veri['haberler'] ?? [])),
             'onceki'       => array_values((array) ($veri['onceki'] ?? [])),
             'kategoriler'  => array_values(array_map('strval', (array) ($veri['kategoriler'] ?? []))),
+            // Ana sayfada konu tavanini asan konular: once bunlar derleniyor.
+            'oncelikli'    => array_values(array_filter((array) ($veri['oncelikli'] ?? []), 'is_array')),
         ];
     }
 

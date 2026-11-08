@@ -35,6 +35,9 @@ if ($yontem === 'GET') {
         'gunluk_tavan' => DERLEME_GUNLUK_TAVAN,
         'haberler'     => derleme_malzeme($saat),
         'onceki'       => derleme_onceki(3),
+        // Ana sayfada konu tavanini asan konular (bkz. includes/konu_siniri.php):
+        // ajan once bunlari derliyor.
+        'oncelikli'    => derleme_oncelikli_konular(),
         'kategoriler'  => array_values(array_map(
             static fn (array $k): string => (string) $k['slug'],
             kategori_listesi()
