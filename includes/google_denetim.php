@@ -450,6 +450,10 @@ function google_denetimi(int $sureButcesi = 80): array
     $digerleri   = array_values(array_filter($tumAdresler, static fn (string $a): bool => !$haberAdresi($a)));
     $rastgele    = array_slice($haberler, 40);
     shuffle($rastgele);
+    // Haber disi sayfalar da karisik sirada (08.11.2026): sure yetmeyince
+    // hep ayni sondakiler denetlenmeden kaliyordu; boylece her denetim
+    // baska bir bolumunu kapsiyor.
+    shuffle($digerleri);
     $secilen     = array_merge($digerleri, array_slice($haberler, 0, 40), array_slice($rastgele, 0, 40));
 
     $haberOrnegi = '';
@@ -511,11 +515,13 @@ function google_denetimi(int $sureButcesi = 80): array
 
     sort($sureler);
     $ekle('Sayfa denetimi (Googlebot gözüyle)', 'Site haritasındaki sayfalar',
-        $sorunlu === [] && $denetlenen === count($secilen) ? 'tamam' : ($sorunlu === [] ? 'uyari' : 'hata'),
+        // Indirilenlerin hepsi sorunsuz ve en az yarisi indirildiyse tamam:
+        // eksik kalan sure butcesinden, sayfadan degil (08.11.2026).
+        $sorunlu !== [] ? 'hata' : ($denetlenen * 2 >= count($secilen) ? 'tamam' : 'uyari'),
         count($tumAdresler) . ' adresten ' . count($digerleri) . ' haber dışı sayfanın tamamı ve ' . min(80, count($haberler))
         . ' haber (en yeni 40 + rastgele 40) seçildi; ' . $denetlenen . '/' . count($secilen) . ' indirildi; ' . ($denetlenen - count($sorunlu)) . ' sorunsuz (HTTP 200, dizine açık, kanonik kendisi, başlık ve açıklama var)'
         . ($sureler !== [] ? '; ortanca yanıt ' . $sureler[intdiv(count($sureler), 2)] . ' sn, en yavaş ' . end($sureler) . ' sn' : ''),
-        $denetlenen < count($secilen) ? 'Süre yetmedi; kalanlar bir sonraki denetimde.' : '');
+        $denetlenen < count($secilen) ? 'Süre yetmedi; sayfalar karışık sırayla seçildiği için kalanlar sonraki denetimlerde.' : '');
 
     $i = 0;
 
