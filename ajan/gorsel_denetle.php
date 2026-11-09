@@ -42,6 +42,13 @@ use Valentra\Ajan\{GorselDenetci, Site};
 date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
+/**
+ * Dosya adında ya da atıfta haber kuruluşu / ekran görüntüsü izi.
+ * Özgür lisanslı da olsa bu görseller kanal logosu, alt bant ya da ajans
+ * filigranı taşıyabiliyor; site sahibinin kuralı: haber sitesi adı olmayacak.
+ */
+const HABER_KURULUSU_DESENI = '/\\b(todo noticias|tn\\.com|entrevista de tn|cnn|bbc|reuters|afp|associated press|ap photo|getty|telesur|euronews|al jazeera|aljazeera|fox news|sky news|infobae|clar[ií]n|televisa|tv azteca|ntv|trt|a haber|habert[uü]rk|h[uü]rriyet|anadolu ajans|ihlas|demir[oö]ren|screenshot|screen ?capture|captura de pantalla|ekran g[oö]r[uü]nt[uü]s[uü]|noticiero|telediario|news ?channel)\\b/iu';
+
 /** Bir istekte modele giden görsel sayısı. */
 const PARTI = 6;
 
@@ -128,9 +135,14 @@ function yedek_bul(GorselDenetci $denetci, array $haber, array $sorgular, int $b
         }
 
         // Ayni gorsel iki haberde olmasin (son iki haftada konulanlar dahil).
+        // Haber kanali/ajans kaynakli gorsel (TV ekran goruntusu, ajans
+        // fotografi) aday degil: logo ya da bant tasiyabilir (09.11.2026:
+        // Milei haberine "TN roportaji" ekran goruntusu kondu).
         $adaylar = array_values(array_filter(
             $denetci->ara($sorgu, PARTI * 2),
             static fn (array $a): bool => !isset($kullanilan[$a['url']])
+                && preg_match(HABER_KURULUSU_DESENI, str_replace(['_', '-', '.'], ' ',
+                    rawurldecode($a['url']) . ' ' . $a['ad']) . ' ' . $a['atif']) !== 1
         ));
         $katliSorgu = GorselDenetci::katla($sorgu);
         $sorgudakiler = array_values(array_filter($soyadlar, static fn (string $s): bool => str_contains($katliSorgu, $s)));
