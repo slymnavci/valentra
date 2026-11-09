@@ -83,6 +83,28 @@ if ($yontem === 'GET') {
         );
     }
 
+    /*
+     * Bir kez (09.11.2026): haber kanali/ajans kaynakli (ekran goruntusu)
+     * ozgur gorselle degismis haberler yeniden aransin (ajan bu adaylari
+     * artik almiyor; bkz. HABER_KURULUSU_DESENI). Eski gorseline donup
+     * listeye giriyor.
+     */
+    if (ayar_oku('gorsel_kurulus_atif_v1') === '') {
+        ayar_yaz('gorsel_kurulus_atif_v1', date('Y-m-d H:i:s'));
+        $izler = ['Todo Noticias', 'entrevista_de_TN', 'CNN', 'BBC', 'Reuters', 'AFP', 'Getty', 'teleSUR', 'Euronews',
+                  'Al Jazeera', 'Fox News', 'Sky News', 'Infobae', 'Televisa', 'TV Azteca', 'screenshot', 'captura'];
+        $kosul = implode(' OR ', array_map(
+            static fn (string $iz): string => '(gorsel_atif LIKE ' . db()->quote('%' . $iz . '%')
+                . ' OR gorsel_url LIKE ' . db()->quote('%' . $iz . '%') . ')',
+            $izler
+        ));
+        db()->exec(
+            "UPDATE haberler SET gorsel_url = IF(gorsel_eski <> '', gorsel_eski, gorsel_url), gorsel_atif = '',
+                    gorsel_denetim = NULL, guncellendi = guncellendi
+              WHERE gorsel_denetim = 2 AND olusturuldu >= NOW() - INTERVAL 14 DAY AND (" . $kosul . ')'
+        );
+    }
+
     $gun  = max(1, min(60, (int) ($_GET['gun'] ?? 3)));
     $adet = max(1, min(400, (int) ($_GET['adet'] ?? 80)));
 
