@@ -36,8 +36,39 @@ if ($haber === null && $slug !== '') {
     }
 }
 
+/*
+ * Yayindan kaldirilmis haber (09.11.2026; Search Console "Bulunamadi
+ * (404)"): adres bir zamanlar vardi. Tekrar diye bekletilen haberin
+ * yayindaki esi varsa ona 301; yoksa 410 (kalici olarak kaldirildi):
+ * Google 410'u 404'ten hizli birakiyor.
+ */
+$kaldirildi = false;
+
+if ($haber === null && $slug !== '') {
+    try {
+        $eski = db()->prepare(
+            "SELECT h.durum, e.slug AS es_slug
+               FROM haberler h
+               LEFT JOIN haberler e ON e.id = " . (haber_sutun_var('tekrar_id') ? 'h.tekrar_id' : 'NULL') . " AND e.durum = 'yayinda'
+              WHERE h.slug = :s LIMIT 1"
+        );
+        $eski->execute(['s' => $slug]);
+        $eskiSatir = $eski->fetch();
+    } catch (Throwable $e) {
+        $eskiSatir = false;
+    }
+
+    if ($eskiSatir !== false && !empty($eskiSatir['es_slug'])) {
+        header('Location: ' . haber_yolu((string) $eskiSatir['es_slug']), true, 301);
+        exit;
+    }
+
+    $kaldirildi = $eskiSatir !== false;
+}
+
 if ($haber === null) {
-    http_response_code(404);
+    http_response_code($kaldirildi ? 410 : 404);
+    $seoRobots = 'noindex, follow';
     $sayfaBasligi = 'Haber bulunamadı — Valentra';
     require __DIR__ . '/includes/sayfa_ust.php';
     ?>
