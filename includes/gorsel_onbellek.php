@@ -64,9 +64,9 @@ function haber_gorsel_yerel(string $url): string
  * haberleri icin bunu kullanalim"). Son dakika haberinin karti, mansetteki
  * yeri ve haber sayfasi kaynagin fotografi yerine kirmizi "SON DAKIKA"
  * gorseliyle gorunuyor. Son dakika sayilan haber (bkz. haber_son_dakika_mi):
- * yapay zekanin haberi okuyup son dakika dedigi (haberler.son_dakika) ve
- * kaynakta en fazla 3 saat once yayimlanmis haber ya da ana sayfanin son
- * dakika yuvasindaki haber. Kaynagin basliginda ya da adresinde "son
+ * yapay zekanin haberi okuyup son dakika dedigi (haberler.son_dakika),
+ * kaynakta en fazla 3 saat once yayimlanmis VE ana sayfanin ilk sayfasinda
+ * duran haber (09.11.2026) ya da ana sayfanin son dakika yuvasindaki haber. Kaynagin basliginda ya da adresinde "son
  * dakika" gecmesi ARTIK YETMIYOR (04.11.2026: birkac gunluk haber bu
  * gorselle cikti; site sahibi "once haberi okusun, ona gore karar versin").
  */
@@ -100,14 +100,61 @@ function haber_son_dakika_kimlikleri(): array
               LIMIT 50'
         )->fetchAll(PDO::FETCH_COLUMN);
 
+        /*
+         * Yalnizca ANA SAYFANIN ILK SAYFASINDAKI haber son dakika gorunuyor
+         * (site sahibi, 09.11.2026: "haber ilk sayfadaysa son dakika
+         * kalabilir; geriye dustuyse artik son dakika olarak yayinlama, ona
+         * uygun bir resim bulalim"). Geriye dusen haber kendi (denetlenmis
+         * ya da konuya uygun bulunmus) gorseliyle gorunuyor.
+         */
+        $ilkSayfa = haber_ana_sayfa_ilk_sayfa_idler();
+
         foreach ($idler as $id) {
-            $onbellek[(int) $id] = true;
+            if ($ilkSayfa === null || isset($ilkSayfa[(int) $id])) {
+                $onbellek[(int) $id] = true;
+            }
         }
     } catch (Throwable $e) {
         error_log('[valentra] son dakika kimlikleri: ' . $e->getMessage());
     }
 
     return $onbellek;
+}
+
+/**
+ * Ana sayfanın ilk sayfasındaki haberler (kaydırak + ilk ızgara; index.php
+ * ile aynı sıra). Hesaplanamazsa null (son dakika kuralı eskisi gibi
+ * yalnızca tazeliğe bakar).
+ *
+ * @return array<int,true>|null
+ */
+function haber_ana_sayfa_ilk_sayfa_idler(): ?array
+{
+    static $idler = false;
+
+    if ($idler !== false) {
+        return $idler;
+    }
+
+    $idler = null;
+
+    if (!function_exists('haber_manset') || !defined('ANA_SAYFA_MANSET_ADEDI')) {
+        return $idler;
+    }
+
+    try {
+        // index.php: kaydirak ANA_SAYFA_MANSET_ADEDI (20) haber, izgara 12 kart.
+        $idler = [];
+
+        foreach (haber_manset(ANA_SAYFA_MANSET_ADEDI + 12, true) as $h) {
+            $idler[(int) $h['id']] = true;
+        }
+    } catch (Throwable $e) {
+        error_log('[valentra] ana sayfa ilk sayfa: ' . $e->getMessage());
+        $idler = null;
+    }
+
+    return $idler;
 }
 
 /** @param array<string,mixed> $haber */
@@ -123,6 +170,7 @@ function haber_son_dakika_mi(array $haber): bool
         return true;
     }
 
+    // Son dakika yuvasi ana sayfanin en ustunde: ilk sayfada oldugu kesin.
     return function_exists('haber_son_dakika_id') && haber_son_dakika_id() === $id;
 }
 
@@ -143,6 +191,10 @@ function haber_gorsel(array $haber): string
 
     if ($url === '') {
         return '';
+    }
+
+    if (!function_exists('site_adresi')) {
+        require_once __DIR__ . '/seo.php';
     }
 
     // Sitenin kendi gorseli (ozgun veri haberleri, /assets/ozgun/):
