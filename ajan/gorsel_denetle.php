@@ -86,7 +86,8 @@ if ($haberler === []) {
     exit(0);
 }
 
-gunluk(count($haberler) . ' görsel denetlenecek.');
+$araSayi = count(array_filter($haberler, static fn (array $h): bool => !empty($h['ara'])));
+gunluk(count($haberler) . ' görsel denetlenecek' . ($araSayi > 0 ? ' (' . $araSayi . ' haber için doğrudan uygun görsel aranacak: görselsiz ya da Infobae)' : '') . '.');
 
 $geminiModel = ayar('GEMINI_MODEL', false) ?: 'gemini-3.8-flash';
 $claudeModel = ayar('CLAUDE_MODEL', false) ?: 'claude-haiku-5-5';
@@ -176,6 +177,56 @@ function yedek_bul(GorselDenetci $denetci, array $haber, array $sorgular, int $b
     }
 
     return null;
+}
+
+/*
+ * Dogrudan uygun gorsel aranacaklar (09.11.2026, site sahibi: "Infobae'den
+ * gelen haberler resimsiz ya da Infobae resimli geliyor; yerine konuya uygun
+ * bir resim bulalim"): gorselsiz / genel konu gorselli haberler ve Infobae
+ * haberleri. Logo denetimi yok; bulunan aday ayni denetimden geciyor (temiz
+ * + konuya uygun). Bulunamazsa site konu gorselini koyuyor.
+ */
+$arananlar = array_values(array_filter($haberler, static fn (array $h): bool => !empty($h['ara'])));
+$haberler  = array_values(array_filter($haberler, static fn (array $h): bool => empty($h['ara'])));
+
+// Surenin en fazla yarisi aramaya: logo denetimi de her calismada ilerlesin.
+$araBitis = $arananlar === [] ? $bitis : time() + intdiv(max(0, $bitis - time()), 2);
+
+foreach (array_chunk($arananlar, PARTI) as $parti) {
+    if (time() >= $araBitis - 90) {
+        gunluk('Süre doldu; görsel aranacak kalan haberler sonraki çalışmada.');
+        break;
+    }
+
+    $sorgular = $denetci->sorgular(array_map(
+        static fn (array $h): array => ['baslik' => (string) $h['baslik'], 'ozet' => (string) $h['ozet']],
+        $parti
+    ));
+    $sonuclar = [];
+
+    foreach ($parti as $i => $h) {
+        $bulunan = ($sorgular[$i]['liste'] ?? []) !== [] ? yedek_bul($denetci, $h, $sorgular[$i], $araBitis, $kullanilan) : null;
+
+        if ($bulunan !== null) {
+            gunluk('#' . $h['id'] . ' (' . ($h['neden'] ?? '') . ') → ' . $bulunan['url'] . ' [' . $bulunan['atif'] . '] — ' . $h['baslik']);
+            $sonuclar[] = ['id' => (int) $h['id'], 'temiz' => false, 'yeni' => $bulunan['url'], 'atif' => $bulunan['atif']];
+            $toplam['degisen']++;
+        } elseif (time() < $araBitis - 45) {
+            // Aranip bulunamadi: konu gorseli (sure dolduysa dokunma, sonra yeniden).
+            gunluk('#' . $h['id'] . ' (' . ($h['neden'] ?? '') . ') uygun görsel bulunamadı → konu görseli (sorgu: '
+                . implode(' | ', $sorgular[$i]['liste'] ?? []) . ') — ' . $h['baslik']);
+            $sonuclar[] = ['id' => (int) $h['id'], 'temiz' => false];
+            $toplam['konu_gorseli']++;
+        }
+    }
+
+    if ($sonuclar !== [] && !$kuru) {
+        try {
+            $site->gorselDenetimGonder($sonuclar);
+        } catch (Throwable $e) {
+            gunluk('Sonuçlar yazılamadı: ' . $e->getMessage());
+        }
+    }
 }
 
 foreach (array_chunk($haberler, PARTI) as $parti) {

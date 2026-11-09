@@ -15,7 +15,9 @@ declare(strict_types=1);
  * Wikimedia Commons; o gorsel de ayni denetimden geciyor) ve buraya
  * gonderiyor; bulamazsa haberin konu gorseli (assets/kategori) konuyor.
  *
- *   GET  ?gun=3&adet=80 -> {"haberler": [{"id","baslik","ozet","kategori","gorsel","yedek"}],
+ *   GET  ?gun=3&adet=80 -> {"haberler": [{"id","baslik","ozet","kategori","gorsel","yedek","ara"?}],
+ *                           ara: logo denetimi yok, dogrudan uygun gorsel aranacak (gorselsiz /
+ *                           konu gorselli / Infobae haberi); bulunamazsa {"temiz": false} -> konu gorseli
  *                           "kullanilan": [son iki haftada yerine konmus adresler]}
  *   POST {"sonuclar": [{"id": 1, "temiz": true}
  *                     | {"id": 2, "temiz": false, "yeni": "https://...", "atif": "...", "bulunan": "AA logosu"}
@@ -65,16 +67,31 @@ if ($yontem === 'GET') {
         );
     }
 
+    /*
+     * Bir kez (09.11.2026, site sahibi: "Infobae'den gelen haberler resimsiz
+     * ya da Infobae resimli geliyor; yerine konuya uygun bir resim bulalim"):
+     * son 3 gunun Infobae haberleri ve genel konu gorseli tasiyan haberler
+     * yeniden listelensin; ajan bunlar icin dogrudan uygun gorsel ariyor.
+     */
+    if (ayar_oku('gorsel_ara_infobae_v1') === '') {
+        ayar_yaz('gorsel_ara_infobae_v1', date('Y-m-d H:i:s'));
+        db()->exec(
+            "UPDATE haberler SET gorsel_denetim = NULL, guncellendi = guncellendi
+              WHERE gorsel_denetim IN (0, 1, 3) AND olusturuldu >= NOW() - INTERVAL 3 DAY
+                AND (kaynak_adi LIKE '%infobae%' OR gorsel_url LIKE '%infobae.com%'
+                     OR gorsel_url LIKE '%/assets/kategori/%')"
+        );
+    }
+
     $gun  = max(1, min(60, (int) ($_GET['gun'] ?? 3)));
     $adet = max(1, min(400, (int) ($_GET['adet'] ?? 80)));
 
     // Once ana sayfadakiler: ana sayfa (one_cikan, yayin_tarihi) sirasinda.
     $ifade = db()->prepare(
-        "SELECT h.id, h.baslik, h.ozet, h.gorsel_url, h.durum, k.slug AS kategori
+        "SELECT h.id, h.baslik, h.ozet, h.gorsel_url, h.durum, h.kaynak_adi, k.slug AS kategori
            FROM haberler h
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
           WHERE h.gorsel_denetim IS NULL
-            AND COALESCE(h.gorsel_url, '') <> ''
             AND h.durum IN ('yayinda', 'taslak')
             AND h.olusturuldu >= NOW() - INTERVAL :gun DAY
           ORDER BY h.durum = 'yayinda' DESC, h.one_cikan DESC, COALESCE(h.yayin_tarihi, h.olusturuldu) DESC
@@ -85,16 +102,45 @@ if ($yontem === 'GET') {
     $liste = [];
     $kendi = [];
 
+    $araSayisi = 0;
+
     foreach ($ifade->fetchAll() as $s) {
         $url = (string) $s['gorsel_url'];
 
-        // Sitenin kendi gorseli denetim istemiyor; bir daha listelenmesin.
-        if ($kendiGorseli($url)) {
+        /*
+         * Dogrudan uygun gorsel aranacaklar ("ara"; 09.11.2026):
+         *   - gorselsiz haber ya da genel konu gorseli (/assets/kategori/)
+         *     tasiyan haber: konuya uygun ozgur lisansli fotograf aransin;
+         *   - Infobae haberi: kaynagin gorseli (yoksa logolu yer tutucusu)
+         *     kullanilmiyor, yerine uygun fotograf; bulunamazsa konu gorseli.
+         */
+        $konuGorseli = $url === '' || str_contains($url, '/assets/kategori/');
+        $infobae     = stripos((string) $s['kaynak_adi'], 'infobae') !== false || stripos($url, 'infobae.com') !== false;
+        $ara         = $konuGorseli || $infobae;
+
+        // Sitenin kendi gorseli (ozgun veri) denetim istemiyor; bir daha listelenmesin.
+        if (!$ara && $kendiGorseli($url)) {
             $kendi[] = (int) $s['id'];
             continue;
         }
 
-        if (count($liste) >= $adet) {
+        // Arama yavas (sorgu + indirme + denetim): bir calismada en fazla 30.
+        if (count($liste) >= $adet || ($ara && $araSayisi >= 30)) {
+            continue;
+        }
+
+        if ($ara) {
+            $araSayisi++;
+            $liste[] = [
+                'id'       => (int) $s['id'],
+                'baslik'   => (string) $s['baslik'],
+                'ozet'     => mb_substr((string) $s['ozet'], 0, 300, 'UTF-8'),
+                'kategori' => (string) ($s['kategori'] ?? ''),
+                'gorsel'   => $konuGorseli ? '' : $url,
+                'yedek'    => '',
+                'ara'      => true,
+                'neden'    => $infobae ? 'Infobae' : 'görselsiz',
+            ];
             continue;
         }
 
