@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Ana sayfada aynı konudan en fazla 2 (çok önemliyse 3) haber.
+ * Ana sayfada bir olaydan tek haber (09.11.2026; önceden 2, çok önemliyse 3).
  *
  * Site sahibinin istegi (08.11.2026): "ayni konuyla ilgili ana sayfada 2
  * veya cok onemliyse 3 haber yayinlayabilirsin; daha fazlasi olmasin.
@@ -29,11 +29,21 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/haberler.php';
 
-/** Bir konudan ana sayfada en fazla bu kadar haber. */
-const KONU_TAVANI = 2;
+/*
+ * BIR OLAY, ANA SAYFADA TEK HABER (site sahibi, 09.11.2026: "Izmir Habas'ta
+ * patlama haberi ana sayfada 2 kez art arda verilmis; bunun olmamasi lazim,
+ * kesin cozum istiyorum"). Onceden 2, cok onemliyse 3 haberdi; buyuk olay
+ * (en cok tekrar edilen haber) boylece ana sayfada en cok yer kapliyordu.
+ * Artik her olaydan bir haber: varsa derleme, yoksa ana sayfa sirasindaki
+ * ilk haber. Digerleri konu sayfalarinda ve haberin "ilgili haberler"inde;
+ * olay derleme ajanina oncelikli gidiyor (derleme_oncelikli_konular).
+ */
 
-/** Çok önemli konuda en fazla bu kadar haber. */
-const KONU_TAVANI_ONEMLI = 3;
+/** Bir olaydan ana sayfada en fazla bu kadar haber. */
+const KONU_TAVANI = 1;
+
+/** Çok önemli olayda da (tekrar en çok onlarda oluyor). */
+const KONU_TAVANI_ONEMLI = 1;
 
 /** Konunun en önemli haberi bu puan ve üstündeyse "çok önemli". */
 const KONU_COK_ONEMLI = 75;
@@ -101,6 +111,85 @@ function konu_kokleri(string $baslik): array
     return array_keys($kokler);
 }
 
+/**
+ * Başlıktaki özel adların kökleri (büyük harfle başlayan ya da tamamı
+ * büyük kelimeler: "Galatasaray", "HABAŞ", "Aliağa'da"). Eşanlamlı
+ * dönüşümü geçirmiş başlık kökleriyle kesişiyor ("Merkez Bankası" -> tcmb).
+ *
+ * @return list<string>
+ */
+function konu_ozel_kokler(string $baslik): array
+{
+    $tum = array_flip(konu_kokleri($baslik));
+    $ozel = [];
+
+    foreach (preg_split('/[^\p{L}\p{N}\'’]+/u', $baslik, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $kelime) {
+        $ilk = mb_substr($kelime, 0, 1, 'UTF-8');
+
+        if ($ilk === mb_strtolower($ilk, 'UTF-8')) {
+            continue;
+        }
+
+        foreach (konu_kokleri($kelime) as $kok) {
+            if (isset($tum[$kok])) {
+                $ozel[$kok] = true;
+            }
+        }
+    }
+
+    return array_keys($ozel);
+}
+
+/**
+ * Haberin olay imzası: başlık kökleri, başlık + özet kökleri, özel adlar.
+ *
+ * @param array<string,mixed> $h baslik, ozet
+ * @return array{t:list<string>,g:list<string>,o:list<string>}
+ */
+function konu_olay_imzasi(array $h): array
+{
+    $baslik = (string) ($h['baslik'] ?? '');
+    $t = konu_kokleri($baslik);
+
+    return [
+        't' => $t,
+        'g' => array_values(array_unique(array_merge($t, konu_kokleri(mb_substr((string) ($h['ozet'] ?? ''), 0, 220, 'UTF-8'))))),
+        'o' => konu_ozel_kokler($baslik),
+    ];
+}
+
+/**
+ * İki haber aynı olayı mı veriyor?
+ *
+ * Ayni: basliklar ayni konuyu anlatiyor (konu_ayni_mi) YA DA baslik +
+ * ozetleri en az 4 kok ve kisa olanin %35'ini paylasiyor ("Aliaga'daki
+ * fabrika patlamasinda olu sayisi 3'e yukseldi" / "HABAS'taki patlamada 3
+ * isci hayatini kaybetti"). AMA iki tarafta da digerinde hic gecmeyen bir
+ * ozel ad varsa farkli olay ("Galatasaray ... Kasimpasa" / "Fenerbahce ...
+ * Kasimpasa"; "Ardahan'da kar" / "Artvin'de kar").
+ *
+ * @param array{t:list<string>,g:list<string>,o:list<string>} $a
+ * @param array{t:list<string>,g:list<string>,o:list<string>} $b
+ */
+function konu_ayni_olay_mi(array $a, array $b): bool
+{
+    if ($a['t'] === [] || $b['t'] === []) {
+        return false;
+    }
+
+    $ortak = count(array_intersect($a['g'], $b['g']));
+    $genis = $ortak >= 4 && $ortak / max(1, min(count($a['g']), count($b['g']))) >= 0.35;
+
+    if (!$genis && !konu_ayni_mi($a['t'], $b['t'])) {
+        return false;
+    }
+
+    $yalnizA = array_diff($a['o'], $b['g']);
+    $yalnizB = array_diff($b['o'], $a['g']);
+
+    return $yalnizA === [] || $yalnizB === [];
+}
+
 /** İki başlık aynı konuyu mu anlatıyor? */
 function konu_ayni_mi(array $a, array $b): bool
 {
@@ -122,7 +211,7 @@ function konu_ayni_mi(array $a, array $b): bool
  */
 function konu_kumele(array $haberler): array
 {
-    $kokler = array_map(static fn (array $h): array => konu_kokleri((string) ($h['baslik'] ?? '')), $haberler);
+    $kokler = array_map(static fn (array $h): array => konu_olay_imzasi($h), $haberler);
     $ata    = array_keys($kokler);
     $bul    = static function (int $i) use (&$ata): int {
         while ($ata[$i] !== $i) {
@@ -136,7 +225,7 @@ function konu_kumele(array $haberler): array
 
     for ($i = 0; $i < $n; $i++) {
         for ($j = $i + 1; $j < $n; $j++) {
-            if (konu_ayni_mi($kokler[$i], $kokler[$j])) {
+            if (konu_ayni_olay_mi($kokler[$i], $kokler[$j])) {
                 $a = $bul($i);
                 $b = $bul($j);
 
@@ -157,7 +246,7 @@ function konu_kumele(array $haberler): array
     return array_values($kumeler);
 }
 
-/** Konunun tavanı: çok önemliyse 3, değilse 2. */
+/** Olayın ana sayfa tavanı (09.11.2026'dan beri her olayda 1). */
 function konu_tavani(array $uyeler): int
 {
     $onemler = array_map(static fn (array $h): int => (int) ($h['onem'] ?? 0), $uyeler);
@@ -184,7 +273,7 @@ function konu_ana_sayfa_konulari(): array
 
     try {
         $ifade = db()->prepare(
-            'SELECT h.id, h.baslik, h.onem, h.derleme, h.kaynak_adi, k.slug AS kategori_slug
+            'SELECT h.id, h.baslik, h.ozet, h.onem, h.derleme, h.kaynak_adi, k.slug AS kategori_slug
                FROM haberler h
                LEFT JOIN kategoriler k ON k.id = h.kategori_id
                ' . haber_okunma_birlesimi() . '
