@@ -1204,6 +1204,65 @@ const HABER_KATEGORI_GORSELLERI = [
     'teknoloji', 'saglik', 'kultur-sanat', 'yemek-tarifleri',
 ];
 
+/*
+ * LISANSLI YAYIN GORSELLERI (site sahibinin karari, 07.11.2026: "ana
+ * sayfada A Haber, Sabah, Haberturk gibi gazete bilgilerini koyma; resim
+ * konacagi zaman onlari kaldiralim, bunlar lisans gerektiriyor").
+ *
+ * Bu yayinlarin fotograflari kendi logolari ve filigranlariyla geliyor ve
+ * kullanimi lisansa bagli. Haberi bu yayinlardan biri kaynak olarak
+ * verdiyse ya da gorsel onlarin sunucusundaysa (Turkuvaz'in gorsel
+ * sunucusu tmgrup.com.tr dahil) gorsel KULLANILMIYOR; yerine konunun hazir
+ * gorseli (haber_kategori_gorseli). Uc yerde uygulaniyor: eklerken
+ * (haber_taslak_ekle), gosterirken (haber_gorsel, gorsel.php) ve iki
+ * saatte bir eski kayitlarda (haber_kategori_gorsellerini_doldur).
+ * Ajanin yazim kurali da ayni (ajan/src/Yazar.php): metinde bu yayinlara
+ * ait logo, gorsel ve ozel haber ibaresi yok. Listeye yayin eklemek icin
+ * alan adini yazmak yeterli (alt alan adlari da kapsaniyor).
+ */
+const HABER_LISANSLI_YAYINLAR = [
+    // Turkuvaz Medya
+    'ahaber.com.tr', 'sabah.com.tr', 'takvim.com.tr', 'fotomac.com.tr', 'aspor.com.tr',
+    'apara.com.tr', 'atv.com.tr', 'yeniasir.com.tr', 'dailysabah.com', 'tmgrup.com.tr',
+    // Ciner Yayin Holding
+    'haberturk.com', 'bloomberght.com', 'showtv.com.tr',
+];
+
+/** Adres lisanslı bir yayının (ya da görsel sunucusunun) mu? */
+function haber_lisansli_adres_mi(string $url): bool
+{
+    $host = strtolower((string) parse_url(trim($url), PHP_URL_HOST));
+
+    if ($host === '') {
+        return false;
+    }
+
+    foreach (HABER_LISANSLI_YAYINLAR as $alan) {
+        if ($host === $alan || str_ends_with($host, '.' . $alan)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Haberin görseli kullanılamaz mı: görsel ya da haberin kaynağı lisanslı
+ * yayının. Sitenin kendi görseli (/assets/) her zaman kullanılabilir.
+ *
+ * @param array<string,mixed> $haber gorsel_url, kaynak_url
+ */
+function haber_gorseli_lisansli_mi(array $haber): bool
+{
+    $gorsel = trim((string) ($haber['gorsel_url'] ?? ''));
+
+    if ($gorsel === '' || str_starts_with($gorsel, '/assets/') || str_contains($gorsel, '/assets/kategori/')) {
+        return false;
+    }
+
+    return haber_lisansli_adres_mi($gorsel) || haber_lisansli_adres_mi((string) ($haber['kaynak_url'] ?? ''));
+}
+
 /** Konunun hazır görseli (tam adres); tanınmayan konu Gündem. */
 function haber_kategori_gorseli(?string $slug): string
 {
@@ -1233,8 +1292,34 @@ function haber_kategori_gorsellerini_doldur(int $limit = 1000): int
           WHERE COALESCE(h.gorsel_url, '') = ''"
     );
     $ifade->execute(['taban' => site_adresi()]);
+    $sayi = $ifade->rowCount();
 
-    return $ifade->rowCount();
+    // Lisansli yayinin gorseli (bkz. HABER_LISANSLI_YAYINLAR): eski kayitlarda da konu gorseli.
+    $kosul = [];
+
+    foreach (HABER_LISANSLI_YAYINLAR as $alan) {
+        foreach (['h.gorsel_url', 'h.kaynak_url'] as $sutun) {
+            $kosul[] = $sutun . ' LIKE ' . db()->quote('%://' . $alan . '/%')
+                . ' OR ' . $sutun . ' LIKE ' . db()->quote('%.' . $alan . '/%');
+        }
+    }
+
+    $lisansli = db()->query(
+        "SELECT h.id, h.gorsel_url, h.kaynak_url, k.slug FROM haberler h
+           LEFT JOIN kategoriler k ON k.id = h.kategori_id
+          WHERE h.gorsel_url NOT LIKE '%/assets/%' AND (" . implode(' OR ', $kosul) . ')
+          LIMIT ' . max(1, $limit)
+    )->fetchAll();
+    $yaz = db()->prepare('UPDATE haberler SET gorsel_url = :g WHERE id = :id');
+
+    foreach ($lisansli as $h) {
+        if (haber_gorseli_lisansli_mi($h)) {
+            $yaz->execute(['g' => haber_kategori_gorseli((string) $h['slug']), 'id' => (int) $h['id']]);
+            $sayi += $yaz->rowCount();
+        }
+    }
+
+    return $sayi;
 }
 
 /*
@@ -1357,7 +1442,9 @@ function haber_taslak_ekle(array $veri): array
         'slug'          => haber_benzersiz_slug($baslik),
         'ozet'          => mb_substr($ozet, 0, 600, 'UTF-8'),
         'icerik'        => $icerik,
-        'gorsel_url'    => guvenli_url((string) ($veri['gorsel_url'] ?? '')) ?: haber_kategori_gorseli((string) ($veri['kategori'] ?? '')),
+        // Lisansli yayinin gorseli kullanilmiyor (bkz. HABER_LISANSLI_YAYINLAR).
+        'gorsel_url'    => (haber_gorseli_lisansli_mi(['gorsel_url' => (string) ($veri['gorsel_url'] ?? ''), 'kaynak_url' => $kaynakUrl])
+            ? '' : guvenli_url((string) ($veri['gorsel_url'] ?? ''))) ?: haber_kategori_gorseli((string) ($veri['kategori'] ?? '')),
         'etiketler'     => mb_substr(trim((string) ($veri['etiketler'] ?? '')), 0, 400, 'UTF-8'),
         'durum'         => HABER_TASLAK,
         'kategori_id'   => kategori_id_cozumle((string) ($veri['kategori'] ?? '')),

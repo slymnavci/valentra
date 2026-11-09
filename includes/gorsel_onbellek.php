@@ -187,6 +187,11 @@ function haber_gorsel(array $haber): string
         return HABER_SON_DAKIKA_GORSELI;
     }
 
+    // Lisansli yayinin gorseli gosterilmiyor; konunun hazir gorseli (bkz. HABER_LISANSLI_YAYINLAR).
+    if (haber_gorseli_lisansli_mi($haber)) {
+        $haber['gorsel_url'] = haber_kategori_gorseli((string) ($haber['kategori_slug'] ?? ''));
+    }
+
     $url = guvenli_url((string) ($haber['gorsel_url'] ?? ''));
 
     if ($url === '') {
