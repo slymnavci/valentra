@@ -713,6 +713,50 @@ function google_denetimi(int $sureButcesi = 80): array
     }
 
     /* -------------------------------------------------------------- *
+     * 5b. Dizin durumu dokumu (09.11.2026; site sahibi Search Console'un
+     * "Sayfalar neden dizine eklenmiyor?" raporunu getirdi). Google bu
+     * listeyi API'den vermiyor; site her gun bir grup adresi URL
+     * denetimiyle sorguluyor (gsc_denetim). Son 14 gunun sonuclari
+     * sebebine gore sayiliyor, sebep basina ornek adresler.
+     * -------------------------------------------------------------- */
+    try {
+        $satirlar = db()->query(
+            "SELECT url, kapsam, sonuc FROM gsc_denetim
+              WHERE denetlendi >= NOW() - INTERVAL 14 DAY ORDER BY denetlendi DESC"
+        )->fetchAll();
+        $gruplar = [];
+
+        foreach ($satirlar as $r) {
+            [$ad, $oneri] = gsc_kapsam_acikla((string) $r['kapsam']);
+            $ad = (string) $r['sonuc'] === 'PASS' ? 'Dizinde' : $ad;
+            $gruplar[$ad] ??= ['sayi' => 0, 'ornek' => [], 'oneri' => $oneri];
+            $gruplar[$ad]['sayi']++;
+
+            if (count($gruplar[$ad]['ornek']) < 3) {
+                $gruplar[$ad]['ornek'][] = gd_kisa_adres((string) $r['url']);
+            }
+        }
+
+        uasort($gruplar, static fn (array $a, array $b): int => $b['sayi'] <=> $a['sayi']);
+
+        if ($gruplar === []) {
+            $ekle('Dizin durumu (örneklem)', 'URL denetimi sonuçları', 'bilgi', 'Son 14 günde denetlenmiş adres yok.');
+        }
+
+        foreach ($gruplar as $ad => $g) {
+            // Sitenin duzeltebilecegi sebepler uyari; Google'in sirasi ya da
+            // kalite karari (taranmadi, tarandi-alinmadi) ve bilerek noindex bilgi.
+            $durum = in_array($ad, ['Bulunamadı (404)', 'Sunucu hatası', 'robots.txt engelliyor',
+                                    'Boş sayfa (soft 404)', 'Kopya sayılmış'], true) ? 'uyari' : 'bilgi';
+            $ekle('Dizin durumu (örneklem)', $ad, $durum,
+                $g['sayi'] . ' / ' . count($satirlar) . ' denetlenen adres; ör. ' . implode(', ', $g['ornek']),
+                $ad === 'Dizinde' ? '' : $g['oneri']);
+        }
+    } catch (Throwable $e) {
+        // gsc_denetim tablosu yoksa bolum atlanir.
+    }
+
+    /* -------------------------------------------------------------- *
      * 6. Icerik saglligi (veritabani)
      * -------------------------------------------------------------- */
     try {

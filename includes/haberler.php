@@ -3018,6 +3018,21 @@ function haber_kota_korunanlar(): array
         }
     }
 
+    /*
+     * Google'in DIZINE ALDIGI sayfalar da korunuyor (09.11.2026; Search
+     * Console "noindex etiketi tarafindan haric tutuldu" 412 ve artiyordu):
+     * URL denetiminde "PASS" cikan haber noindex'e cevrilmiyor.
+     */
+    try {
+        foreach (db()->query("SELECT url FROM gsc_denetim WHERE sonuc = 'PASS'")->fetchAll(PDO::FETCH_COLUMN) as $adres) {
+            if (preg_match('~/haber/([^/?#]+)/?$~', (string) parse_url((string) $adres, PHP_URL_PATH), $m) === 1) {
+                $korunan[rawurldecode($m[1])] = true;
+            }
+        }
+    } catch (Throwable $e) {
+        // gsc_denetim tablosu yoksa yalnizca trafik alanlar korunur.
+    }
+
     return $korunan;
 }
 
@@ -3060,8 +3075,8 @@ function haber_ozgun_kotasini_dagit(bool $zorla = false): ?array
 
     // Once trafik alan sayfalar, sonra onem eksi tazelik cezasi.
     usort($tekler, static function (array $a, array $b) use ($korunanAd): int {
-        $ka = isset($korunanAd[$a['slug']]) ? 1 : 0;
-        $kb = isset($korunanAd[$b['slug']]) ? 1 : 0;
+        $ka = isset($korunanAd[$a['slug']]) || (int) $a['google_kota'] === 1 ? 1 : 0;
+        $kb = isset($korunanAd[$b['slug']]) || (int) $b['google_kota'] === 1 ? 1 : 0;
 
         if ($ka !== $kb) {
             return $kb <=> $ka;
@@ -3076,8 +3091,18 @@ function haber_ozgun_kotasini_dagit(bool $zorla = false): ?array
     $ac = $kapat = [];
     $secilen = $korunan = 0;
 
+    /*
+     * KOTA KALICI (09.11.2026). Onceden kota her dagitimda bastan
+     * siralaniyordu: haber eskidikce tazelik cezasiyla kotadan dusuyor,
+     * dun Google'a sunulan sayfa bugun "noindex" olup site haritasindan
+     * cikiyordu. Google bu sayfalari tarayip dizinden atiyordu (Search
+     * Console: "noindex etiketi tarafindan haric tutuldu" 412, artan) ve
+     * tarama butcesi gidip gelen sayfalara harcaniyordu. Artik bir kez
+     * Google'a sunulan haber kotada kaliyor ve orana sayiliyor; yeni haber
+     * yalnizca kota buyudukce (yeni derleme/ozgun haberle) giriyor.
+     */
     foreach ($tekler as $t) {
-        $koru = isset($korunanAd[$t['slug']]);
+        $koru = isset($korunanAd[$t['slug']]) || (int) $t['google_kota'] === 1;
         $sec  = $koru || $secilen < $kota;
 
         if ($sec) {
