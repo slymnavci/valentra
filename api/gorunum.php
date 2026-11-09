@@ -52,6 +52,20 @@ if ($id <= 0 || !hash_equals(ziyaret_isaret_imzasi($id), $imza)) {
     exit;
 }
 
+/*
+ * Tarayicinin saat dilimi Cin/Hong Kong/Singapur/Tayvan/Makao ise satir
+ * "insan" isaretlenmiyor (09.11.2026; bkz. includes/ziyaret_bulut.php):
+ * bulut adres listesinden kacan tarayici motorlari bu saat dilimleriyle
+ * calisiyor; Turkce haber okuru beklenmiyor.
+ */
+$saatDilimi = (string) ($_POST['z'] ?? '');
+
+if (in_array($saatDilimi, ['Asia/Shanghai', 'Asia/Chongqing', 'Asia/Harbin', 'Asia/Urumqi', 'PRC',
+                           'Asia/Hong_Kong', 'Asia/Singapore', 'Asia/Taipei', 'Asia/Macau'], true)) {
+    http_response_code(204);
+    exit;
+}
+
 if (preg_match('/^[0-9a-f]{16}$/', $anahtar) !== 1) {
     $anahtar = '';
 }

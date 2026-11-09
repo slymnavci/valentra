@@ -23,6 +23,10 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/ziyaret_rapor.php';
+require_once __DIR__ . '/../includes/ziyaret_bulut.php';
+
+// Bir kez: onceki bulut sunucu ziyaretleri raporlardan cikiyor (09.11.2026).
+ziyaret_bulut_eskileri_isaretle();
 
 giris_zorunlu();
 

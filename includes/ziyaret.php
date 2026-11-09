@@ -182,7 +182,26 @@ function ziyaret_sayilmali(): bool
         }
     }
 
-    return !ziyaret_bot_mu();
+    if (ziyaret_bot_mu()) {
+        return false;
+    }
+
+    /*
+     * Bulut sunuculardan gelen tarayici motorlari (09.11.2026, site sahibi:
+     * "ziyaretcilerin cogu Cin'den veya Singapur'dan"): bot imzasi yok,
+     * betigi de calistiriyorlar. Bkz. includes/ziyaret_bulut.php.
+     */
+    require_once __DIR__ . '/ziyaret_bulut.php';
+
+    if (ziyaret_bulut_adresi_mi(ziyaret_adresi())) {
+        return false;
+    }
+
+    // Gercek tarayicilar dil basligini her zaman gonderiyor; Cince
+    // tarayicidan Turkce haber okuru da beklenmiyor (ayni botlar).
+    $dil = strtolower(trim((string) ($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '')));
+
+    return $dil !== '' && !str_starts_with($dil, 'zh');
 }
 
 /**
@@ -508,6 +527,7 @@ function ziyaret_betigi(): string
             var d = new URLSearchParams();
             d.append('id', v.id); d.append('t', v.t); d.append('k', anahtar); d.append('y', yeni);
             d.append('s', Math.round(gecen() / 1000)); d.append('o', derin);
+            try { d.append('z', Intl.DateTimeFormat().resolvedOptions().timeZone || ''); } catch (e) {}
             if (son && navigator.sendBeacon) { navigator.sendBeacon(v.url, d); }
             else { fetch(v.url, { method: 'POST', body: d, keepalive: true, credentials: 'omit' }).catch(function () {}); }
         } catch (e) {}
