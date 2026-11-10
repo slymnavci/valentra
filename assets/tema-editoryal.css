@@ -1,0 +1,259 @@
+/* ==========================================================================
+ * EDITORYAL TEMASI (10.11.2026, site sahibi: "cok profesyonel bir tema;
+ * okuyucu sectiginde site bambaska bir gorunume kavussun").
+ *
+ * Diger temalar ayni duzende renk degistiriyor; bu tema DUZENI de
+ * degistiriyor: baski dergisi / buyuk boy gazete dili.
+ *
+ *   - fildisi kagit, murekkep laciverti, pirinc vurgu
+ *   - kart ve golge yok: icerik ince cetvel cizgileriyle ayriliyor
+ *   - keskin koseler; serif basliklar, harf aralikli kucuk etiketler
+ *   - haber metni serif, ilk paragrafta bas harf
+ *   - son dakika seridi ve alt bant murekkep renginde
+ *
+ * Yalnizca bu temayi secen okura yuklenir (bkz. includes/temalar.php,
+ * 'dosya'); style.css'ten SONRA gelir. Yazi tipleri sistemde olanlar:
+ * indirme yok. Okurun sectigi yazi boyutu ve yazi tipi ayari calismaya
+ * devam eder (govde metni icin).
+ * ======================================================================= */
+
+:root[data-palet="editoryal"] {
+    --zemin: #f4f0e6; --kart: #fbf8f1; --metin: #141c2b; --metin-soluk: #565d6e;
+    --cizgi: #d6cdbb; --vurgu: #8a5a12; --altin: #8a5a12; --altin-koyu: #6d460c;
+    --lacivert: #0f1a2c; --lacivert-acik: #24324a; --vurgu-ustu: #fbf8f1;
+    --golge: none; --yuvarlak: 0px;
+    --piyasa-zemin: #ece6d7; --piyasa-cizgi: #d6cdbb;
+
+    --ed-murekkep: #0f1a2c;
+    --ed-pirinc-acik: #dcb469;
+    --ed-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --ed-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Noto Serif", serif;
+}
+
+/* Keskin koseler: yuvarlak kalmasi gerekenler (fotograf, bayrak, simge,
+   canli noktasi, tema onizlemesi) disinda her sey. */
+:root[data-palet="editoryal"] :where(*:not(img, svg, svg *, video, .tema-panel, .tema-panel *,
+    [class*="nokta"], [class*="simge"], [class*="bayrak"], [class*="avatar"], [class*="foto"], [class*="portre"])) {
+    border-radius: 0 !important;
+}
+
+/* :where: listedeki en ozgul secici butun kuralin onceligini yukseltmesin
+   (kucuk etiket basliklari asagida sans'a donebilsin). */
+:root[data-palet="editoryal"] :where(h1, h2, h3, h4, .kart-baslik, .manset-baslik, .bes-baslik, .blok-liste a, .sd-liste a) {
+    font-family: var(--ed-serif);
+}
+
+:root[data-palet="editoryal"] ::selection { background: var(--ed-murekkep); color: var(--kart); }
+
+/* --- Ust bant: gorsel yok, kagit; ustte kalin, altta ince cetvel -------- */
+:root[data-palet="editoryal"] .ust-bant {
+    background: var(--zemin);
+    border-top: 6px solid var(--ed-murekkep);
+    border-bottom: 1px solid var(--ed-murekkep);
+}
+:root[data-palet="editoryal"] .logo .ad { color: var(--ed-murekkep); }
+:root[data-palet="editoryal"] .logo .alt { color: var(--metin-soluk); letter-spacing: .42em; }
+
+:root[data-palet="editoryal"] .ust-arama {
+    background: transparent; backdrop-filter: none;
+    border: none; border-bottom: 1px solid var(--ed-murekkep);
+}
+:root[data-palet="editoryal"] .ust-arama:focus-within { box-shadow: none; border-bottom-color: var(--vurgu); }
+:root[data-palet="editoryal"] .ust-arama input { font-family: var(--ed-serif); font-style: italic; }
+
+:root[data-palet="editoryal"] .ust-bilgi-grup {
+    background: transparent; backdrop-filter: none; padding-left: 0;
+    font-family: var(--ed-serif); font-style: italic; font-weight: 400; font-size: .95rem;
+}
+:root[data-palet="editoryal"] :is(.tema-dugme, .cekmece-dugme) {
+    background: transparent; border: 1px solid var(--ed-murekkep); box-shadow: none;
+}
+:root[data-palet="editoryal"] :is(.tema-dugme, .cekmece-dugme):hover { background: var(--ed-murekkep); color: var(--kart); }
+:root[data-palet="editoryal"] .cekmece-dugme:hover span { background: var(--kart); }
+
+/* --- Menu: harf aralikli buyuk harf, altta cift cetvel ------------------ */
+:root[data-palet="editoryal"] .menu-bant {
+    background: var(--zemin);
+    border-bottom: 3px double var(--ed-murekkep);
+    box-shadow: none;
+}
+:root[data-palet="editoryal"] .menu-oge {
+    font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ed-murekkep); padding: 0 9px; min-height: 46px;
+}
+:root[data-palet="editoryal"] .menu-oge::after { height: 2px; left: 9px; right: 9px; background: var(--vurgu); }
+:root[data-palet="editoryal"] .menu-oge:hover,
+:root[data-palet="editoryal"] .menu-oge.aktif { color: var(--vurgu); }
+:root[data-palet="editoryal"] .menu-network {
+    background: var(--ed-murekkep); box-shadow: none; letter-spacing: .08em;
+}
+:root[data-palet="editoryal"] .menu-network-yeni { background: var(--ed-pirinc-acik); color: var(--ed-murekkep); }
+
+/* --- Son dakika: murekkep serit ---------------------------------------- */
+:root[data-palet="editoryal"] .sd-serit {
+    background: var(--ed-murekkep); border-color: var(--ed-murekkep);
+}
+:root[data-palet="editoryal"] .sd-etiket {
+    background: var(--ed-pirinc-acik); color: var(--ed-murekkep); letter-spacing: .18em; font-size: .74rem;
+}
+:root[data-palet="editoryal"] .sd-saat { color: var(--ed-pirinc-acik); font-weight: 700; }
+:root[data-palet="editoryal"] .sd-liste a { color: #f1ecdf; font-weight: 400; font-size: 1rem; }
+:root[data-palet="editoryal"] .sd-liste a:hover { color: var(--ed-pirinc-acik); }
+:root[data-palet="editoryal"] .sd-liste li + li::before { background: var(--ed-pirinc-acik); opacity: .7; }
+
+/* --- Manset ------------------------------------------------------------- */
+:root[data-palet="editoryal"] .kaydirak { background: var(--ed-murekkep); border-top: 4px solid var(--ed-murekkep); }
+:root[data-palet="editoryal"] .kaydirak-slayt > a {
+    background: linear-gradient(155deg, #0f1a2c 0%, #172640 60%, #22344f 100%);
+}
+:root[data-palet="editoryal"] .kaydirak-govde h2 {
+    font-weight: 700; letter-spacing: -.012em; line-height: 1.1;
+}
+:root[data-palet="editoryal"] .kaydirak-govde .grup {
+    background: transparent; color: var(--ed-pirinc-acik);
+    padding: 0 0 6px; border-bottom: 2px solid var(--ed-pirinc-acik);
+    font-size: .74rem; letter-spacing: .2em;
+}
+:root[data-palet="editoryal"] .kaydirak-oku {
+    background: transparent; color: #fff; padding-left: 0; padding-right: 0;
+    border-bottom: 1px solid var(--ed-pirinc-acik);
+    font-family: var(--ed-serif); font-style: italic; font-weight: 400;
+}
+:root[data-palet="editoryal"] .kaydirak-ok { background: rgba(15, 26, 44, .55); border: 1px solid rgba(255, 255, 255, .35); }
+:root[data-palet="editoryal"] .kaydirak-sayfalar button {
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    font-family: var(--ed-serif); color: var(--metin-soluk);
+}
+:root[data-palet="editoryal"] .kaydirak-sayfalar button:hover { color: var(--ed-murekkep); border-bottom-color: var(--cizgi); }
+:root[data-palet="editoryal"] .kaydirak-sayfalar button[aria-current="true"] {
+    background: transparent; color: var(--ed-murekkep); font-weight: 700; border-bottom-color: var(--vurgu);
+}
+
+/* --- Pencereler: kart degil, ustten cetvelli sutun ---------------------- */
+:root[data-palet="editoryal"] :is(.pencere, .kart, .detay, .bulten-kutu, .konu-kutu, .konu-veri, .kategori-basligi) {
+    box-shadow: none;
+}
+:root[data-palet="editoryal"] .pencere {
+    background: transparent; padding: 14px 0 0; border-top: 3px solid var(--ed-murekkep);
+}
+:root[data-palet="editoryal"] :is(.pencere-baslik, .blok-baslik) {
+    font-family: var(--ed-sans); font-size: .72rem; font-weight: 800; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--ed-murekkep); border-bottom: 1px solid var(--cizgi); padding-bottom: 10px;
+}
+:root[data-palet="editoryal"] .blok-baslik a { color: inherit; }
+:root[data-palet="editoryal"] .pencere-vurgu { background: var(--ed-murekkep); color: #e9e4d6; padding: 18px; border-top-color: var(--vurgu); }
+:root[data-palet="editoryal"] .pencere-vurgu .pencere-baslik { color: var(--ed-pirinc-acik); border-bottom-color: rgba(255, 255, 255, .18); }
+:root[data-palet="editoryal"] .pencere-vurgu :is(p, a, .pencere-metin) { color: inherit; }
+
+/* Bugun bilmeniz gereken 5 gelisme: buyuk serif rakamlar */
+:root[data-palet="editoryal"] .bes-gelisme { padding: 14px 0 0; }
+:root[data-palet="editoryal"] .bes-no {
+    background: transparent; color: var(--vurgu); box-shadow: none;
+    width: 34px; height: auto; flex: none;
+    font-family: var(--ed-serif); font-style: italic; font-weight: 400; font-size: 2.1rem; line-height: 1;
+}
+:root[data-palet="editoryal"] .bes-baslik { font-weight: 700; font-size: 1.04rem; line-height: 1.28; }
+:root[data-palet="editoryal"] .bes-konu { font-family: var(--ed-sans); letter-spacing: .16em; font-size: .62rem; }
+:root[data-palet="editoryal"] .bes-bulten { border-top-style: solid; font-family: var(--ed-serif); font-style: italic; font-weight: 400; font-size: .95rem; }
+
+/* --- Bolum basliklari: dolgulu etiket yerine serif baslik + cetvel ------ */
+:root[data-palet="editoryal"] .bolum-basligi { margin-top: 40px; gap: 16px; }
+:root[data-palet="editoryal"] .bolum-basligi h2 {
+    background: transparent; color: var(--ed-murekkep); padding: 0;
+    font-size: 1.55rem; font-weight: 700; letter-spacing: -.01em; text-transform: none;
+}
+:root[data-palet="editoryal"] .bolum-basligi .cizgi { height: 1px; background: var(--ed-murekkep); }
+
+/* --- Hesaplamalar ve Rehberler: dizin seridi ---------------------------- */
+:root[data-palet="editoryal"] .hesap-rehber { border-top: 1px solid var(--ed-murekkep); border-bottom: 1px solid var(--ed-murekkep); padding: 10px 0; }
+:root[data-palet="editoryal"] .hesap-rehber h2 { font-family: var(--ed-sans); letter-spacing: .2em; font-size: .7rem; color: var(--vurgu); }
+:root[data-palet="editoryal"] .hesap-rehber ul { gap: 0; padding-bottom: 0; }
+:root[data-palet="editoryal"] .hesap-rehber li + li { border-left: 1px solid var(--cizgi); }
+:root[data-palet="editoryal"] .hesap-rehber a { background: transparent; border: none; padding: 4px 12px; }
+:root[data-palet="editoryal"] .hesap-rehber li:first-child a { padding-left: 0; }
+:root[data-palet="editoryal"] .hesap-rehber strong { font-family: var(--ed-serif); font-size: .98rem; }
+:root[data-palet="editoryal"] .hesap-rehber a:hover strong { color: var(--vurgu); }
+
+/* --- Kartlar: zeminsiz, ustten cetvelli --------------------------------- */
+:root[data-palet="editoryal"] .kart {
+    background: transparent; border-top: 1px solid var(--ed-murekkep); overflow: visible;
+    transition: none;
+}
+:root[data-palet="editoryal"] .kart:hover { transform: none; box-shadow: none; }
+:root[data-palet="editoryal"] .kart:hover h3 { color: var(--vurgu); }
+:root[data-palet="editoryal"] .kart .govde { padding-left: 0; padding-right: 0; }
+:root[data-palet="editoryal"] .kart h3 { font-weight: 700; letter-spacing: -.005em; line-height: 1.22; }
+:root[data-palet="editoryal"] .kart.yazili::before { display: none; }
+:root[data-palet="editoryal"] :is(.etiket, .kart .etiket, .ust-bilgi) { letter-spacing: .16em; font-size: .7rem; }
+:root[data-palet="editoryal"] .bulut-etiket { background: transparent; border: 1px solid var(--cizgi); color: var(--ed-murekkep); }
+:root[data-palet="editoryal"] .bulut-etiket:hover { background: var(--ed-murekkep); border-color: var(--ed-murekkep); color: var(--kart); }
+
+:root[data-palet="editoryal"] .blok-one-cikan h4 { font-size: 1.22rem; font-weight: 700; line-height: 1.22; }
+:root[data-palet="editoryal"] .blok-liste a { font-weight: 400; font-size: 1rem; }
+:root[data-palet="editoryal"] .blok-liste a::before { background: var(--vurgu); }
+
+/* --- Haber sayfasi: dergi sayfasi --------------------------------------- */
+:root[data-palet="editoryal"] .detay {
+    background: transparent; padding: 0; margin-top: 34px;
+    border-top: 4px solid var(--ed-murekkep); padding-top: 22px;
+}
+:root[data-palet="editoryal"] .detay > a.etiket {
+    background: transparent; color: var(--vurgu); padding: 0; border: none;
+    font-size: .74rem; font-weight: 800; letter-spacing: .22em;
+}
+:root[data-palet="editoryal"] .detay h1 {
+    font-weight: 700; font-size: clamp(2rem, 4.8vw, 3.2rem); line-height: 1.08; letter-spacing: -.02em;
+    margin: 10px 0 18px;
+}
+:root[data-palet="editoryal"] .detay .kunye {
+    border-top: 1px solid var(--cizgi); border-bottom: 1px solid var(--cizgi);
+    padding: 10px 0; font-size: .8rem; letter-spacing: .06em; text-transform: uppercase;
+}
+:root[data-palet="editoryal"] .detay .spot {
+    font-family: var(--ed-serif); font-style: italic; font-size: clamp(1.25rem, 1.1rem + .6vw, 1.5rem);
+    line-height: 1.45; color: var(--metin);
+}
+:root[data-palet="editoryal"]:not([data-font]) .detay .icerik {
+    font-family: var(--ed-serif); font-size: clamp(1.13rem, 1rem + .5vw, 1.22rem); line-height: 1.75;
+}
+/* Bas harf: yalnizca metnin ilk paragrafi. */
+:root[data-palet="editoryal"] .detay .icerik > p:first-of-type::first-letter {
+    float: left; font-family: var(--ed-serif); font-weight: 700;
+    font-size: 3.9em; line-height: .82; padding: .07em .09em 0 0; color: var(--ed-murekkep);
+}
+:root[data-palet="editoryal"] .detay .icerik h2 {
+    font-size: 1.5rem; font-weight: 700; padding-top: 14px; border-top: 1px solid var(--cizgi);
+}
+:root[data-palet="editoryal"] .detay .icerik a { color: var(--vurgu); text-decoration: underline; text-underline-offset: 3px; }
+:root[data-palet="editoryal"] .detay .icerik blockquote {
+    margin: 1.4em 0; padding: 0 0 0 20px; border-left: 3px solid var(--vurgu);
+    font-family: var(--ed-serif); font-style: italic; font-size: 1.25em; line-height: 1.5;
+}
+:root[data-palet="editoryal"] :is(.konu-kutu, .bulten-kutu) {
+    background: transparent; border: none; border-top: 1px solid var(--ed-murekkep); border-bottom: 1px solid var(--ed-murekkep);
+}
+:root[data-palet="editoryal"] .konu-kutu { border-left: none; padding-left: 0; padding-right: 0; }
+
+/* --- Dugmeler ve form alanlari ------------------------------------------ */
+:root[data-palet="editoryal"] :is(.dugme, button.ana, .senin-tanit button.ana, .bulten-form button, .alt-bant-dugme) {
+    box-shadow: none; letter-spacing: .08em; text-transform: uppercase; font-size: .78rem; font-weight: 700;
+}
+:root[data-palet="editoryal"] :is(input[type="text"], input[type="email"], input[type="search"], select, textarea):not(.ust-arama input) {
+    background: var(--kart); border: 1px solid var(--cizgi);
+}
+:root[data-palet="editoryal"] :is(input, select, textarea):focus-visible { outline: 2px solid var(--vurgu); outline-offset: 1px; }
+
+/* --- Alt bant: murekkep -------------------------------------------------- */
+:root[data-palet="editoryal"] .alt-bant {
+    background: var(--ed-murekkep); color: #b9c0cf; border-top: 4px solid var(--vurgu); margin-top: 64px;
+}
+:root[data-palet="editoryal"] .alt-bant a { color: #f1ecdf; }
+:root[data-palet="editoryal"] .alt-bant a:hover { color: var(--ed-pirinc-acik); }
+:root[data-palet="editoryal"] .alt-bant :is(strong, h2, h3, b) { color: #f1ecdf; }
+:root[data-palet="editoryal"] .alt-bant-dugme { background: transparent; border: 1px solid rgba(255, 255, 255, .35); color: #f1ecdf; }
+:root[data-palet="editoryal"] .alt-bant-dugme:hover:not(:disabled) { border-color: var(--ed-pirinc-acik); color: var(--ed-pirinc-acik); }
+
+/* Yazdirma: murekkep zeminler kagida donsun. */
+@media print {
+    :root[data-palet="editoryal"] :is(.sd-serit, .alt-bant, .kaydirak, .pencere-vurgu) { background: transparent; color: #000; }
+}

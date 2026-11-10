@@ -86,6 +86,7 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
     foreach (stil_paketleri() as $stilPaketi): ?>
     <link rel="stylesheet" href="<?= e(varlik($stilPaketi)) ?>">
     <?php endforeach; ?>
+    <?= tema_dosya_betigi() ?>
 
     <?php /* Ayni icerige birden fazla adresten ulasiliyorsa hangisinin
              asil oldugunu soyler; aksi halde arama motoru ikisini ayri
