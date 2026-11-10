@@ -200,9 +200,12 @@ function tema_secici_betigi(): string
         // Kendi stil dosyasi olan tema: dosya yuklenince uygulanir (yari
         // giyinmis sayfa gorunmesin).
         . 'var D=' . json_encode(tema_dosyalari(), JSON_UNESCAPED_SLASHES) . ';'
-        . 'function uygula(a){if(a&&D[a]){var l=document.getElementById("tema-dosya");'
+        // "son": en son istenen tema. Dosya inerken okur baska temaya
+        // gecerse gec gelen yukleme geri cagrisi o secimi ezmesin.
+        . 'var son=null;'
+        . 'function uygula(a){son=a;if(a&&D[a]){var l=document.getElementById("tema-dosya");'
         . 'if(!l||l.getAttribute("data-palet")!==a){if(l){l.remove();}l=document.createElement("link");l.rel="stylesheet";l.id="tema-dosya";'
-        . 'l.setAttribute("data-palet",a);l.href=D[a];l.onload=function(){uygula2(a);};l.onerror=function(){uygula2(a);};document.head.appendChild(l);return;}}'
+        . 'l.setAttribute("data-palet",a);l.href=D[a];l.onload=l.onerror=function(){if(son===a){uygula2(a);}};document.head.appendChild(l);return;}}'
         . 'uygula2(a);}'
         . 'function uygula2(a){d.classList.add("tema-gecis");'
         . 'if(a&&T[a]){d.setAttribute("data-tema",T[a]);if(a!=="klasik"&&a!=="gece"){d.setAttribute("data-palet",a);}else{d.removeAttribute("data-palet");}}'
