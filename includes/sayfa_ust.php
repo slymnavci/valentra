@@ -71,7 +71,7 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
     <?php /* Gece/gunduz modu: ziyaretcinin sectigi tema stil dosyasindan
              ONCE uygulaniyor, yoksa sayfa bir an yanlis renkte gorunup
              sonra degisirdi. Secim yoksa sistem ayari gecerli. */ ?>
-    <script>(function(){try{var t=localStorage.getItem('valentra-tema');if(t==='koyu'||t==='acik'){document.documentElement.setAttribute('data-tema',t);}}catch(e){}})();</script>
+    <?php require_once __DIR__ . '/temalar.php'; echo tema_bas_betigi(); ?>
     <?php
     /* En buyuk icerik gorseli (LCP) erken istensin (08.11.2026, Lighthouse
        mobil LCP 6,5 sn): tarayici gorseli ancak 230 KB'lik stil dosyasi ve
@@ -234,16 +234,7 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
             <div class="ust-bilgi-grup">
                 <span class="bilgi-tarih"><?= e(tarih_bicimle(date('Y-m-d H:i:s'), false)) ?></span>
 
-                <button type="button" class="tema-dugme" id="tema-dugme"
-                        aria-label="Gece / gündüz modu" title="Gece / gündüz modu">
-                    <svg class="tema-ay" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                    </svg>
-                    <svg class="tema-gunes" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-                        <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/>
-                        <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                    </svg>
-                </button>
+                <?= tema_secici_html() ?>
             </div>
         </div>
     </header>
@@ -323,34 +314,7 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
     </script>
 
 
-    <script>
-    (function () {
-        // Gece/gunduz: secim tarayicida saklaniyor (yalnizca bu
-        // ziyaretci icin). Ilk tiklamada o an gorulen temanin tersi.
-        var kok = document.documentElement;
-        var dugme = document.getElementById('tema-dugme');
-
-        function koyuMu() {
-            var t = kok.getAttribute('data-tema');
-            if (t) { return t === 'koyu'; }
-            return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        }
-
-        function etiket() {
-            dugme.setAttribute('aria-pressed', koyuMu() ? 'true' : 'false');
-        }
-
-        if (!dugme) { return; }
-        etiket();
-
-        dugme.addEventListener('click', function () {
-            var yeni = koyuMu() ? 'acik' : 'koyu';
-            kok.setAttribute('data-tema', yeni);
-            try { localStorage.setItem('valentra-tema', yeni); } catch (e) {}
-            etiket();
-        });
-    })();
-    </script>
+    <?= tema_secici_betigi() ?>
 
     <?php if ($menu !== []): ?>
         <nav class="menu-bant" aria-label="Ana menü">
