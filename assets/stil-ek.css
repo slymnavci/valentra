@@ -1,0 +1,173 @@
+/* Valentra - ek sayfalarinin stilleri (assets/style.css'ten ayrildi;
+ * yalnizca bu sayfalarda yuklenir: ara.php, araclar.php, bulten.php, burc.php, burclar.php, canli.php, deprem.php, etiket.php, gazete.php, gunun-kelimesi.php, kanun.php, kanunlar.php, kategori.php, konu.php, kose-yazilari.php, kose-yazisi.php, kurumsal.php, mac-ozetleri.php, network.php, piyasalar.php, pratik-bilgi.php, pratik-bilgiler.php, rehber.php, rehberler.php, resmi-gazete.php, sirket.php, uye-eposta.php, uye.php, vergi-takvimi.php, video.php, yazar.php).
+ * Uretim: style.css bolme betigi, 08.11.2026. */
+.kategori-basligi h1 {
+    margin: 0;
+    font-size: clamp(1.5rem, 3.4vw, 2.1rem);
+    font-weight: 800;
+    letter-spacing: -.012em;
+}
+
+.kategori-basligi p {
+    margin: 6px 0 0;
+    color: var(--metin-soluk);
+}
+
+.rg-dis { color: var(--vurgu); text-decoration: underline; }
+
+.kose-gundem {
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--altin-koyu);
+}
+
+.kose-baslik {
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--metin);
+}
+
+.kose-liste a:hover .kose-baslik { color: var(--vurgu); }
+
+.kose-ozet {
+    font-size: .86rem;
+    line-height: 1.45;
+    color: var(--metin-soluk);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Tum yazilar listesi ve "gunun diger yazilari" */
+.kose-liste {
+    list-style: none;
+    margin: 0 0 26px;
+    padding: 0 18px;
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+}
+
+.kose-liste li + li { border-top: 1px solid var(--cizgi); }
+
+.kose-liste a {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 14px 0;
+}
+
+.kose-liste .kose-ozet { -webkit-line-clamp: 3; font-size: .92rem; }
+
+/* Yazi sayfasi */
+.kose-ust-etiket {
+    display: inline-block;
+    margin-bottom: 12px;
+    font-size: .82rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--altin-koyu);
+}
+
+.kose-not {
+    margin: 22px 0 0;
+    font-size: .88rem;
+    color: var(--metin-soluk);
+    font-style: italic;
+}
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) .kose-gundem,
+    :where(:root:not([data-tema="acik"])) .kose-ust-etiket { color: var(--altin); }
+}
+
+:where(:root[data-tema="koyu"]) .kose-gundem,
+:where(:root[data-tema="koyu"]) .kose-ust-etiket { color: var(--altin); }
+
+.canli-not {
+    margin: 8px 0 0;
+    font-size: .8rem;
+    color: var(--metin-soluk);
+}
+
+.canli-not a { color: var(--vurgu); }
+
+.tablo-kaydir { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+.spor-kutu {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    padding: 14px 16px;
+    min-width: 0;
+}
+
+.spor-kutu h3 {
+    margin: 0 0 10px;
+    font-size: .9rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--metin);
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--altin);
+}
+
+.spor-kutu h3 + ul + h3,
+.spor-kutu ul + h3 { margin-top: 18px; }
+
+.puan-tablosu {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .9rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.puan-tablosu th,
+.puan-tablosu td {
+    padding: 6px 6px;
+    text-align: center;
+    border-bottom: 1px solid var(--cizgi);
+    white-space: nowrap;
+}
+
+.puan-tablosu th {
+    font-size: .76rem;
+    color: var(--metin-soluk);
+    font-weight: 700;
+}
+
+.puan-tablosu .takim { text-align: left; width: 100%; }
+.puan-tablosu .sira { color: var(--metin-soluk); width: 1%; }
+.puan-tablosu .puan { font-weight: 800; color: var(--metin); }
+.puan-tablosu tbody tr:last-child td { border-bottom: 0; }
+
+/* Ilk dort (Avrupa) ve son uc (kume dusme) satiri ince bir serit. */
+.puan-tablosu tbody tr:nth-child(-n+4) td.sira { box-shadow: inset 3px 0 0 var(--artis); }
+.puan-tablosu tbody tr:nth-last-child(-n+3) td.sira { box-shadow: inset 3px 0 0 var(--dusus); }
+@media (max-width: 560px) {
+    .puan-tablosu .genis { display: none; }
+    .puan-tablosu th, .puan-tablosu td { padding: 6px 4px; }
+}
+
+.puan-tablosu td.takim a { display: inline-flex; align-items: center; gap: 7px; color: inherit; }
+.puan-tablosu td.takim a:hover { color: var(--vurgu); }
+.puan-tablosu td.takim img { width: 18px; height: 18px; object-fit: contain; }
+
+.pdeg { font-size: .82rem; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pdeg.arti { color: var(--artis); }
+.pdeg.eksi { color: var(--dusus); }
+.pdeg.duz  { color: var(--metin-soluk); }
+.kivrim.arti { color: var(--artis); }
+.kivrim.eksi { color: var(--dusus); }
+
+.analiz-tablosu tbody th { text-align: left; font-weight: 600; font-size: .9rem; color: var(--metin); }
+.analiz-tablosu small { color: var(--metin-soluk); font-weight: 400; }
+
+.pdeg { font-variant-numeric: tabular-nums; font-weight: 600; }
+.pdeg.arti { color: var(--artis); }
+.pdeg.eksi { color: var(--dusus); }
+.pdeg.bos, .pdeg.duz { color: var(--metin-soluk); }

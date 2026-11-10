@@ -81,6 +81,11 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
     <link rel="preload" as="image" fetchpriority="high" href="<?= e((string) $lcpGorsel['src']) ?>"<?php if (!empty($lcpGorsel['srcset'])): ?> imagesrcset="<?= e((string) $lcpGorsel['srcset']) ?>" imagesizes="<?= e((string) ($lcpGorsel['sizes'] ?? '100vw')) ?>"<?php endif; ?>>
     <?php endif; ?>
     <link rel="stylesheet" href="<?= e(varlik('/assets/style.css')) ?>">
+    <?php /* Sayfaya ozel stil paketleri (bkz. includes/stil_paketleri.php). */
+    require_once __DIR__ . '/stil_paketleri.php';
+    foreach (stil_paketleri() as $stilPaketi): ?>
+    <link rel="stylesheet" href="<?= e(varlik($stilPaketi)) ?>">
+    <?php endforeach; ?>
 
     <?php /* Ayni icerige birden fazla adresten ulasiliyorsa hangisinin
              asil oldugunu soyler; aksi halde arama motoru ikisini ayri
