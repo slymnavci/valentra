@@ -29,6 +29,23 @@ declare(strict_types=1);
  */
 
 const SAYFA_ONBELLEK_SURE   = 60;
+
+/*
+ * BAYAT KOPYA HEMEN, YENISI ARKADA (10.11.2026).
+ *
+ * Lighthouse masaustu puani uc olcumde 67, 61, 58: engelleme 0 ms, duzen
+ * kaymasi 0; tek sorun ilk icerigin 3-4,4 sn'de gelmesi ("Root document
+ * took 1,130 ms"). Site az trafikli: 60 saniyelik kopya cogu ziyaretciye
+ * (ve olcume) bayat denk geliyor, sayfa o anda bastan uretiliyor.
+ *
+ * Bu sureden genc bayat kopya varsa ziyaretciye HEMEN o veriliyor; yanit
+ * gittikten sonra ayni istek sayfayi yeniden uretip kopyayi tazeliyor
+ * (fastcgi/litespeed_finish_request). Sonraki ziyaretci tazesini gorur.
+ * Yalnizca bunu isteyen sayfalarda (sayfa_onbellek'in ikinci parametresi):
+ * arkada uretim sirasinda durum kodu degistirilemedigi icin 404/410/301
+ * verebilen sayfalar (haber.php) bunu KULLANMAMALI.
+ */
+const SAYFA_ONBELLEK_BAYAT  = 600;
 const SAYFA_ONBELLEK_DIZIN  = __DIR__ . '/../onbellek/sayfa';
 const SAYFA_ONBELLEK_ZIYARET = '<!--valentra-ziyaret-betigi-->';
 
@@ -41,8 +58,10 @@ const SAYFA_ONBELLEK_YOK_SAYILAN = ['utm_source', 'utm_medium', 'utm_campaign', 
  * onu basar ve istegi bitirir; yoksa uretilen sayfayi yakalar.
  *
  * @param list<string> $parametreler sayfanin kullandigi sorgu parametreleri
+ * @param bool         $bayatSun     bayat kopyayi hemen ver, arkada yenile
+ *                                   (bkz. SAYFA_ONBELLEK_BAYAT; her zaman 200 donen sayfalar)
  */
-function sayfa_onbellek(array $parametreler): void
+function sayfa_onbellek(array $parametreler, bool $bayatSun = false): void
 {
     $yontem = (string) ($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
@@ -78,7 +97,33 @@ function sayfa_onbellek(array $parametreler): void
         exit;
     }
 
+    // Bayat ama cok eski olmayan kopya: ziyaretci beklemesin, yenisi arkada.
+    $bitir = function_exists('fastcgi_finish_request') ? 'fastcgi_finish_request'
+           : (function_exists('litespeed_finish_request') ? 'litespeed_finish_request' : null);
+
+    if ($bayatSun && $bitir !== null && $zaman !== false && time() - $zaman < SAYFA_ONBELLEK_BAYAT) {
+        // Kopyayi "taze" isaretle: uretim surerken gelen diger istekler de
+        // onu alsin, ayni anda birden cok istek sayfayi uretmesin. Uretim
+        // dusarse kopya bir sure daha kalir, sonraki istek yeniden dener.
+        @touch($dosya);
+
+        if (sayfa_onbellek_sun($dosya)) {
+            ignore_user_abort(true);
+            $bitir();
+
+            // Buradan sonrasi ziyaretciye gitmiyor: sayfa normal akisiyla
+            // uretilip kopyaya yaziliyor; ziyaret ikinci kez sayilmiyor.
+            $GLOBALS['sayfa_onbellek_arkada'] = true;
+        }
+    }
+
     ob_start('sayfa_onbellek_yaz');
+}
+
+/** Bu istek yaniti gonderdi ve kopyayi arkada mi tazeliyor? */
+function sayfa_onbellek_arkada_mi(): bool
+{
+    return !empty($GLOBALS['sayfa_onbellek_arkada']);
 }
 
 /** Onbellekteki kopyayi basar; okunamazsa false (sayfa yeniden uretilir). */
@@ -154,6 +199,11 @@ function sayfa_onbellek_yaz(string $html): string
                 }
             }
         }
+    }
+
+    // Arkada tazeleme: yanit coktan gitti, cikti kimseye ulasmiyor.
+    if (sayfa_onbellek_arkada_mi()) {
+        return '';
     }
 
     return str_replace(SAYFA_ONBELLEK_ZIYARET, function_exists('ziyaret_betigi') ? ziyaret_betigi() : '', $html);

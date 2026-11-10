@@ -79,6 +79,12 @@ $GLOBALS['ziyaret_son_id'] = 0;
  */
 function ziyaret_kaydet(?int $haberId = null, string $baslik = ''): void
 {
+    // Sayfa onbellegi kopyayi arkada tazeliyor: bu ziyaret, bayat kopya
+    // verilirken zaten sayildi (bkz. sayfa_onbellek, SAYFA_ONBELLEK_BAYAT).
+    if (!empty($GLOBALS['sayfa_onbellek_arkada'])) {
+        return;
+    }
+
     if (!ziyaret_sayilmali()) {
         return;
     }

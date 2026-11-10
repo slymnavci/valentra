@@ -10,7 +10,9 @@ require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/sayfa_onbellek.php';
 
 // Ziyaretciye bir dakikalik kopya (bkz. includes/sayfa_onbellek.php).
-sayfa_onbellek(['sayfa']);
+// Ikinci parametre: bayat kopya hemen verilir, yenisi yanit gittikten sonra
+// uretilir (ana sayfa her zaman 200 doner; bkz. SAYFA_ONBELLEK_BAYAT).
+sayfa_onbellek(['sayfa'], true);
 require_once __DIR__ . '/includes/kose.php';
 
 // #300'un tek seferlik geri almasi (haber_gorsel_ozgunleri_geri_al) burada
