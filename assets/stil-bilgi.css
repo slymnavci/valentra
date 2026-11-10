@@ -1,0 +1,963 @@
+/* Valentra - bilgi sayfalarinin stilleri (assets/style.css'ten ayrildi;
+ * yalnizca bu sayfalarda yuklenir: araclar.php, kanun.php, kanunlar.php, pratik-bilgi.php, pratik-bilgiler.php, rehber.php, rehberler.php, resmi-gazete.php, vergi-takvimi.php).
+ * Uretim: style.css bolme betigi, 08.11.2026. */
+/* --- Kanun listesi -------------------------------------------------------- */
+
+.kanun-listesi {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.kanun-ust {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.kanun-ust h3 {
+    margin: 0;
+    font-size: 1.08rem;
+    line-height: 1.3;
+}
+
+.kanun-no {
+    font-size: .82rem;
+    font-weight: 700;
+    color: var(--metin-soluk);
+    white-space: nowrap;
+}
+
+.kanun-bag {
+    font-size: .90rem;
+    font-weight: 700;
+    color: var(--vurgu);
+}
+
+/* --- Kanun metni sayfasi -------------------------------------------------- */
+
+.kanun-basligi {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin: 24px 0 16px;
+}
+
+.kanun-basligi .geri {
+    font-size: .90rem;
+    font-weight: 600;
+    color: var(--metin-soluk);
+}
+
+.kanun-basligi .geri:hover { color: var(--vurgu); }
+
+.kanun-basligi h1 {
+    margin: 6px 0 4px;
+    font-size: clamp(1.35rem, 2.6vw, 1.9rem);
+    line-height: 1.2;
+}
+
+.kanun-basligi p {
+    margin: 0;
+    font-size: .96rem;
+    color: var(--metin-soluk);
+}
+
+.kanun-basligi .dis-bag {
+    background: var(--lacivert);
+    color: #fff;
+    font-size: .94rem;
+    font-weight: 700;
+    padding: 9px 16px;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.kanun-basligi .dis-bag:hover { background: var(--lacivert-acik); }
+
+.kanun-uyari {
+    background: #fdf0ef;
+    border: 1px solid #f3c9c5;
+    color: #8c2f27;
+    border-radius: var(--yuvarlak);
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    font-size: .98rem;
+}
+
+.kanun-uyari a { text-decoration: underline; }
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) .kanun-uyari { background: #2d1a18; border-color: #5a2a25; color: #f3b5ae; }
+}
+
+:where(:root[data-tema="koyu"]) .kanun-uyari { background: #2d1a18; border-color: #5a2a25; color: #f3b5ae; }
+
+/*
+ * Kanun metni.
+ *
+ * Metin resmi kaynaktan geldigi icin kendi bicimlendirmesini tasiyor
+ * ama nitelikleri ayiklandi; burada okunabilir bir tipografi
+ * veriliyor. Satir uzunlugu sinirli: kanun metinleri uzun, ekran
+ * genisligince akan satirlari izlemek yoruyor.
+ */
+.kanun-metin {
+    background: var(--kart);
+    border: 1px solid var(--cizgi);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    padding: 30px 34px;
+    max-width: 78ch;
+    margin: 0 auto;
+    font-size: 1.02rem;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+}
+
+.kanun-metin p { margin: 0 0 14px; }
+
+.kanun-metin h1,
+.kanun-metin h2,
+.kanun-metin h3,
+.kanun-metin h4 {
+    margin: 26px 0 10px;
+    font-size: 1.08rem;
+    line-height: 1.35;
+    color: var(--lacivert);
+}
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) .kanun-metin h1,
+    :where(:root:not([data-tema="acik"])) .kanun-metin h2,
+    :where(:root:not([data-tema="acik"])) .kanun-metin h3,
+    :where(:root:not([data-tema="acik"])) .kanun-metin h4 { color: var(--altin); }
+}
+
+:where(:root[data-tema="koyu"]) .kanun-metin h1,
+:where(:root[data-tema="koyu"]) .kanun-metin h2,
+:where(:root[data-tema="koyu"]) .kanun-metin h3,
+:where(:root[data-tema="koyu"]) .kanun-metin h4 { color: var(--altin); }
+
+.kanun-metin b,
+.kanun-metin strong { color: var(--metin); }
+
+.kanun-metin ul,
+.kanun-metin ol { margin: 0 0 14px; padding-left: 22px; }
+
+.kanun-metin li { margin-bottom: 6px; }
+
+/* Kaynaktaki tablolar dar ekranda tasmasin. */
+.kanun-metin table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 16px;
+    font-size: .96rem;
+    display: block;
+    overflow-x: auto;
+}
+
+.kanun-metin td,
+.kanun-metin th {
+    border: 1px solid var(--cizgi);
+    padding: 6px 9px;
+    vertical-align: top;
+}
+
+.kanun-kaynak {
+    margin: 14px auto 34px;
+    max-width: 78ch;
+}
+@media (max-width: 700px) {
+    .kanun-metin { padding: 20px 18px; }
+}
+
+/*
+ * Metin getirilemediginde gosterilen panel.
+ *
+ * Bilerek hata rengi kullanilmiyor. Ziyaretci acisindan burada bozulan
+ * bir sey yok: aradigi metin duruyor, yalnizca baska bir adreste. Kirmizi
+ * bir serit sayfayi arizali gosteriyordu; bu panel ise calisan iki yolu
+ * one cikariyor.
+ */
+.kanun-duser {
+    background: var(--kart);
+    border: 1px solid var(--cizgi);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    border-top: 3px solid var(--altin);
+    padding: 40px 28px 34px;
+    margin: 18px 0 8px;
+    text-align: center;
+}
+
+.kanun-duser-simge {
+    width: 40px;
+    height: 40px;
+    fill: none;
+    stroke: var(--altin-koyu);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    margin-bottom: 12px;
+}
+
+.kanun-duser h2 {
+    margin: 0 0 8px;
+    font-size: 1.28rem;
+}
+
+.kanun-duser > p {
+    margin: 0 auto 20px;
+    max-width: 56ch;
+    font-size: .99rem;
+    line-height: 1.6;
+    color: var(--metin-soluk);
+}
+
+.kanun-duser-yollar {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.kanun-duser-yollar a {
+    font-size: .96rem;
+    font-weight: 700;
+    padding: 11px 20px;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.dugme-birincil {
+    background: var(--lacivert);
+    color: #fff;
+}
+
+.dugme-birincil:hover { background: var(--lacivert-acik); }
+
+.dugme-ikincil {
+    border: 1px solid var(--cizgi);
+    color: var(--metin);
+}
+
+.dugme-ikincil:hover { border-color: var(--lacivert); color: var(--vurgu); }
+
+.kanun-duser-not {
+    margin: 20px auto 0;
+    max-width: 56ch;
+    font-size: .90rem;
+    color: var(--metin-soluk);
+}
+
+.kanun-duser-not a { color: var(--vurgu); text-decoration: underline; }
+
+/* Kanun sayfasindaki yonetici tanisi: ziyaretciye gorunmez.
+   Acilir blok: kapaliyken sayfayi bozmuyor, acilinca ayrintiyi veriyor. */
+.kanun-tani {
+    margin: 22px auto 0;
+    max-width: 70ch;
+    text-align: left;
+    font-size: .90rem;
+    border: 1px dashed var(--cizgi);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--metin-soluk);
+}
+
+.kanun-tani summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--metin);
+}
+
+.kanun-tani p {
+    margin: 8px 0 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    line-height: 1.55;
+    word-break: break-word;
+}
+
+/* Kanun metni PDF olarak geldiginde sayfanin icinde acilir.
+   Yukseklik ekrana gore: kisa bir kutuda kanun okumak zor. */
+.kanun-pdf {
+    width: 100%;
+    height: calc(100vh - 220px);
+    min-height: 480px;
+    border: 1px solid var(--cizgi);
+    border-radius: 10px;
+    background: #fff;
+}
+
+/* --- Pratik bilgiler: liste ve detay ------------------------------------- */
+
+/*
+ * Giris sayfasi liste, kart degil.
+ *
+ * Degerlerin bir kismi tek rakam ("12.000 TL"), bir kismi onlarca
+ * satirlik tarife. Kart duzeninde uzun olanlar sayfayi kilometrelerce
+ * uzatiyor, kisa olanlar aralarinda kayboluyordu. Listede hepsi ayni
+ * yuksekligi kapliyor ve goz basliklar arasinda hizlica geziyor;
+ * degerin tamami kendi sayfasinda.
+ */
+.pratik-liste {
+    list-style: none;
+    margin: 0 0 26px;
+    padding: 0;
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    overflow: hidden;
+}
+
+.pratik-liste li + li { border-top: 1px solid var(--cizgi); }
+
+.pratik-liste a {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 18px;
+    transition: background .12s ease;
+}
+
+.pratik-liste-ad {
+    font-weight: 600;
+    color: var(--metin);
+    min-width: 0;
+}
+
+.pratik-liste a:hover .pratik-liste-ad { color: var(--vurgu); }
+
+.pratik-liste-ad small {
+    display: block;
+    font-weight: 400;
+    font-size: .86rem;
+    color: var(--metin-soluk);
+    margin-top: 2px;
+}
+
+.pratik-liste-deger {
+    color: var(--metin-soluk);
+    font-size: .96rem;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+@media (max-width: 560px) {
+    .pratik-liste a { flex-direction: column; gap: 4px; }
+    .pratik-liste-deger { text-align: left; white-space: normal; }
+}
+
+.pratik-detay {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    border-top: 3px solid var(--altin);
+    padding: 26px 28px 24px;
+    margin: 18px 0 0;
+}
+
+.pratik-detay .geri {
+    font-size: .90rem;
+    font-weight: 600;
+    color: var(--metin-soluk);
+}
+
+.pratik-detay .geri:hover { color: var(--vurgu); }
+
+.pratik-detay h1 {
+    margin: 8px 0 6px;
+    font-size: clamp(1.3rem, 2.4vw, 1.8rem);
+    line-height: 1.25;
+}
+
+.pratik-detay-aciklama {
+    margin: 0 0 18px;
+    color: var(--metin-soluk);
+    font-size: .99rem;
+}
+
+/* Degerin kendisi sayfanin ana konusu: buyuk ve okunakli. */
+.pratik-deger-kutu {
+    background: var(--zemin);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+}
+
+.pratik-deger-baslik {
+    margin: 16px 0 8px;
+    font-size: .94rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--metin-soluk);
+}
+
+.pratik-deger-baslik:first-child { margin-top: 0; }
+
+.pratik-deger-satir {
+    margin: 0 0 6px;
+    font-size: 1.10rem;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--metin);
+}
+
+/* Tek satirlik degerler (bir rakam) daha buyuk dursun. */
+.pratik-deger-satir:only-child { font-size: 1.5rem; }
+
+.pratik-kunye {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 22px;
+    margin: 0 0 16px;
+}
+
+.pratik-kunye dt {
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--metin-soluk);
+    margin-bottom: 3px;
+}
+
+.pratik-kunye dd {
+    margin: 0;
+    font-size: .98rem;
+    color: var(--metin);
+}
+
+.pratik-kunye a { color: var(--vurgu); }
+
+/*
+ * Yuklenen suret uyarisi.
+ *
+ * Ziyaretci yururlukteki metne mi yoksa bir kopyaya mi baktigini
+ * bilmeli; bu yuzden metnin USTUNDE ve goz ardi edilemeyecek kadar
+ * belirgin duruyor. Hata rengi degil uyari rengi: bozulan bir sey yok,
+ * dikkat edilmesi gereken bir sey var.
+ */
+.kanun-kopya-uyari {
+    background: #fff8e8;
+    border: 1px solid #e8d5a8;
+    border-left: 4px solid var(--altin-koyu);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 0 0 14px;
+    font-size: .96rem;
+    line-height: 1.6;
+    color: #6b5322;
+}
+
+.kanun-kopya-uyari a { color: var(--vurgu); text-decoration: underline; }
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) .kanun-kopya-uyari {
+        background: #2a2314;
+        border-color: #4d3f22;
+        color: #e8d3a4;
+    }
+}
+
+:where(:root[data-tema="koyu"]) .kanun-kopya-uyari {
+    background: #2a2314;
+    border-color: #4d3f22;
+    color: #e8d3a4;
+}
+
+.takvim-gun {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 0;
+    border-radius: 8px;
+    background: var(--lacivert);
+    color: #fff;
+    line-height: 1.1;
+}
+
+.takvim-gun strong {
+    font-size: 1.05rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.takvim-gun span {
+    font-size: .6rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    opacity: .85;
+}
+
+.takvim-yazi { display: flex; flex-direction: column; min-width: 0; }
+
+/* --- Vergi takvimi sayfasi ----------------------------------------------- */
+
+.takvim-vurgu {
+    margin: 0 0 30px;
+    padding: 20px 22px;
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+}
+
+.takvim-vurgu h2 {
+    margin: 0 0 14px;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.takvim-vurgu-liste {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 14px;
+}
+
+.takvim-vurgu-oge {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+}
+
+/* Aylar: genis ekranda dort, sonra uc ve iki sutun. */
+.takvim-yil {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+}
+@media (max-width: 1200px) { .takvim-yil { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 860px) { .takvim-yil { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) { .takvim-yil { grid-template-columns: 1fr; }
+}
+
+.takvim-ay {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    padding: 16px 18px 14px;
+}
+
+/*
+ * Gecmis aylar soluk ama GIZLI DEGIL: okuyucu "gecen ay neyi
+ * kacirdim" diye de bakiyor.
+ */
+.takvim-ay.gecmis { opacity: .62; }
+
+.takvim-ay.su-anki {
+    outline: 2px solid var(--altin);
+    outline-offset: -2px;
+}
+
+.takvim-ay h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.takvim-ay .rozet {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--altin);
+    color: var(--vurgu-ustu, #fff);
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.takvim-ay-liste { list-style: none; margin: 0; padding: 0; }
+
+.takvim-ay-liste li {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 1px solid var(--cizgi);
+}
+
+.takvim-ay-liste li:first-child { border-top: 0; }
+
+/* Suresi gecmis yukumluluk ustu cizili degil, yalnizca soluk:
+   ustu cizgi "iptal edildi" izlenimi verirdi. */
+.takvim-ay-liste li.oldu { opacity: .5; }
+
+.takvim-ay-liste .gun {
+    font-size: .95rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--vurgu);
+    text-align: right;
+}
+
+.takvim-ay-liste .yazi { display: flex; flex-direction: column; min-width: 0; }
+
+.takvim-bos {
+    margin: 0;
+    font-size: .8rem;
+    color: var(--metin-soluk);
+}
+
+.takvim-yil-gecis {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin: 30px 0;
+    font-weight: 600;
+}
+
+.takvim-yil-gecis a { color: var(--vurgu); }
+.takvim-yil-gecis span { color: var(--metin-soluk); }
+
+/* --- Resmi Gazete sayfasi ------------------------------------------------ */
+
+.rg-gunler {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 18px 0 0;
+}
+
+.rg-gunler a {
+    padding: 5px 12px;
+    border: 1px solid var(--cizgi);
+    border-radius: 999px;
+    background: var(--kart);
+    color: var(--metin-soluk);
+    font-size: .88rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.rg-kunye {
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    border-top: 3px solid var(--altin);
+    padding: 20px 24px 18px;
+    margin: 18px 0 0;
+}
+
+.rg-kunye-ust {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 14px;
+}
+
+.rg-tarih { font-size: 1.25rem; font-weight: 800; }
+
+.rg-sayi {
+    color: var(--metin-soluk);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.rg-uyari {
+    margin: 8px 0 0;
+    font-size: .92rem;
+    color: var(--altin-koyu);
+}
+
+.rg-ozet { margin: 10px 0 0; }
+
+.rg-bolum-sayilari {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 0;
+    padding: 0;
+}
+
+.rg-bolum-sayilari li {
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: var(--zemin);
+    font-size: .9rem;
+    color: var(--metin-soluk);
+}
+
+.rg-bolum-sayilari strong { color: var(--metin); margin-left: 4px; }
+
+.rg-bolum {
+    margin: 18px 0 8px;
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: var(--metin);
+}
+
+.rg-liste {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+    background: var(--kart);
+    border-radius: var(--yuvarlak);
+    box-shadow: var(--golge);
+    overflow: hidden;
+}
+
+.rg-liste li { padding: 12px 18px; }
+
+.rg-liste li + li { border-top: 1px solid var(--cizgi); }
+
+.rg-madde {
+    display: block;
+    font-weight: 600;
+    color: var(--metin);
+    overflow-wrap: anywhere;
+}
+
+.rg-rozet {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 0 6px;
+    border: 1px solid var(--cizgi);
+    border-radius: 4px;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: var(--metin-soluk);
+    vertical-align: 2px;
+}
+
+.rg-haber {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--vurgu);
+}
+
+.rg-haber:hover { text-decoration: underline; }
+
+.rg-not { margin: 18px 0 8px; }
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) .rg-uyari { color: var(--altin); }
+}
+
+:where(:root[data-tema="koyu"]) .rg-uyari { color: var(--altin); }
+
+/* --- Hesaplama araclari ---------------------------------------------------- */
+
+.arac-kisayol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 18px;
+}
+
+.arac-kisayol a {
+    padding: 6px 14px;
+    border: 1px solid var(--cizgi);
+    border-radius: 999px;
+    background: var(--kart);
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--vurgu);
+}
+
+.arac-izgara {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    align-items: start;
+}
+@media (max-width: 1200px) { .arac-izgara { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) { .arac-izgara { grid-template-columns: 1fr; }
+}
+
+.arac-kart h2 { margin: 0 0 4px; font-size: 1.15rem; font-weight: 800; }
+
+.arac-aciklama { margin: 0 0 14px; font-size: .92rem; color: var(--metin-soluk); }
+
+.arac-form { display: grid; gap: 10px; }
+
+.arac-secim { display: grid; gap: 4px; font-size: .92rem; }
+
+.arac-secim label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+
+.arac-alan { display: grid; gap: 4px; }
+
+/* display:grid, hidden niteligini ezerdi ("Diger" orani secilmedikce gizli). */
+.arac-alan[hidden] { display: none; }
+
+.arac-alan span { font-size: .85rem; font-weight: 600; color: var(--metin-soluk); }
+
+.arac-alan input,
+.arac-alan select {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--cizgi);
+    border-radius: 8px;
+    background: var(--zemin);
+    color: var(--metin);
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+}
+
+.arac-alan input:focus,
+.arac-alan select:focus { outline: 2px solid var(--vurgu); outline-offset: 1px; }
+
+.arac-sonuc {
+    margin: 16px 0 0;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: var(--zemin);
+}
+
+.arac-sonuc > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 0;
+    font-size: .93rem;
+}
+
+.arac-sonuc > div + div { border-top: 1px solid var(--cizgi); }
+
+.arac-sonuc dt { color: var(--metin-soluk); }
+
+.arac-sonuc dd {
+    margin: 0;
+    font-weight: 600;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.arac-not { margin: 12px 0 0; font-size: .8rem; line-height: 1.5; color: var(--metin-soluk); }
+
+/* --- Rehberler ----------------------------------------------------------- */
+
+.uyari-serit {
+    margin: 18px 0 0;
+    padding: 12px 16px;
+    border-radius: var(--yuvarlak);
+    background: #fff4d6;
+    border: 1px solid #e8cf85;
+    color: #5c4300;
+    font-size: .94rem;
+}
+
+.rehber-iz {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--altin-koyu);
+}
+
+.rehber-kunye strong { font-weight: 600; color: var(--metin); }
+
+.rehber-icindekiler {
+    margin: 18px 0 8px;
+    padding: 14px 18px;
+    border-radius: var(--yuvarlak);
+    background: var(--zemin);
+    border: 1px solid var(--cizgi);
+    font-size: .94rem;
+}
+
+.rehber-icindekiler ol { margin: 8px 0 0; padding-left: 1.3em; }
+.rehber-icindekiler li { margin: 3px 0; }
+.rehber-icindekiler a { color: var(--vurgu); }
+
+.rehber-icerik h2 {
+    margin: 1.7em 0 .6em;
+    font-size: 1.3rem;
+    font-weight: 800;
+    line-height: 1.3;
+    scroll-margin-top: 70px;
+}
+
+.rehber-icerik h3 { margin: 1.3em 0 .5em; font-size: 1.08rem; font-weight: 700; }
+
+.rehber-icerik ul,
+.rehber-icerik ol { margin: 0 0 1.05em; padding-left: 1.4em; }
+
+.rehber-icerik li { margin-bottom: .4em; }
+
+.rehber-not {
+    margin: 0 0 1.1em;
+    padding: 12px 16px;
+    border-left: 4px solid var(--altin);
+    border-radius: 0 8px 8px 0;
+    background: rgba(201, 168, 106, .12);
+    font-weight: 500;
+}
+
+.rehber-tablo {
+    margin: 0 0 1.2em;
+    overflow-x: auto;
+    border: 1px solid var(--cizgi);
+    border-radius: 8px;
+}
+
+.rehber-tablo table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .94rem;
+}
+
+.rehber-tablo th,
+.rehber-tablo td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--cizgi);
+    white-space: nowrap;
+}
+
+.rehber-tablo td:first-child { white-space: normal; }
+
+.rehber-tablo th {
+    background: var(--zemin);
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--metin-soluk);
+}
+
+.rehber-tablo tbody tr:last-child td { border-bottom: 0; }
+.rehber-tablo .sayi { text-align: right; font-variant-numeric: tabular-nums; }
+
+.rehber-arac { margin: 0 0 1.2em; }
+
+.dugme-arac {
+    display: inline-block;
+    padding: 10px 16px;
+    border-radius: 8px;
+    background: var(--lacivert);
+    color: #fff !important;
+    font-weight: 600;
+    text-decoration: none !important;
+}
+
+.dugme-arac:hover { background: var(--lacivert-acik); }
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) .uyari-serit { background: #3a2f10; border-color: #6b5520; color: #f3e2b0; }
+    :where(:root:not([data-tema="acik"])) .rehber-iz { color: var(--altin); }
+}
+
+:where(:root[data-tema="koyu"]) .uyari-serit { background: #3a2f10; border-color: #6b5520; color: #f3e2b0; }
+:where(:root[data-tema="koyu"]) .rehber-iz { color: var(--altin); }
+
+.arac-rehber { margin: -4px 0 14px; font-size: .92rem; }
+.arac-rehber a { color: var(--vurgu); font-weight: 600; }
+.rehber-tablo th:not(:first-child) { text-align: right; }

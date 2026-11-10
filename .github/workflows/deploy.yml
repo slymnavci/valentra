@@ -101,3 +101,15 @@ jobs:
         # yalnizca son yuklemeden bu yana degisen dosyalar gidiyor; ayrinti,
         # siralama ve yeniden deneme .github/yukle.sh icinde.
         run: bash .github/yukle.sh
+
+      # Stil paketleri denetimi (10.11.2026): assets/style.css sayfa
+      # gruplarina bolundu (bkz. includes/stil_paketleri.php). Paketteki bir
+      # sinif, paketin yuklenmedigi bir sayfada kullanilmaya baslarsa orada
+      # stilsiz kalir; bu adim onu UYARI olarak yazar. Yuklemeden SONRA ve
+      # hata vermeden: deploy'u ne geciktirir ne durdurur.
+      - name: Stil paketleri denetimi
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: |
+          php .github/stil/yorumsuz.php "$PWD" "$RUNNER_TEMP/yorumsuz.json"
+          python3 .github/stil/denetle.py "$PWD" "$RUNNER_TEMP"
