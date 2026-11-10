@@ -94,7 +94,9 @@ if (!uye_yonetici_mi($nwUye)) {
         var simdi = kok.getAttribute('data-tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'koyu' : 'acik');
         var yeni = simdi === 'koyu' ? 'acik' : 'koyu';
         kok.setAttribute('data-tema', yeni);
-        try { localStorage.setItem('valentra-tema', yeni); } catch (e) {}
+        // Sitenin tema secimiyle (bkz. includes/temalar.php) ayni anahtar: Gece / Klasik.
+        kok.removeAttribute('data-palet');
+        try { localStorage.setItem('valentra-palet', yeni === 'koyu' ? 'gece' : 'klasik'); localStorage.removeItem('valentra-tema'); } catch (e) {}
     });
 })();
 </script>
