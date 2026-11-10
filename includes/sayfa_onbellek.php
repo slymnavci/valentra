@@ -101,10 +101,15 @@ function sayfa_onbellek(array $parametreler, bool $bayatSun = false): void
     $bitir = function_exists('fastcgi_finish_request') ? 'fastcgi_finish_request'
            : (function_exists('litespeed_finish_request') ? 'litespeed_finish_request' : null);
 
-    if ($bayatSun && $bitir !== null && $zaman !== false && time() - $zaman < SAYFA_ONBELLEK_BAYAT) {
+    // Kopyanin YASI dosya zamanindan degil, icine yazilan uretim anindan
+    // ("t") okunuyor: asagidaki touch() dosya zamanini yeniliyor; arkadaki
+    // uretim ust uste dusse bile (disk dolu, hata) icerik en fazla
+    // SAYFA_ONBELLEK_BAYAT kadar eski verilir, sonra bastan uretilir.
+    if ($bayatSun && $bitir !== null && $zaman !== false
+        && time() - sayfa_onbellek_uretim_ani($dosya, $zaman) < SAYFA_ONBELLEK_BAYAT) {
         // Kopyayi "taze" isaretle: uretim surerken gelen diger istekler de
         // onu alsin, ayni anda birden cok istek sayfayi uretmesin. Uretim
-        // dusarse kopya bir sure daha kalir, sonraki istek yeniden dener.
+        // dusarse sonraki deneme SAYFA_ONBELLEK_SURE sonra.
         @touch($dosya);
 
         if (sayfa_onbellek_sun($dosya)) {
@@ -118,6 +123,24 @@ function sayfa_onbellek(array $parametreler, bool $bayatSun = false): void
     }
 
     ob_start('sayfa_onbellek_yaz');
+}
+
+/**
+ * Kopyanin uretildigi an: ilk satirdaki {"t":...}. Eski bicimli kopyada
+ * (t yok) ya da okunamazsa dosya zamani.
+ */
+function sayfa_onbellek_uretim_ani(string $dosya, int $dosyaZamani): int
+{
+    $f = @fopen($dosya, 'rb');
+
+    if ($f === false) {
+        return $dosyaZamani;
+    }
+
+    $bilgi = json_decode((string) fgets($f, 4096), true);
+    fclose($f);
+
+    return is_array($bilgi) && isset($bilgi['t']) && (int) $bilgi['t'] > 0 ? (int) $bilgi['t'] : $dosyaZamani;
 }
 
 /** Bu istek yaniti gonderdi ve kopyayi arkada mi tazeliyor? */
@@ -182,7 +205,8 @@ function sayfa_onbellek_yaz(string $html): string
 
         $gecici = $dosya . '.' . bin2hex(random_bytes(4)) . '.tmp';
 
-        if (@file_put_contents($gecici, json_encode($bilgi, JSON_UNESCAPED_UNICODE) . "\n" . $html) !== false) {
+        // "t": uretim ani (bkz. sayfa_onbellek_uretim_ani).
+        if (@file_put_contents($gecici, json_encode($bilgi + ['t' => time()], JSON_UNESCAPED_UNICODE) . "\n" . $html) !== false) {
             @rename($gecici, $dosya);
         } else {
             @unlink($gecici);
