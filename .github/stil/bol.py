@@ -33,6 +33,12 @@ PAKET_YUKLENEN = {k: set(v) | YENI for k, v in PAKET_SAYFALARI.items()}
 css = open('assets/style.css', encoding='utf-8').read()
 
 # --- ayristirici: ust duzey ogeler [(on_metin, basliK, govde, ic_ogeler|None)]
+# Icinde kural tasiyan at-kurallari: icerideki her kural ayri ele alinir
+# (tasinir ve sira denetimine girer). @container baslangicta yoktu; blok
+# bolunmez sayilip ortakta kaliyor, taban kurali ise pakete gidip ondan
+# SONRA yukleniyor ve sutun sayilarini eziyordu (PR incelemesi).
+KAPSAYICI = ('@media', '@supports', '@container', '@layer', '@scope', '@starting-style')
+
 def blok_sonu(s, i):
     """s[i] == '{' ; eslesen '}' indeksini dondurur (yorum/dize farkinda)."""
     d, n = 0, len(s)
@@ -115,7 +121,7 @@ for o in ogeler(css):
     if o['tur'] == 'son':
         UST.append(('metin', o['on'])); continue
     bas = o['bas'].strip()
-    if bas.startswith('@media') or bas.startswith('@supports'):
+    if bas.startswith(KAPSAYICI):
         ic = []
         for io in ogeler(o['govde']):
             if io['tur'] == 'son':
@@ -263,7 +269,7 @@ for p in UST:
 
 ortak_css = ''.join(ortak)
 # Bos kalan @media bloklarini temizle
-ortak_css = re.sub(r'\n?@media[^{]+\{\s*\}', '', ortak_css)
+ortak_css = re.sub(r'\n?@(?:media|supports|container|layer|scope)[^{]*\{\s*\}', '', ortak_css)
 print('orijinal', len(css), 'ortak', len(ortak_css))
 for k, ms in paket.items():
     print(k, 'kural', tasinan[k], 'bayt', len(''.join(ms)))

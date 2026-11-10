@@ -19,7 +19,7 @@ for ad, sayfalar in PAKET_YUKLENEN.items():
     kurallar = []
     for o in ogeler(metin):
         if o['tur'] == 'son': continue
-        if o['bas'].strip().startswith(('@media', '@supports')):
+        if o['bas'].strip().startswith(KAPSAYICI):
             kurallar += [io['bas'] for io in ogeler(o['govde']) if io['tur'] != 'son']
         else:
             kurallar.append(o['bas'])

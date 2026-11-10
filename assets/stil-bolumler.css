@@ -279,6 +279,18 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
 }
+@container (min-width: 420px) { .sirket-izgara { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@container (min-width: 560px) { .sirket-izgara { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@container (min-width: 700px) { .sirket-izgara { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+@container (min-width: 840px) { .sirket-izgara { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+@container (min-width: 1300px) { .sirket-izgara { grid-template-columns: repeat(10, minmax(0, 1fr)); }
+}
+@container (min-width: 1650px) { .sirket-izgara { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+}
 
 .sirket-izgara a {
     display: grid;
@@ -333,6 +345,9 @@
     align-items: start;
 }
 .ptablo-cift { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@container (min-width: 656px) {
+    .ptablo-cift { grid-column: span 2; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 .ptablo {
     background: var(--kart);
