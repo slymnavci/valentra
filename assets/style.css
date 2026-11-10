@@ -6718,19 +6718,26 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 /* --- Hesaplamalar ve Rehberler (ana sayfa ustu; 08.11.2026) ------------- */
 .hesap-rehber { margin: 18px 0 6px; }
 .hesap-rehber h2 { font-size: .82rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--metin-soluk); margin: 0 0 8px; }
+/* Tek satir (site sahibinin istegi, 10.11.2026: "ikinci siraya gecmesin,
+   tek sirada verelim hepsini"). Genis ekranda dokuz kutu yan yana sigar;
+   sigmayan ekranda satir yatay kayar (kutular kuculup okunmaz hale
+   gelmesin), kaydirma kutu basina oturur. */
 .hesap-rehber ul {
-    list-style: none; margin: 0; padding: 0; display: grid; gap: 8px;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    list-style: none; margin: 0; padding: 0 0 4px; display: grid; gap: 8px;
+    grid-auto-flow: column; grid-auto-columns: minmax(124px, 1fr);
+    overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
 }
+.hesap-rehber li { scroll-snap-align: start; min-width: 0; }
 .hesap-rehber a {
-    display: flex; flex-direction: column; gap: 2px; height: 100%; padding: 9px 12px; border: 1px solid var(--cizgi); border-radius: 10px;
-    background: var(--kart); color: var(--metin);
+    display: flex; flex-direction: column; gap: 2px; height: 100%; padding: 9px 10px; border: 1px solid var(--cizgi); border-radius: 10px;
+    background: var(--kart); color: var(--metin); box-sizing: border-box;
 }
 .hesap-rehber a:hover { border-color: var(--altin); }
-.hesap-rehber strong { font-size: .9rem; line-height: 1.25; }
-.hesap-rehber span { font-size: .78rem; color: var(--metin-soluk); }
+.hesap-rehber strong { font-size: .86rem; line-height: 1.25; }
+.hesap-rehber span { font-size: .76rem; color: var(--metin-soluk); }
 @media (max-width: 560px) {
-    .hesap-rehber ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hesap-rehber ul { grid-auto-columns: 46%; }
 }
 .vitrin-piyasa .piyasa-serit { height: auto; }
 

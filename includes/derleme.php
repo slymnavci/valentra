@@ -23,7 +23,11 @@ require_once __DIR__ . '/konu_siniri.php';
 
 /** Günde en fazla bu kadar derleme (reddedilen sayılmaz). */
 // 20'den 40'a (03.11.2026, site sahibi: "%70 ozgun icerik olsun").
-const DERLEME_GUNLUK_TAVAN = 40;
+// 40'tan 60'a (08.11.2026, site sahibi): Google'a sunulan haberlerin %70'i
+// ozgun olmak zorunda (HABER_OZGUN_HEDEF_YUZDE); dizine giren haber sayisini
+// derleme sayisi belirliyor. 60 derleme ~ gunde 85 sunulan haber (40'ta ~57).
+// Ajan calisma basina en fazla 8 yaziyor (ajan.yml --en-fazla=8), 12 calisma.
+const DERLEME_GUNLUK_TAVAN = 60;
 
 /** Bir derlemenin dayanması gereken en az farklı kaynak. */
 const DERLEME_ASGARI_KAYNAK = 2;
