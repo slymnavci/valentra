@@ -6946,3 +6946,111 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 }
 /* Panel acikken ust bant yapiskan menunun ustunde kalsin. */
 .ust-bant:has(.tema-panel:not([hidden])) { z-index: 200; }
+
+/* --- Temalar, 2. tur (10.11.2026: "biraz daha cesitlendir; kurlarin oldugu
+ * cubugun rengi de degissin; yazi boyutu ve yazi tipi; siyah beyaz bir gazete
+ * secenegi: yalnizca resimler renkli"). ------------------------------------ */
+
+/* Piyasa (kur) seridi her temada kendi tonunda. */
+:root[data-palet="gazete"]   { --piyasa-zemin: #ece2cf; --piyasa-cizgi: #d8c9b0; }
+:root[data-palet="zumrut"]   { --piyasa-zemin: #e1ede5; --piyasa-cizgi: #c9ddd0; }
+:root[data-palet="okyanus"]  { --piyasa-zemin: #e1eaf6; --piyasa-cizgi: #c8d7ea; }
+:root[data-palet="pudra"]    { --piyasa-zemin: #f2e4e9; --piyasa-cizgi: #e2cdd6; }
+:root[data-palet="lacivert"] { --piyasa-zemin: #16243f; --piyasa-cizgi: #27385b; }
+:root[data-palet="komur"]    { --piyasa-zemin: #1c1c1c; --piyasa-cizgi: #2e2e2e; }
+
+:root[data-palet="gunbatimi"] {
+    --zemin: #fbf3ec; --kart: #fffaf5; --metin: #2b1a10; --metin-soluk: #735a48;
+    --cizgi: #f0dfd0; --vurgu: #b93c0b; --altin: #c2410c; --altin-koyu: #9a3412;
+    --lacivert: #2b1a10; --lacivert-acik: #4d3324; --vurgu-ustu: #fff;
+    --piyasa-zemin: #f6e5d6; --piyasa-cizgi: #ebcfb7;
+}
+
+:root[data-palet="lavanta"] {
+    --zemin: #f4f2fb; --kart: #ffffff; --metin: #1e1838; --metin-soluk: #5c5680;
+    --cizgi: #e2ddf3; --vurgu: #5b3fd1; --altin: #5b3fd1; --altin-koyu: #4529a8;
+    --lacivert: #1e1838; --lacivert-acik: #352d5c; --vurgu-ustu: #fff;
+    --piyasa-zemin: #eae6f8; --piyasa-cizgi: #d8d0f0;
+}
+
+:root[data-palet="grafit"] {
+    --zemin: #f2f2f1; --kart: #ffffff; --metin: #1a1a1a; --metin-soluk: #5b5b5b;
+    --cizgi: #e0e0de; --vurgu: #1a1a1a; --altin: #1a1a1a; --altin-koyu: #000;
+    --lacivert: #1a1a1a; --lacivert-acik: #3a3a3a; --vurgu-ustu: #fff;
+    --piyasa-zemin: #e8e8e6; --piyasa-cizgi: #d4d4d1;
+}
+
+:root[data-palet="sise"] {
+    --zemin: #0c1a17; --kart: #12241f; --metin: #e6f2ee; --metin-soluk: #93ada5;
+    --cizgi: #1f3a33; --vurgu: #4fd1a5; --altin: #2fb58a; --altin-koyu: #4fd1a5;
+    --lacivert: #0c1a17; --lacivert-acik: #1a3029; --vurgu-ustu: #04140f;
+    --piyasa-zemin: #173029; --piyasa-cizgi: #24453c;
+    --golge: 0 1px 2px rgba(0, 0, 0, .45);
+}
+
+/* Yuksek kontrast: siyah zemin, beyaz yazi, sari vurgu (az goren okur icin). */
+:root[data-palet="kontrast"] {
+    --zemin: #000; --kart: #000; --metin: #fff; --metin-soluk: #e0e0e0;
+    --cizgi: #ffffff; --vurgu: #ffd400; --altin: #ffd400; --altin-koyu: #ffe24d;
+    --lacivert: #000; --lacivert-acik: #111; --vurgu-ustu: #000;
+    --piyasa-zemin: #000; --piyasa-cizgi: #fff; --golge: none;
+}
+:root[data-palet="kontrast"] a:hover { text-decoration: underline; }
+
+/*
+ * SIYAH-BEYAZ GAZETE: sayfanin her seyi siyah-beyaz, YALNIZCA haber
+ * fotograflari ve videolar renkli. Renkler griye cekiliyor; sabit renkli
+ * ogeler (logo, menudeki ValPapel/ValSpor/ValMagazin, Network dugmesi,
+ * bayraklar, ust bandin gorseli, kur degisimleri) gri tona donuyor.
+ */
+:root[data-palet="siyahbeyaz"] {
+    --zemin: #f5f5f2; --kart: #ffffff; --metin: #111; --metin-soluk: #4d4d4d;
+    --cizgi: #d9d9d6; --vurgu: #111; --altin: #111; --altin-koyu: #000;
+    --lacivert: #111; --lacivert-acik: #333; --vurgu-ustu: #fff;
+    --piyasa-zemin: #ececea; --piyasa-cizgi: #cfcfcc;
+}
+:root[data-palet="siyahbeyaz"] :is(.ust-bant, .menu-bant, .sd-serit, .piyasa-serit, .hava-serit, .mac-bant, .tema-dugme, .menu-gazete,
+    .menu-network, .menu-oge-network, .logo, .alt-bant, footer, .rozet, .kategori-etiket) {
+    filter: grayscale(1);
+}
+:root[data-palet="siyahbeyaz"] :is(h1, h2, h3, .logo .ad) {
+    font-family: Georgia, "Times New Roman", serif;
+}
+:root[data-palet="siyahbeyaz"] .piyasa-oge .degisim.arti,
+:root[data-palet="siyahbeyaz"] .piyasa-oge .degisim.eksi { color: #111; }
+
+/* --- Yazi boyutu (data-boyut): tum olcek rem; tarayici ayari korunuyor. --- */
+:root[data-boyut="kucuk"]   { font-size: 90%; }
+:root[data-boyut="buyuk"]   { font-size: 112.5%; }
+:root[data-boyut="cokbuyuk"] { font-size: 125%; }
+
+/* --- Yazi tipi (data-font): sistem yazi tipleri, indirme yok. --- */
+:root[data-font="klasik"] :is(body, button, input, select, textarea) {
+    font-family: Georgia, Cambria, "Times New Roman", serif;
+}
+:root[data-font="kitap"] :is(body, button, input, select, textarea) {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Charter, "Bitstream Charter", serif;
+}
+:root[data-font="okunakli"] :is(body, button, input, select, textarea) {
+    font-family: Verdana, "Segoe UI", Tahoma, "DejaVu Sans", sans-serif;
+    letter-spacing: .005em;
+}
+
+/* --- Panel: bolum basliklari, boyut ve yazi tipi dugmeleri. --- */
+.tema-bolum { margin: 14px 0 8px; font-size: .74rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--metin-soluk); }
+.tema-bolum:first-of-type { margin-top: 2px; }
+.tema-ayar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.tema-ayar button {
+    all: unset; box-sizing: border-box; width: 100%; cursor: pointer; text-align: center;
+    padding: 8px 4px 7px; border-radius: 10px; border: 2px solid var(--cizgi); background: var(--zemin); color: var(--metin);
+    transition: border-color .15s ease, transform .15s ease;
+}
+.tema-ayar button:hover { transform: translateY(-1px); }
+.tema-ayar button:focus-visible { outline: 2px solid var(--vurgu); outline-offset: 2px; }
+.tema-ayar button[aria-checked="true"] { border-color: var(--vurgu); }
+.tema-ayar .ornek { display: block; font-weight: 700; line-height: 1.1; }
+.tema-ayar .ad { display: block; margin-top: 3px; font-size: .72rem; color: var(--metin-soluk); }
+.tema-ayar [data-boyut] .ornek { height: 26px; display: flex; align-items: flex-end; justify-content: center; }
+.tema-onizleme.o-sb { filter: none; }
+.tema-onizleme .o-foto { left: 8px; top: 24px; width: 46%; height: 18px; border-radius: 5px 5px 0 0;
+    background: linear-gradient(135deg, #3a7bd5, #f6a04d 60%, #3fae6a); }
