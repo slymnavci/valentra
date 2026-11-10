@@ -13,6 +13,16 @@ declare(strict_types=1);
  */
 
 const TEMALAR = [
+    /*
+     * EDITORYAL (10.11.2026, site sahibi: "cok profesyonel bir tema; okuyucu
+     * sectiginde site bambaska bir gorunume kavussun"). Renkten fazlasi:
+     * dergi duzeni (cetvel cizgileri, keskin koseler, serif basliklar, bas
+     * harf). Kurallari kendi dosyasinda ('dosya'); yalnizca secen okura
+     * yuklenir (bkz. tema_dosya_betigi).
+     */
+    'editoryal' => ['ad' => 'Editoryal', 'not' => 'Dergi düzeni: fildişi kâğıt, mürekkep laciverti, serif başlıklar', 'taban' => 'acik', 'grup' => 'İmza tasarım',
+                 'renk' => ['#f4f0e6', '#fbf8f1', '#0f1a2c', '#8f8a7c', '#8a5a12', '#0f1a2c'],
+                 'dosya' => '/assets/tema-editoryal.css'],
     'klasik' => ['ad' => 'Valentra Klasik', 'not' => 'Beyaz zemin, kırmızı imza', 'taban' => 'acik', 'grup' => 'Aydınlık',
                  'renk' => ['#f7f7f8', '#ffffff', '#18181b', '#8a8c93', '#d7161f', '#e6e6ea']],
     'gazete' => ['ad' => 'Gazete Kâğıdı', 'not' => 'Sabah gazetesinin sıcak kâğıdı, klasik başlıklar', 'taban' => 'acik', 'grup' => 'Aydınlık',
@@ -74,6 +84,44 @@ function tema_bas_betigi(): string
 }
 
 /** Üst banttaki tema düğmesi ve seçici paneli. */
+/**
+ * Kendi stil dosyasi olan temalar: palet => surumlu adres.
+ *
+ * @return array<string,string>
+ */
+function tema_dosyalari(): array
+{
+    $d = [];
+
+    foreach (TEMALAR as $ad => $t) {
+        if (!empty($t['dosya'])) {
+            $d[$ad] = varlik((string) $t['dosya']);
+        }
+    }
+
+    return $d;
+}
+
+/**
+ * Secili temanin kendi stil dosyasi (varsa), style.css'ten SONRA.
+ *
+ * document.write bilincli: ayristirici bu stil dosyasini bekler, sayfa bir
+ * an temasiz gorunmez. Yalnizca boyle bir tema secmis okurda calisir;
+ * diger okurlar (ve olcum araclari) icin hicbir sey yuklenmez.
+ */
+function tema_dosya_betigi(): string
+{
+    $d = tema_dosyalari();
+
+    if ($d === []) {
+        return '';
+    }
+
+    return '<script>(function(){var D=' . json_encode($d, JSON_UNESCAPED_SLASHES) . ',p=document.documentElement.getAttribute("data-palet");'
+        . 'if(p&&D[p]){document.write(\'<link rel="stylesheet" id="tema-dosya" data-palet="\'+p+\'" href="\'+D[p]+\'">\');}'
+        . '})();</script>';
+}
+
 function tema_secici_html(): string
 {
     $secenekler = '';
@@ -149,7 +197,17 @@ function tema_secici_betigi(): string
         . 'function oku(){try{return localStorage.getItem("valentra-palet")||"";}catch(x){return "";}}'
         . 'function etiket(){var a=oku();if(!a){var e=null;try{e=localStorage.getItem("valentra-tema");}catch(x){}a=e==="koyu"?"gece":(e==="acik"?"klasik":"");}'
         . 's.forEach(function(o){o.setAttribute("aria-checked",o.getAttribute("data-palet")===a?"true":"false");});}'
-        . 'function uygula(a){d.classList.add("tema-gecis");'
+        // Kendi stil dosyasi olan tema: dosya yuklenince uygulanir (yari
+        // giyinmis sayfa gorunmesin).
+        . 'var D=' . json_encode(tema_dosyalari(), JSON_UNESCAPED_SLASHES) . ';'
+        // "son": en son istenen tema. Dosya inerken okur baska temaya
+        // gecerse gec gelen yukleme geri cagrisi o secimi ezmesin.
+        . 'var son=null;'
+        . 'function uygula(a){son=a;if(a&&D[a]){var l=document.getElementById("tema-dosya");'
+        . 'if(!l||l.getAttribute("data-palet")!==a){if(l){l.remove();}l=document.createElement("link");l.rel="stylesheet";l.id="tema-dosya";'
+        . 'l.setAttribute("data-palet",a);l.href=D[a];l.onload=l.onerror=function(){if(son===a){uygula2(a);}};document.head.appendChild(l);return;}}'
+        . 'uygula2(a);}'
+        . 'function uygula2(a){d.classList.add("tema-gecis");'
         . 'if(a&&T[a]){d.setAttribute("data-tema",T[a]);if(a!=="klasik"&&a!=="gece"){d.setAttribute("data-palet",a);}else{d.removeAttribute("data-palet");}}'
         . 'else{d.removeAttribute("data-tema");d.removeAttribute("data-palet");}'
         . 'try{if(a){localStorage.setItem("valentra-palet",a);}else{localStorage.removeItem("valentra-palet");}localStorage.removeItem("valentra-tema");}catch(x){}'

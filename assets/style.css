@@ -4215,6 +4215,8 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 .tema-panel-ust span { font-size: .82rem; color: var(--metin-soluk); }
 
 .tema-izgara { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 0; padding: 0; list-style: none; }
+/* Tek temali bolum (Imza tasarim): kutu tam genislikte. */
+.tema-izgara li:only-child { grid-column: 1 / -1; }
 
 .tema-secenek {
     all: unset; box-sizing: border-box; display: block; width: 100%; cursor: pointer;
