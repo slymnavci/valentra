@@ -270,19 +270,21 @@ $onceki = array_map(static fn (array $o): array => $o + ['yazar_adi' => $yazarAd
 gunluk(count($haberler) . ' haber malzeme; bugün yazacak ' . count($bekleyenYazarlar) . ' yazar: '
      . implode(', ', array_map(static fn (array $y): string => (string) $y['ad'], $bekleyenYazarlar)) . '.');
 
-// Kose yazisi haberden ayri, daha guclu modelle (GEMINI_KOSE_MODEL; bkz. Yazar).
-// Gemini yogunken Claude ya da Luna yaziyor (26.10.2026; bkz. Yazar::geminiOnce).
-$yazar = new Yazar(ayar('GEMINI_API_KEY'), Yazar::koseModeli(), trim((string) getenv('OPENAI_API_KEY')), trim((string) getenv('ANTHROPIC_API_KEY')));
-$yazar->geminiOnce();
+// Kose yazilari once Claude (Haiku 5.5), olmazsa GPT-6 Luna. Gemini kose
+// yazilarinda kapali (site sahibinin karari, 10.11.2026; bkz. Yazar::geminiKapat).
+$yazar = new Yazar(trim((string) getenv('GEMINI_API_KEY')), Yazar::koseModeli(), trim((string) getenv('OPENAI_API_KEY')), trim((string) getenv('ANTHROPIC_API_KEY')));
+$yazar->geminiKapat();
+
+if ($yazar->modelKalmadi()) {
+    fwrite(STDERR, "HATA: köşe yazısı için model yok: ANTHROPIC_API_KEY ve OPENAI_API_KEY tanımlı değil (Gemini kapalı).\n");
+    exit(1);
+}
 
 // Uzun yazi 90 saniyeyi asabiliyor: istege 180 saniye, ama zaman asimi
 // ya da 5xx'te yalnizca iki yeniden deneme (eskiden alti, 11 dakikaya kadar).
 $yazar->sureSiniri(180, [10, 30], $bitis);
 
-// Kose modeli yogunken (503) ayni istek haber modeline (bkz. Yazar::yedekModel).
-$yazar->yedekModel(Yazar::haberModeli());
-gunluk('Model: ' . $yazar->model() . ' (köşe yazısı; GEMINI_KOSE_MODEL ile değiştirilebilir; yoğunlukta yedek: '
-    . Yazar::haberModeli() . ').');
+gunluk('Model: ' . $yazar->model() . ' (köşe yazısı; CLAUDE_MODEL / OPENAI_MODEL ile değiştirilebilir).');
 $kose  = new KoseYazari($yazar);
 $sayfa = new Sayfa(new Http());
 

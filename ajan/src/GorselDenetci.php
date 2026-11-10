@@ -12,7 +12,7 @@ namespace Valentra\Ajan;
  * internetten konuya uygun, haber sitesi adi olmayan bir resim bulup
  * yerlestirelim."
  *
- *  - Denetim: gorseller partiler halinde Gemini'ye (yedek: Claude)
+ *  - Denetim: gorseller partiler halinde Claude'a (yedek: Gemini; 10.11.2026)
  *    gosteriliyor; her biri icin "temiz" (medya kurulusu adi/logosu yok)
  *    ve istenirse "uygun" (basliga uyuyor) karari.
  *  - Arama: Wikimedia Commons ve Openverse; yalnizca ticari kullanima
@@ -241,12 +241,13 @@ METIN;
 
         $veri = null;
 
-        if (!$this->geminiKapali && $this->geminiKey !== '') {
-            $veri = $this->geminiGorsel($ogeler, $sema);
+        // Once Claude, olmazsa Gemini (site sahibi, 10.11.2026: "hepsinde once Claude").
+        if (!$this->claudeKapali && $this->claudeKey !== '') {
+            $veri = $this->claudeGorsel($ogeler, $sema);
         }
 
-        if ($veri === null && !$this->claudeKapali && $this->claudeKey !== '') {
-            $veri = $this->claudeGorsel($ogeler, $sema);
+        if ($veri === null && !$this->geminiKapali && $this->geminiKey !== '') {
+            $veri = $this->geminiGorsel($ogeler, $sema);
         }
 
         $sonuc = array_fill(0, count($ogeler), null);
@@ -521,12 +522,12 @@ METIN;
 
         $veri = null;
 
-        if (!$this->geminiKapali && $this->geminiKey !== '') {
-            $veri = $this->geminiJson([['text' => $istem]], $sema, $yonerge);
+        if (!$this->claudeKapali && $this->claudeKey !== '') {
+            $veri = $this->claudeJson([['type' => 'text', 'text' => $istem]], $sema, $yonerge);
         }
 
-        if ($veri === null && !$this->claudeKapali && $this->claudeKey !== '') {
-            $veri = $this->claudeJson([['type' => 'text', 'text' => $istem]], $sema, $yonerge);
+        if ($veri === null && !$this->geminiKapali && $this->geminiKey !== '') {
+            $veri = $this->geminiJson([['text' => $istem]], $sema, $yonerge);
         }
 
         $sonuc = array_fill(0, count($haberler), ['liste' => [], 'kisiler' => []]);

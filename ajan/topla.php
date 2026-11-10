@@ -227,17 +227,25 @@ function ayar(string $ad): string
 
 $siteUrl   = ayar('VALENTRA_SITE_URL');
 $ajanKey   = ayar('VALENTRA_AGENT_KEY');
-$apiKey    = ayar('GEMINI_API_KEY');
+// Gemini haber toplamada kullanilmiyor (site sahibi, 10.11.2026); anahtar
+// artik zorunlu degil.
+$apiKey    = trim((string) getenv('GEMINI_API_KEY'));
 
 gunluk('Valentra ajanı başlıyor' . ($kuruCalisma ? ' (KURU ÇALIŞMA — gönderim yok)' : ''));
 
 $site    = new Site($siteUrl, $ajanKey);
 $http    = new Http();
 
-// OpenAI anahtari varsa haberler once onunla (GPT-6 Luna), basarisizsa
-// Gemini ile (bkz. Yazar, BIRINCIL MODEL). Yoksa yalnizca Gemini.
+// Haberler once Claude (Haiku 5.5), olmazsa GPT-6 Luna. Gemini haber
+// toplamada kapali (site sahibinin karari, 10.11.2026; bkz. Yazar::geminiKapat).
 $yazar   = new Yazar($apiKey, '', trim((string) getenv('OPENAI_API_KEY')), trim((string) getenv('ANTHROPIC_API_KEY')));
-gunluk('Model: ' . $yazar->model() . ' (haber; CLAUDE_MODEL / OPENAI_MODEL / GEMINI_MODEL ile değiştirilebilir).');
+$yazar->geminiKapat();
+gunluk('Model: ' . $yazar->model() . ' (haber; CLAUDE_MODEL / OPENAI_MODEL ile değiştirilebilir).');
+
+if ($yazar->modelKalmadi()) {
+    Bildirim::sorun('Haber toplama için model yok: ANTHROPIC_API_KEY ve OPENAI_API_KEY tanımlı değil (Gemini haber toplamada kapalı).');
+    exit(1);
+}
 
 // --- 1. Yapılandırma -------------------------------------------------------
 
@@ -1970,6 +1978,15 @@ foreach ($gruplar as $grupNo => $grup) {
         foreach ($grup as $a) {
             video_kaydet($a['girdi'], $a['kaynak'], 'model hatası — ' . mb_substr($e->getMessage(), 0, 120, 'UTF-8'));
         }
+
+        // Claude ve Luna ikisi de kapandiysa (kredi, anahtar, ust uste hata)
+        // kalan gruplar da yazilamaz; Gemini yedegi yok.
+        if ($yazar->modelKalmadi()) {
+            $modelErisimYok = 'Claude ve Luna bu çalışmada kullanılamadı; Gemini haber toplamada kapalı olduğu için '
+                . 'kalan haberler yazılmadı. Anthropic ve OpenAI kredisini/anahtarını kontrol edin.';
+            gunluk('  ' . $modelErisimYok);
+            break;
+        }
         continue;
     }
 
@@ -2212,8 +2229,8 @@ if ($kullanim['istek'] > 0) {
 $claudeDurumu = $yazar->claudeDurumu();
 
 if ($claudeDurumu !== null && $claudeDurumu['durum'] === 'kredi') {
-    Bildirim::sorun('Anthropic (' . $claudeDurumu['model'] . ') kredisi bitti; haberler bu çalışmada sıradaki modellerle '
-        . '(Luna, Gemini) yazıldı. platform.claude.com → Billing sayfasından kredi yükleyin.');
+    Bildirim::sorun('Anthropic (' . $claudeDurumu['model'] . ') kredisi bitti; haberler bu çalışmada Luna ile '
+        . 'yazıldı. platform.claude.com → Billing sayfasından kredi yükleyin.');
 } elseif ($claudeDurumu !== null && $claudeDurumu['durum'] === 'anahtar') {
     Bildirim::sorun('Anthropic anahtarı geçersiz ya da yetkisiz; haberler sıradaki modellerle yazıldı. '
         . 'GitHub\'daki ANTHROPIC_API_KEY değerini kontrol edin.');
@@ -2223,10 +2240,10 @@ $openAiDurumu = $yazar->birincilDurumu();
 
 if ($openAiDurumu !== null && $openAiDurumu['durum'] !== 'bilinmiyor') {
     if ($openAiDurumu['durum'] === 'kredi') {
-        Bildirim::sorun('OpenAI (' . $openAiDurumu['model'] . ') kredisi bitti; haberler bu çalışmada yedek Gemini ile '
-            . 'yazıldı (daha pahalı). platform.openai.com → Billing sayfasından kredi yükleyin.');
+        Bildirim::sorun('OpenAI (' . $openAiDurumu['model'] . ') kredisi bitti; Claude düşerse haberlerin yedeği yok '
+            . '(Gemini kapalı). platform.openai.com → Billing sayfasından kredi yükleyin.');
     } elseif ($openAiDurumu['durum'] === 'anahtar') {
-        Bildirim::sorun('OpenAI anahtarı geçersiz ya da yetkisiz; haberler yedek Gemini ile yazıldı. '
+        Bildirim::sorun('OpenAI anahtarı geçersiz ya da yetkisiz; Claude düşerse haberlerin yedeği yok (Gemini kapalı). '
             . 'GitHub\'daki OPENAI_API_KEY değerini kontrol edin.');
     }
 

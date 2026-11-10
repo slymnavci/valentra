@@ -644,6 +644,9 @@ final class Yazar implements SemaliIstemci
     /** Gemini once, Claude/Luna yedek mi (bkz. geminiOnce())? */
     private bool $geminiOnce = false;
 
+    /** Gemini bu calismada hic kullanilmiyor mu (bkz. geminiKapat())? */
+    private bool $geminiKapali = false;
+
     /** Son Gemini hatasi gecici miydi (5xx, zaman asimi)? */
     private bool $sonGeciciHata = false;
 
@@ -717,6 +720,10 @@ final class Yazar implements SemaliIstemci
     public function model(): string
     {
         $sira = array_filter([$this->claude?->model(), $this->birincil?->model()]);
+
+        if ($this->geminiKapali) {
+            return $sira !== [] ? implode(' → ', $sira) . ' (Gemini kapalı)' : 'model yok (Gemini kapalı)';
+        }
 
         return $sira !== []
             ? implode(' → ', $sira) . ' (yedek: ' . $this->model . ')'
@@ -837,7 +844,8 @@ final class Yazar implements SemaliIstemci
             $this->birincilKapat('erişim yok (' . $e->getMessage() . ')');
         } catch (\Throwable $e) {
             $this->birincilArdisikHata++;
-            fwrite(STDERR, '[' . date('H:i:s') . '] ' . $this->birincil->model() . ' başarısız, Gemini ile devam: '
+            fwrite(STDERR, '[' . date('H:i:s') . '] ' . $this->birincil->model() . ' başarısız'
+                . ($this->geminiKapali ? ' (Gemini kapalı, istek yazılmıyor): ' : ', Gemini ile devam: ')
                 . mb_substr($e->getMessage(), 0, 300, 'UTF-8') . PHP_EOL);
 
             if ($this->birincilArdisikHata >= self::BIRINCIL_HATA_SINIRI) {
@@ -1016,6 +1024,10 @@ final class Yazar implements SemaliIstemci
     {
         $this->sonGeciciHata = false;
 
+        if ($this->geminiKapali) {
+            throw new \RuntimeException('Claude ve Luna yanıt veremedi; Gemini bu adımda kapalı (bkz. Yazar::geminiKapat).');
+        }
+
         try {
             $yanit = $this->geminiModelIstegi($govde, $this->model);
             $this->sonYanitlayan = $this->model;
@@ -1061,7 +1073,38 @@ final class Yazar implements SemaliIstemci
      */
     public function geminiOnce(bool $acik = true): void
     {
-        $this->geminiOnce = $acik;
+        $this->geminiOnce = $acik && !$this->geminiKapali;
+    }
+
+    /**
+     * Gemini bu calismada hic kullanilmiyor: sira yalnizca Claude -> Luna.
+     *
+     * Site sahibinin karari (10.11.2026): "Gemini'yi haber toplamada ve
+     * kose yazilarindan cikaralim; hepsinde once Claude sonra Luna."
+     * Ikisi de yanit veremezse istek hata sayiliyor (Gemini'ye gitmiyor).
+     */
+    public function geminiKapat(): void
+    {
+        $this->geminiKapali = true;
+        $this->geminiOnce   = false;
+    }
+
+    /** Gemini kapali mi (bkz. geminiKapat())? */
+    public function geminiKapaliMi(): bool
+    {
+        return $this->geminiKapali;
+    }
+
+    /**
+     * Gemini kapaliyken Claude ve Luna'nin ikisi de bu calismada kapandi
+     * mi (kredi, anahtar ya da ust uste hata)? Kapandiysa kalan istekler
+     * yazilamaz; cagiran calismayi erken bitirebilir.
+     */
+    public function modelKalmadi(): bool
+    {
+        return $this->geminiKapali
+            && ($this->claude === null || $this->claudeKapali)
+            && ($this->birincil === null || $this->birincilKapali);
     }
 
     /** Haber modeli (GEMINI_MODEL, yoksa varsayilan); kose yazisinin yedegi. */
