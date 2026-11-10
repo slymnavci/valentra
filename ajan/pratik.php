@@ -78,7 +78,9 @@ function ayar(string $ad): string
 $site   = new Site(ayar('VALENTRA_SITE_URL'), ayar('VALENTRA_AGENT_KEY'));
 $http   = new Http();
 $sayfa  = new Sayfa($http);
-$yazar  = new Yazar(ayar('GEMINI_API_KEY'));
+// Once Claude, sonra Luna, en son Gemini (site sahibi, 10.11.2026: "hepsinde
+// once Claude sonra Luna"). Onceden yalnizca Gemini'ydi.
+$yazar  = new Yazar(ayar('GEMINI_API_KEY'), '', trim((string) getenv('OPENAI_API_KEY')), trim((string) getenv('ANTHROPIC_API_KEY')));
 $okuyucu = new DegerOkuyucu($yazar);
 
 gunluk('Pratik bilgi toplayıcı başlıyor' . ($kuru ? ' (KURU ÇALIŞMA — gönderim yok)' : ''));

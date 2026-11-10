@@ -81,7 +81,7 @@ if ($malzeme['firsatlar'] === []) {
 }
 
 $yazar = new Yazar(ayar('GEMINI_API_KEY'), Yazar::koseModeli(), trim((string) getenv('OPENAI_API_KEY')), trim((string) getenv('ANTHROPIC_API_KEY')));
-$yazar->geminiOnce();
+// Once Claude, sonra Luna; Gemini yalnizca en son yedek (site sahibi, 10.11.2026).
 $yazar->sureSiniri(180, [10, 30], $bitis);
 $yazar->yedekModel(Yazar::haberModeli());
 $aciklayici = new Aciklayici($yazar);

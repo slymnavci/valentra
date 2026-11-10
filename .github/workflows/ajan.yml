@@ -254,6 +254,11 @@ jobs:
         env:
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          # Once Claude, sonra Luna, en son Gemini (10.11.2026).
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
         run: php pratik.php
@@ -266,10 +271,9 @@ jobs:
           # Model adi degisirse kod duzenlemeye gerek yok: bu secret'i
           # ekleyip istedigin model adini yazman yeterli.
           GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
-          # Haberler once OpenAI ile (varsayilan GPT-6 Luna), basarisizsa
-          # Gemini ile. OPENAI_API_KEY yoksa yalnizca Gemini (23.10.2026).
-          # Haberler once Claude Haiku 5.5 ile (ANTHROPIC_API_KEY), sonra Luna,
-          # en son Gemini (23.10.2026). Anahtar yoksa Claude atlanir.
+          # Haberler once Claude Haiku 5.5 ile (ANTHROPIC_API_KEY), sonra
+          # GPT-6 Luna (OPENAI_API_KEY). Gemini haber toplamada kapali
+          # (10.11.2026); GEMINI_API_KEY yalnizca baska adimlar icin.
           ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
           OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
@@ -415,10 +419,8 @@ jobs:
       # onemli haberlerinden (onem puani) ve en az biri dunyadan olmak
       # uzere yorum yazilari. Hepsi onaya duser.
       #
-      # Kose yazisi haberden ayri modelle (23.10.2026): varsayilan Gemini
-      # 3.8 Flash; GEMINI_KOSE_MODEL gizli degeriyle degistirilebilir.
-      # Haber toplama once GPT-6 Luna (OPENAI_API_KEY), yedek Gemini 3.8
-      # Flash (GEMINI_MODEL).
+      # Haber toplama ve kose yazisi (10.11.2026): once Claude Haiku 5.5,
+      # sonra GPT-6 Luna; Gemini ikisinde de kapali.
       # Kose yazarlarinin fotograflari (23.10.2026, site sahibinin karari):
       # fotografi olmayan yazar icin bir kez uretilip siteye yukleniyor;
       # hepsi varsa hemen biter (bkz. ajan/portre.php).
@@ -445,7 +447,7 @@ jobs:
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
           GEMINI_KOSE_MODEL:   ${{ secrets.GEMINI_KOSE_MODEL }}
           GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
-          # Gemini yogunken yedek (26.10.2026): Claude, sonra Luna.
+          # Once Claude, sonra Luna; Gemini kapali (10.11.2026).
           ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
           OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}

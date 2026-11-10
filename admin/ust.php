@@ -46,15 +46,15 @@
             <div class="uyari uyari-hata" style="margin-top:18px;">
                 <?php if ($openAiUyari['durum'] === 'kredi'): ?>
                     <strong>OpenAI kredisi bitti.</strong>
-                    Haberler şu an yedek model (Gemini) ile yazılıyor; bu yaklaşık
-                    6 kat daha pahalı. Kredi yükleyin; ajanın bir sonraki
-                    çalışmasında Luna'ya kendiliğinden döner ve bu uyarı kalkar.
+                    Luna, Claude'un yedeği; Claude da düşerse haber ve köşe yazısı
+                    yazılamaz (Gemini bu iki adımda kapalı). Kredi yükleyin; ajanın
+                    bir sonraki çalışmasında Luna kendiliğinden döner ve bu uyarı kalkar.
                     <a href="https://platform.openai.com/settings/organization/billing/overview"
                        target="_blank" rel="noopener" class="dugme dugme-ana"
                        style="margin-left:10px;">Kredi yükle</a>
                 <?php else: ?>
                     <strong>OpenAI anahtarı geçersiz.</strong>
-                    Haberler şu an yedek model (Gemini) ile yazılıyor. GitHub'daki
+                    Claude düşerse haber ve köşe yazısının yedeği yok (Gemini kapalı). GitHub'daki
                     <code>OPENAI_API_KEY</code> değerini yeni bir anahtarla güncelleyin.
                     <a href="https://platform.openai.com/api-keys" target="_blank"
                        rel="noopener" class="dugme dugme-ana" style="margin-left:10px;">API anahtarları</a>
