@@ -4439,11 +4439,60 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
  * hatirlaniyor, kaydirma cubugu ziplamiyor. Desteklemeyen tarayici
  * kurali yok sayar (eskisi gibi hepsini cizer).
  * ------------------------------------------------------------------ */
+/* Alt bant (footer) bu listede DEGIL: 11.11.2026 denetiminde Lighthouse,
+   cizilmemis alt banttaki baglantilari "kismen ortulu, dokunma hedefi kucuk"
+   saydi (mobil erisilebilirlik). Kazanci da kucuktu. */
 .alt-pencereler,
-.video-seridi,
-.alt-bant {
+.video-seridi {
     content-visibility: auto;
 }
 .alt-pencereler { contain-intrinsic-size: auto 1400px; }
 .video-seridi   { contain-intrinsic-size: auto 420px; }
-.alt-bant       { contain-intrinsic-size: auto 260px; }
+
+/* ------------------------------------------------------------------ *
+ * Vitrindeki iki kutu simetrik (11.11.2026, site sahibi: "sagdaki iki
+ * kutunun boy ve cizgileri simetrik olsun; basliklar hafif grimsi").
+ * "Bugun bilmeniz gereken 5 gelisme" basligi iki satir, "Gunun
+ * analizleri" tek satirdi: basliklarin altindaki kirmizi cizgi ve alttaki
+ * baglanti satiri farkli hizadaydi. Iki baslik da iki satirlik yer
+ * tutuyor ve alta yaslaniyor; alt baglanti satirlari ayni yukseklikte,
+ * ayni kesik cizgiyle.
+ * ------------------------------------------------------------------ */
+.vitrin > .bes-gelisme .pencere-baslik,
+.vitrin > .kose-kutu .pencere-baslik {
+    display: flex; align-items: flex-end; box-sizing: border-box;
+    height: 62px; line-height: 1.5; margin: 0 0 8px; padding: 0 0 10px;
+    font-size: .9rem; letter-spacing: .12em; border-bottom-width: 2px;
+    color: var(--metin-soluk);
+}
+.vitrin > .bes-gelisme,
+.vitrin > .kose-kutu { padding: 14px 18px; }
+.vitrin > .bes-gelisme .bes-bulten,
+.vitrin > .kose-kutu .kose-kutu-tumu {
+    display: flex; align-items: center; box-sizing: border-box;
+    height: 58px; line-height: 1.45;
+    margin: 8px 0 0; padding: 10px 0 0;
+    border-top: 1px dashed var(--cizgi);
+    font-size: .82rem; font-weight: 700;
+}
+.vitrin > .kose-kutu .yazar-listesi li { border-top: 1px solid var(--cizgi); padding: 6px 0; }
+.vitrin > .kose-kutu .yazar-listesi li:first-child { border-top: none; }
+
+/* ------------------------------------------------------------------ *
+ * Piyasa seridi siyah zemin, beyaz yazi (11.11.2026, site sahibi: "USD,
+ * altin bilgilerinin oldugu seridi farkli bir renk yapalim; siyah icinde
+ * beyaz yazilar olabilir"). Yalnizca varsayilan (klasik ve gece) temada;
+ * okurun sectigi renk temalari kendi serit rengini koruyor.
+ * ------------------------------------------------------------------ */
+:root:not([data-palet]) .piyasa-serit {
+    background: #111318; border-color: #111318; border-left-color: var(--altin);
+}
+:root:not([data-palet]) .piyasa-serit .piyasa-oge .ad,
+:root:not([data-palet]) .piyasa-serit .piyasa-oge .deger { color: #fff; }
+:root:not([data-palet]) .piyasa-serit .piyasa-oge .degisim.arti { color: #4ade80; }
+:root:not([data-palet]) .piyasa-serit .piyasa-oge .degisim.eksi { color: #ff7a80; }
+:root:not([data-palet]) .piyasa-serit .piyasa-oge .degisim.duraan { color: #b9bec8; }
+:root:not([data-palet]) .piyasa-serit .piyasa-simge { box-shadow: 0 0 0 1px rgba(255, 255, 255, .28); }
+/* Uc analiz de kutuya sigsin: tarih satiri yok (hepsi bugunun yazisi). */
+.vitrin > .kose-kutu .yazar-tarih { display: none; }
+.vitrin > .kose-kutu .yazar-listesi .yazar-yazi { font-size: .98rem; line-height: 1.28; }

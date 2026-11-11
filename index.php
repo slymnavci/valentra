@@ -135,7 +135,12 @@ require __DIR__ . '/includes/sayfa_ust.php';
     require_once __DIR__ . '/includes/kose.php';
 
     try {
-        $yazarYazilari = $sayfa === 1 ? kose_yazarlarin_son_yazilari() : [];
+        // Arsiv masasi (kaldirilan yazarlarin eski yazilari) kutuda gosterilmiyor;
+        // yalnizca uc gunluk analiz (ekonomi, spor, dunya).
+        $yazarYazilari = $sayfa === 1 ? array_values(array_filter(
+            kose_yazarlarin_son_yazilari(),
+            static fn (array $s): bool => empty($s['yazar']['arsiv'])
+        )) : [];
     } catch (PDOException $e) {
         $yazarYazilari = [];
     }
