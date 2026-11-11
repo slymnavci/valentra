@@ -211,6 +211,85 @@ function bulten_abone_ol(string $eposta, string $ip): string
     return 'tamam';
 }
 
+/** Panelden tek seferde eklenebilecek en çok adres. */
+const BULTEN_TOPLU_EN_COK = 2000;
+
+/**
+ * Panelden toplu abone ekleme (11.11.2026, site sahibi: "yonetim sayfasinda
+ * toplu maile gondermek icin bir buton; girilen mail adreslerine gunluk
+ * bulten gonderelim"). Adresler onay e-postasi BEKLENMEDEN aktif abone
+ * olur ve ertesi sabahki bultenden itibaren alir; her bultende tek tikla
+ * abonelikten cikma var.
+ *
+ * Izin sorumlulugu ekleyende (panel bunu isaretletiyor): Turkiye'de ticari
+ * elektronik ileti icin alicinin onayi gerekiyor (6563 sayili Kanun, IYS).
+ *
+ * ABONELIKTEN CIKMIS ADRES YENIDEN EKLENMEZ: "beni listeden cikar" diyen
+ * kisiye panelden yeniden gondermek hem yasaya aykiri hem sikayet sebebi.
+ * Onay bekleyen adres aktife cevrilir.
+ *
+ * @return array{eklenen:int,zaten:int,ayrilmis:int,gecersiz:int,fazla:int,gecersizler:list<string>}
+ */
+function bulten_toplu_ekle(string $metin): array
+{
+    $sonuc = ['eklenen' => 0, 'zaten' => 0, 'ayrilmis' => 0, 'gecersiz' => 0, 'fazla' => 0, 'gecersizler' => []];
+
+    // Adresler satir, virgul, noktali virgul ya da boslukla ayrilmis olabilir;
+    // "Ad Soyad <adres>" bicimindeki satirdan yalnizca adres alinir.
+    $parcalar = preg_split('/[\s,;]+/u', str_replace(['<', '>', '"', "'"], ' ', $metin)) ?: [];
+    $adresler = [];
+
+    foreach ($parcalar as $p) {
+        $p = mb_strtolower(trim($p), 'UTF-8');
+
+        if ($p === '' || !str_contains($p, '@')) {
+            continue; // ad, soyad gibi adres olmayan parcalar
+        }
+
+        if (!filter_var($p, FILTER_VALIDATE_EMAIL) || strlen($p) > 190) {
+            $sonuc['gecersiz']++;
+
+            if (count($sonuc['gecersizler']) < 10) {
+                $sonuc['gecersizler'][] = mb_substr($p, 0, 60, 'UTF-8');
+            }
+
+            continue;
+        }
+
+        $adresler[$p] = true;
+    }
+
+    $adresler = array_keys($adresler);
+
+    if (count($adresler) > BULTEN_TOPLU_EN_COK) {
+        $sonuc['fazla'] = count($adresler) - BULTEN_TOPLU_EN_COK;
+        $adresler = array_slice($adresler, 0, BULTEN_TOPLU_EN_COK);
+    }
+
+    $bul   = db()->prepare('SELECT id, durum FROM bulten_aboneleri WHERE eposta = :e');
+    $ekle  = db()->prepare("INSERT INTO bulten_aboneleri (eposta, anahtar, durum, ip, onaylandi) VALUES (:e, :a, 'aktif', 'panel', NOW())");
+    $aktif = db()->prepare("UPDATE bulten_aboneleri SET durum = 'aktif', onaylandi = NOW(), ip = 'panel' WHERE id = :id");
+
+    foreach ($adresler as $adres) {
+        $bul->execute(['e' => $adres]);
+        $abone = $bul->fetch();
+
+        if ($abone === false) {
+            $ekle->execute(['e' => $adres, 'a' => bin2hex(random_bytes(16))]);
+            $sonuc['eklenen']++;
+        } elseif ($abone['durum'] === 'iptal') {
+            $sonuc['ayrilmis']++;
+        } elseif ($abone['durum'] === 'bekliyor') {
+            $aktif->execute(['id' => $abone['id']]);
+            $sonuc['eklenen']++;
+        } else {
+            $sonuc['zaten']++;
+        }
+    }
+
+    return $sonuc;
+}
+
 /** @return array<string,mixed>|null */
 function bulten_abone_anahtarla(string $anahtar): ?array
 {

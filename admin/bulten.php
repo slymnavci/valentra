@@ -53,6 +53,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         @set_time_limit(150);
         $s = bulten_isle(120);
         yonlendir('bulten.php?bildirim=simdi&g=' . $s['gonderilen'] . '&h=' . $s['hata']);
+    } elseif ($islem === 'toplu_ekle') {
+        // Toplu abone ekleme (11.11.2026; bkz. bulten_toplu_ekle).
+        if (empty($_POST['izin'])) {
+            $hata = 'Adresleri eklemek için izin kutusunu işaretleyin.';
+        } else {
+            try {
+                $t = bulten_toplu_ekle((string) ($_POST['adresler'] ?? ''));
+
+                if ($t['eklenen'] + $t['zaten'] + $t['ayrilmis'] + $t['gecersiz'] === 0) {
+                    $hata = 'Listede e-posta adresi bulunamadı.';
+                } else {
+                    $_SESSION['bulten_toplu'] = $t;
+                    yonlendir('bulten.php?bildirim=toplu');
+                }
+            } catch (PDOException $e) {
+                $hata = 'Adresler eklenemedi: ' . $e->getMessage();
+            }
+        }
     } elseif ($islem === 'abone_sil') {
         db()->prepare('DELETE FROM bulten_aboneleri WHERE id = :id')->execute(['id' => (int) ($_POST['id'] ?? 0)]);
         yonlendir('bulten.php?bildirim=silindi');
@@ -66,6 +84,18 @@ $bildirim = match ((string) ($_GET['bildirim'] ?? '')) {
     'silindi' => 'Abone silindi.',
     default   => '',
 };
+
+// Toplu eklemenin sonucu (bir kez gosterilir).
+if (($_GET['bildirim'] ?? '') === 'toplu' && isset($_SESSION['bulten_toplu']) && is_array($_SESSION['bulten_toplu'])) {
+    $t = $_SESSION['bulten_toplu'];
+    unset($_SESSION['bulten_toplu']);
+
+    $bildirim = (int) $t['eklenen'] . ' adres abone yapıldı; bir sonraki bültenden itibaren alacaklar.'
+        . ((int) $t['zaten'] > 0 ? ' ' . (int) $t['zaten'] . ' adres zaten aboneydi.' : '')
+        . ((int) $t['ayrilmis'] > 0 ? ' ' . (int) $t['ayrilmis'] . ' adres daha önce abonelikten çıktığı için eklenmedi.' : '')
+        . ((int) $t['gecersiz'] > 0 ? ' ' . (int) $t['gecersiz'] . ' adres geçersiz (' . implode(', ', array_map('strval', (array) $t['gecersizler'])) . ').' : '')
+        . ((int) $t['fazla'] > 0 ? ' Tek seferde en fazla ' . BULTEN_TOPLU_EN_COK . ' adres eklenir; ' . (int) $t['fazla'] . ' adres alınmadı, yeniden gönderin.' : '');
+}
 
 $sayilar  = bulten_sayilar();
 $gecmis   = [];
@@ -127,6 +157,27 @@ require __DIR__ . '/ust.php';
             <input type="checkbox" name="acik" value="1"<?= bulten_acik() ? ' checked' : '' ?>> Bülten açık (kutu sitede görünür, her sabah gönderilir)
         </label>
         <button type="submit" class="dugme dugme-ana">Kaydet</button>
+    </form>
+</div>
+
+<div class="kutu" style="margin-top:20px;">
+    <h2 style="margin-top:0;">Toplu abone ekle</h2>
+    <p class="ipucu" style="margin-top:0;">
+        Buraya yazdığınız adresler onay e-postası beklenmeden abone olur ve bir sonraki bültenden itibaren
+        her gün bülteni alır. Adresleri alt alta ya da virgülle ayırarak yapıştırın (tek seferde en fazla
+        <?= number_format(BULTEN_TOPLU_EN_COK, 0, ',', '.') ?>). Daha önce abonelikten çıkmış adresler eklenmez.
+    </p>
+    <form method="post" action="bulten.php">
+        <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+        <input type="hidden" name="islem" value="toplu_ekle">
+        <textarea name="adresler" rows="6" required placeholder="ornek@adres.com&#10;baska@adres.com"
+                  style="width:100%;font-family:inherit;"><?= $hata !== '' ? e((string) ($_POST['adresler'] ?? '')) : '' ?></textarea>
+        <label style="display:flex;gap:8px;align-items:flex-start;margin:10px 0;">
+            <input type="checkbox" name="izin" value="1" required style="margin-top:3px;">
+            <span>Bu adreslerin sahipleri Valentra'dan e-posta almayı kabul etti. (Türkiye'de izinsiz ticari e-posta
+                göndermek yasak: 6563 sayılı Kanun. İzinsiz gönderim ayrıca bültenin istenmeyen klasörüne düşmesine yol açar.)</span>
+        </label>
+        <button type="submit" class="dugme dugme-ana">Adresleri abone yap</button>
     </form>
 </div>
 
