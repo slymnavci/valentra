@@ -80,8 +80,7 @@ function olcum_head_html(): string
      * cikardi: adsbygoogle.js'in uzun isleri tam okurun sayfayi okumaya
      * basladigi ana kaydi. Yerel olcumde sitenin kendi kodunun engellemesi
      * 0 ms; ~600 ms'nin tamami ucuncu taraf betikleri.
-     *   - Olcum (gtag.js, hafif): eskisi gibi yuklemeden 1,5 sn sonra;
-     *     sayfa goruntulemeleri sayilmaya devam ediyor.
+     *   - Olcum (gtag.js): o da ayni gun gec gruba alindi (asagida).
      *   - Reklam (adsbygoogle.js, agir): okur dokununca/kaydirinca ya da
      *     yuklemeden 8 sn sonra. Bedeli: sayfaya hic dokunmadan 8 sn icinde
      *     cikan okura reklam gosterilmez.
@@ -91,7 +90,12 @@ function olcum_head_html(): string
 
     if ($ga !== '') {
         $html .= "<script>gtag('js', new Date()); gtag('config', " . json_encode($ga) . ");</script>\n";
-        $betikler[] = ['src' => 'https://www.googletagmanager.com/gtag/js?id=' . rawurlencode($ga)];
+        // Olcum betigi de gec grupta (11.11.2026, site sahibinin karari). 1,5 sn'de
+        // yuklenirken mobil olcumde toplam engelleme 443 ms kaliyordu (reklam
+        // ertelendikten sonra kalan tek ucuncu taraf betigi). Bedeli: sayfaya hic
+        // dokunmadan 8 sn icinde cikan ziyaretci Analytics'te sayilmaz. Sitenin
+        // kendi ziyaret sayaci (includes/ziyaret.php) bundan etkilenmiyor.
+        $betikler[] = ['src' => 'https://www.googletagmanager.com/gtag/js?id=' . rawurlencode($ga), 'gec' => 1];
     }
 
     if ($ad !== '') {
