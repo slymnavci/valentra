@@ -184,6 +184,10 @@ Halk TV, Sözcü, Hürriyet, Sabah, Milliyet, BBC, Euronews, DW, Sputnik.
 - Mikrofonlarda, kürsüde ya da ekranda görünen kanal/ajans logoları.
 - TV ekran görüntüsü: kanal bandı, "SON DAKİKA" bandı, alt yazı şeridi.
 - Görselin üstüne yazılmış manşet, haber başlığı, haber kartı tasarımı.
+- Medya adı OLMASA BİLE fotoğrafın üstüne sonradan bindirilmiş büyük yazı
+  (site sahibi, 11.11.2026: "ana sayfada yazısız resimler kullan"): video
+  kapağı yazısı, slogan, alıntı cümlesi, "SON DAKİKA"/"FLAŞ" bandı, skor
+  ya da tarih kartı, afiş/duyuru tasarımı, kolaj üstü başlık.
 Şunlar medya kuruluşu DEĞİL, tek başlarına görseli kirletmez (temiz=true):
 spor kulübü armaları ve formalar, marka/şirket logoları (ürün, bina,
 tabela), kamu kurumu amblemleri, bayraklar, stadyum reklam panoları,
