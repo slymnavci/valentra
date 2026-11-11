@@ -359,6 +359,48 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
             </div>
         </nav>
 
+        <?php
+        /*
+         * MENU TEK SATIR (11.11.2026, site sahibi: "Valentra Network linkini
+         * menu ile ayni hizaya getir; orayi daraltalim, bosluk olmasin").
+         * On dort oge hicbir genislikte tek satira sigmiyor, Network dugmesi
+         * alt satira dusup yaninda bos bir serit birakiyordu. Betik menuyu
+         * sigana kadar sikilastiriyor (sik1..sik3: aralik ve yazi kuculur,
+         * dugmede "VALENTRA" ve "YENI" kalkar); yine sigmazsa sondaki ogeleri
+         * gizliyor (hepsi soldaki cekmece menude duruyor). Menu cizilmeden
+         * hemen once calisiyor; yeniden boyutlanmada tekrar. Telefonda
+         * (720 piksel ve alti) menu zaten yatay kayiyor, dokunulmuyor.
+         * Betik calismazsa menu eskisi gibi alt satira geciyor.
+         */
+        ?>
+        <script>
+        (function () {
+            var satir = document.querySelector('.menu-satir');
+            if (!satir) { return; }
+            var ogeler = [].slice.call(satir.children).filter(function (o) { return !o.classList.contains('menu-oge-network'); });
+
+            function sigiyor() { return satir.scrollWidth <= satir.clientWidth + 1; }
+
+            function sigdir() {
+                satir.classList.remove('tek-satir', 'sik1', 'sik2', 'sik3');
+                ogeler.forEach(function (o) { o.classList.remove('menu-gizli'); });
+                if (window.innerWidth <= 720) { return; }
+                satir.classList.add('tek-satir');
+                var duzey = ['sik1', 'sik2', 'sik3'];
+                for (var i = 0; i < duzey.length && !sigiyor(); i++) { satir.classList.add(duzey[i]); }
+                // Hala sigmiyorsa sondan gizle; Ana Sayfa ve aktif oge kalir.
+                for (var j = ogeler.length - 1; j > 0 && !sigiyor(); j--) {
+                    if (!ogeler[j].classList.contains('aktif')) { ogeler[j].classList.add('menu-gizli'); }
+                }
+            }
+
+            sigdir();
+            var bekle;
+            window.addEventListener('resize', function () { clearTimeout(bekle); bekle = setTimeout(sigdir, 80); });
+            if (document.fonts && document.fonts.ready) { document.fonts.ready.then(sigdir); }
+        })();
+        </script>
+
         <script>
         (function () {
             var gruplar = document.querySelectorAll('.menu-grup');
