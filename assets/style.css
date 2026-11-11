@@ -3644,6 +3644,27 @@ a.bulut-etiket:hover,
 @media (prefers-reduced-motion: reduce) { .menu-network::before { animation: none; display: none; } }
 a.menu-oge-network:hover, a.menu-oge-network.aktif { color: inherit; }
 a.menu-oge-network:hover .menu-network { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(215, 22, 31, .45); }
+/*
+ * MENU TEK SATIR (11.11.2026, site sahibi: "Network linkini menu ile ayni
+ * hizaya getir; orayi daraltalim, bosluk olmasin"). Siniflari
+ * includes/sayfa_ust.php'deki betik veriyor: menu sigana kadar sik1..sik3.
+ * Artan yer ogelerin arasina esit dagiliyor; Network dugmesi satirin
+ * sonunda, ayni hizada. Acilir listeler tasabilsin diye overflow gorunur.
+ */
+.menu-satir.tek-satir { flex-wrap: nowrap; justify-content: space-between; }
+.menu-satir.tek-satir .menu-oge-network { margin-left: 0; }
+.menu-satir.tek-satir .menu-oge { padding: 0 10px; }
+.menu-satir.tek-satir .menu-oge-network { padding-right: 0; }
+.menu-satir.tek-satir > :first-child { padding-left: 0; }
+.menu-satir.sik1 .menu-oge { padding: 0 7px; font-size: .93rem; gap: 5px; }
+.menu-satir.sik1 .menu-network .nw-val { display: none; }
+.menu-satir.sik1 .menu-network { padding: 6px 10px; gap: 6px; }
+.menu-satir.sik2 .menu-oge { padding: 0 5px; font-size: .88rem; }
+.menu-satir.sik2 .menu-network-yeni { display: none; }
+.menu-satir.sik3 .menu-oge { padding: 0 4px; font-size: .83rem; letter-spacing: -.005em; }
+.menu-satir.sik1 > :first-child, .menu-satir.sik2 > :first-child, .menu-satir.sik3 > :first-child { padding-left: 0; }
+.menu-satir.sik1 .menu-oge-network, .menu-satir.sik2 .menu-oge-network, .menu-satir.sik3 .menu-oge-network { padding-right: 0; }
+.menu-satir .menu-gizli { display: none; }
 /* Cekmece menude de ayni dugme, sola yasli. */
 .cekmece-oge .menu-network { margin: 2px 0; }
 /* Tablet genisliginde menu tek satira sigsin: "VALENTRA" kalkiyor, "Network" kaliyor. */
