@@ -191,10 +191,27 @@ fotoğrafın doğal parçası olan yazılar.
 Emin değilsen ve yazı ya da amblem bir medya kuruluşuna benziyorsa temiz=false.
 
 UYGUN MU? Görsel haberin konusuna uyuyor mu (yer, nesne, olay, alan)?
+Haberin başlığına değil KONUSUNA bak (özet verildiyse onu da oku).
 Birebir aynı olay olması gerekmez; konuyu temsil etmesi yeter. Konuyla
 ilgisiz, yanıltıcı ya da başka bir olayı/kişiyi gösteriyormuş gibi
 duruyorsa uygun=false. Uygunsuz, şiddet içeren, çıplaklık içeren görsel
 uygun=false.
+YANLIŞ YER (site sahibi, 11.11.2026: "resimler haberle alakasız"):
+Görselde ya da arşiv adında haberdekinden BAŞKA bir ülke, şehir, kurum ya
+da tesis tanınıyorsa uygun=false. Örnekler: Antalya'daki trafik haberine
+ABD polis aracı; Türkiye'deki dava haberine ABD adliye binası; Türk
+bakanın haberine başka ülkedeki santral; Beypazarı haberine ABD'deki
+yaban atları; İstanbul haberine başka bir şehrin silueti. Yeri belli
+olmayan, konunun NESNESİNİ gösteren genel fotoğraf uygundur (elektrik
+sayacı, banknotlar, buğday tarlası, boş sınıf, ambulans ışığı), ama
+üstünde başka ülkenin yazısı, plakası, üniforması ya da tabelası
+okunuyorsa uygun=false.
+FOTOĞRAF KALİTESİ (site sahibi: "resim kalitesi mevcut haberlerdeki
+resimler kadar olsun"): Görsel güncel, net, renkli bir haber fotoğrafı
+gibi durmalı. Şunlar uygun=false: bulanık, pikselli ya da çok karanlık
+fotoğraf; kartpostal, gravür, tablo, çizim, karikatür; eski siyah-beyaz
+arşiv fotoğrafı ya da gazete/dergi taraması; grafik, tablo, harita,
+şema, logo, amblem, pul, afiş; ekran görüntüsü; kolaj.
 KİŞİ: Haber bir kişiyle ilgiliyse (ör. "Erdoğan Bakü'de") o kişinin
 başka bir yerde/tarihte çekilmiş fotoğrafı UYGUNDUR. Başka bir kişiyi
 gösteren fotoğraf uygun=false. Görselin arşivdeki adı verildiyse ona da
@@ -284,6 +301,7 @@ METIN;
 
         foreach ($ogeler as $i => $o) {
             $parcalar[] = ['text' => 'Görsel ' . ($i + 1) . ' — haber başlığı: ' . $o['baslik']
+                . (($o['ozet'] ?? '') !== '' ? "\n   Haberin özeti: " . $o['ozet'] : '')
                 . (($o['ad'] ?? '') !== '' ? "\n   Görselin arşivdeki adı: " . $o['ad'] : '')];
             $parcalar[] = ['inlineData' => ['mimeType' => $o['resim']['tur'], 'data' => base64_encode($o['resim']['veri'])]];
         }
@@ -366,6 +384,7 @@ METIN;
 
         foreach ($ogeler as $i => $o) {
             $icerik[] = ['type' => 'text', 'text' => 'Görsel ' . ($i + 1) . ' — haber başlığı: ' . $o['baslik']
+                . (($o['ozet'] ?? '') !== '' ? "\n   Haberin özeti: " . $o['ozet'] : '')
                 . (($o['ad'] ?? '') !== '' ? "\n   Görselin arşivdeki adı: " . $o['ad'] : '')];
             $icerik[] = ['type' => 'image', 'source' => [
                 'type' => 'base64', 'media_type' => $o['resim']['tur'], 'data' => base64_encode($o['resim']['veri']),
@@ -492,6 +511,19 @@ Sonra özgül yer/kurum/nesne (ör. "Grand National Assembly of Turkey",
 "Borsa Istanbul", "Baku"), en son genel ve kesin sonuç veren (ör. "gold
 bars", "football stadium", "wheat field"). Haber sitesi, kanal ya da
 ajans adı yazma. Bayrak ya da slogan aratma.
+
+KONUYA GÖRE (site sahibi, 11.11.2026: "sadece başlığa göre değil konuya
+göre"): Sorguları başlıktaki kelimelerden değil haberin METNİNDEN çıkar:
+haber gerçekte neyi anlatıyor, okur hangi fotoğrafı görünce "bu haber
+bu" der? Örnek: başlık "6,5 milyon abone etkilenecek", metin elektrik
+faturası desteğini anlatıyorsa sorgu "electricity meter", "power lines
+Turkey"; "abone" değil.
+YER: Haber Türkiye'de geçiyorsa özgül sorguya yeri kat ("Antalya city",
+"Erzurum winter", "Istanbul courthouse", "Ankara"). Başka bir ülkenin
+kurumunu, polisini, adliyesini, şehrini getirecek çıplak genel sorgu
+yazma ("city traffic", "courthouse building", "police car" YAZMA); genel
+sorgu yalnızca yeri belli olmayan bir NESNE olsun ("electricity meter",
+"Turkish lira banknotes", "olive harvest", "school classroom").
 METIN;
 
         $sema = [
@@ -517,7 +549,9 @@ METIN;
         $istem = '';
 
         foreach ($haberler as $i => $h) {
-            $istem .= ($i + 1) . '. Başlık: ' . $h['baslik'] . "\n   Özet: " . mb_substr($h['ozet'], 0, 240, 'UTF-8') . "\n";
+            $istem .= ($i + 1) . '. Başlık: ' . $h['baslik'] . "\n   Özet: " . mb_substr($h['ozet'], 0, 240, 'UTF-8') . "\n"
+                    . (trim((string) ($h['metin'] ?? '')) !== ''
+                        ? '   Metin: ' . preg_replace('/\s+/u', ' ', mb_substr((string) $h['metin'], 0, 700, 'UTF-8')) . "\n" : '');
         }
 
         $veri = null;
@@ -607,9 +641,11 @@ METIN;
             $m = (array) ($b['extmetadata'] ?? []);
             $lisans = trim((string) ($m['LicenseShortName']['value'] ?? ''));
 
-            if (!in_array((string) ($b['mime'] ?? ''), ['image/jpeg', 'image/png', 'image/webp'], true)
-                || (int) ($b['width'] ?? 0) < 800 || (int) ($b['height'] ?? 0) < 450
-                || (int) ($b['width'] ?? 0) < (int) ($b['height'] ?? 0)) {
+            // Yalnizca fotograf (PNG cogunlukla grafik/harita/logo), en az 1200
+            // piksel genis ve yatay (11.11.2026: mansette bulanik gorunmesin;
+            // onceden 800 piksel ve PNG de kabul ediliyordu).
+            if (!in_array((string) ($b['mime'] ?? ''), ['image/jpeg', 'image/webp'], true)
+                || !self::boyutUygun((int) ($b['width'] ?? 0), (int) ($b['height'] ?? 0))) {
                 continue;
             }
 
@@ -670,7 +706,8 @@ METIN;
             $url = (string) ($r['url'] ?? '');
 
             // Genislik bilinmiyorsa (0) indirince denetleniyor; bilinen kucukler eleniyor.
-            if (!str_starts_with($url, 'https://') || ($g > 0 && ($g < 800 || $g < $y))) {
+            if (!str_starts_with($url, 'https://') || ($g > 0 && $y > 0 && !self::boyutUygun($g, $y))
+                || preg_match('/\.(png|gif|svg)(\?|$)/i', $url) === 1) {
                 continue;
             }
 
@@ -691,6 +728,40 @@ METIN;
         }
 
         return $sonuc;
+    }
+
+    /** Yerine konacak görselin en az genişliği (piksel). */
+    public const EN_AZ_GENISLIK = 1200;
+
+    /**
+     * Aday görselin boyutu haber fotoğrafı gibi mi: en az EN_AZ_GENISLIK
+     * genişlikte, yatay (en/boy 1,2 ile 2,4 arası; çok geniş panorama ve
+     * kareye yakın görsel manşet ve kartta kötü kırpılıyor).
+     */
+    public static function boyutUygun(int $genislik, int $yukseklik): bool
+    {
+        if ($genislik < self::EN_AZ_GENISLIK || $yukseklik < 1) {
+            return false;
+        }
+
+        $oran = $genislik / $yukseklik;
+
+        return $oran >= 1.2 && $oran <= 2.4;
+    }
+
+    /**
+     * Aday görselin adı fotoğraf olmayan ya da eski bir şeyi mi gösteriyor
+     * (kartpostal, harita, grafik, logo, 1980 öncesi tarih)? 10.11.2026
+     * çalışmasında "Lima City Hall postcard", 1924 tarihli dergi taraması
+     * ve bir dış ticaret grafiği haberlere kondu.
+     */
+    public static function fotografDisi(string $ad): bool
+    {
+        $ad = self::katla($ad);
+
+        return preg_match('/\b(postcard|kartpostal|map|harita|chart|graph|grafik|diagram|logo|emblem|coat of arms|flag|bayrak|'
+            . 'stamp|poster|engraving|painting|drawing|illustration|cartoon|sketch|lithograph|screenshot|scan|svg)\b/', $ad) === 1
+            || preg_match('/(?<!\d)(1[0-8]\d\d|19[0-7]\d)(\d{4})?(?!\d|\s*(x|px))/', $ad) === 1;
     }
 
     /**
