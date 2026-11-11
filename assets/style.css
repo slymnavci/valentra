@@ -4439,11 +4439,12 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
  * hatirlaniyor, kaydirma cubugu ziplamiyor. Desteklemeyen tarayici
  * kurali yok sayar (eskisi gibi hepsini cizer).
  * ------------------------------------------------------------------ */
+/* Alt bant (footer) bu listede DEGIL: 11.11.2026 denetiminde Lighthouse,
+   cizilmemis alt banttaki baglantilari "kismen ortulu, dokunma hedefi kucuk"
+   saydi (mobil erisilebilirlik). Kazanci da kucuktu. */
 .alt-pencereler,
-.video-seridi,
-.alt-bant {
+.video-seridi {
     content-visibility: auto;
 }
 .alt-pencereler { contain-intrinsic-size: auto 1400px; }
 .video-seridi   { contain-intrinsic-size: auto 420px; }
-.alt-bant       { contain-intrinsic-size: auto 260px; }
