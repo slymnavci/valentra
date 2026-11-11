@@ -23,7 +23,8 @@ $sayfa    = (string) ($_GET['s'] ?? '');
 if (!isset($sayfalar[$sayfa])) {
     http_response_code(404);
     $sayfaBasligi = 'Sayfa bulunamadı — Valentra';
-    require __DIR__ . '/includes/sayfa_ust.php';
+    $govdeSinifi = 'okuma'; // okunur genislik (bkz. haber.php)
+require __DIR__ . '/includes/sayfa_ust.php';
     echo '<div class="bos-durum"><strong>Sayfa bulunamadı.</strong></div>';
     require __DIR__ . '/includes/sayfa_alt.php';
     exit;
@@ -49,6 +50,7 @@ $epostaBag = $eposta !== ''
     ? '<a href="mailto:' . e($eposta) . '">' . e($eposta) . '</a>'
     : '<a href="' . e(kurumsal_yolu('iletisim')) . '">İletişim</a> sayfasındaki adres';
 
+$govdeSinifi = 'okuma'; // okunur genislik (bkz. haber.php)
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
 
