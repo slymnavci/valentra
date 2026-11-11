@@ -26,9 +26,9 @@ $gunler = kose_gunlere_gore($sayfa, KOSE_SAYFA_GUN);
 $gunAdlari = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
 
 $aktifKategori = 'kose';
-$sayfaBasligi  = 'Valentra Diyor ki… — Tüm yazılar' . ($sayfa > 1 ? ' — Sayfa ' . $sayfa : '');
-$sayfaAciklama = 'Valentra\'nın her gün gündemin ve dünyanın en önemli konularını '
-               . 'değerlendirdiği köşe yazıları.';
+$sayfaBasligi  = 'Valentra Analiz — Günlük ekonomi, spor ve dünya analizleri' . ($sayfa > 1 ? ' — Sayfa ' . $sayfa : '');
+$sayfaAciklama = 'Valentra\'nın her gün ekonomi, spor ve dünya gündeminin en önemli konusunu '
+               . 'arka planı ve olası etkileriyle değerlendirdiği analiz yazıları.';
 $seoAdres      = site_adresi() . kose_liste_yolu($sayfa);
 
 // Arsiv sayfalari (2., 3. ...) Google'a acik (08.11.2026, site sahibi:
@@ -40,19 +40,18 @@ require __DIR__ . '/includes/sayfa_ust.php';
 ?>
 
 <div class="kategori-basligi">
-    <h1>Valentra Diyor ki…</h1>
+    <h1>Valentra Analiz</h1>
     <p>
-        Yazarlarımız her gün kendi alanlarında gündemin en önemli
-        konularını değerlendiriyor.
+        Her gün üç yazı: ekonomi, spor ve dünya gündeminin en önemli konusu,
+        arka planı ve olası etkileriyle.
     </p>
 </div>
 
-<?php // Yazarlar seridi: her yazarin sayfasina (gecmis yazilari). ?>
-<nav class="yazar-seridi" aria-label="Yazarlar">
+<?php // Masa seridi: her masanin sayfasina (gecmis yazilari). Kisi ve portre yok (11.11.2026). ?>
+<nav class="yazar-seridi masa-seridi" aria-label="Analiz başlıkları">
     <?php foreach (array_keys(KOSE_YAZARLARI) as $anahtar): ?>
         <?php $y = yazar_bul($anahtar); ?>
         <a href="<?= e(yazar_yolu($anahtar)) ?>">
-            <?= yazar_portre_svg($anahtar, 64) ?>
             <span class="yazar-ad"><?= e($y['ad']) ?></span>
             <span class="yazar-alan"><?= e($y['alan']) ?></span>
         </a>

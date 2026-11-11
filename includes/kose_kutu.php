@@ -21,15 +21,12 @@ if (($yazarYazilari ?? []) === []) {
 }
 ?>
 <section class="pencere kose-kutu" aria-labelledby="kose-kutu-baslik">
-    <h2 class="pencere-baslik kose-kutu-baslik" id="kose-kutu-baslik">Yazarlarımız</h2>
+    <h2 class="pencere-baslik kose-kutu-baslik" id="kose-kutu-baslik">Günün Analizleri</h2>
 
     <ul class="yazar-listesi">
         <?php foreach ($yazarYazilari as $satir): ?>
             <?php $yazar = $satir['yazar']; $yazi = $satir['yazi']; ?>
-            <li>
-                <a class="yazar-portre-bag" href="<?= e(yazar_yolu($yazar['anahtar'])) ?>" aria-hidden="true" tabindex="-1">
-                    <?= yazar_portre_svg($yazar['anahtar'], 52) ?>
-                </a>
+            <li class="masa">
                 <div class="yazar-metin">
                     <a class="yazar-ad" href="<?= e(yazar_yolu($yazar['anahtar'])) ?>"><?= e($yazar['ad']) ?></a>
                     <a class="yazar-yazi" href="<?= e(kose_yolu((string) $yazi['slug'])) ?>"><?= e((string) $yazi['baslik']) ?></a>

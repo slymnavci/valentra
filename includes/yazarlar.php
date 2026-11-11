@@ -2,174 +2,104 @@
 declare(strict_types=1);
 
 /**
- * Köşe yazarları.
+ * Günlük analiz masaları (eski adıyla köşe yazarları).
  *
- * Site sahibinin istegi (23.10.2026): "her gun 6-7 kose yazisi; her yazi
- * farkli birisi tarafindan; yazilari gazetenin en saginda dursun, gecmis
- * yazilarina da okuyucular ulasabilsin; herkes birer konuda yazsin".
- * Yazarlarin adlari site sahibinin verdigi adlar; yazilari ajan, her
- * yazarin alaninda ve uslubuyla yaziyor (ajan/kose.php). Portreler
- * fotograf degil, asagida koddan uretilen cizim (yazar_portre_svg).
+ * Site sahibinin karari (11.11.2026): "yazarlari kaldiralim; bunun yerine
+ * ekonomi, spor, dunya gundemi ile ilgili gunluk yazilar yazdiralim."
+ * 23.10.2026'dan beri on iki yapay zeka yazar karakteri vardi (adlari ve
+ * gercekci fotograflariyla); Google Haberler ve Discover gercek yazar
+ * bilgisi istiyor, uydurma kisi imzasi guven kaybettiriyordu. Artik kisi
+ * yok: uc masa, her gun kendi alaninda bir analiz; imza Valentra.
  *
- * Portre: yazarin FOTOGRAFI varsa o (gorseller/yazar/<anahtar>.jpg; ajan
- * bir kez uretip yukluyor, bkz. ajan/portre.php ve api/yazar-portre.php,
- * gorunum alani uretim tarifi), yoksa cizim. Site sahibinin karari
- * (23.10.2026): fotograflar gercekci; yazar sayfasinda tek satir not
- * (yazar.php).
+ * Kod ve veritabani eski adlari kullanmaya devam ediyor (kose_yazilari
+ * tablosu, "yazar" sutunu, /yazar/<anahtar> adresi): sutunda artik masa
+ * anahtari duruyor. Eski yazilar KOSE_ESKI_YAZARLAR ile masalara
+ * baglaniyor; eski yazar adresleri masanin sayfasina kalici yonleniyor.
  *
- * Sira: site sahibinin saydigi sira; "Valentra Yorumu" en sonda.
- * kategoriler: yazarin konusunu sectigi haber basliklari (bos: hepsi).
- * anahtar_kelimeler / haric_kelimeler: haberin basliginda ya da ozetinde
- * gecmesi gereken / gecmemesi gereken sozcukler (kulup ve basketbol
- * yazarlari; kucuk harfle). spor: spor sayfasindaki "Spor Yazarlari".
- * uslup: ajanin yazi istemine eklenen kalem tarifi.
+ * kategoriler: masanin konusunu sectigi haber basliklari.
+ * spor: spor sayfasindaki analiz bolumunde gorunur.
+ * arsiv: ajan bu masaya yeni yazi yazmaz (yalnizca eski yazilar).
+ * uslup: ajanin yazi istemine eklenen tarif.
  */
 const KOSE_YAZARLARI = [
-    'ahmet-sami-gumus' => [
-        'ad'          => 'Ahmet Sami Gümüş',
+    'ekonomi' => [
+        'ad'          => 'Ekonomi Analizi',
         'alan'        => 'Ekonomi ve piyasalar',
         'kategoriler' => ['ekonomi'],
-        'tanitim'     => 'Faiz, enflasyon, kur, borsa ve şirketler: ekonomideki gelişmelerin cebimize ve işimize etkisini yazıyor.',
-        'uslup'       => 'Veriye dayalı, sade ve öğretici. Rakamları ve kavramları okurun gündelik hayatından örneklerle açıklar; '
-                       . '"bu kararın market fiyatına, krediye, maaşa etkisi ne?" sorusunu hep sorar. Yatırım tavsiyesi vermez.',
-        'gorunum'     => 'a Turkish man in his early fifties, short neatly side-parted brown hair, rectangular glasses, clean-shaven, wearing a dark navy suit and light blue shirt',
-        'portre'      => ['zemin' => '#1f4e79', 'ten' => '#e8b98e', 'sac' => '#4a3426', 'sac_bicim' => 'yan', 'giysi' => '#26303f', 'gomlek' => '#dfe7f1', 'gozluk' => true, 'sakal' => false],
+        'tanitim'     => 'Faiz, enflasyon, kur, borsa, vergi ve düzenlemeler: günün ekonomi gündeminin cebimize ve işimize etkisi, her gün tek yazıda.',
+        'uslup'       => 'Veriye dayalı, sade ve öğretici bir analiz. Rakamları ve kavramları okurun gündelik hayatından örneklerle açıklar; '
+                       . '"bu kararın market fiyatına, krediye, maaşa, faturaya etkisi ne?" sorusunu hep sorar. Kurum adına yazılır: '
+                       . 'birinci tekil şahıs yok. Yatırım tavsiyesi vermez.',
+        'portre'      => null,
     ],
-    'tekin-alp-sagduyulu' => [
-        'ad'          => 'Tekin Alp Sağduyulu',
-        'alan'        => 'İç politika',
-        'kategoriler' => ['politika'],
-        'tanitim'     => 'Türkiye siyasetinde günün gelişmelerini ölçülü bir dille, kararların içeriği ve olası etkileri üzerinden değerlendiriyor.',
-        'uslup'       => 'Ölçülü, dengeli ve sağduyulu. Tarafların açıklanmış tutumlarını eşit mesafeden aktarır, hiçbir partiyi ya da '
-                       . 'kişiyi övmez, yermez; kararın içeriğini, sürecini ve vatandaşa etkisini tartışır. Uzlaşmayı ve sağduyuyu öne çıkarır.',
-        'gorunum'     => 'a Turkish man in his early sixties, short silver-grey hair, short neatly trimmed white beard, wearing a charcoal jacket and white shirt',
-        'portre'      => ['zemin' => '#7a2e2e', 'ten' => '#d9a47c', 'sac' => '#b8b8b8', 'sac_bicim' => 'kisa', 'giysi' => '#2e3440', 'gomlek' => '#f2f2f2', 'gozluk' => false, 'sakal' => true],
+    'spor' => [
+        'ad'          => 'Spor Analizi',
+        'alan'        => 'Spor gündemi',
+        'kategoriler' => ['spor'],
+        'spor'        => true,
+        'tanitim'     => 'Günün spor gündemi: maçlar, kadro tercihleri, transferler ve kulüplerdeki gelişmeler, her gün tek yazıda.',
+        'uslup'       => 'Oyunu ve rakamları öne çıkaran sakin bir analiz. Maçı oyun planı, kadro tercihleri ve performans üzerinden '
+                       . 'değerlendirir; hiçbir kulübün tarafını tutmaz, hakemlere ve taraftarlara saygılıdır, kışkırtıcı dil kullanmaz. '
+                       . 'Kurum adına yazılır: birinci tekil şahıs yok.',
+        'portre'      => null,
     ],
-    'sevket-gurkan-cokyazar' => [
-        'ad'          => 'Şevket Gürkan Çokyazar',
+    'dunya' => [
+        'ad'          => 'Dünya Gündemi',
         'alan'        => 'Dünya ve dış politika',
         'kategoriler' => ['dunya'],
-        'tanitim'     => 'Uluslararası gelişmeleri tarihsel arka planı ve bölgesel dengeleriyle ele alıyor; Türkiye\'ye olası yansımalarını yazıyor.',
-        'uslup'       => 'Geniş perspektifli ve tarihsel bağlam kuran. Gelişmeyi bölgesel ve küresel dengeler içinde okur, '
-                       . 'Türkiye\'ye olası yansımalarını ayrıca tartışır; kesin hüküm yerine senaryolar sunar.',
-        'gorunum'     => 'a Turkish man in his mid forties, short black hair, thin metal-framed glasses, light stubble, wearing a dark grey blazer and beige shirt',
-        'portre'      => ['zemin' => '#2f5d50', 'ten' => '#c98f68', 'sac' => '#1e1e1e', 'sac_bicim' => 'kisa', 'giysi' => '#3b3f4a', 'gomlek' => '#e9e4d8', 'gozluk' => true, 'sakal' => false],
-    ],
-    'gamze-ilkmen-korukoylu' => [
-        'ad'          => 'Gamze İlkmen Koruköylü',
-        'alan'        => 'Toplum, sağlık ve eğitim',
-        'kategoriler' => ['gundem', 'saglik'],
-        'tanitim'     => 'Gündemin insana dokunan yüzünü yazıyor: sağlık, eğitim, aile, şehir hayatı ve vatandaşın günlük yaşamı.',
-        'uslup'       => 'İnsan odaklı, sıcak ama ölçülü. Gelişmeyi vatandaşın, ailelerin, öğrencilerin, hastaların gözünden anlatır; '
-                       . 'pratik sonuçlarını ve dikkat edilmesi gerekenleri açıkça söyler.',
-        'gorunum'     => 'a Turkish woman in her mid forties, shoulder-length chestnut brown hair, warm expression, wearing a navy blazer and cream blouse',
-        'portre'      => ['zemin' => '#8a5a9e', 'ten' => '#efc39f', 'sac' => '#6b3e26', 'sac_bicim' => 'uzun', 'giysi' => '#3d5a80', 'gomlek' => '#f5efe6', 'gozluk' => false, 'sakal' => false],
-    ],
-    'sirin-ebru-berrakgol' => [
-        'ad'          => 'Şirin Ebru Berrakgöl',
-        'alan'        => 'Kültür, sanat ve yaşam',
-        'kategoriler' => ['kultur-sanat', 'teknoloji'],
-        'tanitim'     => 'Kültür, sanat, teknoloji ve yaşamdaki yenilikleri; kitapları, sergileri ve gündelik hayatı değiştiren gelişmeleri yazıyor.',
-        'uslup'       => 'Akıcı, merak uyandıran ve zarif. Gelişmeyi kültürel bağlamı içinde anlatır, okuru düşünmeye davet eder; '
-                       . 'eleştiride bile kırıcı değildir.',
-        'gorunum'     => 'a Turkish woman in her mid thirties, dark brown hair in a loose bun, round tortoiseshell glasses, wearing a burgundy blouse',
-        'portre'      => ['zemin' => '#b5651d', 'ten' => '#f3cfae', 'sac' => '#2b1b14', 'sac_bicim' => 'topuz', 'giysi' => '#5b2a4a', 'gomlek' => '#f0d9c4', 'gozluk' => true, 'sakal' => false],
-    ],
-    'hasan-yavuz-osmanoglu' => [
-        'ad'          => 'Hasan Yavuz Osmanoğlu',
-        'alan'        => 'Futbol',
-        'kategoriler' => ['spor'],
-        'haric_kelimeler' => ['basketbol', 'euroleague', 'eurocup', 'nba', 'potada'],
-        'spor'        => true,
-        'tanitim'     => 'Günün maçlarını, ligi ve futbolun gündemini taktik ve teknik yönleriyle, hiçbir kulübün tarafını tutmadan yazıyor.',
-        'uslup'       => 'Tutkulu ama tarafsız. Maçı ve gelişmeyi taktik, kadro ve istatistik üzerinden çözümler; hiçbir kulübü, '
-                       . 'oyuncuyu ya da hakemi hedef göstermez, taraftar diliyle değil yorumcu diliyle yazar.',
-        'gorunum'     => 'a Turkish man in his early forties, short black hair, neatly trimmed full black beard, wearing a dark green crew-neck sweater',
-        'portre'      => ['zemin' => '#2d6a4f', 'ten' => '#b97a56', 'sac' => '#111111', 'sac_bicim' => 'kisa', 'giysi' => '#1b4332', 'gomlek' => '#e8f1ea', 'gozluk' => false, 'sakal' => true],
-    ],
-    /*
-     * SPOR YORUMCULARI (site sahibinin istegi, 25.10.2026: "spor
-     * sayfasinda da yorumcular yapalim; basketbol, futbol alanlarinda
-     * gunun maclari hakkinda yorum yapsinlar; Galatasaray, Fenerbahce,
-     * Besiktas, Trabzonspor'un haftalik maclarini, hepsinde birer kisi
-     * olusturalim; bunlari kose yazari olarak sunalim").
-     *
-     * Kulup yazarlari yalnizca basliginda ya da ozetinde kulubun adi
-     * gecen spor haberlerinden konu seciyor (anahtar_kelimeler); kulubun
-     * o gun haberi yoksa yazmiyor. Kulubu yakindan izleyen yorumcu, ama
-     * rakiplere, hakemlere ve taraftarlara saygili (kose yayin politikasi
-     * aynen gecerli). Adlar ve gorunumler uydurma; site sahibi
-     * degistirebilir.
-     */
-    'baris-can-yildirimer' => [
-        'ad'          => 'Barış Can Yıldırımer',
-        'alan'        => 'Basketbol',
-        'kategoriler' => ['spor'],
-        'anahtar_kelimeler' => ['basketbol', 'euroleague', 'eurocup', 'nba', 'potada', 'smaç', 'ribaund'],
-        'spor'        => true,
-        'tanitim'     => 'Basketbol Süper Ligi, EuroLeague ve milli takım: günün maçlarını oyun planı, rotasyon ve istatistikleriyle yorumluyor.',
-        'uslup'       => 'Dinamik ve analitik. Maçı periyot periyot, hücum ve savunma setleri, rotasyon ve istatistikler üzerinden '
-                       . 'anlatır; oyuncuları ve antrenörleri hedef göstermez, hakem kararlarını tartışırken ölçülüdür.',
-        'gorunum'     => 'a tall Turkish man in his late thirties, short dark brown hair, clean-shaven, wearing a navy quarter-zip sports pullover',
-        'portre'      => ['zemin' => '#c2571a', 'ten' => '#d9a47c', 'sac' => '#3b2a1f', 'sac_bicim' => 'kisa', 'giysi' => '#1f3354', 'gomlek' => '#e8edf4', 'gozluk' => false, 'sakal' => false],
-    ],
-    'cem-aslan-karakaya' => [
-        'ad'          => 'Cem Aslan Karakaya',
-        'alan'        => 'Galatasaray',
-        'kategoriler' => ['spor'],
-        'anahtar_kelimeler' => ['galatasaray', 'cimbom'],
-        'spor'        => true,
-        'tanitim'     => 'Galatasaray\'ın maçlarını, kadrosunu ve haftalık gündemini yakından izliyor.',
-        'uslup'       => 'Galatasaray\'ı yakından izleyen bir yorumcu. Maçı takımın oyun planı, kadro tercihleri ve performans '
-                       . 'üzerinden değerlendirir; rakip kulüplere, hakemlere ve taraftarlara saygılıdır, kışkırtıcı taraftar dili kullanmaz.',
-        'gorunum'     => 'a Turkish man in his mid forties, short wavy dark hair with grey at the temples, light stubble, wearing a dark red knit sweater',
-        'portre'      => ['zemin' => '#a90432', 'ten' => '#d8a07a', 'sac' => '#2a221d', 'sac_bicim' => 'kisa', 'giysi' => '#5c0b1e', 'gomlek' => '#f2c94c', 'gozluk' => false, 'sakal' => true],
-    ],
-    'murat-kaan-sarigul' => [
-        'ad'          => 'Murat Kaan Sarıgül',
-        'alan'        => 'Fenerbahçe',
-        'kategoriler' => ['spor'],
-        'anahtar_kelimeler' => ['fenerbahçe', 'fenerbahce', 'kanarya'],
-        'spor'        => true,
-        'tanitim'     => 'Fenerbahçe\'nin maçlarını, kadrosunu ve haftalık gündemini yakından izliyor.',
-        'uslup'       => 'Fenerbahçe\'yi yakından izleyen bir yorumcu. Maçı takımın oyun planı, kadro tercihleri ve performans '
-                       . 'üzerinden değerlendirir; rakip kulüplere, hakemlere ve taraftarlara saygılıdır, kışkırtıcı taraftar dili kullanmaz.',
-        'gorunum'     => 'a Turkish man in his early fifties, short neatly combed black hair, rectangular dark-framed glasses, clean-shaven, wearing a navy blazer and white shirt',
-        'portre'      => ['zemin' => '#0b2a5b', 'ten' => '#e2b08a', 'sac' => '#1e1e1e', 'sac_bicim' => 'yan', 'giysi' => '#13204a', 'gomlek' => '#f5d000', 'gozluk' => true, 'sakal' => false],
-    ],
-    'kartal-emre-aksoy' => [
-        'ad'          => 'Kartal Emre Aksoy',
-        'alan'        => 'Beşiktaş',
-        'kategoriler' => ['spor'],
-        'anahtar_kelimeler' => ['beşiktaş', 'besiktas', 'kara kartal'],
-        'spor'        => true,
-        'tanitim'     => 'Beşiktaş\'ın maçlarını, kadrosunu ve haftalık gündemini yakından izliyor.',
-        'uslup'       => 'Beşiktaş\'ı yakından izleyen bir yorumcu. Maçı takımın oyun planı, kadro tercihleri ve performans '
-                       . 'üzerinden değerlendirir; rakip kulüplere, hakemlere ve taraftarlara saygılıdır, kışkırtıcı taraftar dili kullanmaz.',
-        'gorunum'     => 'a Turkish man in his late forties, short salt-and-pepper hair, short trimmed beard, wearing a black jacket over a white t-shirt',
-        'portre'      => ['zemin' => '#1c1c1c', 'ten' => '#cf9a74', 'sac' => '#6e6e6e', 'sac_bicim' => 'kisa', 'giysi' => '#111111', 'gomlek' => '#f4f4f4', 'gozluk' => false, 'sakal' => true],
-    ],
-    'hakan-omer-karadenizli' => [
-        'ad'          => 'Hakan Ömer Karadenizli',
-        'alan'        => 'Trabzonspor',
-        'kategoriler' => ['spor'],
-        'anahtar_kelimeler' => ['trabzonspor', 'bordo-mavi', 'bordo mavi'],
-        'spor'        => true,
-        'tanitim'     => 'Trabzonspor\'un maçlarını, kadrosunu ve haftalık gündemini yakından izliyor.',
-        'uslup'       => 'Trabzonspor\'u yakından izleyen bir yorumcu. Maçı takımın oyun planı, kadro tercihleri ve performans '
-                       . 'üzerinden değerlendirir; rakip kulüplere, hakemlere ve taraftarlara saygılıdır, kışkırtıcı taraftar dili kullanmaz.',
-        'gorunum'     => 'a Turkish man in his early forties, short black hair, thick dark moustache and short beard, wearing a burgundy crew-neck sweater',
-        'portre'      => ['zemin' => '#6d1a36', 'ten' => '#c98f68', 'sac' => '#151515', 'sac_bicim' => 'kisa', 'giysi' => '#5a1630', 'gomlek' => '#8ecae6', 'gozluk' => false, 'sakal' => true],
+        'tanitim'     => 'Dünyadaki günün en önemli gelişmesi: arka planı, bölgesel dengeler ve Türkiye\'ye olası yansımaları, her gün tek yazıda.',
+        'uslup'       => 'Geniş perspektifli ve bağlam kuran bir analiz. Gelişmeyi bölgesel ve küresel dengeler içinde okur, '
+                       . 'Türkiye\'ye olası yansımalarını ayrıca tartışır; kesin hüküm yerine senaryolar sunar. Taraf tutmaz. '
+                       . 'Kurum adına yazılır: birinci tekil şahıs yok.',
+        'portre'      => null,
     ],
     'valentra' => [
-        'ad'          => 'Valentra Yorumu',
-        'alan'        => 'Günün en önemli konusu',
+        'ad'          => 'Valentra Analiz',
+        'alan'        => 'Arşiv',
         'kategoriler' => [],
-        'tanitim'     => 'Valentra yayın kurulunun günün en önemli konusuna dair değerlendirmesi.',
+        'arsiv'       => true,
+        'tanitim'     => 'Valentra\'nın gündem, politika, toplum ve kültür üzerine daha önce yayımlanmış değerlendirmeleri.',
         'uslup'       => 'Kurumsal, sakin ve çözümleyici: ne oldu, neden önemli, arka planı ne, bundan sonra ne olabilir.',
         'portre'      => null,
     ],
 ];
+
+/**
+ * Kaldırılan yazar karakterleri => yazılarının bağlandığı masa.
+ * Eski yazılar silinmiyor; adresleri ve içerikleri aynı, imza masanın adı.
+ */
+const KOSE_ESKI_YAZARLAR = [
+    'ahmet-sami-gumus'       => 'ekonomi',
+    'sevket-gurkan-cokyazar' => 'dunya',
+    'hasan-yavuz-osmanoglu'  => 'spor',
+    'baris-can-yildirimer'   => 'spor',
+    'cem-aslan-karakaya'     => 'spor',
+    'murat-kaan-sarigul'     => 'spor',
+    'kartal-emre-aksoy'      => 'spor',
+    'hakan-omer-karadenizli' => 'spor',
+    'tekin-alp-sagduyulu'    => 'valentra',
+    'gamze-ilkmen-korukoylu' => 'valentra',
+    'sirin-ebru-berrakgol'   => 'valentra',
+];
+
+/** Kayıttaki "yazar" değerinin bugünkü masa anahtarı (bilinmiyorsa varsayılan). */
+function yazar_anahtar_coz(string $anahtar): string
+{
+    $anahtar = KOSE_ESKI_YAZARLAR[$anahtar] ?? $anahtar;
+
+    return isset(KOSE_YAZARLARI[$anahtar]) ? $anahtar : KOSE_VARSAYILAN_YAZAR;
+}
+
+/**
+ * Masanın veritabanındaki "yazar" değerleri: kendi anahtarı ve ona
+ * bağlanan eski yazar anahtarları.
+ *
+ * @return list<string>
+ */
+function yazar_kayit_anahtarlari(string $anahtar): array
+{
+    return array_merge([$anahtar], array_keys(KOSE_ESKI_YAZARLAR, $anahtar, true));
+}
 
 /** Yazar fotoğraflarının klasörü (site kökünden). */
 const YAZAR_FOTO_YOLU = '/gorseller/yazar';
@@ -269,7 +199,7 @@ function yazar_bul(string $anahtar): ?array
 /** Yazının yazarı; bilinmiyorsa Valentra Yorumu. */
 function yazar_yazinin(array $yazi): array
 {
-    return yazar_bul((string) ($yazi['yazar'] ?? '')) ?? yazar_bul(KOSE_VARSAYILAN_YAZAR);
+    return yazar_bul(yazar_anahtar_coz((string) ($yazi['yazar'] ?? '')));
 }
 
 function yazar_yolu(string $anahtar, int $sayfa = 1): string

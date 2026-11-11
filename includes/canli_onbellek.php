@@ -229,6 +229,28 @@ function canli_esz_kip(?bool $ac = null): bool
     return $acik;
 }
 
+/** Yanıt gönderildikten sonraki tazeleme mi (argümanla açılır)? */
+function canli_arkada(?bool $ac = null): bool
+{
+    static $acik = false;
+
+    if ($ac !== null) {
+        $acik = $ac;
+    }
+
+    return $acik;
+}
+
+/**
+ * Ziyaretçi yanıtı bekliyor mu? Zorla tazelemede (ajan), yanıttan sonraki
+ * tazelemede ve sayfa önbelleğinin arkada ürettiği kopyada beklemiyor.
+ */
+function canli_ziyaretci_bekliyor(): bool
+{
+    return PHP_SAPI !== 'cli' && !canli_zorla() && !canli_arkada()
+        && !(function_exists('sayfa_onbellek_arkada_mi') && sayfa_onbellek_arkada_mi());
+}
+
 /** İlk açılış bütçesinden kalan saniye. */
 function canli_butce_kalan(): float
 {
@@ -263,6 +285,7 @@ function canli_sonra_tazele(string $anahtar, callable $uret): void
 
             ignore_user_abort(true);
             @set_time_limit(60);
+            canli_arkada(true);
 
             foreach ($liste as [$ad, $is]) {
                 canli_onbellek_uret($ad, $is);
@@ -304,8 +327,22 @@ function canli_coklu_indir(array $adresler, int $zamanAsimi = 8): array
 {
     require_once __DIR__ . '/http_ortak.php';
 
-    if (canli_esz_kip()) {
-        $zamanAsimi = max(1, min($zamanAsimi, (int) ceil(max(0.0, canli_butce_kalan()))));
+    /*
+     * Ziyaretci beklerken (yanit henuz gitmedi) toplu indirme de kalan
+     * butceyle sinirli (11.11.2026, tam denetim: /sirket/DOHOL 16,7 sn).
+     * Sirket sayfasi hic verisi olmayan serileri burada indiriyor
+     * (includes/sirket.php); 8 sn'lik zaman asimi butceye bakmiyordu.
+     * Butce bittiyse hic indirilmiyor: o seriler o ziyarette bos, sonraki
+     * denemede yeniden. Arkada calisan tazelemede sinir yok.
+     */
+    if (canli_ziyaretci_bekliyor()) {
+        $kalan = canli_butce_kalan();
+
+        if ($kalan < 0.5) {
+            return array_fill_keys(array_keys($adresler), null);
+        }
+
+        $zamanAsimi = max(1, min($zamanAsimi, (int) ceil($kalan)));
     }
 
     $coklu   = curl_multi_init();

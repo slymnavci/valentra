@@ -52,7 +52,6 @@ on:
           - kanun-testi
           - ag-tanisi
           - canli
-          - yazar-portre
           - topluluk
           - baslik-denetim
           - gorsel-denetim
@@ -421,19 +420,6 @@ jobs:
       #
       # Haber toplama ve kose yazisi (10.11.2026): once Claude Haiku 5.5,
       # sonra GPT-6 Luna; Gemini ikisinde de kapali.
-      # Kose yazarlarinin fotograflari (23.10.2026, site sahibinin karari):
-      # fotografi olmayan yazar icin bir kez uretilip siteye yukleniyor;
-      # hepsi varsa hemen biter (bkz. ajan/portre.php).
-      - name: Yazar fotograflari
-        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'yazar-portre' || inputs.mod == 'kose-yazisi') }}
-        working-directory: ajan
-        env:
-          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_GORSEL_MODEL: ${{ secrets.GEMINI_GORSEL_MODEL }}
-          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
-          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
-        run: php portre.php
-
       # Sure (26.10.2026): adim bir kez 44 dakika surup butun isi 45
       # dakikalik sinira takip iptal ettirdi. kose.php 18 dakikalik butceyle
       # calisiyor (--sure) ve yazilari yazdikca gonderiyor; buradaki sinir

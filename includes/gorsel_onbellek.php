@@ -553,7 +553,9 @@ function haber_gorsel_kopya_uret(string $url, string $asilYol, int $genislik): s
     $webp   = function_exists('imagewebp');
     $yol    = $taban . ($webp ? '.webp' : '.jpg');
     $gecici = $yol . '.' . bin2hex(random_bytes(4)) . '.tmp';
-    $tamam  = $webp ? @imagewebp($hedef, $gecici, 72) : @imagejpeg($hedef, $gecici, 78);
+    // Kalite 72/78'den 82/85'e (11.11.2026, site sahibi: "resimler bulanik"):
+    // 72'de yuz ve yazi kenarlari yumusuyordu; dosya ~%25 buyuyor.
+    $tamam  = $webp ? @imagewebp($hedef, $gecici, 82) : @imagejpeg($hedef, $gecici, 85);
     imagedestroy($hedef);
 
     if (!$tamam || !@rename($gecici, $yol)) {

@@ -1883,26 +1883,30 @@ foreach ($gruplar as $grupNo => $grup) {
             continue;
         }
 
-        // Gorsel once beslemeden, yoksa haber sayfasinin og:image'inden.
-        // Besleme gorseli daha guvenilir: siteyi yazan kisi haberin
-        // gorselini oraya koyuyor, og:image bazen genel site kapagi.
-        $gorsel = ($aday['girdi']['gorsel'] ?? '') !== ''
-            ? (string) $aday['girdi']['gorsel']
-            : (string) $okunan['gorsel'];
+        /*
+         * Gorsel once haber sayfasinin og:image'inden, yoksa beslemeden
+         * (11.11.2026, site sahibi: "resimler bulanik"). Onceden tersiydi;
+         * besleme gorseli cogu kaynakta kucuk bir onizleme (300-480 piksel)
+         * ve mansette buyutulunce bulaniklasiyordu; og:image haberin buyuk
+         * boy fotografi. og:image genel site kapagi/logosu gibi duruyorsa
+         * (adresinde logo, default, placeholder...) besleme gorseli.
+         */
+        $sayfaGorseli   = (string) $okunan['gorsel'];
+        $beslemeGorseli = (string) ($aday['girdi']['gorsel'] ?? '');
+        $genelKapak     = preg_match('~logo|default|placeholder|no[-_]?image|og[-_]?image|share[-_]?image|favicon|/static/img/~i',
+                                     (string) parse_url($sayfaGorseli, PHP_URL_PATH)) === 1;
+        $gorsel = $sayfaGorseli !== '' && !($genelKapak && $beslemeGorseli !== '') ? $sayfaGorseli : $beslemeGorseli;
 
+        /*
+         * Gorselsiz haber artik ELENMIYOR (11.11.2026, site sahibi: "haber
+         * fotografi yoksa konu okunsun, konuya gore bir resim secilip
+         * eklensin"). Haber gorselsiz yaziliyor; hemen ardindan calisan
+         * gorsel adimi (gorsel_denetle.php) haberin metninden konuya uygun,
+         * ozgur lisansli bir fotograf ariyor. Bulunana kadar (ya da
+         * bulunamazsa) sitede konu gorseli gorunuyor.
+         */
         if ($gorsel === '') {
             $gorselsiz++;
-            video_kaydet($aday['girdi'], $aday['kaynak'], 'görsel yok — kapak resmi bulunamadı');
-
-            // Sayfa okunduysa ve gorsel yine yoksa bir sonraki calismada
-            // da olmayacak: eleme hafizasina yaziliyor ki kontenjani her
-            // calismada yeniden yemesin. Sayfa OKUNAMADIYSA yazilmiyor;
-            // gecici bir hata olabilir.
-            if (trim((string) $okunan['metin']) !== '') {
-                $elenenler[url_parmak($aday['girdi']['baglanti'])] = time();
-            }
-
-            continue;
         }
 
         $tutulan[]   = $aday;
@@ -2165,7 +2169,7 @@ if ($ekKaynakliAday > 0) {
 }
 
 if ($gorselsiz > 0) {
-    gunluk($gorselsiz . ' aday görseli olmadığı için alınmadı (görselsiz haber yayımlanmıyor).');
+    gunluk($gorselsiz . ' adayın kapak resmi yok; haber yazılırsa görsel adımı konuya uygun fotoğraf arayacak.');
 }
 
 if ($tarihsizElenen > 0) {

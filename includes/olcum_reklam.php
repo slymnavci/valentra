@@ -73,6 +73,20 @@ function olcum_head_html(): string
      * birikenleri isliyor, olcum ve reklam kaybolmuyor. Okur daha once
      * dokunur ya da kaydirirsa hemen yukleniyor.
      */
+    /*
+     * Reklam betigi daha da gec (11.11.2026, site sahibi: "sayfa acma
+     * performansini cok iyi hale getir"). 08.11'deki 1,5 sn'lik erteleme
+     * ilk icerigi hizlandirdi ama toplam engellemeyi 226 ms'den ~600 ms'ye
+     * cikardi: adsbygoogle.js'in uzun isleri tam okurun sayfayi okumaya
+     * basladigi ana kaydi. Yerel olcumde sitenin kendi kodunun engellemesi
+     * 0 ms; ~600 ms'nin tamami ucuncu taraf betikleri.
+     *   - Olcum (gtag.js, hafif): eskisi gibi yuklemeden 1,5 sn sonra;
+     *     sayfa goruntulemeleri sayilmaya devam ediyor.
+     *   - Reklam (adsbygoogle.js, agir): okur dokununca/kaydirinca ya da
+     *     yuklemeden 8 sn sonra. Bedeli: sayfaya hic dokunmadan 8 sn icinde
+     *     cikan okura reklam gosterilmez.
+     * "gec": 1 olan betik bu ikinci gruba girer.
+     */
     $betikler = [];
 
     if ($ga !== '') {
@@ -81,14 +95,15 @@ function olcum_head_html(): string
     }
 
     if ($ad !== '') {
-        $betikler[] = ['src' => 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' . rawurlencode($ad), 'co' => 1];
+        $betikler[] = ['src' => 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' . rawurlencode($ad), 'co' => 1, 'gec' => 1];
     }
 
-    $html .= '<script>(function(){var b=' . json_encode($betikler, JSON_UNESCAPED_SLASHES) . ',y=false;'
-        . 'function yukle(){if(y){return;}y=true;b.forEach(function(x){var s=document.createElement("script");s.async=true;s.src=x.src;if(x.co){s.crossOrigin="anonymous";}document.head.appendChild(s);});}'
-        . 'function sonra(){setTimeout(function(){if(window.requestIdleCallback){requestIdleCallback(yukle,{timeout:3000});}else{yukle();}},1500);}'
+    $html .= '<script>(function(){var b=' . json_encode($betikler, JSON_UNESCAPED_SLASHES) . ',y={};'
+        . 'function yukle(g){if(y[g]){return;}y[g]=true;b.forEach(function(x){if((x.gec?1:0)!==g){return;}var s=document.createElement("script");s.async=true;s.src=x.src;if(x.co){s.crossOrigin="anonymous";}document.head.appendChild(s);});}'
+        . 'function bosta(g,ms){setTimeout(function(){if(window.requestIdleCallback){requestIdleCallback(function(){yukle(g);},{timeout:3000});}else{yukle(g);}},ms);}'
+        . 'function sonra(){bosta(0,1500);bosta(1,8000);}'
         . 'if(document.readyState==="complete"){sonra();}else{addEventListener("load",sonra);}'
-        . '["pointerdown","keydown","scroll","touchstart"].forEach(function(o){addEventListener(o,yukle,{once:true,passive:true});});'
+        . '["pointerdown","keydown","scroll","touchstart"].forEach(function(o){addEventListener(o,function(){yukle(0);yukle(1);},{once:true,passive:true});});'
         . "})();</script>\n";
 
     return $html;

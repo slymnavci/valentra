@@ -110,7 +110,7 @@ if ($yontem === 'GET') {
 
     // Once ana sayfadakiler: ana sayfa (one_cikan, yayin_tarihi) sirasinda.
     $ifade = db()->prepare(
-        "SELECT h.id, h.baslik, h.ozet, h.gorsel_url, h.durum, h.kaynak_adi, k.slug AS kategori
+        "SELECT h.id, h.baslik, h.ozet, LEFT(h.icerik, 1200) AS metin, h.gorsel_url, h.durum, h.kaynak_adi, k.slug AS kategori
            FROM haberler h
            LEFT JOIN kategoriler k ON k.id = h.kategori_id
           WHERE h.gorsel_denetim IS NULL
@@ -157,6 +157,9 @@ if ($yontem === 'GET') {
                 'id'       => (int) $s['id'],
                 'baslik'   => (string) $s['baslik'],
                 'ozet'     => mb_substr((string) $s['ozet'], 0, 300, 'UTF-8'),
+                // Haberin konusu (11.11.2026, site sahibi: "sadece basliga gore degil
+                // konuya gore resim secilsin"): arama sozcukleri metinden cikiyor.
+                'metin'    => mb_substr((string) ($s['metin'] ?? ''), 0, 900, 'UTF-8'),
                 'kategori' => (string) ($s['kategori'] ?? ''),
                 'gorsel'   => $konuGorseli ? '' : $url,
                 'yedek'    => '',
@@ -170,6 +173,7 @@ if ($yontem === 'GET') {
             'id'       => (int) $s['id'],
             'baslik'   => (string) $s['baslik'],
             'ozet'     => mb_substr((string) $s['ozet'], 0, 300, 'UTF-8'),
+            'metin'    => mb_substr((string) ($s['metin'] ?? ''), 0, 900, 'UTF-8'),
             'kategori' => (string) ($s['kategori'] ?? ''),
             'gorsel'   => $url,
             // Kaynak gorseli vermezse sitenin onbellekteki kopyasi.

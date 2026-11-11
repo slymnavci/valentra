@@ -17,7 +17,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/yazarlar.php';
 
 /** Bir günün en fazla kaç yazısı olabilir: her yazara bir yazı. */
-const KOSE_GUNLUK_TAVAN = 12;   // 7 genel + 5 spor yorumcusu (25.10.2026)
+const KOSE_GUNLUK_TAVAN = 3;   // ekonomi, spor, dunya: gunde birer analiz (11.11.2026; onceden 12 yazar)
 
 /** Yazının asgari uzunluğu (karakter). Kısa bir yazı köşe yazısı değildir. */
 const KOSE_ASGARI_METIN = 800;
@@ -49,7 +49,8 @@ function kose_taslak_ekle(array $veri): array
     }
 
     $idler = kose_id_listesi($veri['haber_idleri'] ?? []);
-    $yazar = yazar_bul((string) ($veri['yazar'] ?? '')) !== null ? (string) $veri['yazar'] : KOSE_VARSAYILAN_YAZAR;
+    // Eski yazar anahtariyla gelen (bekletilmis) yazi masasina baglanir.
+    $yazar = yazar_anahtar_coz((string) ($veri['yazar'] ?? ''));
 
     // Her yazara gunde bir yazi (reddedilen sayilmaz).
     $gunun = db()->prepare(
@@ -593,8 +594,17 @@ function kose_yazarlarin_son_yazilari(): array
  */
 function kose_yazarin_yazilari(string $anahtar, int $sayfa = 1, int $adet = 12): array
 {
-    $kosul = 'durum = :d AND yazar = :y';
-    $param = ['d' => HABER_YAYINDA, 'y' => $anahtar];
+    // Masanin kendi yazilari ve ona baglanan eski yazarlarin yazilari.
+    $anahtarlar = yazar_kayit_anahtarlari($anahtar);
+    $yer   = [];
+    $param = ['d' => HABER_YAYINDA];
+
+    foreach ($anahtarlar as $i => $a) {
+        $yer[] = ':y' . $i;
+        $param['y' . $i] = $a;
+    }
+
+    $kosul = 'durum = :d AND yazar IN (' . implode(', ', $yer) . ')';
 
     $say = db()->prepare('SELECT COUNT(*) FROM kose_yazilari WHERE ' . $kosul);
     $say->execute($param);
@@ -619,11 +629,20 @@ function kose_yazarlar_ajan_icin(?string $gun = null): array
 {
     $ifade = db()->prepare('SELECT DISTINCT yazar FROM kose_yazilari WHERE gun = :g AND durum <> :r');
     $ifade->execute(['g' => $gun ?? date('Y-m-d'), 'r' => HABER_REDDEDILDI]);
-    $yazanlar = array_flip($ifade->fetchAll(PDO::FETCH_COLUMN));
+    // Eski yazar anahtariyla yazilmis bugunku yazi da masanin yazisi sayilir.
+    $yazanlar = array_flip(array_map(
+        static fn ($a): string => yazar_anahtar_coz((string) $a),
+        $ifade->fetchAll(PDO::FETCH_COLUMN)
+    ));
 
     $sonuc = [];
 
     foreach (KOSE_YAZARLARI as $anahtar => $y) {
+        // Arsiv masasina yeni yazi yazilmiyor.
+        if (!empty($y['arsiv'])) {
+            continue;
+        }
+
         $sonuc[] = [
             'anahtar'     => $anahtar,
             'ad'          => $y['ad'],

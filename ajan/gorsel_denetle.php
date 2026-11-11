@@ -141,6 +141,8 @@ function yedek_bul(GorselDenetci $denetci, array $haber, array $sorgular, int $b
         $adaylar = array_values(array_filter(
             $denetci->ara($sorgu, PARTI * 2),
             static fn (array $a): bool => !isset($kullanilan[$a['url']])
+                // Kartpostal, harita, grafik, logo, eski tarihli tarama aday degil (11.11.2026).
+                && !GorselDenetci::fotografDisi(str_replace(['_', '-', '.'], ' ', rawurldecode(basename($a['url'])) . ' ' . $a['ad']))
                 && preg_match(HABER_KURULUSU_DESENI, str_replace(['_', '-', '.'], ' ',
                     rawurldecode($a['url']) . ' ' . $a['ad']) . ' ' . $a['atif']) !== 1
         ));
@@ -173,8 +175,12 @@ function yedek_bul(GorselDenetci $denetci, array $haber, array $sorgular, int $b
         $sira   = [];
 
         foreach ($adaylar as $i => $a) {
-            if ($resimler[$i] !== null) {
-                $ogeler[] = ['resim' => $resimler[$i], 'baslik' => $haber['baslik'], 'ad' => $a['ad']];
+            // Indirilen dosyanin gercek boyutu da yeterli olmali (arsiv boyutu
+            // bildirmediyse ilk kez burada goruluyor): kucuk gorsel mansette bulanik.
+            if ($resimler[$i] !== null
+                && GorselDenetci::boyutUygun((int) $resimler[$i]['genislik'], (int) $resimler[$i]['yukseklik'])) {
+                $ogeler[] = ['resim' => $resimler[$i], 'baslik' => $haber['baslik'], 'ad' => $a['ad'],
+                             'ozet' => mb_substr((string) ($haber['ozet'] ?? ''), 0, 300, 'UTF-8')];
                 $sira[]   = $a;
             }
         }
@@ -211,7 +217,7 @@ foreach (array_chunk($arananlar, PARTI) as $parti) {
     }
 
     $sorgular = $denetci->sorgular(array_map(
-        static fn (array $h): array => ['baslik' => (string) $h['baslik'], 'ozet' => (string) $h['ozet']],
+        static fn (array $h): array => ['baslik' => (string) $h['baslik'], 'ozet' => (string) $h['ozet'], 'metin' => (string) ($h['metin'] ?? '')],
         $parti
     ));
     $sonuclar = [];
@@ -307,7 +313,7 @@ foreach (array_chunk($haberler, PARTI) as $parti) {
 
     if ($logolu !== []) {
         $sorgular = $denetci->sorgular(array_map(
-            static fn (array $h): array => ['baslik' => (string) $h['baslik'], 'ozet' => (string) $h['ozet']],
+            static fn (array $h): array => ['baslik' => (string) $h['baslik'], 'ozet' => (string) $h['ozet'], 'metin' => (string) ($h['metin'] ?? '')],
             $logolu
         ));
 
