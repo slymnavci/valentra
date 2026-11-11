@@ -405,7 +405,7 @@ final class KoseYazari
             return '';
         }
 
-        $blok = "KÖŞE YAZARI: {$kalem['ad']}
+        $blok = "ANALİZ BÖLÜMÜ: {$kalem['ad']}
 "
               . 'Alanı: ' . ($kalem['alan'] ?? '-') . "
 "
@@ -418,8 +418,8 @@ final class KoseYazari
               . "Dünya gündemi kuralı bu seçimde geçerli değil; çeşitlilik kuralı da (tek konu).
 
 "
-            : "Yazıyı bu yazarın kaleminden, yukarıdaki üslupla yaz. Yazıda yazarın adını ya da kendini tanıtan bir cümle kullanma; "
-              . "birinci tekil şahıs ölçülü kullanılabilir (\"bence\" yerine \"değerlendirmeme göre\"). Yayın politikası ve "
+            : "Yazıyı yukarıdaki üslupla yaz. Yazı kişi imzasıyla değil Valentra adına yayımlanan bir analizdir (11.11.2026): "
+              . "birinci tekil şahıs (\"bence\", \"değerlendirmeme göre\") ve kendini tanıtan cümle kullanma. Yayın politikası ve "
               . "UYDURMA kuralı aynen geçerli.
 
 ";

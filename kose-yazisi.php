@@ -66,13 +66,13 @@ require __DIR__ . '/includes/sayfa_ust.php';
 <div class="ana-kolon">
 
 <article class="detay kose-detay">
-    <a class="kose-ust-etiket" href="<?= e(kose_liste_yolu()) ?>">Valentra Diyor ki…</a>
+    <a class="kose-ust-etiket" href="<?= e(kose_liste_yolu()) ?>">Valentra Analiz</a>
 
     <h1><?= e((string) $yazi['baslik']) ?></h1>
 
     <div class="kunye kose-kunye">
-        <a class="kose-yazar" href="<?= e(yazar_yolu($yazar['anahtar'])) ?>">
-            <?= yazar_portre_svg($yazar['anahtar'], 44) ?>
+        <?php /* Kisi ve portre yok (11.11.2026): imza analiz masasi. */ ?>
+        <a class="kose-yazar kose-masa" href="<?= e(yazar_yolu($yazar['anahtar'])) ?>">
             <span>
                 <span class="hazirlayan"><?= e($yazar['ad']) ?></span>
                 <span class="yazar-alan"><?= e($yazar['alan']) ?></span>
@@ -140,7 +140,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
 <?php if ($yazarinDigerleri !== []): ?>
     <div class="bolum-basligi">
-        <h2><?= e($yazar['ad']) ?> — diğer yazıları</h2>
+        <h2><?= e($yazar['ad']) ?> — önceki yazılar</h2>
         <span class="cizgi"></span>
     </div>
 

@@ -89,10 +89,10 @@ require __DIR__ . '/includes/sayfa_ust.php';
                     bağlantı bulunur. Ayrıntı için okurlarımızı kaynağa yönlendiririz.</li>
             </ol>
 
-            <h2>Köşe yazıları</h2>
-            <p>"Valentra Diyor ki" bölümündeki köşe yazıları, günün haberlerinden yapay zekâ desteğiyle
-                hazırlanır. Yazar adları Valentra'nın yapay zekâ destekli yazar karakterleridir; bu durum
-                her yazının altında ve yazar sayfalarında belirtilir.</p>
+            <h2>Analiz yazıları</h2>
+            <p>"Valentra Analiz" bölümünde her gün ekonomi, spor ve dünya gündemi için birer analiz
+                yayımlanır. Yazılar günün haberlerinden yapay zekâ desteğiyle hazırlanır ve kişi adıyla
+                değil Valentra imzasıyla yayımlanır; bu durum her yazının altında belirtilir.</p>
 
             <h2>Veriler</h2>
             <p>Piyasa verileri Yahoo Finance ve İş Yatırım'dan, Süper Lig puan durumu ve fikstürü TFF'den,
@@ -115,7 +115,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
                 Taraflar eşit mesafeyle aktarılır; haber metinlerinde yorum ve övgü/yergi yer almaz.</p>
 
             <h2 id="yapay-zeka">3. Yapay zekâ kullanımı</h2>
-            <p>Valentra'da haber özetleri ve köşe yazıları yapay zekâ desteğiyle hazırlanır.
+            <p>Valentra'da haber özetleri ve analiz yazıları yapay zekâ desteğiyle hazırlanır.
                 <?= $otomatik
                     ? 'İçerik, editörlerin belirlediği kurallara göre yayına alınır ve yayından sonra denetlenir.'
                     : 'Haber özetleri yayına alınmadan önce editör onayından geçer.' ?>

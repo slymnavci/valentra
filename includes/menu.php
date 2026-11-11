@@ -53,7 +53,7 @@ function site_menusu(): array
 
     // Kose yazilari: gunun en onemli konularinin yorumu (yapay zeka ile
     // yaziliyor, onaydan geciyor). Haber basliklarinin sonunda.
-    $menu[] = ['ad' => 'Köşe Yazıları', 'anahtar' => 'kose', 'href' => kose_liste_yolu(), 'altlar' => []];
+    $menu[] = ['ad' => 'Analiz', 'anahtar' => 'kose', 'href' => kose_liste_yolu(), 'altlar' => []];
 
     // Video haberler (30.10.2026): videosu olan haberler bir arada.
     $menu[] = ['ad' => 'Video', 'anahtar' => 'video', 'href' => video_yolu(), 'altlar' => []];

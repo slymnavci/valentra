@@ -15,7 +15,16 @@ require_once __DIR__ . '/includes/seo.php';
 
 const YAZAR_SAYFA_ADET = 12;
 
-$yazar = yazar_bul((string) ($_GET['y'] ?? ''));
+// Kaldirilan yazar karakterlerinin adresi (11.11.2026) yazilarinin baglandigi
+// analiz masasina kalici yonleniyor (bkz. KOSE_ESKI_YAZARLAR).
+$istenen = (string) ($_GET['y'] ?? '');
+
+if (isset(KOSE_ESKI_YAZARLAR[$istenen])) {
+    header('Location: ' . yazar_yolu(KOSE_ESKI_YAZARLAR[$istenen]), true, 301);
+    exit;
+}
+
+$yazar = yazar_bul($istenen);
 
 if ($yazar === null) {
     http_response_code(404);
@@ -34,7 +43,7 @@ $sonSayfa = max(1, (int) ceil($sonuc['toplam'] / YAZAR_SAYFA_ADET));
 $gorseller = kose_gorselleri($yazilar);
 
 $aktifKategori = 'kose';
-$sayfaBasligi  = $yazar['ad'] . ' — Yazıları' . ($sayfa > 1 ? ' — Sayfa ' . $sayfa : '') . ' | Valentra';
+$sayfaBasligi  = $yazar['ad'] . ' — Günlük analiz yazıları' . ($sayfa > 1 ? ' — Sayfa ' . $sayfa : '') . ' | Valentra';
 $sayfaAciklama = $yazar['ad'] . ': ' . $yazar['tanitim'];
 $seoAdres      = site_adresi() . yazar_yolu($yazar['anahtar'], $sayfa);
 
@@ -47,15 +56,12 @@ require __DIR__ . '/includes/sayfa_ust.php';
 ?>
 
 <div class="kategori-basligi yazar-basligi">
-    <?= yazar_portre_svg($yazar['anahtar'], 96) ?>
     <div>
         <h1><?= e($yazar['ad']) ?></h1>
         <p class="yazar-alan"><?= e($yazar['alan']) ?></p>
         <p><?= e($yazar['tanitim']) ?></p>
         <?php // Site sahibinin karari (23.10.2026): not yalnizca yazar sayfasinda, tek satir. ?>
-        <?php if (($yazar['gorunum'] ?? '') !== ''): ?>
-            <p class="yazar-not">Valentra'nın yapay zeka destekli yazar karakteridir.</p>
-        <?php endif; ?>
+        <p class="yazar-not">Bu bölümdeki yazılar günün haberlerinden yapay zekâ desteğiyle hazırlanır.</p>
     </div>
 </div>
 
