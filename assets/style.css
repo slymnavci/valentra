@@ -90,7 +90,17 @@ body {
     /* Satir araligi da acildi: uzun mevzuat metinlerinde satir takibi
        kolaylasiyor. */
     line-height: 1.62;
-    -webkit-font-smoothing: antialiased;
+    /*
+     * Net yazi (11.11.2026, site sahibi: "yazilar net ve okunur olsun").
+     * "-webkit-font-smoothing: antialiased" Mac'te harfleri inceltip
+     * soluklastiriyordu; isletim sisteminin varsayilan cizimi daha dolgun
+     * ve keskin. Harf araligi (kerning) ve bitisik harfler acik.
+     */
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+    font-variant-ligatures: common-ligatures;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -845,9 +855,20 @@ summary.cekmece-oge::after {
  * (govde 16px). Haber ve kose yazisi ayni kurali kullaniyor.
  */
 .detay .icerik {
-    font-size: clamp(1.0625rem, .95rem + .45vw, 1.125rem);
+    font-size: clamp(1.0625rem, .95rem + .45vw, 1.1875rem);
     line-height: 1.75;
 }
+
+/*
+ * Satir uzunlugu (11.11.2026, site sahibi: "yazilar cok yayvan duruyor,
+ * saga sola dagilmis"). Genis ekranda metin 814 pikseldi, satir basina 99
+ * karakter: goz satir sonundan sonraki satirin basina donerken yolu
+ * kaybediyor. Rahat okuma 65-75 karakter; 19 pikselde 43rem ~72 karakter.
+ * Telefonda zaten dar (~38 karakter), etkisi yok. Gorsel, tablo ve gomulu
+ * icerik bu sinirin disinda kalmiyor: max-width:100% ile metne uyuyor.
+ */
+.detay .icerik,
+.detay .spot { max-width: 43rem; }
 
 .detay .icerik p { margin: 0 0 1.05em; }
 

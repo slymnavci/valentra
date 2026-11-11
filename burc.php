@@ -39,6 +39,7 @@ if ($istenen !== '') {
     $seoRobots = 'noindex, follow';
 }
 
+$govdeSinifi = 'okuma'; // okunur genislik (bkz. haber.php)
 require __DIR__ . '/includes/sayfa_ust.php';
 require_once __DIR__ . '/includes/gazeteler.php';
 ?>
