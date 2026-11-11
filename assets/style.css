@@ -4408,3 +4408,21 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 .tema-onizleme.o-sb { filter: none; }
 .tema-onizleme .o-foto { left: 8px; top: 24px; width: 46%; height: 18px; border-radius: 5px 5px 0 0;
     background: linear-gradient(135deg, #3a7bd5, #f6a04d 60%, #3fae6a); }
+
+/* ------------------------------------------------------------------ *
+ * Ekran disindaki bolumler gorunene kadar cizilmiyor (11.11.2026, site
+ * sahibi: "sayfa acma performansini cok iyi hale getir"). Ana sayfada
+ * 1.400'den fazla oge var; ilk ekranin altindaki konu bloklari, video
+ * seridi ve alt bant ilk cizimde hesaplanmiyor, okur yaklasinca ciziliyor.
+ * contain-intrinsic-size "auto": bir kez cizilen bolumun gercek boyu
+ * hatirlaniyor, kaydirma cubugu ziplamiyor. Desteklemeyen tarayici
+ * kurali yok sayar (eskisi gibi hepsini cizer).
+ * ------------------------------------------------------------------ */
+.alt-pencereler,
+.video-seridi,
+.alt-bant {
+    content-visibility: auto;
+}
+.alt-pencereler { contain-intrinsic-size: auto 1400px; }
+.video-seridi   { contain-intrinsic-size: auto 420px; }
+.alt-bant       { contain-intrinsic-size: auto 260px; }
