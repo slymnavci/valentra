@@ -14,9 +14,21 @@ declare(strict_types=1);
  *
  * Elle calisir (ajan.yml, mod: onem-denetim); yonerge her degistiginde.
  *
+ * KAPSAM: yalnizca spor haberleri ve "baska ulkenin ic meselesi" sayilan
+ * haberler. Ilk kuru calisma (12.11.2026) 400 haberin 310'unun puanini
+ * degistirmek istedi; cogu yonergeyle ilgisiz, Turkiye gundemi haberlerinin
+ * dusurulmesiydi ("Erdogan COP31 liderlerini karsiladi" 84 -> 50, "Benzine
+ * indirim" 90 -> 72). Sebep olcu degil malzeme: toplama sirasinda model
+ * haberin TAM metnini ve olayi veren kaynak sayisini goruyor, burada
+ * yalnizca baslik ve spot var; daha az bilgiyle verilen puan sistematik
+ * olarak dusuk cikiyor. Bu yuzden model her habere bir "kural" da yaziyor
+ * ve yalnizca yonergede DEGISEN kurallara giren haberlerin puani yaziliyor;
+ * gerisi toplanirken aldigi puanla kaliyor. --hepsi bu sinirlamayi kaldirir.
+ *
  *   php ajan/onem_denetle.php             son 36 saatin haberleri
  *   php ajan/onem_denetle.php --saat=72   daha geriye
  *   php ajan/onem_denetle.php --kuru      yalnizca farklari goster
+ *   php ajan/onem_denetle.php --hepsi     kural ayirmadan butun haberler
  *
  * Ortam: VALENTRA_SITE_URL, VALENTRA_AGENT_KEY, GEMINI_API_KEY
  * (OPENAI_API_KEY, ANTHROPIC_API_KEY yedek).
@@ -64,8 +76,9 @@ function ayar(string $ad): string
     return trim($deger);
 }
 
-$secenekler = getopt('', ['kuru', 'saat::', 'sure::']);
+$secenekler = getopt('', ['kuru', 'hepsi', 'saat::', 'sure::']);
 $kuru  = isset($secenekler['kuru']);
+$hepsi = isset($secenekler['hepsi']);
 $saat  = max(1, min(168, (int) ($secenekler['saat'] ?? 36)));
 $bitis = time() + max(2, (int) ($secenekler['sure'] ?? 15)) * 60;
 
@@ -92,7 +105,16 @@ $yonerge = "Sen Valentra haber sitesinin editörüsün. Sana yayımlanmış habe
     . "spotu (özeti), kategorisi ve aynı olayı veren kaynak sayısı verilecek. Her\n"
     . "habere aşağıdaki ölçüyle 0-100 arası bir önem puanı ver. Yalnızca verilen\n"
     . "bilgiye bak; haberi bilmiyormuş gibi tahmin yürütme. Kaynak sayısı 1 ise\n"
-    . "\"Bu olayı veren kaynak sayısı\" kuralını uygulama.\n\n"
+    . "\"Bu olayı veren kaynak sayısı\" kuralını uygulama; kaynağın tek olması\n"
+    . "puanı düşürmek için sebep değildir.\n\n"
+    . "Her haber için ayrıca \"kural\" alanını doldur:\n"
+    . "- \"spor\": haber spor kategorisinde.\n"
+    . "- \"yabanci\": haber ölçüdeki BAŞKA ÜLKENİN İÇ MESELESİ basamağına giriyor\n"
+    . "  (yalnızca o ülkeyi ilgilendiriyor, Türkiye'deki okuru etkilemiyor) ve\n"
+    . "  puanını 20-45 verdin. Ölçünün bu kuralın DIŞINDA saydığı haberler\n"
+    . "  (Türkiye'yi etkileyen dış gelişme, savaş ve krizler, küresel piyasa\n"
+    . "  kararları, büyük felaketler) \"yabanci\" DEĞİLDİR.\n"
+    . "- \"diger\": geri kalan her şey (Türkiye gündemi, politika, ekonomi ...).\n\n"
     . Yazar::onemOlcutu();
 
 $sema = [
@@ -105,9 +127,10 @@ $sema = [
                 'properties' => [
                     'sira'  => ['type' => 'integer', 'description' => 'İstemdeki sıra numarası (1 tabanlı)'],
                     'onem'  => ['type' => 'integer', 'description' => '0-100 arası önem puanı'],
+                    'kural' => ['type' => 'string',  'enum' => ['spor', 'yabanci', 'diger'], 'description' => 'Haberin girdiği kural (bkz. yönerge)'],
                     'neden' => ['type' => 'string',  'description' => 'Tek kısa cümle: puanın hangi basamağa dayandığı'],
                 ],
-                'required' => ['sira', 'onem', 'neden'],
+                'required' => ['sira', 'onem', 'kural', 'neden'],
             ],
         ],
     ],
@@ -117,6 +140,7 @@ $sema = [
 $okunan  = 0;
 $farkli  = 0;
 $degisen = 0;
+$kapsamDisi = 0;
 
 foreach (array_chunk($haberler, PARTI) as $parti) {
     if (time() >= $bitis - 30) {
@@ -156,8 +180,21 @@ foreach (array_chunk($haberler, PARTI) as $parti) {
             continue;
         }
 
+        // Kategori sitenin bilgisi; modelin "spor" demesine degil ona bakiliyor.
+        $kural = (string) $h['kategori'] === 'spor' ? 'spor' : ((string) ($s['kural'] ?? '') === 'yabanci' ? 'yabanci' : 'diger');
+
+        // "yabanci" yalnizca puani dusurur ve 45'i gecemez (basamagin tavani).
+        if ($kural === 'yabanci' && ($yeni > 45 || $yeni >= $eski)) {
+            $kural = 'diger';
+        }
+
+        if (!$hepsi && $kural === 'diger') {
+            $kapsamDisi++;
+            continue;
+        }
+
         $farkli++;
-        gunluk(sprintf('  %3d → %3d  [%s] %s  (%s)', $eski, $yeni, $h['kategori'], $h['baslik'], trim((string) ($s['neden'] ?? ''))));
+        gunluk(sprintf('  %3d → %3d  %-7s [%s] %s  (%s)', $eski, $yeni, $kural, $h['kategori'], $h['baslik'], trim((string) ($s['neden'] ?? ''))));
         $gonder[] = ['id' => (int) $h['id'], 'onem' => $yeni];
     }
 
@@ -171,6 +208,7 @@ foreach (array_chunk($haberler, PARTI) as $parti) {
 }
 
 $ozet = 'Önem denetimi: ' . $okunan . ' haber puanlandı, ' . $farkli . ' tanesinin puanı en az ' . ASGARI_FARK . ' puan farklı'
+    . ($hepsi ? '' : ' (spor ve başka ülkenin iç meselesi; ' . $kapsamDisi . ' haber kapsam dışı bırakıldı)')
     . ($kuru ? ' (kuru çalışma, siteye yazılmadı)' : ', ' . $degisen . ' haberin puanı güncellendi') . '.';
 gunluk($ozet);
 
