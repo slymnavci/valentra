@@ -9,8 +9,10 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/sayfa_onbellek.php';
 
-// Ziyaretciye bir dakikalik kopya (bkz. includes/sayfa_onbellek.php).
-sayfa_onbellek(['h']);
+// Ziyaretciye bir dakikalik kopya; bayatsa yine hemen verilir ve arkada
+// tazelenir (12.11.2026; bkz. includes/sayfa_onbellek.php). 200 disindaki
+// her dal sayfa_onbellek_iptal() cagiriyor.
+sayfa_onbellek(['h'], true, SAYFA_ONBELLEK_BAYAT_HABER);
 
 $slug = trim((string) ($_GET['h'] ?? ''));
 $haber = $slug !== '' ? haber_yayinda_bul($slug) : null;
@@ -31,6 +33,7 @@ if ($haber === null && $slug !== '') {
     $hedefSlug = haber_yonlendirme_hedefi($slug);
 
     if ($hedefSlug !== null) {
+        sayfa_onbellek_iptal();
         header('Location: ' . haber_yolu($hedefSlug), true, 301);
         exit;
     }
@@ -59,6 +62,7 @@ if ($haber === null && $slug !== '') {
     }
 
     if ($eskiSatir !== false && !empty($eskiSatir['es_slug'])) {
+        sayfa_onbellek_iptal();
         header('Location: ' . haber_yolu((string) $eskiSatir['es_slug']), true, 301);
         exit;
     }
@@ -67,6 +71,7 @@ if ($haber === null && $slug !== '') {
 }
 
 if ($haber === null) {
+    sayfa_onbellek_iptal();
     http_response_code($kaldirildi ? 410 : 404);
     $seoRobots = 'noindex, follow';
     $sayfaBasligi = 'Haber bulunamadı — Valentra';
