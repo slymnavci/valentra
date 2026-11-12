@@ -262,7 +262,18 @@ function haber_baslikta_gecen_kosulu(array $kelimeler): string
  * spor haberi daha once toplanmis gundem haberini de one gecmiyor. Spor
  * haberlerinin hepsi ValSpor'da.
  */
-const ANA_SAYFA_SPOR_ONDE_ESIGI = 88;
+/*
+ * 88'den 70'e (12.11.2026, site sahibi: "burada en onemli haber milli mac
+ * skoru ve yorumlar"). Siradan spor haberi artik ana sayfaya hic girmiyor
+ * (SPOR_ANA_SAYFA_ESIGI = 70; asagida), yani "arkaya alinacak" spor
+ * kalmadi: esigi gecen spor haberi (milli mac sonucu, sampiyonlugu
+ * belirleyen mac) zaten onemli diye girdi. 88'de kalinca 74 puanli
+ * Turkiye-Belcika mac sonucu gunun onemi 60 ve ustu butun haberlerinin
+ * arkasina, 56 haberlik ana sayfa sinirinin disina dustu; ana sayfada hic
+ * gorunmedi. Iki esik ayni olmali. "Ilk haber spor olmasin" kurali
+ * (haber_ana_sayfa_basi_id) yerinde.
+ */
+const ANA_SAYFA_SPOR_ONDE_ESIGI = 70;
 
 function haber_onde_spor_kosulu(): string
 {
@@ -293,7 +304,7 @@ function haber_arkadaki_spor_ifadesi(): string
  * haberleri eski yonergeyle en fazla 60 almisti: onlar da ana sayfadan
  * cikar, yeni toplananlar yeni puanla gelir.
  */
-const SPOR_ANA_SAYFA_ESIGI = 70;
+const SPOR_ANA_SAYFA_ESIGI = 70; // ANA_SAYFA_SPOR_ONDE_ESIGI ile ayni olmali
 
 /** Onemi dusuk spor haberlerini disarida birakan kosul ("h" takma adiyla). */
 function haber_siradan_spor_disi_kosulu(): string
