@@ -41,7 +41,10 @@ final class HaberAkisi
         'spor'         => 8,
         'politika'     => 10,
         'ekonomi'      => 8,
-        'saglik'       => 5,
+        // 5'ten 12'ye (12.11.2026, site sahibi: "yabanci gazetelerden
+        // saglik ve teknoloji haberleri bolca alsin; Turkiye'de daha az").
+        // Yabanci kaynaklar sql/schema.sql'in sonunda.
+        'saglik'       => 12,
         'kultur-sanat' => 5,
         // Magazin (29.10.2026, ValMagazin): olculu; sanatcilarin
         // aciklamalari, roportajlari, yeni isleri.
@@ -50,7 +53,8 @@ final class HaberAkisi
         // sahibinin istegi: "yemek tarifi sayisini artiralim"; 7 kaynak).
         'yemek-tarifleri' => 12,
         'dunya'        => 10,
-        'teknoloji'    => 6,
+        // 6'dan 12'ye (12.11.2026; bkz. saglik).
+        'teknoloji'    => 12,
         /*
          * Yerel gazeteler (04.11.2026, site sahibi: "Trabzon, Kayseri,
          * Kocaeli gazetelerine de bakalim; gunluk bunlardan da haber

@@ -2683,3 +2683,28 @@ CREATE TABLE IF NOT EXISTS haber_yonlendirmeleri (
     PRIMARY KEY (eski_slug),
     KEY ix_yonlendirme_hedef (hedef_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Yabanci basindan saglik ve teknoloji (12.11.2026, site sahibi: "yabanci
+-- gazetelerden saglik ve teknoloji haberleri bolca alsin; bunlar Turkiye'de
+-- daha az"). Ingilizce kaynaklar; ajan cevirmiyor, anlayip kendi
+-- cumleleriyle Turkce ozetliyor (bkz. Yazar yonergesi). Basliklarin payi da
+-- artti (ajan/src/HaberAkisi.php, PAYLAR). Panelden tek tek kapatilabilir.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('BBC Health',              'https://www.bbc.com/news/health',          'https://feeds.bbci.co.uk/news/health/rss.xml',              'rss', 'saglik', 1),
+    ('The Guardian Health',     'https://www.theguardian.com/society/health', 'https://www.theguardian.com/society/health/rss',         'rss', 'saglik', 1),
+    ('NPR Health',              'https://www.npr.org/sections/health',      'https://feeds.npr.org/1128/rss.xml',                        'rss', 'saglik', 1),
+    ('STAT News',               'https://www.statnews.com',                 'https://www.statnews.com/feed/',                            'rss', 'saglik', 1),
+    ('ScienceDaily Health',     'https://www.sciencedaily.com/news/health_medicine/', 'https://www.sciencedaily.com/rss/health_medicine.xml', 'rss', 'saglik', 1),
+    ('Medical Xpress',          'https://medicalxpress.com',                'https://medicalxpress.com/rss-feed/',                       'rss', 'saglik', 1),
+    ('WHO News',                'https://www.who.int/news',                 'https://www.who.int/rss-feeds/news-english.xml',            'rss', 'saglik', 1),
+    ('BBC Technology',          'https://www.bbc.com/news/technology',      'https://feeds.bbci.co.uk/news/technology/rss.xml',          'rss', 'teknoloji', 1),
+    ('The Guardian Technology', 'https://www.theguardian.com/technology',   'https://www.theguardian.com/technology/rss',                'rss', 'teknoloji', 1),
+    ('NPR Technology',          'https://www.npr.org/sections/technology',  'https://feeds.npr.org/1019/rss.xml',                        'rss', 'teknoloji', 1),
+    ('Ars Technica',            'https://arstechnica.com',                  'https://feeds.arstechnica.com/arstechnica/index',           'rss', 'teknoloji', 1),
+    ('The Verge',               'https://www.theverge.com',                 'https://www.theverge.com/rss/index.xml',                    'rss', 'teknoloji', 1),
+    ('TechCrunch',              'https://techcrunch.com',                   'https://techcrunch.com/feed/',                              'rss', 'teknoloji', 1),
+    ('Wired',                   'https://www.wired.com',                    'https://www.wired.com/feed/rss',                            'rss', 'teknoloji', 1),
+    ('MIT Technology Review',   'https://www.technologyreview.com',         'https://www.technologyreview.com/feed/',                    'rss', 'teknoloji', 1),
+    ('Engadget',                'https://www.engadget.com',                 'https://www.engadget.com/rss.xml',                          'rss', 'teknoloji', 1);

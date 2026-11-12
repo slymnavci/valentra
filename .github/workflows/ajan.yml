@@ -63,7 +63,7 @@ on:
         description: 'Kac saat geriye bakilsin'
         default: '2'
       enfazla:
-        description: 'En fazla kac aday islensin (bos: basliklarin paylarinin toplami, 72)'
+        description: 'En fazla kac aday islensin (bos: basliklarin paylarinin toplami, 96)'
         default: ''
       aday:
         description: 'kaynak-testi: DB disi aday adresler  (Ad=https://..., Ad=https://...|yol:/bolum/)'
@@ -304,7 +304,7 @@ jobs:
           # demekti; simdi degil.
           #
           # 22.10.2026: aday sayisi verilmezse ajan basliklarin paylarinin
-          # toplamini kullaniyor (HaberAkisi::PAYLAR, 72); haberler baslik
+          # toplamini kullaniyor (HaberAkisi::PAYLAR, 96); haberler baslik
           # baslik isleniyor.
           # 23.10.2026: 30 saatten 2 saate (site sahibinin karari: "her
           # aramada bir iki saat once yayinlanan haberleri alsin; eski

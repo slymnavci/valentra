@@ -442,6 +442,13 @@ final class Yazar implements SemaliIstemci
           -> "ekonomi".
         - Diğerleri kendi başlıklarına: "spor", "teknoloji", "saglik",
           "kultur-sanat".
+        - Yabancı basından gelen sağlık haberi (tıp araştırması, tedavi,
+          ilaç, salgın, beslenme) -> "saglik"; teknoloji ve bilim haberi
+          (yapay zekâ, ürün, internet, uzay, siber güvenlik) -> "teknoloji".
+          Kaynağın yabancı olması haberi "dunya" yapmaz: konusu sağlık ya
+          da teknolojiyse başlığı odur. Bu haberler Türk okurunu da
+          doğrudan ilgilendirir; önemini konunun okura faydasına göre ver,
+          olayın Türkiye'de geçmemesi puanı düşürmesin.
         - Sanatçıların açıklaması, röportajı, yeni işi, konseri, ödülü
           (ölçülü magazin) -> "magazin". Sergi, tiyatro, edebiyat,
           kültürel miras ve kurum haberi -> "kultur-sanat".
