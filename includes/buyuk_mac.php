@@ -36,6 +36,27 @@ const BUYUK_MAC_KULUPLER = '/galatasaray|fenerbah|be[sş]ikta[sş]/iu';
 /** Bakılan ligler. */
 const BUYUK_MAC_LIGLER = ['tur.1', 'uefa.champions', 'uefa.europa', 'uefa.europa.conf'];
 
+/*
+ * MILLI TAKIM (12.11.2026, site sahibi: "canli mac skorlarini en ustte serit
+ * olarak veriyorduk ama gelmiyor; mesela Turkiye - Belcika macini beklerdim").
+ * Bant yalnizca kulup liglerine bakiyordu; A Milli Takim'in maclari hic
+ * kapsamda degildi. Bu yarismalarda yalnizca Turkiye'nin oynadigi mac
+ * banda girer ve buyuk mac sayilir (basta gosterilir).
+ *
+ * Ayri liste: mac_oncesi.php BUYUK_MAC_LIGLER'i kulup adlariyla haber
+ * eslestirmek icin kullaniyor; "Turkiye" kelimesi orada cok genis kalirdi.
+ */
+const BUYUK_MAC_MILLI_LIGLER = ['uefa.nations', 'fifa.worldq.uefa', 'uefa.euroq', 'fifa.friendly', 'fifa.world', 'uefa.euro'];
+
+/** Bantta gorunen yarisma adi (ESPN Ingilizce veriyor ya da katalogda yok). */
+const BUYUK_MAC_MILLI_LIG_ADLARI = [
+    'uefa.nations' => 'Uluslar Ligi', 'fifa.worldq.uefa' => 'Dünya Kupası Elemeleri', 'uefa.euroq' => 'Avrupa Şampiyonası Elemeleri',
+    'fifa.friendly' => 'Hazırlık Maçı', 'fifa.world' => 'Dünya Kupası', 'uefa.euro' => 'Avrupa Şampiyonası',
+];
+
+/** A Milli Takim'in ESPN'deki adi (tam eslesme: "Turkmenistan" degil). */
+const BUYUK_MAC_MILLI = '/^t[uü]rk(?:iye|ey)$/iu';
+
 /** Maç sırasında ESPN'e en sık bu kadar saniyede bir gidiliyor. */
 const BUYUK_MAC_TAZE = 20;
 
@@ -74,7 +95,7 @@ function buyuk_maclar(bool $taze = false): array
 
     $sonuc = [];
 
-    foreach (BUYUK_MAC_LIGLER as $lig) {
+    foreach (array_merge(BUYUK_MAC_LIGLER, BUYUK_MAC_MILLI_LIGLER) as $lig) {
         foreach ($gunler as $gun) {
             $kayit  = futbol_gun_maclari($lig, $gun, BUYUK_MAC_FIKSTUR);
             $adaylar = buyuk_mac_adaylari($kayit['veri']['maclar'] ?? [], $simdi, $lig);
@@ -127,10 +148,18 @@ function buyuk_mac_adaylari(array $maclar, int $simdi, string $lig): array
     }));
 }
 
-/** Büyük üçten biri oynuyor mu? */
+/** Büyük üçten biri ya da A Milli Takım oynuyor mu? */
 function buyuk_mac_buyuk_mu(array $m): bool
 {
-    return preg_match(BUYUK_MAC_KULUPLER, ($m['ev'] ?? '') . ' ' . ($m['dep'] ?? '')) === 1;
+    return preg_match(BUYUK_MAC_KULUPLER, ($m['ev'] ?? '') . ' ' . ($m['dep'] ?? '')) === 1
+        || buyuk_mac_milli_mi($m);
+}
+
+/** A Milli Takım'ın maçı mı (takım adı tam olarak "Türkiye" / "Turkey")? */
+function buyuk_mac_milli_mi(array $m): bool
+{
+    return preg_match(BUYUK_MAC_MILLI, trim((string) ($m['ev'] ?? ''))) === 1
+        || preg_match(BUYUK_MAC_MILLI, trim((string) ($m['dep'] ?? ''))) === 1;
 }
 
 /**
@@ -206,7 +235,7 @@ function buyuk_mac_ozeti(array $m, string $lig): array
         },
         'canli'    => in_array($durum, FUTBOL_CANLI, true),
         'buyuk'    => buyuk_mac_buyuk_mu($m),
-        'lig'      => (string) $m['lig'],
+        'lig'      => BUYUK_MAC_MILLI_LIG_ADLARI[$lig] ?? (string) $m['lig'],
         'ev'       => futbol_kisa_takim((string) $m['ev']),
         'dep'      => futbol_kisa_takim((string) $m['dep']),
         'ev_logo'  => (string) $m['ev_logo'],
@@ -218,6 +247,26 @@ function buyuk_mac_ozeti(array $m, string $lig): array
     ];
 }
 
+/** ESPN'in milli takım adları (İngilizce) => Türkçe. Listede olmayan olduğu gibi kalır. */
+const FUTBOL_ULKE_ADLARI = [
+    'Turkey' => 'Türkiye', 'Türkiye' => 'Türkiye', 'Belgium' => 'Belçika', 'Germany' => 'Almanya', 'France' => 'Fransa',
+    'Spain' => 'İspanya', 'Italy' => 'İtalya', 'England' => 'İngiltere', 'Netherlands' => 'Hollanda', 'Portugal' => 'Portekiz',
+    'Croatia' => 'Hırvatistan', 'Switzerland' => 'İsviçre', 'Austria' => 'Avusturya', 'Denmark' => 'Danimarka',
+    'Sweden' => 'İsveç', 'Norway' => 'Norveç', 'Finland' => 'Finlandiya', 'Iceland' => 'İzlanda', 'Poland' => 'Polonya',
+    'Czechia' => 'Çekya', 'Czech Republic' => 'Çekya', 'Slovakia' => 'Slovakya', 'Hungary' => 'Macaristan', 'Romania' => 'Romanya',
+    'Bulgaria' => 'Bulgaristan', 'Greece' => 'Yunanistan', 'Serbia' => 'Sırbistan', 'Slovenia' => 'Slovenya',
+    'Bosnia and Herzegovina' => 'Bosna Hersek', 'Bosnia-Herzegovina' => 'Bosna Hersek', 'Montenegro' => 'Karadağ',
+    'North Macedonia' => 'Kuzey Makedonya', 'Albania' => 'Arnavutluk', 'Kosovo' => 'Kosova', 'Ukraine' => 'Ukrayna',
+    'Georgia' => 'Gürcistan', 'Armenia' => 'Ermenistan', 'Azerbaijan' => 'Azerbaycan', 'Kazakhstan' => 'Kazakistan',
+    'Scotland' => 'İskoçya', 'Wales' => 'Galler', 'Northern Ireland' => 'Kuzey İrlanda', 'Republic of Ireland' => 'İrlanda',
+    'Ireland' => 'İrlanda', 'Israel' => 'İsrail', 'Cyprus' => 'Kıbrıs', 'Malta' => 'Malta', 'Luxembourg' => 'Lüksemburg',
+    'Estonia' => 'Estonya', 'Latvia' => 'Letonya', 'Lithuania' => 'Litvanya', 'Moldova' => 'Moldova', 'Belarus' => 'Belarus',
+    'Faroe Islands' => 'Faroe Adaları', 'Gibraltar' => 'Cebelitarık', 'Andorra' => 'Andorra', 'San Marino' => 'San Marino',
+    'Liechtenstein' => 'Lihtenştayn', 'Russia' => 'Rusya', 'Brazil' => 'Brezilya', 'Argentina' => 'Arjantin',
+    'United States' => 'ABD', 'USA' => 'ABD', 'Mexico' => 'Meksika', 'Japan' => 'Japonya', 'South Korea' => 'Güney Kore',
+    'Morocco' => 'Fas', 'Egypt' => 'Mısır', 'Saudi Arabia' => 'Suudi Arabistan', 'Qatar' => 'Katar', 'Iran' => 'İran',
+];
+
 /**
  * "Galatasaray SK" -> "Galatasaray"; ESPN'in Türkçe karaktersiz yazdığı
  * kulüp adları düzeltiliyor ("Fenerbahce" -> "Fenerbahçe").
@@ -225,6 +274,11 @@ function buyuk_mac_ozeti(array $m, string $lig): array
 function futbol_kisa_takim(string $ad): string
 {
     $ad = trim((string) preg_replace('/\s+(A\.?Ş\.?|SK|S\.K\.|JK|FK|AŞ)$/u', '', $ad));
+
+    // Milli takimlar: ESPN Ingilizce yaziyor ("Belgium" -> "Belçika").
+    if (isset(FUTBOL_ULKE_ADLARI[$ad])) {
+        return FUTBOL_ULKE_ADLARI[$ad];
+    }
 
     return strtr($ad, [
         'Fenerbahce'  => 'Fenerbahçe',
