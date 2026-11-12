@@ -426,6 +426,22 @@ final class Yazar implements SemaliIstemci
         - 30-59: Sınırlı etkili ya da rutin haberler: sektörel
           açıklamalar, yerel olaylar, bilim ve sağlık haberleri,
           kültür-sanat etkinlikleri.
+        - BAŞKA ÜLKENİN İÇ MESELESİ 20-45, kategorisi ne olursa olsun
+          (sağlık, yaşam, ekonomi, gündem, dünya): Türkiye'deki okurun
+          hayatına somut etkisi olmayan, yalnızca o ülkeyi ilgilendiren
+          haberler. Örnekler: ABD'de kızamıktan altı kişinin ölmesi, bir
+          ülkedeki yerel salgın ya da hastalık istatistiği, yabancı bir
+          ülkenin bütçe açığı ya da iç ekonomi verisi, oradaki yerel
+          kaza, suç, hava olayı, iç siyaset ayrıntısı. "Okur Türkiye'de;
+          bu onu etkiliyor mu, merak ediyor mu?" diye sor; cevap
+          hayırsa konu ciddi görünse de puan düşük kalır. Bu kuralın
+          DIŞINDA kalanlar (kendi ölçüleriyle puanlanır): Türkiye'yi,
+          Türk vatandaşlarını ya da Türkiye ekonomisini doğrudan
+          etkileyen dış gelişmeler; Türkiye'nin taraf olduğu ya da
+          yakından izlediği savaş ve krizler; küresel piyasayı
+          belirleyen kararlar (Fed faizi, petrol, altın); dünyaya
+          yayılma riski taşıyan salgınlar; çok sayıda can kaybı olan
+          büyük felaketler.
         - 0-29: Çok dar ilgi alanı.
         Başlığın çarpıcılığına değil, olayın etkisine bak.
         Her adayda "Bu olayı veren kaynak sayısı" yazar: aynı olayı birden
@@ -1248,6 +1264,23 @@ final class Yazar implements SemaliIstemci
     }
 
     /** Haber modeli (GEMINI_MODEL, yoksa varsayilan); kose yazisinin yedegi. */
+    /**
+     * Yönergenin ÖNEM PUANI bölümü, olduğu gibi (ajan/onem_denetle.php:
+     * yayındaki haberler aynı ölçüyle yeniden puanlanıyor; tek kaynak burası).
+     */
+    public static function onemOlcutu(): string
+    {
+        $bas = strpos(self::YONERGE, 'ÖNEM PUANI (0-100)');
+        $son = strpos(self::YONERGE, "GOOGLE'DA ÇOK ARANAN");
+
+        if ($bas === false || $son === false || $son <= $bas) {
+            throw new \LogicException('Yönergede ÖNEM PUANI bölümü bulunamadı.');
+        }
+
+        // Girintiyi at: bolum yonergenin icinde sekiz bosluk iceride.
+        return trim((string) preg_replace('/^ {8}/m', '', substr(self::YONERGE, $bas, $son - $bas)));
+    }
+
     public static function haberModeli(): string
     {
         return self::ortamModeli('GEMINI_MODEL', self::VARSAYILAN_MODEL);
