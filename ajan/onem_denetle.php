@@ -59,6 +59,9 @@ const PARTI = 25;
 /** Bundan kucuk fark yazilmiyor: model ayni habere 2-3 puan oynak verebiliyor. */
 const ASGARI_FARK = 5;
 
+/** Toplanirken bu puani ve ustunu almis haber "yabanci" diye dusurulmez. */
+const YABANCI_KORUMA = 75;
+
 function gunluk(string $mesaj): void
 {
     echo '[' . date('H:i:s') . '] ' . $mesaj . PHP_EOL;
@@ -184,7 +187,16 @@ foreach (array_chunk($haberler, PARTI) as $parti) {
         $kural = (string) $h['kategori'] === 'spor' ? 'spor' : ((string) ($s['kural'] ?? '') === 'yabanci' ? 'yabanci' : 'diger');
 
         // "yabanci" yalnizca puani dusurur ve 45'i gecemez (basamagin tavani).
-        if ($kural === 'yabanci' && ($yeni > 45 || $yeni >= $eski)) {
+        // Toplanirken YABANCI_KORUMA ve ustu almis haber de dusurulmuyor:
+        // model onu tam metniyle okuyup ulke gundemi saymisti; ikinci kuru
+        // calismada bu aralikta dusurulmek istenenler tartismaliydi ("Katz:
+        // Saldirilar icin muhalefetten onay almayacagiz" 75 -> 35, Iran
+        // savasiyla ilgili; Beyaz Saray yakininda silahli saldiri 85 -> 35).
+        if ($kural === 'yabanci' && ($yeni > 45 || $yeni >= $eski || $eski >= YABANCI_KORUMA)) {
+            if ($eski >= YABANCI_KORUMA && $yeni <= 45) {
+                gunluk(sprintf('  (dokunulmadı) %3d, model %3d önerdi: [%s] %s', $eski, $yeni, $h['kategori'], $h['baslik']));
+            }
+
             $kural = 'diger';
         }
 
