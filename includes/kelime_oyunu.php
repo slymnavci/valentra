@@ -28,6 +28,62 @@ const KELIME_YEDEK = [
     'DÜNYA', 'EKRAN', 'MÜZİK', 'ROMAN', 'LİMAN', 'KÖPRÜ', 'TÜNEL', 'METRO',
 ];
 
+/*
+ * OYUNA GIRMEYEN KELIMELER VE HABERLER (12.11.2026, site sahibi: "sehit
+ * haberi on planda olsa da onu oyunda kullanmak insanlari kirabilir; bunu
+ * kaldir hemen"). Kelime gunun en onemli haberlerinin etiketlerinden
+ * seciliyordu ve hicbir suzgec yoktu: gunun en onemli haberi bir aci
+ * haberse oyunun kelimesi de o oluyordu.
+ *
+ * Iki katman:
+ *   1. Kelimenin kendisi (KELIME_HASSAS): olum, siddet, felaket, hastalik.
+ *   2. Kelimenin alindigi HABER (KELIME_HASSAS_HABER; baslik ve etiketlerde
+ *      kok aranir): kelime masum olsa da ("ASKER", "TÖREN") oyun bitince o
+ *      habere baglanti veriliyor; aci bir haber oyunla yan yana gelmesin.
+ * Kayitli gunun kelimesi bu suzgece takiliyorsa hemen yeniden secilir.
+ */
+const KELIME_HASSAS = [
+    'ŞEHİT', 'ŞEHİD', 'ÖLÜM', 'ÖLDÜ', 'ÖLEN', 'CESET', 'TABUT', 'MEZAR', 'MATEM', 'YASLI', 'KATİL', 'TERÖR', 'SAVAŞ', 'BOMBA',
+    'SİLAH', 'DARBE', 'TACİZ', 'İDAM', 'İNFAZ', 'KAZA', 'ENKAZ', 'YANIK', 'YARA', 'YARALI', 'KANLI', 'VAHŞİ', 'VAHŞET', 'CİNNET',
+    'FACİA', 'AFET', 'SEL', 'KAYIP', 'ESİR', 'REHİN', 'İSTİLA', 'İŞGAL', 'SÜRGÜN', 'KIYIM', 'KIRIM', 'TÜMÖR', 'KOMA', 'VEFAT',
+    'CENAZE', 'TAZİYE', 'ACI', 'ACILI', 'YETİM', 'ÖKSÜZ', 'GASP', 'DARP', 'ŞİDDET', 'İŞKENCE', 'ZEHİR', 'MAYIN', 'FÜZE', 'ÇATIŞMA',
+    // Aci bir haberin oldugu gunde yan anlam tasiyabilecekler.
+    'ASKER', 'CEPHE', 'SINIR', 'NÖBET', 'KURBAN',
+];
+
+/** Başlığında ya da etiketlerinde bunlardan biri geçen haberden kelime alınmaz (küçük harf kök). */
+const KELIME_HASSAS_HABER = [
+    'şehit', 'şehid', 'şehad', 'öldü', 'ölüm', 'ölü ', 'ölen', 'hayatını kaybet', 'can verdi', 'can kayb', 'cenaze', 'taziye', 'vefat',
+    'yaralı', 'yaraland', 'saldırı', 'saldırgan', 'terör', 'bomba', 'patlama', 'çatışma', 'savaş', 'katliam', 'cinayet', 'öldür',
+    'kaza ', 'kazası', 'kazada', 'kazasında', 'kazaya', 'deprem', 'yangın', ' sel ', 'sel felaket', 'sel bask', 'heyelan', 'çığ', 'afet', 'enkaz', 'facia', 'intihar', 'taciz', 'tecavüz', 'istismar',
+    'şiddet', 'işkence', 'kaçırıl', 'rehin', 'kayıp', 'boğul', 'zehirlen', 'kanser', 'salgın', 'yoğun bakım', 'hayati tehlike',
+    'idam', 'soykırım', 'vurul', 'bıçak', 'silahlı', 'ceset', 'cesed', 'mezar', 'yas ', 'başsağlığı',
+];
+
+/** Türkçe küçük harf. */
+function kelime_kucuk(string $metin): string
+{
+    return mb_strtolower(strtr($metin, ['I' => 'ı', 'İ' => 'i']), 'UTF-8');
+}
+
+/** Kelime ya da alındığı haber oyuna uygun değil mi? */
+function kelime_hassas_mi(string $kelime, string $baslik = '', string $etiketler = ''): bool
+{
+    if (in_array($kelime, KELIME_HASSAS, true)) {
+        return true;
+    }
+
+    $metin = kelime_kucuk($baslik . ' | ' . $etiketler) . ' ';
+
+    foreach (KELIME_HASSAS_HABER as $kok) {
+        if (str_contains($metin, $kok)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function kelime_oyunu_yolu(): string
 {
     return temiz_adres_acik() ? '/gunun-kelimesi' : '/gunun-kelimesi.php';
@@ -54,7 +110,10 @@ function kelime_bugun(): array
     $bugun = date('Y-m-d');
     $kayit = json_decode(ayar_oku('gunun_kelimesi'), true);
 
-    if (is_array($kayit) && ($kayit['gun'] ?? '') === $bugun && kelime_gecerli_mi((string) ($kayit['kelime'] ?? ''))) {
+    // Kayitli kelime hassas suzgecine takiliyorsa (suzgec sonradan eklendi
+    // ya da genisletildi) gun ortasinda da yeniden secilir.
+    if (is_array($kayit) && ($kayit['gun'] ?? '') === $bugun && kelime_gecerli_mi((string) ($kayit['kelime'] ?? ''))
+        && !kelime_hassas_mi((string) $kayit['kelime'], (string) ($kayit['haber_baslik'] ?? ''))) {
         return $kayit + ['haber_baslik' => '', 'haber_slug' => ''];
     }
 
@@ -62,6 +121,10 @@ function kelime_bugun(): array
     $gecmis = is_array($gecmis) ? $gecmis : [];
     $kullanilan = array_column(array_filter($gecmis, static fn ($g): bool =>
         is_array($g) && strtotime((string) ($g['gun'] ?? '')) >= strtotime('-60 days')), 'kelime');
+
+    // Bugun icin kayitli (ve simdi reddedilen) kelime gecmisten cikar;
+    // yerine secilen yazilir. Reddedilen kelime bugun yeniden secilmesin.
+    $gecmis = array_values(array_filter($gecmis, static fn ($g): bool => is_array($g) && ($g['gun'] ?? '') !== $bugun));
 
     $secim = ['gun' => $bugun, 'kelime' => '', 'haber_baslik' => '', 'haber_slug' => ''];
 
@@ -79,10 +142,15 @@ function kelime_bugun(): array
     }
 
     foreach ($haberler as $h) {
+        // Aci haberden kelime alinmaz (kelime masum olsa da).
+        if (kelime_hassas_mi('', (string) $h['baslik'], (string) $h['etiketler'])) {
+            continue;
+        }
+
         foreach (etiketleri_coz((string) $h['etiketler']) as $etiket) {
             $aday = kelime_buyuk(trim($etiket));
 
-            if (kelime_gecerli_mi($aday) && !in_array($aday, $kullanilan, true)) {
+            if (kelime_gecerli_mi($aday) && !in_array($aday, $kullanilan, true) && !kelime_hassas_mi($aday)) {
                 $secim['kelime']       = $aday;
                 $secim['haber_baslik'] = (string) $h['baslik'];
                 $secim['haber_slug']   = (string) $h['slug'];
