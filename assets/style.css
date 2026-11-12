@@ -1,5 +1,40 @@
 /* Valentra - vergi haberleri portali */
 
+/*
+ * Yazi tipi: Source Sans 3 (12.11.2026, site sahibi: "mevcut font cok
+ * yayvan; gazete icin daha okunabilir bir font"). Eskiden cihazin kendi
+ * yazi tipi kullaniliyordu; Windows'ta bu Segoe UI'di ve satirlar genis
+ * duruyordu. Simdi her cihazda ayni, daha dar ve sakin bir yazi tipi.
+ *
+ * Dosyalar sitede (assets/yazi/, disaridan istek yok), degisken agirlik
+ * (200-900) ve yalnizca Latin + Turkce harfler: dosya basina 32 KB.
+ * Duz dosya sayfa_ust.php'de preload ediliyor; adres degisirse orasi da
+ * degismeli. Dosya bir yil onbellekte (bkz. .htaccess) ve adresi
+ * surumsuz: icerik degisirse dosya ADI degismeli.
+ *
+ * size-adjust: Source Sans'in kucuk harfleri ayni puntoda sistem yazi
+ * tiplerinden alcak; duzeltilmezse yazi kuculmus gorunur. %103 ile kucuk
+ * harf boyu sistem yazi tiplerine yaklasiyor, satir yine Arial'den
+ * yaklasik %4 dar kaliyor (olcum: ayni cumle, ayni punto). Deger
+ * buyudukce yazi irilesir ama darlik kazanci azalir (%105'te %2).
+ */
+@font-face {
+    font-family: "Source Sans 3";
+    font-style: normal;
+    font-weight: 200 900;
+    font-display: swap;
+    src: url("yazi/source-sans-3.woff2") format("woff2");
+    size-adjust: 103%;
+}
+@font-face {
+    font-family: "Source Sans 3";
+    font-style: italic;
+    font-weight: 200 900;
+    font-display: swap;
+    src: url("yazi/source-sans-3-italic.woff2") format("woff2");
+    size-adjust: 103%;
+}
+
 :root {
     /*
      * BEYAZ VE KIRMIZI (site sahibinin istegi, 24.10.2026: "beyaz kirmizi
@@ -84,7 +119,7 @@ body {
     margin: 0;
     background: var(--zemin);
     color: var(--metin);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    font-family: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
                  "Helvetica Neue", Arial, sans-serif;
     font-size: 1rem;
     /* Satir araligi da acildi: uzun mevzuat metinlerinde satir takibi
@@ -4399,7 +4434,8 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 :root[data-boyut="buyuk"]   { font-size: 112.5%; }
 :root[data-boyut="cokbuyuk"] { font-size: 125%; }
 
-/* --- Yazi tipi (data-font): sistem yazi tipleri, indirme yok. --- */
+/* --- Yazi tipi (data-font): varsayilan Source Sans 3 (dosyanin basi);
+       buradaki secenekler sistem yazi tipleri, indirme yok. --- */
 :root[data-font="klasik"] :is(body, button, input, select, textarea) {
     font-family: Georgia, Cambria, "Times New Roman", serif;
 }

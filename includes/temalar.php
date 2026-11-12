@@ -58,7 +58,7 @@ const TEMA_BOYUTLARI = ['kucuk' => ['Küçük', '.8rem'], '' => ['Normal', '.95r
 
 /** Yazı tipleri (data-font; boş = modern). */
 const TEMA_FONTLARI = [
-    ''         => ['Modern', '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif'],
+    ''         => ['Modern', '"Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif'],
     'klasik'   => ['Klasik', 'Georgia, Cambria, "Times New Roman", serif'],
     'kitap'    => ['Kitap', '"Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", serif'],
     'okunakli' => ['Okunaklı', 'Verdana, "Segoe UI", Tahoma, sans-serif'],
