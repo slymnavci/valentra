@@ -400,13 +400,29 @@ final class Yazar implements SemaliIstemci
           diplomatik görüşmeler; ölüm ya da yaralanmalı kazalar ve
           olaylar (trafik, iş kazası, yangın, patlama, göçük), güvenlik
           operasyonları; piyasalarda belirgin hareket.
-        - SPOR çok geride: Galatasaray, Fenerbahçe, Beşiktaş,
-          Trabzonspor ve milli takımların maçları ve önemli gelişmeleri
-          45-60; diğer futbol, basketbol ve voleybol haberleri, dünya
-          sporu 30-45. TEK İSTİSNA Türkiye'nin büyük başarısı: milli
-          takımın ya da bir Türk kulübünün kupa, şampiyonluk ya da
-          madalya kazanması (Avrupa ve dünya şampiyonaları, olimpiyat,
-          Avrupa kupaları finali) 88-100; o zaman ana haber olur.
+        - SPOR çok geride. Spor haberi ana sayfaya ancak 70 ve üzeri
+          puanla girer; altı yalnızca spor sayfasında kalır. Üç basamak:
+          * 30-60 (ana sayfaya GİRMEZ): Galatasaray, Fenerbahçe,
+            Beşiktaş, Trabzonspor ve milli takımlarla ilgili sıradan
+            haberler 45-60: kadro ve aday kadro açıklamaları, kadroya
+            alınan ya da alınmayan oyuncu, sakatlık, transfer, antrenman,
+            maç öncesi, oyuncu/teknik direktör/yönetici açıklaması, lig
+            maçı sonucu. Diğer futbol, basketbol ve voleybol haberleri,
+            dünya sporu 30-45. Voleybol ve basketbolda lig maçları,
+            kulüp haberleri ve sıradan milli maçlar da burada.
+          * 70-84 (ana sayfaya girer): A Milli Futbol Takımı'nın resmî
+            maçının SONUCU (skor) ve maç sonrası değerlendirmesi; milli
+            basketbol ve voleybol takımlarının büyük turnuvadaki (dünya
+            ve Avrupa şampiyonası, olimpiyat, bunların elemeleri)
+            maçının sonucu; şampiyonluğu belirleyen maçın sonucu (lig
+            şampiyonluğunun kesinleşmesi, kupa finali, bir Türk
+            takımının Avrupa kupasında yarı final ya da final maçı).
+            Maçın kendisi değil de çevresindeki haber (kadro, açıklama,
+            hakem ataması) bu basamağa girmez.
+          * 88-100 (ana haber olur): Türkiye'nin büyük başarısı: milli
+            takımın ya da bir Türk kulübünün kupa, şampiyonluk ya da
+            madalya kazanması (Avrupa ve dünya şampiyonaları, olimpiyat,
+            Avrupa kupaları finali).
         - 30-59: Sınırlı etkili ya da rutin haberler: sektörel
           açıklamalar, yerel olaylar, bilim ve sağlık haberleri,
           kültür-sanat etkinlikleri.

@@ -93,7 +93,9 @@ function senin_icin_haberler(array $konular, string $sehir, int $adet = SENIN_AD
 
     if ($konular !== [] && $kalan > 0) {
         $yer = implode(', ', array_map(static fn (string $k): string => db()->quote($k), $konular));
-        $sql = sprintf($secim, haber_ana_akis_kosulu()) . ' AND k.slug IN (' . $yer . ')'
+        // Okur sporu kendi sectiyse siradan spor haberi de gelir
+        // (bkz. haber_siradan_spor_disi_kosulu).
+        $sql = sprintf($secim, haber_ana_akis_kosulu(false, true, in_array('spor', $konular, true))) . ' AND k.slug IN (' . $yer . ')'
             . ($haric !== [] ? ' AND h.id NOT IN (' . implode(', ', $haric) . ')' : '')
             . ' ORDER BY DATE(h.olusturuldu) DESC, h.onem DESC, h.olusturuldu DESC LIMIT ' . max(1, min(24, $kalan + 2));
         $sonuc['konu'] = array_slice(db()->query($sql)->fetchAll(), 0, $kalan);
