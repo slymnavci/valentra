@@ -260,6 +260,8 @@ require __DIR__ . '/ust.php';
                    <?= (int) $haber['one_cikan'] === 1 ? 'checked' : '' ?>>
             Manşete al
         </label>
+        <?php /* Sureli mansete alma, oncelik, geri cekme, duzeltme notu ve "neden bu sirada" (12.11.2026). */ ?>
+        <a href="oncelik.php?id=<?= (int) $haber['id'] ?>#h<?= (int) $haber['id'] ?>" style="margin-left:14px;">Öncelik masasında aç: neden bu sırada, süreli manşet, geri çekme →</a>
     </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;">

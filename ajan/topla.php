@@ -52,8 +52,19 @@ date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
 /** Komut satırı seçenekleri */
-$secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::', 'sitetavani::', 'sitearaligi::', 'kaynakbasina::', 'konu::', 'video']);
+$secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::', 'sitetavani::', 'sitearaligi::', 'kaynakbasina::', 'konu::', 'video', 'nobet']);
 $kuruCalisma = isset($secenekler['kuru']);
+/*
+ * --nobet: NOBET TARAMASI (12.11.2026; .github/workflows/nobet.yml). Site
+ * sahibi: "kritik haber olagan kuyrugu beklemesin; kaynagin aciklamasi ile
+ * sistemin taramasi arasindaki gecikme de olculsun". Ajan iki saatte bir
+ * calisiyor: 12.11.2026'da MSB'nin 19.11'de duyurdugu helikopter kazasi
+ * 21.01'deki toplamaya kadar hic gorulmedi. Nobet taramasi iki toplama
+ * arasinda sik calisir, beslemeleri okur, basliklari on taramadan gecirir
+ * ve YALNIZCA kritik ya da yuksek oncelikli olabilecek adaylari yazar;
+ * olagan haberlere dokunmaz (onlar iki saatlik toplamanin isi).
+ */
+$nobetModu = isset($secenekler['nobet']);
 /*
  * --video: yalnizca YouTube kanal kaynaklari (Video haber ajani,
  * .github/workflows/video.yml). Site sahibinin istegi (23.10.2026):
@@ -641,6 +652,26 @@ function baslik_kumesi(string $baslik): array
     );
 
     return array_fill_keys($secilen, true);
+}
+
+/**
+ * Aday baslik, bilinen basliga gore yeni bilgi tasiyor mu: bilinende
+ * olmayan bir sayi ya da en az dort yeni kelime.
+ *
+ * @param array<string,bool> $aday
+ * @param array<string,bool> $bilinen
+ */
+function baslik_yeni_bilgi(array $aday, array $bilinen): bool
+{
+    $fazla = array_keys(array_diff_key($aday, $bilinen));
+
+    foreach ($fazla as $kelime) {
+        if (preg_match('/\d/u', (string) $kelime) === 1) {
+            return true;
+        }
+    }
+
+    return count($fazla) >= 4;
 }
 
 /**
@@ -1341,7 +1372,17 @@ foreach ($kaynaklar as $kaynak) {
          * adres/baslik uzerinden; ayni video iki kez gelmez.
          */
         foreach ($videoModu ? [] : $bilinenKumeler as $eskiKume) {
-            if (baslik_benzer($kume, $eskiKume)) {
+            /*
+             * YENI GELISME kopya degildir (12.11.2026). Sitede "X'te askeri
+             * helikopter dustu" varken gelen "X'te askeri helikopter dustu:
+             * 4 asker sehit oldu" basligi eski basligin butun kelimelerini
+             * tasidigi icin "zaten var" sayilip modele hic gitmiyordu.
+             * Bilinen baslikta olmayan bir SAYI (can kaybi, oran, skor) ya
+             * da en az dort yeni kelime getiren aday modele gider; ayni
+             * olayin tekrari mi, yeni gelismesi mi oldugunu model haberi
+             * okuyarak soyler (Yazar, AYNI OLAYIN YENI GELISMESI).
+             */
+            if (baslik_benzer($kume, $eskiKume) && !baslik_yeni_bilgi($kume, $eskiKume)) {
                 $benzerVar = true;
                 break;
             }
@@ -1486,6 +1527,66 @@ if ($gundem !== []) {
 // en yeniler; bütçe sınırına takılırsa gündemdeki ve güncel olanlar işlensin.
 usort($adaylar, static fn (array $a, array $b): int =>
     [(int) ($b['gundem']['trafik'] ?? -1), $b['kapsam'], $b['puan']] <=> [(int) ($a['gundem']['trafik'] ?? -1), $a['kapsam'], $a['puan']]);
+
+/*
+ * ON TARAMA VE HIZLI YOL (12.11.2026; bkz. Yazar::onTarama). Basliklar tek
+ * kucuk istekte okunur; kritik ya da yuksek oncelikli olabilecek adaylar
+ * kaynak tavani ve konu kontenjani UYGULANMADAN ayrilir, calismanin ilk
+ * grubunda yazilir ve yazilir yazilmaz siteye gonderilir. Onceden boyle
+ * bir haber "Politika" grubunun sirasini bekliyor (spor once), sonra
+ * calismanin sonundaki toplu gonderimi bekliyordu; kaynak tavanina ya da
+ * konu kontenjanina takilirsa hic yazilmayabiliyordu.
+ */
+const ON_TARAMA_EN_FAZLA_ADAY = 250;
+const ONCELIKLI_EN_FAZLA      = 8;
+
+$oncelikliAdaylar = [];
+
+if (!$videoModu && $adaylar !== []) {
+    $taranan = array_slice($adaylar, 0, ON_TARAMA_EN_FAZLA_ADAY);
+
+    try {
+        $isaretli = $yazar->onTarama(array_map(static fn (array $a): array => [
+            'baslik' => (string) $a['girdi']['baslik'],
+            'kaynak' => (string) $a['kaynak']['ad'],
+            'kapsam' => (int) $a['kapsam'],
+        ], $taranan));
+    } catch (Throwable $e) {
+        // On tarama yalnizca sirayi belirler; dusmesi toplamayi durdurmaz.
+        $isaretli = [];
+        gunluk('  Ön tarama yapılamadı, adaylar olağan sırayla işlenecek: ' . mb_substr($e->getMessage(), 0, 160));
+    }
+
+    foreach ($isaretli as $sira => $sinif) {
+        if (isset($adaylar[$sira]) && !resmi_gazete_mi($adaylar[$sira]['kaynak'])) {
+            $adaylar[$sira]['on_tarama'] = $sinif;
+        }
+    }
+
+    // Once kritikler; ayni olayin adaylari tek adayda birlesir (digerleri ek kaynak).
+    $oncelikliAdaylar = array_values(array_filter($adaylar, static fn (array $a): bool => isset($a['on_tarama'])));
+    usort($oncelikliAdaylar, static fn (array $a, array $b): int =>
+        [$b['on_tarama'] === 'kritik', $b['kapsam'], $b['puan']] <=> [$a['on_tarama'] === 'kritik', $a['kapsam'], $a['puan']]);
+    [$oncelikliAdaylar] = ayni_olayi_ele($oncelikliAdaylar);
+    $oncelikliAdaylar = array_slice($oncelikliAdaylar, 0, ONCELIKLI_EN_FAZLA);
+    $adaylar = array_values(array_filter($adaylar, static fn (array $a): bool => !isset($a['on_tarama'])));
+
+    gunluk('  Ön tarama: ' . count($taranan) . ' başlık okundu; '
+        . ($oncelikliAdaylar === []
+            ? 'kritik ya da yüksek öncelikli aday yok.'
+            : count($oncelikliAdaylar) . ' aday öncelikli (kotalara takılmadan ilk grupta yazılıp hemen gönderilecek): '
+              . implode('; ', array_map(static fn (array $a): string => '[' . $a['on_tarama'] . '] ' . mb_substr((string) $a['girdi']['baslik'], 0, 70), $oncelikliAdaylar))));
+}
+
+if ($nobetModu) {
+    // Nobet taramasi yalnizca oncelikli adaylari yazar.
+    $adaylar = [];
+
+    if ($oncelikliAdaylar === []) {
+        gunluk('Nöbet taraması: işlenecek kritik ya da yüksek öncelikli aday yok.');
+        exit(0);
+    }
+}
 
 $cokKaynakli = array_values(array_filter($adaylar, static fn (array $a): bool => $a['kapsam'] > 1));
 
@@ -1644,6 +1745,9 @@ if ($rgTekil !== []) {
     gunluk('  Resmî Gazete: ' . count($rgTekil) . ' madde öncelikli ve kaynak tavanı dışında modele gidiyor.');
 }
 
+// On taramanin ayirdiklari en basta (bkz. ON TARAMA VE HIZLI YOL).
+$adaylar = array_merge($oncelikliAdaylar, $adaylar);
+
 $konuOzeti = [];
 
 foreach (array_keys($konuPaylari) as $konu) {
@@ -1707,10 +1811,13 @@ $grupBoyu = max(1, (int) ($secenekler['grup'] ?? 5));
  * olusuyor; baslik icinde kapsam/yenilik sirasi korunuyor. Resmi
  * Gazete maddeleri basta, ayri grupta.
  */
-$basliklar = ['resmi-gazete' => []] + array_fill_keys(HaberAkisi::SIRA, []);
+$basliklar = ['oncelikli' => [], 'resmi-gazete' => []] + array_fill_keys(HaberAkisi::SIRA, []);
 
 foreach ($adaylar as $aday) {
-    $konu = resmi_gazete_mi($aday['kaynak']) ? 'resmi-gazete' : HaberAkisi::kova($aday['kaynak']);
+    // On taramanin ayirdigi adaylar ilk grupta (bkz. ON TARAMA VE HIZLI YOL).
+    $konu = isset($aday['on_tarama'])
+        ? 'oncelikli'
+        : (resmi_gazete_mi($aday['kaynak']) ? 'resmi-gazete' : HaberAkisi::kova($aday['kaynak']));
     $basliklar[isset($basliklar[$konu]) ? $konu : 'ekonomi'][] = $aday;
 }
 
@@ -1731,6 +1838,8 @@ foreach ($basliklar as $konu => $konuAdaylari) {
 gunluk(count($gruplar) . ' grup halinde, başlık başlık işlenecek (grup başına en fazla ' . $grupBoyu . ' aday).');
 
 $islenenAday = 0;
+/** @var array<string,mixed> Hizli yoldan gonderilenlerin toplami (bkz. HIZLI YOL) */
+$hizliYanit  = [];
 $gorselsiz   = 0;
 $ekKaynakliAday = 0;
 $eskiElenen  = 0;
@@ -1744,7 +1853,7 @@ foreach ($gruplar as $grupNo => $grup) {
     if ($grupNo === 0 || $grupBasligi[$grupNo] !== $grupBasligi[$grupNo - 1]) {
         $konu = $grupBasligi[$grupNo];
         $adet = count($basliklar[$konu]);
-        gunluk('— ' . (HaberAkisi::ADLAR[$konu] ?? 'Resmî Gazete') . ' (' . $adet . ' aday) —');
+        gunluk('— ' . ($konu === 'oncelikli' ? 'Öncelikli (ön tarama)' : (HaberAkisi::ADLAR[$konu] ?? 'Resmî Gazete')) . ' (' . $adet . ' aday) —');
     }
 
     $islenenAday += count($grup);
@@ -2110,6 +2219,28 @@ foreach ($gruplar as $grupNo => $grup) {
             // Modelin son dakika karari (04.11.2026): haberi okuyup veriyor;
             // site bunu yasla birlikte kullaniyor (bkz. haber_son_dakika_mi).
             'son_dakika'   => !empty($sonuc['son_dakika']),
+            /*
+             * Editoryal oncelik ve dogrulama (12.11.2026; bkz. Yazar,
+             * EDITORYAL ONCELIK). Model haberi okuyup dolduruyor; son
+             * karari site veriyor (includes/oncelik.php, oncelik_karar):
+             * kritik ama dogrulanmamis haber yayimlanmaz, acil editor
+             * incelemesine duser.
+             */
+            'oncelik'          => (string) ($sonuc['oncelik'] ?? ''),
+            'olay_turu'        => (string) ($sonuc['olay_turu'] ?? ''),
+            'olay_guncel'      => !empty($sonuc['olay_guncel']),
+            'turkiye_dogrudan' => !empty($sonuc['turkiye_dogrudan']),
+            'dogrulama'        => (string) ($sonuc['dogrulama'] ?? ''),
+            'resmi_kurum'      => (string) ($sonuc['resmi_kurum'] ?? ''),
+            'bagimsiz_kaynak_sayisi' => (int) ($sonuc['bagimsiz_kaynak_sayisi'] ?? 0),
+            'can_kaybi'        => (string) ($sonuc['can_kaybi'] ?? ''),
+            'olay_yeri'        => (string) ($sonuc['olay_yeri'] ?? ''),
+            'olay_tarihi'      => (string) ($sonuc['olay_tarihi'] ?? ''),
+            'gelisme'          => (string) ($sonuc['gelisme'] ?? ''),
+            'oncelik_gerekce'  => (string) ($sonuc['oncelik_gerekce'] ?? ''),
+            // Modelin haberi dogrulayip yazdigi an: site "dogrulamadan
+            // yayina" ve "kaynaktan taramaya" surelerini bununla olcuyor.
+            'dogrulama_ani'    => time(),
             // Haberi yazan model: site otomatik yayin esigini buna gore
             // seciyor (Luna guveni daha temkinli puanliyor).
             'model'       => $yanitlayanModel,
@@ -2151,7 +2282,53 @@ foreach ($gruplar as $grupNo => $grup) {
          */
         array_unshift($modeleGosterilecek, (string) $sonuc['baslik']);
 
-        gunluk("  kabul (%{$sonuc['guven_skoru']}, önem " . (int) ($sonuc['onem'] ?? 50) . ", {$sonuc['kategori']}) — {$sonuc['baslik']}");
+        gunluk("  kabul (%{$sonuc['guven_skoru']}, önem " . (int) ($sonuc['onem'] ?? 50) . ", {$sonuc['kategori']}"
+            . (in_array($sonuc['oncelik'] ?? '', ['kritik', 'yuksek'], true)
+                ? ', ' . mb_strtoupper((string) $sonuc['oncelik']) . ' / ' . (string) ($sonuc['dogrulama'] ?? '?')
+                : '')
+            . ") — {$sonuc['baslik']}");
+    }
+
+    /*
+     * HIZLI YOL (12.11.2026): kritik ve yuksek oncelikli haber calismanin
+     * bitmesini beklemez; grubu yazilir yazilmaz siteye gonderilir. Site
+     * dogrulanmis kritik haberi hemen yayimlayip sayfa kopyalarini
+     * yeniliyor, dogrulanmamis olani acil editor incelemesine aliyor.
+     * Gonderim duserse haber listede kalir, calismanin sonunda (ya da
+     * depodan, sonraki calismada) gider.
+     */
+    if (!$kuruCalisma) {
+        $hizli = array_filter($haberler, static fn (array $h): bool => in_array($h['oncelik'] ?? '', ['kritik', 'yuksek'], true));
+
+        if ($hizli !== []) {
+            try {
+                $hy = $site->gonder(array_values($hizli));
+                $haberler = array_values(array_diff_key($haberler, $hizli));
+
+                foreach (['eklenen', 'yinelenen', 'yayinlanan', 'incelemede', 'kritik_yayinlanan'] as $alan) {
+                    $hizliYanit[$alan] = ($hizliYanit[$alan] ?? 0) + (int) ($hy[$alan] ?? 0);
+                }
+
+                $hizliYanit['gonderilen'] = ($hizliYanit['gonderilen'] ?? 0) + count($hizli);
+                $hizliYanit['acil_inceleme'] = array_merge($hizliYanit['acil_inceleme'] ?? [], (array) ($hy['acil_inceleme'] ?? []));
+
+                gunluk('  ⚡ hızlı yol: ' . count($hizli) . ' öncelikli haber hemen gönderildi ('
+                    . (int) ($hy['yayinlanan'] ?? 0) . ' yayında'
+                    . ((int) ($hy['kritik_yayinlanan'] ?? 0) > 0 ? ', ' . (int) $hy['kritik_yayinlanan'] . ' kritik: ana sayfa yenilendi' : '')
+                    . ((int) ($hy['incelemede'] ?? 0) > 0 ? ', ' . (int) $hy['incelemede'] . ' editör incelemesinde' : '') . ').');
+
+                foreach ((array) ($hy['acil_inceleme'] ?? []) as $acilBaslik) {
+                    gunluk('  ⚠ ACİL İNCELEME: kritik ama doğrulanmadı, yayımlanmadı — ' . (string) $acilBaslik);
+
+                    if (getenv('GITHUB_ACTIONS') === 'true') {
+                        echo '::warning title=Acil editör incelemesi::' . str_replace(['%', "\r", "\n"], ['%25', ' ', ' '], (string) $acilBaslik)
+                            . ' — kritik ama doğrulanmadı; panelde Öncelik masasında bekliyor.' . PHP_EOL;
+                    }
+                }
+            } catch (Throwable $e) {
+                gunluk('  Hızlı gönderim başarısız, haber çalışmanın sonunda gönderilecek: ' . mb_substr($e->getMessage(), 0, 160));
+            }
+        }
     }
 }
 
@@ -2181,7 +2358,7 @@ if ($eskiElenen > 0) {
 }
 
 gunluk(
-    count($haberler) . ' haber yazıldı, ' . $elenen . ' eleme'
+    (count($haberler) + (int) ($hizliYanit['gonderilen'] ?? 0)) . ' haber yazıldı, ' . $elenen . ' eleme'
     . ($yinelenen > 0 ? ' (' . $yinelenen . ' yinelenen)' : '')
     . ', ' . $hatali . ' hata.'
 );
@@ -2305,7 +2482,10 @@ if ($bekleyen !== []) {
 $gonderilecek = array_merge($bekleyen, $haberler);
 
 if ($gonderilecek === []) {
-    gunluk('Gönderilecek haber yok.');
+    gunluk($hizliYanit !== []
+        ? 'Öncelikli haberler hızlı yoldan gönderildi (' . (int) ($hizliYanit['eklenen'] ?? 0) . ' yeni, '
+          . (int) ($hizliYanit['yayinlanan'] ?? 0) . ' yayında); başka gönderilecek haber yok.'
+        : 'Gönderilecek haber yok.');
 
     if ($modelOzeti !== '' && getenv('GITHUB_ACTIONS') === 'true') {
         echo '::notice title=Valentra ajanı::' . str_replace(['%', "\r", "\n"], ['%25', '%0D', '%0A'], $modelOzeti) . PHP_EOL;
@@ -2394,12 +2574,24 @@ $depo->sil('bekleyen_haberler');
  * eklendi, kaci hemen yayina girdi, kaci onay bekliyor, ana sayfada su an
  * kac haber var. Site eski surumse yayinlanan/ana_sayfa alanlari yok.
  */
+// Hizli yoldan gidenler de ozete dahil (bkz. HIZLI YOL).
+foreach (['eklenen', 'yinelenen', 'yayinlanan', 'incelemede', 'kritik_yayinlanan'] as $alan) {
+    if (isset($yanit[$alan]) || isset($hizliYanit[$alan])) {
+        $yanit[$alan] = (int) ($yanit[$alan] ?? 0) + (int) ($hizliYanit[$alan] ?? 0);
+    }
+}
+
 $ozet = ($modelOzeti !== '' ? $modelOzeti . ' ' : '') . 'Siteye gönderildi: ' . ($yanit['eklenen'] ?? 0) . ' yeni haber, '
     . ($yanit['yinelenen'] ?? 0) . ' zaten vardı.';
 
 if (isset($yanit['yayinlanan'])) {
     $ozet .= ' Hemen yayına giren: ' . (int) $yanit['yayinlanan']
-        . ', onay bekleyen (güven puanı düşük): ' . max(0, (int) ($yanit['eklenen'] ?? 0) - (int) $yanit['yayinlanan']) . '.';
+        . ', onay bekleyen: ' . max(0, (int) ($yanit['eklenen'] ?? 0) - (int) $yanit['yayinlanan']) . '.';
+}
+
+if ((int) ($yanit['kritik_yayinlanan'] ?? 0) > 0 || (int) ($yanit['incelemede'] ?? 0) > 0) {
+    $ozet .= ' Kritik (hızlı yoldan yayımlanan): ' . (int) ($yanit['kritik_yayinlanan'] ?? 0)
+        . ', editör incelemesine düşen: ' . (int) ($yanit['incelemede'] ?? 0) . '.';
 }
 
 if (is_array($yanit['ana_sayfa'] ?? null)) {

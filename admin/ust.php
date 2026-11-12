@@ -87,6 +87,9 @@
                 // Site sahibinin istegi (23.10.2026): okunma istatistigi
                 // ust menude, acilir listenin icinde kaybolmasin.
                 'Ziyaretçiler'  => 'istatistik.php',
+                // Oncelik masasi (12.11.2026): acil inceleme, ana sayfa sirasinin
+                // gerekcesi ve editor mudahalesi (bkz. includes/oncelik.php).
+                'Öncelik'       => 'oncelik.php',
                 /*
                  * Sitede gorunmeyen bolumler menuden cikti (site sahibinin
                  * istegi, 24.10.2026: "yonetim alanindan egitim, rehberler
@@ -170,5 +173,21 @@
             </script>
         </div>
     </header>
+
+    <?php
+    // Acil inceleme bekleyen kritik haber varsa her panel sayfasinda uyari
+    // (12.11.2026; bkz. includes/oncelik.php). Kritik ama dogrulanmamis
+    // haber otomatik yayimlanmiyor; editor gormeden beklemesin.
+    if (isset($panelMenu) && basename($_SERVER['SCRIPT_NAME'] ?? '') !== 'oncelik.php') {
+        require_once __DIR__ . '/../includes/oncelik.php';
+        $acilInceleme = oncelik_acil_sayisi();
+
+        if ($acilInceleme > 0) {
+            echo '<div class="sinirli"><div class="uyari uyari-hata" style="margin-top:14px;"><strong>' . $acilInceleme
+                . ' kritik haber acil inceleme bekliyor.</strong> Doğrulanmadığı için otomatik yayımlanmadı. '
+                . '<a href="oncelik.php">Öncelik masasını aç →</a></div></div>';
+        }
+    }
+    ?>
 
     <div class="sinirli">

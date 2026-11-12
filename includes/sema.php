@@ -243,6 +243,35 @@ function sema_yukselt(array &$hatalar = []): array
     // Tek konu, tek haber: yayindaki esi (08.11.2026; bkz. haber_tekrar_bekletilir).
     $sutunEkle('haberler', 'tekrar_id', 'INT UNSIGNED NULL');
 
+    // Haber onceligi (12.11.2026; bkz. includes/oncelik.php).
+    $sutunEkle('haberler', 'oncelik', 'TINYINT NOT NULL DEFAULT 1');
+    $sutunEkle('haberler', 'aciliyet', 'TINYINT NOT NULL DEFAULT 0');
+    $sutunEkle('haberler', 'dogrulama', "VARCHAR(16) NOT NULL DEFAULT ''");
+    $sutunEkle('haberler', 'can_kaybi', "VARCHAR(12) NOT NULL DEFAULT ''");
+    $sutunEkle('haberler', 'olay_turu', "VARCHAR(32) NOT NULL DEFAULT ''");
+    $sutunEkle('haberler', 'olay_kimlik', 'VARCHAR(40) NULL');
+    $sutunEkle('haberler', 'olay_yeri', "VARCHAR(80) NOT NULL DEFAULT ''");
+    $sutunEkle('haberler', 'olay_zamani', 'DATETIME NULL');
+    $sutunEkle('haberler', 'gelisme_zamani', 'DATETIME NULL');
+    $sutunEkle('haberler', 'inceleme', "VARCHAR(12) NOT NULL DEFAULT ''");
+    $sutunEkle('haberler', 'karar_kaydi', 'TEXT NULL');
+    $sutunEkle('haberler', 'editor_manset', 'TINYINT NOT NULL DEFAULT 0');
+    $sutunEkle('haberler', 'editor_oncelik', 'TINYINT NULL');
+    $sutunEkle('haberler', 'editor_bitis', 'DATETIME NULL');
+    $sutunEkle('haberler', 'editor_gerekce', "VARCHAR(300) NOT NULL DEFAULT ''");
+    $sutunEkle('haberler', 'editor_id', 'INT UNSIGNED NULL');
+    $sutunEkle('haberler', 'editor_zaman', 'DATETIME NULL');
+    $sutunEkle('haberler', 'duzeltme', "VARCHAR(600) NOT NULL DEFAULT ''");
+    $adim('haberler.olay_kimlik indeksi', static function (): bool {
+        if (sema_indeks_var('haberler', 'idx_olay_kimlik')) {
+            return false;
+        }
+
+        db()->exec('ALTER TABLE haberler ADD INDEX idx_olay_kimlik (olay_kimlik)');
+
+        return true;
+    });
+
     /*
      * V Network sosyal alan (31.10.2026; bkz. includes/network.php):
      * uyenin profil yazisi; yorumlar uye paylasimlarina da yapilabiliyor
@@ -698,6 +727,10 @@ function sema_guncel_mi(): bool
             ['haberler', 'derleme_kaynaklari'],
             ['haberler', 'google_kota'],
             ['haberler', 'tekrar_id'],
+            // Ana sayfa siralamasi (oncelik_sira_ust) ve oncelik_kaydet.
+            ['haberler', 'oncelik'],
+            ['haberler', 'editor_bitis'],
+            ['haberler', 'duzeltme'],
             ['ziyaretler', 'kampanya'],
         ];
 

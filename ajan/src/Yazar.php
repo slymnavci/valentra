@@ -435,6 +435,91 @@ final class Yazar implements SemaliIstemci
         dışında: büyük maçlar her sitede yer aldığı için spor haberi
         yukarıdaki spor aralığında kalır.
 
+        EDİTORYAL ÖNCELİK (site sahibinin kararı, 12.11.2026: "haber
+        önceliklendirme Türkiye merkezli bir yayın kuruluşunun haber müdürü
+        mantığıyla yapılsın; asker uçağının düşmesi gibi ulusal ölçekte
+        kritik bir haber ilk haber olmadı"). Önem puanından AYRI alanlardır;
+        site ana sayfayı önce bu sınıfa göre sıralar. Haberi OKUYARAK doldur;
+        başlıkta bir kelimenin geçmesi hiçbir şeyi belirlemez.
+
+        oncelik alanı:
+        - "kritik": YALNIZCA Türkiye'yi doğrudan ilgilendiren, ŞU AN olan
+          ve aşağıdaki türlerden biri olan olay:
+          * şehit haberi (asker, polis, korucu);
+          * askerî uçak ya da helikopter kazası (can kaybı henüz
+            bilinmese de);
+          * büyük can kaybı olan olay (kaza, yangın, patlama, göçük,
+            saldırı);
+          * yıkıcı deprem, tsunami ya da büyük afet (hasar, can kaybı ya
+            da geniş tahliye var);
+          * büyük terör saldırısı;
+          * Cumhurbaşkanı'nın ACİL ya da geniş etkili kararı (olağanüstü
+            hâl, seferberlik, sokağa çıkma kısıtlaması, ülke çapında
+            güvenlik ya da ekonomi kararı);
+          * ülke çapında olağanüstü gelişme.
+        - "yuksek": ülke gündemini bugün belirleyen ama yukarıdakilerden
+          olmayan gelişme (faiz kararı, enflasyon verisi, önemli kanun,
+          zam oranı, ölümlü kaza, Türkiye'yi etkileyen büyük dış gelişme).
+        - "normal": gündelik haber. "dusuk": dar ilgi alanı.
+        KRİTİK DEĞİLDİR (kelime geçse de): Cumhurbaşkanı'nın rutin
+        mesajı, kutlaması, konuşması, ziyareti; küçük ve hasarsız deprem;
+        "şehitler anıldı", cenaze töreni, taziye mesajı, şehidin
+        özgeçmişi; eski bir kazanın ya da saldırının yıldönümü; "deprem
+        gibi açıklama", "bomba transfer" gibi benzetmeler; spor ve magazin
+        haberlerindeki "flaş", "şok", "son dakika"; yorum, analiz, uzman
+        görüşü, video programı; başka ülkedeki olay (o "yuksek" olabilir).
+
+        olay_turu: "sehit", "askeri_hava_araci_kazasi", "buyuk_can_kaybi",
+        "yikici_afet", "buyuk_teror", "cumhurbaskani_acil_karar",
+        "ulke_capi_olaganustu" ya da "diger". Anma ve yıldönümü haberinde
+        de olayın türünü yaz ama olay_guncel=false ver.
+        olay_guncel: olayın KENDİSİ bugün ya da son 24 saatte olduysa true;
+        yıldönümü, anma, eski olayın ayrıntısı, benzetme, değerlendirme
+        ise false.
+        turkiye_dogrudan: olay Türkiye'de olduysa ya da Türkiye'yi, Türk
+        vatandaşlarını ya da Türk askerini doğrudan etkiliyorsa true.
+        olay_yeri: olayın olduğu il (yurt dışındaysa ülke); yalın yaz
+        ("Malatya"). Bilinmiyorsa boş. olay_tarihi: olayın günü,
+        YYYY-AA-GG; bilinmiyorsa boş.
+
+        DOĞRULAMA önemden ayrıdır (dogrulama alanı):
+        - "resmi": olayı yetkili kurum açıkladı (MSB, İçişleri, AFAD,
+          valilik, Cumhurbaşkanlığı, savcılık...) ve kaynak bu açıklamayı
+          aktarıyor. resmi_kurum alanına kurumu yaz. Resmî açıklama
+          yalnızca AÇIKLADIĞI bilgi için yeterlidir: MSB "helikopter kaza
+          kırıma uğradı" dediyse kaza doğrulanmıştır, can kaybı değil.
+        - "bagimsiz": resmî açıklama yok ama en az iki BAĞIMSIZ kaynak
+          kendi muhabirine ya da kendi kaynağına dayanarak aynı bilgiyi
+          veriyor. Aynı ajans haberini (AA, DHA, İHA) aynen yayımlayan
+          siteler TEK kaynaktır; birbirini kaynak gösteren siteler de.
+          bagimsiz_kaynak_sayisi alanına gerçekten bağımsız kaynak
+          sayısını yaz.
+        - "tek_kaynak": bilgi tek kaynağa dayanıyor.
+        - "iddia": sosyal medya paylaşımı, "iddia edildi", "öne sürüldü",
+          kaynağı belirsiz bilgi.
+        can_kaybi: "dogrulandi" (yetkili kurum ya da bağımsız kaynaklar
+        sayıyı ya da can kaybını açıkladı), "dogrulanmadi" (can kaybı
+        ihtimali var ama açıklanmadı) ya da "yok".
+        DOĞRULANMAMIŞ BİLGİYİ YAZMA: can_kaybi "dogrulandi" değilse
+        başlıkta, spotta ve metinde "şehit oldu", "hayatını kaybetti",
+        "öldü" yazma, sayı verme; "can kaybına ilişkin resmî açıklama
+        yapılmadı" de. Kaynakta olmayan ayrıntıyı (kazanın nedeni, kişi
+        adları, sayı) TAHMİNLE doldurma.
+        KRİTİK HABERDE KISA İLK SÜRÜM: doğrulanmış bilgi azsa haber de
+        kısa olur (2-3 paragraf: ne oldu, nerede, kim açıkladı, ne
+        bilinmiyor). Uzun metin için arka plan uydurma.
+
+        AYNI OLAYIN YENİ GELİŞMESİ (gelisme alanı): "ilk" (olayın ilk
+        haberi), "yeni_gelisme" ya da "ayni_bilgi". "DAHA ÖNCE
+        YAYIMLANANLAR"daki bir olayın devamı olan aday YENİ ÖNEMLİ BİLGİ
+        getiriyorsa (resmen açıklanan can kaybı sayısı, kurtarma
+        sonucu, yetkili kurumun yeni açıklaması, gözaltı, olayın nedeni)
+        yinelenen DEĞİLDİR: ilgili=true, gelisme="yeni_gelisme"; başlığı
+        ve ilk paragrafı yeni bilgi üzerine kur. Yalnızca taziye mesajı,
+        tepki, görüntü, yorum ya da aynı bilginin başka kaynaktan
+        tekrarı ise eskisi gibi yinelenen say.
+        oncelik_gerekce: sınıfı neden verdiğini tek cümleyle yaz.
+
         GOOGLE'DA ÇOK ARANAN: Bazı adaylarda "Google'da şu an çok aranan"
         satırı ve aranan ifade yazar. Türkiye'de o an binlerce kişi bu
         ifadeyi Google'da arıyor. Böyle bir haberi elemek için çok güçlü
@@ -588,6 +673,20 @@ final class Yazar implements SemaliIstemci
             'ajan_notu'   => ['type' => 'string',  'description' => 'Onaylayacak editöre tek cümlelik not'],
             'son_dakika'  => ['type' => 'boolean', 'description' => 'Haberi okuyarak karar ver: olay ya da açıklama bugün, son birkaç saatte ilk kez duyurulan önemli ve yeni bir gelişme mi (bkz. TAZELİK VE SON DAKİKA). Kaynağın "son dakika" demesi ölçü değil; tereddütte false'],
             'neden_onemli'=> ['type' => 'string',  'description' => '2-3 cümle: gelişmenin okur için anlamı, yalnızca kaynaktaki olgulardan (bkz. NEDEN ÖNEMLİ). Yemek tarifinde boş.'],
+            // Editoryal oncelik ve dogrulama (12.11.2026; bkz. EDITORYAL ONCELIK,
+            // sitede includes/oncelik.php). Onem puanindan ayri alanlar.
+            'oncelik'     => ['type' => 'string', 'enum' => ['kritik', 'yuksek', 'normal', 'dusuk'], 'description' => 'Editoryal önem sınıfı (bkz. EDİTORYAL ÖNCELİK); haberi okuyarak, başlıktaki kelimelere göre değil'],
+            'olay_turu'   => ['type' => 'string', 'enum' => ['sehit', 'askeri_hava_araci_kazasi', 'buyuk_can_kaybi', 'yikici_afet', 'buyuk_teror', 'cumhurbaskani_acil_karar', 'ulke_capi_olaganustu', 'diger'], 'description' => 'Olayın türü; listede yoksa diger'],
+            'olay_guncel' => ['type' => 'boolean', 'description' => 'Olayın kendisi bugün ya da son 24 saatte mi oldu (yıldönümü, anma, benzetme, değerlendirme: false)'],
+            'turkiye_dogrudan' => ['type' => 'boolean', 'description' => 'Olay Türkiye\'de mi ya da Türkiye\'yi doğrudan etkiliyor mu'],
+            'dogrulama'   => ['type' => 'string', 'enum' => ['resmi', 'bagimsiz', 'tek_kaynak', 'iddia'], 'description' => 'Bilginin doğrulama durumu (bkz. DOĞRULAMA)'],
+            'resmi_kurum' => ['type' => 'string', 'description' => 'dogrulama=resmi ise açıklamayı yapan kurum; değilse boş'],
+            'bagimsiz_kaynak_sayisi' => ['type' => 'integer', 'description' => 'Aynı bilgiyi kendi kaynağına dayanarak veren BAĞIMSIZ kaynak sayısı (aynı ajansın kopyaları tek kaynak)'],
+            'can_kaybi'   => ['type' => 'string', 'enum' => ['dogrulandi', 'dogrulanmadi', 'yok'], 'description' => 'Can kaybı doğrulandı mı'],
+            'olay_yeri'   => ['type' => 'string', 'description' => 'Olayın olduğu il (yurt dışıysa ülke), yalın; bilinmiyorsa boş'],
+            'olay_tarihi' => ['type' => 'string', 'description' => 'Olayın günü YYYY-AA-GG; bilinmiyorsa boş'],
+            'gelisme'     => ['type' => 'string', 'enum' => ['ilk', 'yeni_gelisme', 'ayni_bilgi'], 'description' => 'Olayın ilk haberi mi, daha önce yayımlanan bir olayın yeni önemli gelişmesi mi'],
+            'oncelik_gerekce' => ['type' => 'string', 'description' => 'Öncelik sınıfının tek cümlelik gerekçesi'],
 
             /*
              * Eski VALENTRA ANALIZ alanlari (vergi yayini donemi).
@@ -607,6 +706,8 @@ final class Yazar implements SemaliIstemci
         'required' => [
             'sira', 'ilgili', 'red_nedeni', 'baslik', 'ozet', 'icerik',
             'etiketler', 'kategori', 'guven_skoru', 'onem', 'ajan_notu', 'neden_onemli', 'son_dakika',
+            'oncelik', 'olay_turu', 'olay_guncel', 'turkiye_dogrudan', 'dogrulama', 'resmi_kurum',
+            'bagimsiz_kaynak_sayisi', 'can_kaybi', 'olay_yeri', 'olay_tarihi', 'gelisme', 'oncelik_gerekce',
             'analiz_degisen', 'analiz_etkilenen', 'analiz_zaman', 'analiz_islem',
             'isletme_etkisi', 'uygulama_ornegi', 'resmi_dayanak',
         ],
@@ -631,12 +732,28 @@ final class Yazar implements SemaliIstemci
             'onem'        => ['type' => 'integer', 'description' => '0-100 arası önem puanı: haberin kamuoyu için ne kadar önemli olduğu (bkz. ÖNEM PUANI)'],
             'ajan_notu'   => ['type' => 'string',  'description' => 'Onaylayacak editöre tek cümlelik not'],
             'son_dakika'  => ['type' => 'boolean', 'description' => 'Haberi okuyarak karar ver: olay ya da açıklama bugün, son birkaç saatte ilk kez duyurulan önemli ve yeni bir gelişme mi (bkz. TAZELİK VE SON DAKİKA). Kaynağın "son dakika" demesi ölçü değil; tereddütte false'],
+            // Editoryal oncelik ve dogrulama (12.11.2026; bkz. EDITORYAL ONCELIK,
+            // sitede includes/oncelik.php). Onem puanindan ayri alanlar.
+            'oncelik'     => ['type' => 'string', 'enum' => ['kritik', 'yuksek', 'normal', 'dusuk'], 'description' => 'Editoryal önem sınıfı (bkz. EDİTORYAL ÖNCELİK); haberi okuyarak, başlıktaki kelimelere göre değil'],
+            'olay_turu'   => ['type' => 'string', 'enum' => ['sehit', 'askeri_hava_araci_kazasi', 'buyuk_can_kaybi', 'yikici_afet', 'buyuk_teror', 'cumhurbaskani_acil_karar', 'ulke_capi_olaganustu', 'diger'], 'description' => 'Olayın türü; listede yoksa diger'],
+            'olay_guncel' => ['type' => 'boolean', 'description' => 'Olayın kendisi bugün ya da son 24 saatte mi oldu (yıldönümü, anma, benzetme, değerlendirme: false)'],
+            'turkiye_dogrudan' => ['type' => 'boolean', 'description' => 'Olay Türkiye\'de mi ya da Türkiye\'yi doğrudan etkiliyor mu'],
+            'dogrulama'   => ['type' => 'string', 'enum' => ['resmi', 'bagimsiz', 'tek_kaynak', 'iddia'], 'description' => 'Bilginin doğrulama durumu (bkz. DOĞRULAMA)'],
+            'resmi_kurum' => ['type' => 'string', 'description' => 'dogrulama=resmi ise açıklamayı yapan kurum; değilse boş'],
+            'bagimsiz_kaynak_sayisi' => ['type' => 'integer', 'description' => 'Aynı bilgiyi kendi kaynağına dayanarak veren BAĞIMSIZ kaynak sayısı (aynı ajansın kopyaları tek kaynak)'],
+            'can_kaybi'   => ['type' => 'string', 'enum' => ['dogrulandi', 'dogrulanmadi', 'yok'], 'description' => 'Can kaybı doğrulandı mı'],
+            'olay_yeri'   => ['type' => 'string', 'description' => 'Olayın olduğu il (yurt dışıysa ülke), yalın; bilinmiyorsa boş'],
+            'olay_tarihi' => ['type' => 'string', 'description' => 'Olayın günü YYYY-AA-GG; bilinmiyorsa boş'],
+            'gelisme'     => ['type' => 'string', 'enum' => ['ilk', 'yeni_gelisme', 'ayni_bilgi'], 'description' => 'Olayın ilk haberi mi, daha önce yayımlanan bir olayın yeni önemli gelişmesi mi'],
+            'oncelik_gerekce' => ['type' => 'string', 'description' => 'Öncelik sınıfının tek cümlelik gerekçesi'],
         ],
         // Gemini'nin responseSchema'si OpenAPI alt kumesidir;
         // additionalProperties desteklenmez, gonderilirse istek 400 doner.
         'required' => [
             'ilgili', 'red_nedeni', 'baslik', 'ozet', 'icerik',
             'etiketler', 'kategori', 'guven_skoru', 'onem', 'ajan_notu', 'son_dakika',
+            'oncelik', 'olay_turu', 'olay_guncel', 'turkiye_dogrudan', 'dogrulama', 'resmi_kurum',
+            'bagimsiz_kaynak_sayisi', 'can_kaybi', 'olay_yeri', 'olay_tarihi', 'gelisme', 'oncelik_gerekce',
         ],
     ];
 
@@ -1276,6 +1393,98 @@ final class Yazar implements SemaliIstemci
             count($adaylar),
             'ilgili'
         );
+    }
+
+    /*
+     * ON TARAMA (12.11.2026; site sahibi: "kritik haber olagan kuyrugu
+     * beklemesin"). Toplanan adaylarin BASLIKLARI tek kucuk istekte
+     * okunur; kritik ya da yuksek oncelikli OLABILECEK adaylar isaretlenir.
+     * Isaretlenenler kaynak ve konu kotalarina takilmadan, calismanin ILK
+     * grubunda yazilir ve hemen siteye gonderilir (bkz. topla.php, HIZLI
+     * YOL). Burasi yalnizca SIRA belirler: haberin sinifina ve
+     * dogrulamasina, haberin tamami okunurken karar verilir (YONERGE,
+     * EDITORYAL ONCELIK); yanlis isaretlenen aday yalnizca once islenmis olur.
+     */
+    private const ON_TARAMA_YONERGESI = <<<'METIN'
+        Türkiye merkezli bir haber sitesinin haber müdürüsün. Sana haber
+        adaylarının başlıkları verilecek. Görevin, HEMEN işlenmesi gereken
+        adayları ayırmak. Her aday için sinif alanına şunlardan birini yaz:
+
+        "kritik": Türkiye'yi doğrudan ilgilendiren ve ŞU AN olan: şehit
+        haberi; askerî uçak ya da helikopter kazası; büyük can kaybı olan
+        kaza, yangın, patlama, göçük, saldırı; yıkıcı deprem, tsunami ya da
+        büyük afet; büyük terör saldırısı; Cumhurbaşkanı'nın acil ya da
+        geniş etkili kararı; ülke çapında olağanüstü gelişme.
+        "yuksek": ülke gündemini bugün belirleyen diğer gelişmeler (faiz
+        kararı, enflasyon verisi, zam oranı, önemli kanun, ölümlü kaza,
+        Türkiye'yi etkileyen büyük dış gelişme).
+        "normal": geri kalan her şey.
+
+        Kelimeye değil olaya bak. KRİTİK DEĞİLDİR: rutin mesaj, kutlama,
+        konuşma, ziyaret; küçük ve hasarsız deprem; anma, cenaze, taziye,
+        yıldönümü; "deprem gibi", "bomba" gibi benzetmeler; spor ve
+        magazindeki "flaş", "şok", "son dakika"; yorum, analiz, video
+        programı. Aynı olayın birden çok adayı varsa hepsini aynı sınıfa
+        koy. Tereddütte "normal" yaz. Her aday için bir sonuç döndür.
+        METIN;
+
+    /** @var array<string,mixed> */
+    private const ON_TARAMA_SEMASI = [
+        'type' => 'object',
+        'properties' => [
+            'sonuclar' => [
+                'type'  => 'array',
+                'items' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'sira'  => ['type' => 'integer', 'description' => 'Adayın sıra numarası'],
+                        'sinif' => ['type' => 'string', 'enum' => ['kritik', 'yuksek', 'normal']],
+                    ],
+                    'required' => ['sira', 'sinif'],
+                ],
+            ],
+        ],
+        'required' => ['sonuclar'],
+    ];
+
+    /**
+     * Adayların başlıklarını okuyup önce işlenecekleri döndürür.
+     *
+     * @param list<array{baslik:string,kaynak:string,kapsam:int}> $adaylar
+     * @return array<int,string> 0 tabanlı sıra => 'kritik' | 'yuksek'
+     */
+    public function onTarama(array $adaylar): array
+    {
+        if ($adaylar === []) {
+            return [];
+        }
+
+        $satirlar = [];
+
+        foreach (array_values($adaylar) as $sira => $aday) {
+            $satirlar[] = ($sira + 1) . '. ' . mb_substr(trim($aday['baslik']), 0, 160, 'UTF-8')
+                . ' — ' . mb_substr($aday['kaynak'], 0, 40, 'UTF-8')
+                . ($aday['kapsam'] > 1 ? ' (' . $aday['kapsam'] . ' kaynakta)' : '');
+        }
+
+        $sonuclar = $this->semaliIstek(
+            self::ON_TARAMA_YONERGESI,
+            'Bugün: ' . date('d.m.Y H:i') . " (Türkiye saati). Adaylar:\n" . implode("\n", $satirlar),
+            self::ON_TARAMA_SEMASI,
+            8000,
+            count($adaylar),
+            'sinif'
+        );
+
+        $secilen = [];
+
+        foreach ($sonuclar as $sira => $sonuc) {
+            if (in_array($sonuc['sinif'] ?? '', ['kritik', 'yuksek'], true)) {
+                $secilen[$sira] = (string) $sonuc['sinif'];
+            }
+        }
+
+        return $secilen;
     }
 
     /**

@@ -28,6 +28,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/haberler.php';
+require_once __DIR__ . '/oncelik.php';
 
 /*
  * BIR OLAY, ANA SAYFADA TEK HABER (site sahibi, 09.11.2026: "Izmir Habas'ta
@@ -225,7 +226,12 @@ function konu_kumele(array $haberler): array
 
     for ($i = 0; $i < $n; $i++) {
         for ($j = $i + 1; $j < $n; $j++) {
-            if (konu_ayni_olay_mi($kokler[$i], $kokler[$j])) {
+            // Ayni olay kimligi (12.11.2026; bkz. oncelik_kaydet): olay turu,
+            // yeri ve zamaniyla eslesmis haberler basliklari benzemese de ayni olay.
+            $ayniOlay = (string) ($haberler[$i]['olay_kimlik'] ?? '') !== ''
+                && (string) ($haberler[$i]['olay_kimlik'] ?? '') === (string) ($haberler[$j]['olay_kimlik'] ?? '');
+
+            if ($ayniOlay || konu_ayni_olay_mi($kokler[$i], $kokler[$j])) {
                 $a = $bul($i);
                 $b = $bul($j);
 
@@ -273,7 +279,9 @@ function konu_ana_sayfa_konulari(): array
 
     try {
         $ifade = db()->prepare(
-            'SELECT h.id, h.baslik, h.ozet, h.onem, h.derleme, h.kaynak_adi, k.slug AS kategori_slug
+            'SELECT h.id, h.baslik, h.ozet, h.onem, h.derleme, h.kaynak_adi, k.slug AS kategori_slug'
+            . (oncelik_hazir() ? ', h.olay_kimlik, ' . oncelik_etkin_sinif_ifadesi() . ' AS etkin_sinif,
+                    UNIX_TIMESTAMP(COALESCE(h.gelisme_zamani, h.kaynak_tarihi, h.olusturuldu)) AS gelisme' : '') . '
                FROM haberler h
                LEFT JOIN kategoriler k ON k.id = h.kategori_id
                ' . haber_okunma_birlesimi() . '
@@ -294,6 +302,17 @@ function konu_ana_sayfa_konulari(): array
 
         // Once derleme (ozgun) haber, sonra ana sayfa sirasi (usort kararli).
         usort($uyeler, static fn (array $a, array $b): int => (int) $b['derleme'] <=> (int) $a['derleme']);
+
+        /*
+         * Kritik ya da yuksek oncelikli olayda (12.11.2026) olayin EN SON
+         * ONEMLI GELISMESINI veren haber kalir: derleme yazildiktan sonra
+         * can kaybi sayisi degistiyse ana sayfada eski derleme degil yeni
+         * gelisme durur. Esitlikte yine derleme, sonra ana sayfa sirasi.
+         */
+        if (max(array_map(static fn (array $h): int => (int) ($h['etkin_sinif'] ?? 1), $uyeler)) >= 2) {
+            usort($uyeler, static fn (array $a, array $b): int =>
+                [(int) ($b['etkin_sinif'] ?? 1), (int) ($b['gelisme'] ?? 0)] <=> [(int) ($a['etkin_sinif'] ?? 1), (int) ($a['gelisme'] ?? 0)]);
+        }
 
         $tavan = konu_tavani($uyeler);
         $idler = array_map(static fn (array $h): int => (int) $h['id'], $uyeler);

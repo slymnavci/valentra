@@ -245,6 +245,13 @@ foreach (($govdeVeri ?? []) as $ad => $deger) {
         <?= $metinHtml ?>
     </div>
 
+    <?php /* Editorun duzeltme notu (12.11.2026; bkz. oncelik_duzeltme_yaz). */ ?>
+    <?php if (trim((string) ($haber['duzeltme'] ?? '')) !== ''): ?>
+        <p class="duzeltme-notu" style="margin:14px 0;padding:10px 14px;border-left:4px solid #c9a227;background:rgba(201,162,39,.1);">
+            <strong>Düzeltme:</strong> <?= e((string) $haber['duzeltme']) ?>
+        </p>
+    <?php endif; ?>
+
     <?php /* Metnin sonunda buyuk paylasim cubugu ve WhatsApp kanali (03.11.2026). */ ?>
     <?= paylas_cubugu_html((string) $haber['baslik'], haber_yolu((string) $haber['slug']), 'alt') ?>
     <?= whatsapp_kanal_html() ?>
