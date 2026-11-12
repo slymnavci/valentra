@@ -275,6 +275,34 @@ function haber_arkadaki_spor_ifadesi(): string
 }
 
 /*
+ * SIRADAN SPOR HABERI ANA SAYFADA YOK (site sahibi, 12.11.2026: "Ozan
+ * Tufan'in milli takim kadrosunda yer bulamamasi cok onemli bir haber
+ * degil; bu haberleri ana sayfaya koyma, spor haberlerinde olabilir. Burada
+ * en onemli haber milli mac skoru ve yorumlar. Voleybol, basketbolda dunya
+ * sampiyonu olmadiysa burada yeri olmamali; onemli sampiyonluk maci,
+ * Turkiye basket maci varsa bunlar yayinlanabilir").
+ *
+ * Yukaridaki kural sporu yalnizca ARKAYA aliyordu; gundem haberi azalinca
+ * kadro, transfer, aciklama haberleri yine "Bugun bilmeniz gereken 5
+ * gelisme"ye ve mansete cikiyordu. Artik onemi SPOR_ANA_SAYFA_ESIGI'nin
+ * altindaki spor haberi ana sayfa akisina (manset, 5 gelisme, izgara,
+ * bulten) hic girmiyor; yayinda kaliyor ve ValSpor'da gorunuyor. Esigi
+ * gecenler: milli takim mac sonuclari ve degerlendirmeleri, sampiyonlugu
+ * belirleyen maclar, kupa/madalya (ajan bunlara 70+ veriyor; bkz.
+ * ajan/src/Yazar.php, ONEM PUANI). Bu karardan ONCE toplanmis spor
+ * haberleri eski yonergeyle en fazla 60 almisti: onlar da ana sayfadan
+ * cikar, yeni toplananlar yeni puanla gelir.
+ */
+const SPOR_ANA_SAYFA_ESIGI = 70;
+
+/** Onemi dusuk spor haberlerini disarida birakan kosul ("h" takma adiyla). */
+function haber_siradan_spor_disi_kosulu(): string
+{
+    return '(h.onem >= ' . SPOR_ANA_SAYFA_ESIGI . ' OR h.kategori_id IS NULL OR h.kategori_id NOT IN'
+        . " (SELECT id FROM kategoriler WHERE slug = 'spor'))";
+}
+
+/*
  * SON DAKIKA YUVASI (site sahibinin karari, 23.10.2026: "en basa en yeni
  * haberleri koyup son dakika yapalim; bir sonrakinde onem derecesine
  * gore geri gitsin, oradaki haber son dakika olsun; her seferinde en
@@ -768,7 +796,7 @@ const HABER_ANA_SAYFA_EN_FAZLA_GUN = 14;
  * (yemek tarifi gibi akis disi bir baslikta olmayan), kaynak tarihi
  * bilinen haber. Tarih penceresi yok; siniri haber sayisi koyuyor.
  */
-function haber_ana_akis_kosulu(bool $yerelDahil = false, bool $konuSiniri = true): string
+function haber_ana_akis_kosulu(bool $yerelDahil = false, bool $konuSiniri = true, bool $sporDahil = false): string
 {
     $disarida = implode(', ', array_map(
         static fn (string $slug): string => db()->quote($slug),
@@ -807,6 +835,8 @@ function haber_ana_akis_kosulu(bool $yerelDahil = false, bool $konuSiniri = true
         . ' AND h.olusturuldu >= NOW() - INTERVAL ' . HABER_ANA_SAYFA_EN_FAZLA_GUN . ' DAY'
         // Dusuk onemli yerel haber ana akista yok ($yerelDahil: "Senin Icin" sehir bolumu).
         . ($yerelDahil ? '' : ' AND ' . haber_yerel_kosulu())
+        // Siradan spor haberi ana akista yok ($sporDahil: "Senin Icin"de sporu secen okur).
+        . ($sporDahil ? '' : ' AND ' . haber_siradan_spor_disi_kosulu())
         . ($konuSiniri ? haber_konu_siniri_kosulu() : '');
 }
 
