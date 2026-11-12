@@ -108,6 +108,11 @@ if (isset($mansetler[0]) && haber_gorsel($mansetler[0]) !== '') {
 require __DIR__ . '/includes/sayfa_ust.php';
 ?>
 
+<?php /* Sayfanin tek H1'i (12.11.2026): ana sayfada 30 H2 vardi, H1 yoktu;
+         arama motoru ve ekran okuyucu sayfanin ana basligini bulamiyordu.
+         Metin sayfa basligiyla (<title>) ayni; gorunum degismiyor. */ ?>
+<h1 class="gizli-etiket"><?= e($sayfaBasligi) ?></h1>
+
 <?php if ($toplam === 0): ?>
     <div class="bos-durum">
         <?php /* Ana sayfa kaynakta bugun ve dun yayimlanmis haberleri gosteriyor

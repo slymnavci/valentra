@@ -98,6 +98,9 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
              asil oldugunu soyler; aksi halde arama motoru ikisini ayri
              sayfa sanip ikisinin de degerini dusurur. */ ?>
     <link rel="canonical" href="<?= e($seoAdres) ?>">
+    <?php /* RSS beslemesi (12.11.2026; bkz. rss.php): Discover'daki "Takip et"
+             ve besleme okuyucular adresi buradan buluyor. */ ?>
+    <link rel="alternate" type="application/rss+xml" title="Valentra — Güncel Haberler" href="<?= e(site_adresi() . rss_yolu()) ?>">
 
     <?php /* Dizine acik sayfalarda buyuk gorsel onizleme izni: yoksa
              Google Discover ve Haberler haberi kucuk resimle gosteriyor. */ ?>

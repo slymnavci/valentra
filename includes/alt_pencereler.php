@@ -39,7 +39,7 @@ if ($altBloklar === []) {
 
             <a class="blok-one-cikan" href="<?= e(haber_yolu((string) $ilk['slug'])) ?>">
                 <?php if ($ilkGorsel !== ''): ?>
-                    <img src="<?= e(haber_gorsel_kucuk($ilk, 480)) ?>" alt="" loading="lazy" referrerpolicy="no-referrer"
+                    <img src="<?= e(haber_gorsel_kucuk($ilk, 480)) ?>" alt="<?= e((string) $ilk['baslik']) ?>" loading="lazy" referrerpolicy="no-referrer"
                          onerror="this.remove()">
                 <?php endif; ?>
                 <h4><?= e($ilk['baslik']) ?></h4>

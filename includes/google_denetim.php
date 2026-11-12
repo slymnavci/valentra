@@ -590,9 +590,13 @@ function google_denetimi(int $sureButcesi = 80): array
         $b = gd_sayfa_coz($h['govde']);
         $haber = null;
 
+        // Sema tek dugum de olabilir, "@graph" icinde de (icerik haritasi
+        // ve SSS ile birlikte basiliyor; bkz. seo_haber_semasi).
         foreach ($b['semalar'] as $s) {
-            if (($s['@type'] ?? '') === 'NewsArticle') {
-                $haber = $s;
+            foreach (isset($s['@graph']) && is_array($s['@graph']) ? $s['@graph'] : [$s] as $dugum) {
+                if (is_array($dugum) && ($dugum['@type'] ?? '') === 'NewsArticle') {
+                    $haber = $dugum;
+                }
             }
         }
 

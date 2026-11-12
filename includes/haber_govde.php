@@ -80,7 +80,7 @@ foreach (($govdeVeri ?? []) as $ad => $deger) {
         <?php // Sayfada kucuk kopya; asil dosya paylasim gorseli ve yapisal veride.
               // Kaydirinca gelen haberde gorsel tembel yukleniyor. ?>
         <?php $haberSet = haber_gorsel_srcset($haber); ?>
-        <img src="<?= e(haber_gorsel_kucuk($haber, 960)) ?>" alt="" referrerpolicy="no-referrer"
+        <img src="<?= e(haber_gorsel_kucuk($haber, 960)) ?>" alt="<?= e((string) $haber['baslik']) ?>" referrerpolicy="no-referrer"
              <?= isset($_GET['sonraki']) ? 'loading="lazy"' : 'fetchpriority="high"' ?>
              <?php if ($haberSet !== ''): ?>srcset="<?= e($haberSet) ?>" sizes="(max-width: 960px) 100vw, 960px"<?php endif; ?>
              onerror="this.remove()" style="border-radius:8px;margin-bottom:<?= trim((string) ($haber['gorsel_atif'] ?? '')) !== '' ? '6' : '22' ?>px;">
