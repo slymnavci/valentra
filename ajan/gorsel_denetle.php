@@ -124,8 +124,15 @@ function yedek_bul(GorselDenetci $denetci, array $haber, array $sorgular, int $b
         $parcalar = preg_split('/\s+/', GorselDenetci::katla($kisi)) ?: [];
         $soyad = (string) end($parcalar);
 
+        /*
+         * Soyadin ILK ALTI HARFI (12.11.2026): arsivlerde ayni kisi farkli
+         * yazimlarla duruyor ("Zelenskyy", "Zelensky", "Zelenskiy"). Tam
+         * soyad arandiginda "Volodymyr Zelensky 2022.jpg" adli dosyalar
+         * eleniyor, Zelensky haberi konu gorseliyle kaliyordu (12.11 07:59
+         * calismasi: "Volodymyr Zelenskyy" sorgusunda hic aday kalmadi).
+         */
         if (strlen($soyad) >= 3) {
-            $soyadlar[] = $soyad;
+            $soyadlar[] = substr($soyad, 0, 6);
         }
     }
 

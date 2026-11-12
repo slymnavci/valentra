@@ -200,6 +200,10 @@ Birebir aynı olay olması gerekmez; konuyu temsil etmesi yeter. Konuyla
 ilgisiz, yanıltıcı ya da başka bir olayı/kişiyi gösteriyormuş gibi
 duruyorsa uygun=false. Uygunsuz, şiddet içeren, çıplaklık içeren görsel
 uygun=false.
+KİŞİ FOTOĞRAFI YER KURALINDAN MUAF: Haberin konusu olan tanınmış kişinin
+fotoğrafı, başka bir ülkede ya da toplantıda çekilmiş olsa da uygundur
+(Zelenski haberine Zelenski'nin herhangi bir resmî görüşme fotoğrafı).
+Aşağıdaki yer kuralı kişisiz, yer/nesne fotoğrafları içindir.
 YANLIŞ YER (site sahibi, 11.11.2026: "resimler haberle alakasız"):
 Görselde ya da arşiv adında haberdekinden BAŞKA bir ülke, şehir, kurum ya
 da tesis tanınıyorsa uygun=false. Örnekler: Antalya'daki trafik haberine
@@ -623,7 +627,7 @@ METIN;
             'generator'    => 'search',
             'gsrsearch'    => $sorgu . ' filetype:bitmap',
             'gsrnamespace' => 6,
-            'gsrlimit'     => 15,
+            'gsrlimit'     => 30,   // 15'ten (12.11.2026): boyut ve ad suzgeclerinden sonra aday kalmiyordu
             'prop'         => 'imageinfo',
             'iiprop'       => 'url|size|mime|extmetadata',
             'iiurlwidth'   => 1280,
