@@ -265,7 +265,7 @@ function mac_ozeti_kart_html(array $o): string
     $zaman = strtotime((string) $o['yayin']) ?: time();
 
     return '<article class="mozet-kart"><a href="' . e(mac_ozeti_yolu((string) $o['slug'])) . '">'
-        . '<span class="mozet-kapak"><img src="' . e(mac_ozeti_gorsel($o)) . '" alt="" loading="lazy" width="480" height="360">'
+        . '<span class="mozet-kapak"><img src="' . e(mac_ozeti_gorsel($o)) . '" alt="' . e((string) ($o['baslik'] ?? '')) . '" loading="lazy" width="480" height="360">'
         . '<span class="mozet-oynat" aria-hidden="true">▶</span>'
         . ((string) $o['skor'] !== '' ? '<span class="mozet-skor">' . e((string) $o['skor']) . '</span>' : '') . '</span>'
         . '<span class="mozet-govde"><span class="mozet-baslik">' . e((string) $o['baslik']) . '</span>'

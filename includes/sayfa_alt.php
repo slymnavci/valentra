@@ -14,6 +14,7 @@
                 <a href="<?= e(kurumsal_yolu($kurumsalAnahtar)) ?>"><?= e($kurumsalAd) ?></a>
             <?php endforeach; ?>
             <a href="/bulten.php">E-posta bülteni</a>
+            <a href="<?= e(rss_yolu()) ?>">RSS</a>
         </nav>
         <?php /* Gundem dosyalari ve son depremler (03.11.2026): Google'in bulmasi icin her sayfadan baglanti. */ ?>
         <?php require_once __DIR__ . '/konu.php'; ?>

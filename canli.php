@@ -126,7 +126,7 @@ require_once __DIR__ . '/includes/paylas.php';
         </div>
         <?= paylas_cubugu_html((string) $anlatim['baslik'], canli_yolu((string) $anlatim['slug']), 'ust') ?>
         <?php if ((string) $anlatim['gorsel_url'] !== ''): ?>
-            <img src="<?= e((string) $anlatim['gorsel_url']) ?>" alt="" referrerpolicy="no-referrer" fetchpriority="high"
+            <img src="<?= e((string) $anlatim['gorsel_url']) ?>" alt="<?= e((string) $anlatim['baslik']) ?>" referrerpolicy="no-referrer" fetchpriority="high"
                  onerror="this.remove()" style="border-radius:8px;margin:4px 0 18px;width:100%;">
         <?php endif; ?>
     </header>

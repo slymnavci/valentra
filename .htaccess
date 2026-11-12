@@ -172,6 +172,14 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^kategori/([^/]+)/?$ kategori.php?k=$1 [L,QSA]
 
+    # RSS beslemesi (12.11.2026): /rss, /rss/gundem
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^rss/?$ rss.php [L,QSA]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^rss/([a-z0-9-]+)/?$ rss.php?k=$1 [L,QSA]
+
     # Mac ozetleri (04.11.2026): /mac-ozetleri, /mac-ozeti/galatasaray-fenerbahce-...
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

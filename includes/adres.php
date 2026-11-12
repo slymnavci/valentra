@@ -42,6 +42,16 @@ function temiz_adres_acik(): bool
     return $acik;
 }
 
+/** RSS beslemesinin adresi (bkz. rss.php); $kategori boşsa bütün haberler. */
+function rss_yolu(string $kategori = ''): string
+{
+    if (temiz_adres_acik()) {
+        return '/rss' . ($kategori !== '' ? '/' . rawurlencode($kategori) : '');
+    }
+
+    return '/rss.php' . ($kategori !== '' ? '?k=' . rawurlencode($kategori) : '');
+}
+
 /** Haber sayfasının adresi. */
 function haber_yolu(string $slug): string
 {

@@ -32,7 +32,7 @@ try {
 }
 
 $haberler = db()->query(
-    'SELECT slug, baslik, yayin_tarihi
+    'SELECT id, slug, baslik, gorsel_url, yayin_tarihi
        FROM haberler
       WHERE durum = ' . db()->quote(HABER_YAYINDA) . '
         AND yayin_tarihi >= NOW() - INTERVAL 2 DAY
@@ -44,7 +44,8 @@ $haberler = db()->query(
 echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
 ?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 <?php foreach ($haberler as $haber): ?>
     <url>
         <loc><?= e($taban . haber_yolu((string) $haber['slug'])) ?></loc>
@@ -56,6 +57,13 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
             <news:publication_date><?= e(date('c', (int) strtotime((string) $haber['yayin_tarihi']))) ?></news:publication_date>
             <news:title><?= e((string) $haber['baslik']) ?></news:title>
         </news:news>
+        <?php /* Haberin gorseli (12.11.2026; bkz. sitemap.php). */ ?>
+        <?php $haritaGorsel = seo_haber_gorsel_adresi($haber, true); ?>
+        <?php if ($haritaGorsel !== ''): ?>
+        <image:image>
+            <image:loc><?= e($haritaGorsel) ?></image:loc>
+        </image:image>
+        <?php endif; ?>
     </url>
 <?php endforeach; ?>
 </urlset>

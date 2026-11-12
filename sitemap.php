@@ -33,7 +33,7 @@ try {
 }
 
 $haberler = db()->query(
-    'SELECT slug, yayin_tarihi, guncellendi
+    'SELECT id, slug, baslik, gorsel_url, yayin_tarihi, guncellendi
        FROM haberler
       WHERE durum = ' . db()->quote(HABER_YAYINDA) . '
         AND ' . haber_dizinlenir_kosulu() . '
@@ -55,7 +55,11 @@ $zaman = static fn (?string $t): string => date('c', $t !== null ? (int) strtoti
 
 echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
 ?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<?php /* Gorsel uzantisi (12.11.2026): haberin gorseli adresin yaninda
+         bildiriliyor; Google Gorseller gorseli sayfayi taramayi beklemeden
+         ogreniyor. */ ?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
     <url>
         <loc><?= e($taban) ?>/</loc>
         <changefreq>hourly</changefreq>
@@ -321,6 +325,12 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
             <lastmod><?= e($zaman($haber['guncellendi'] ?: $haber['yayin_tarihi'])) ?></lastmod>
             <changefreq>weekly</changefreq>
             <priority>0.8</priority>
+            <?php $haritaGorsel = seo_haber_gorsel_adresi($haber, true); ?>
+            <?php if ($haritaGorsel !== ''): ?>
+            <image:image>
+                <image:loc><?= e($haritaGorsel) ?></image:loc>
+            </image:image>
+            <?php endif; ?>
         </url>
     <?php endforeach; ?>
 </urlset>

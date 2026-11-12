@@ -188,9 +188,42 @@ function seo_haber_semasi(array $haber): string
         }
     }
 
+    /*
+     * Ek dugumler: icerik haritasi (12.11.2026) ve varsa SSS.
+     *
+     * BreadcrumbList: arama sonucunda ciplak adres yerine
+     * "Valentra > Gundem" gorunsun. Sayfadaki kategori etiketinin
+     * karsiligi (ayni ad, ayni adres); kategorisiz haberde basilmiyor.
+     * Son ogede "item" yok: Google sayfanin kendi adresini kullaniyor.
+     */
+    $ekler = [];
+
+    if (!empty($haber['kategori_slug']) && !empty($haber['kategori_adi'])) {
+        $ekler[] = [
+            '@type'           => 'BreadcrumbList',
+            'itemListElement' => [
+                ['@type' => 'ListItem', 'position' => 1, 'name' => 'Ana Sayfa', 'item' => site_adresi() . '/'],
+                ['@type' => 'ListItem', 'position' => 2, 'name' => (string) $haber['kategori_adi'],
+                 'item' => site_adresi() . kategori_yolu((string) $haber['kategori_slug'])],
+                ['@type' => 'ListItem', 'position' => 3, 'name' => (string) $haber['baslik']],
+            ],
+        ];
+    }
+
     $sss = seo_sss_cikar(okur_dili((string) ($haber['icerik'] ?? '')));
 
-    if ($sss === []) {
+    if ($sss !== []) {
+        $ekler[] = [
+            '@type'      => 'FAQPage',
+            'mainEntity' => array_map(static fn (array $s): array => [
+                '@type'          => 'Question',
+                'name'           => $s['soru'],
+                'acceptedAnswer' => ['@type' => 'Answer', 'text' => $s['cevap']],
+            ], $sss),
+        ];
+    }
+
+    if ($ekler === []) {
         return json_encode($sema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
@@ -198,15 +231,42 @@ function seo_haber_semasi(array $haber): string
 
     return json_encode([
         '@context' => 'https://schema.org',
-        '@graph'   => [$sema, [
-            '@type'      => 'FAQPage',
-            'mainEntity' => array_map(static fn (array $s): array => [
-                '@type'          => 'Question',
-                'name'           => $s['soru'],
-                'acceptedAnswer' => ['@type' => 'Answer', 'text' => $s['cevap']],
-            ], $sss),
-        ]],
+        '@graph'   => [$sema, ...$ekler],
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+}
+
+/**
+ * Haberin görselinin tam adresi (site haritaları ve RSS için); yoksa ''.
+ *
+ * Haber sayfasinin ve NewsArticle semasinin kullandigi gorselle ayni
+ * (haber_gorsel). Gorselsiz haberde bos: marka gorseli haritaya ve
+ * beslemeye haberin gorseli diye yazilmiyor.
+ *
+ * $yalnizHabereOzgu (site haritalari): yalnizca sunucuda duran, o
+ * habere ait dosya. Disarida kalanlar:
+ *   - /gorsel.php?id=...: gorsel henuz indirilmemis; adres noindex
+ *     basliyor ve Googlebot her birini istese site binlerce gorseli
+ *     kaynaklardan bir anda indirmeye kalkardi;
+ *   - son dakika ve konu gorselleri (/assets/...): onlarca haberde ayni
+ *     dosya, gorsel aramasina bir sey katmiyor.
+ *
+ * @param array<string,mixed> $haber id ve gorsel_url gerekli
+ */
+function seo_haber_gorsel_adresi(array $haber, bool $yalnizHabereOzgu = false): string
+{
+    require_once __DIR__ . '/gorsel_onbellek.php';
+
+    $gorsel = haber_gorsel($haber);
+
+    if ($gorsel === '') {
+        return '';
+    }
+
+    if ($yalnizHabereOzgu && !str_starts_with($gorsel, HABER_GORSEL_YOLU . '/')) {
+        return '';
+    }
+
+    return str_starts_with($gorsel, '/') ? site_adresi() . $gorsel : $gorsel;
 }
 
 /**

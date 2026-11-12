@@ -28,7 +28,7 @@ if (($mansetler ?? []) === []) {
                         <?php /* Gorsel kutuyu dolduruyor (30.10.2026); genis ekranda 1440'lik kopya.
                                  sizes: 1400 ve ustunde kaydirak hava ve yazarlar kutularinin yaninda. */ ?>
                         <?php $slaytSet = haber_gorsel_srcset($haber, [480, 960, 1440]); ?>
-                        <img class="ust-gorsel" src="<?= e(haber_gorsel_kucuk($haber, 960)) ?>" alt="" referrerpolicy="no-referrer"
+                        <img class="ust-gorsel" src="<?= e(haber_gorsel_kucuk($haber, 960)) ?>" alt="<?= e((string) $haber['baslik']) ?>" referrerpolicy="no-referrer"
                              <?php if ($slaytSet !== ''): ?>srcset="<?= e($slaytSet) ?>" sizes="(min-width: 1400px) calc(100vw - 780px), calc(100vw - 48px)"<?php endif; ?>
                              <?= $sira === 0 ? 'fetchpriority="high"' : '' ?>
                              onerror="this.closest('.kaydirak-slayt').classList.remove('gorselli');this.remove()"

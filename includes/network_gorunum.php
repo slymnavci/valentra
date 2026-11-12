@@ -294,7 +294,7 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
             <?php elseif (haber_gorsel($v) !== ''): ?>
                 <a class="nw-gorsel" href="<?= e($detayYol) ?>">
                     <?php $set = haber_gorsel_srcset($v); ?>
-                    <img src="<?= e(haber_gorsel_kucuk($v, 960)) ?>" alt="" loading="lazy" referrerpolicy="no-referrer"
+                    <img src="<?= e(haber_gorsel_kucuk($v, 960)) ?>" alt="<?= e((string) $v['baslik']) ?>" loading="lazy" referrerpolicy="no-referrer"
                          <?php if ($set !== ''): ?>srcset="<?= e($set) ?>" sizes="(max-width: 680px) 100vw, 640px"<?php endif; ?>
                          onerror="this.remove()">
                 </a>
