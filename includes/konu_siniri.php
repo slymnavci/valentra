@@ -403,6 +403,56 @@ function konu_sayilari(string $baslik): array
     return array_values(array_unique($m[0]));
 }
 
+/**
+ * Başlıktaki sayılar, sıra sayıları hariç ("ligde 18. sırada", "11.
+ * haftada" yeni bilgi değil; "4 asker", "%36,5", "2-1" öyle).
+ *
+ * @return list<string>
+ */
+function konu_sayilari_sirasiz(string $baslik): array
+{
+    return konu_sayilari(preg_replace('/\d+\.(?=\s+\p{Ll})/u', '', $baslik) ?? $baslik);
+}
+
+/**
+ * Başlıktaki maç skoru, sırasız ("Belçika 2-1 Türkiye" ile "Türkiye 1-2
+ * Belçika" aynı: "1-2"); skor yoksa null. Yıl aralığı ("2026-2027") ve
+ * ondalıklı sayı skor değil.
+ */
+function konu_skoru(string $baslik): ?string
+{
+    if (preg_match('/(?<![\d.,])(\d{1,3})[-–](\d{1,3})(?![\d.,]|[-–]\d)/u', $baslik, $m) !== 1) {
+        return null;
+    }
+
+    $s = [(int) $m[1], (int) $m[2]];
+    sort($s);
+
+    return $s[0] . '-' . $s[1];
+}
+
+/**
+ * İki başlık aynı maçın sonucunu mu veriyor? (12.11.2026)
+ *
+ * Site sahibi: "futbol maci pes pese iki kez verilmis; haber ayniysa
+ * birlestirelim demistik ama olmadi". "Türkiye, Belçika'ya 2-1 yenildi;
+ * Uluslar A Ligi'nde henüz puanı yok" ile "Belçika 2-1 Türkiye: Arda
+ * Güler'in frikiği yetmedi, milliler hâlâ puansız" yalnizca iki kok
+ * paylasiyor ("Türkiye" dolgu sozcuk; bkz. KONU_DOLGU), kelime olcusu
+ * (konu_ayni_mi_siki: en az 3) ayni haber oldugunu goremiyordu.
+ *
+ * Olcu: ayni skor VE en az bir ortak ozel ad (takim). Bir takim ayni gun
+ * iki mac oynamadigi icin TEKRAR_SAAT penceresinde bu ayni mactir. Devre
+ * skoru ("1-0") ile mac sonucu ("2-1") farkli skor: ayni sayilmaz.
+ */
+function konu_ayni_mac_mi(string $a, string $b): bool
+{
+    $skor = konu_skoru($a);
+
+    return $skor !== null && $skor === konu_skoru($b)
+        && array_intersect(konu_ozel_kokler($a), konu_ozel_kokler($b)) !== [];
+}
+
 /** Bekletme için konu ölçüsü: en az 3 ortak kök ve kısa başlığın yarısı. */
 function konu_ayni_mi_siki(array $a, array $b): bool
 {
@@ -546,6 +596,12 @@ function konu_tekrar_bul(array $haber): ?array
     $sayilar = konu_sayilari((string) $haber['baslik']);
 
     foreach (konu_son_yayindakiler() as $y) {
+        // Ayni macin sonucu (ayni skor, ortak takim): kelimeler farkli olsa
+        // da ayni haber. Onem istisnasi yok: skor ayni, yeni gelisme degil.
+        if ($y['id'] !== $kendi && konu_ayni_mac_mi((string) $haber['baslik'], $y['baslik'])) {
+            return ['id' => $y['id'], 'baslik' => $y['baslik'], 'neden' => 'aynı maçın sonucu son ' . TEKRAR_SAAT . ' saatte yayımlandı'];
+        }
+
         // Yayindakinde olmayan bir sayi (faiz %36 -> %40, skor 1-0 -> 2-0)
         // yeni bilgi: tekrar sayilmiyor.
         if ($sayilar !== [] && array_diff($sayilar, konu_sayilari($y['baslik'])) !== []) {
