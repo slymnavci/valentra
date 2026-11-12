@@ -335,7 +335,9 @@ body.okuma .sinirli { max-width: 1320px; }
     background: var(--altin);
 }
 .sd-saat { color: var(--altin); font-weight: 800; font-size: .88rem; font-variant-numeric: tabular-nums; }
-.sd-liste a { color: var(--metin); font-weight: 600; font-size: .94rem; }
+/* Baslik duz, saat kirmizi ve kalin (12.11.2026, site sahibi: "her sey bold,
+   karisik gosteriyor; yalnizca basliklar bold olsun"). */
+.sd-liste a { color: var(--metin); font-weight: 400; font-size: .94rem; }
 .sd-liste a:hover { color: var(--altin); }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1044,7 +1046,7 @@ summary.cekmece-oge::after {
     color: var(--metin);
     font-family: inherit;
     font-size: .98rem;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: .005em;
     white-space: nowrap;
     cursor: pointer;
@@ -2150,7 +2152,7 @@ a.menu-oge.aktif::after,
 /* Ad notr renkte; yukselis/dusus yalnizca degisimin renginde (30.10.2026). */
 .piyasa-oge .ad {
     font-size: .9rem;
-    font-weight: 700;
+    font-weight: 400;
     color: var(--metin);
 }
 
@@ -2171,14 +2173,14 @@ a.menu-oge.aktif::after,
 
 .piyasa-oge .deger {
     font-size: 1.1rem;
-    font-weight: 800;
+    font-weight: 700;
     color: var(--metin);
     font-variant-numeric: tabular-nums;
 }
 
 .piyasa-oge .degisim {
     font-size: .88rem;
-    font-weight: 700;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
 
@@ -4143,13 +4145,16 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
     background: var(--altin); color: var(--vurgu-ustu, #fff); font-weight: 800; font-size: .9rem;
 }
 .bes-liste a { display: flex; flex-direction: column; gap: 2px; min-width: 0; color: var(--metin); }
+/* Haber satiri duz; kalin ve kirmizi olan yalnizca konu etiketi (12.11.2026,
+   site sahibi: "onemli haberlerin burada bold olmasi gerekmiyor; gundemi
+   kirmizi ve bold yapmamiz yeterli"). */
 .bes-baslik {
-    font-weight: 700; font-size: .92rem; line-height: 1.3;
+    font-weight: 400; font-size: .92rem; line-height: 1.3;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .bes-liste a:hover .bes-baslik { color: var(--altin); }
 .bes-konu { font-size: .68rem; font-weight: 800; color: var(--altin); text-transform: uppercase; letter-spacing: .05em; margin-right: 2px; }
-.bes-bulten { display: block; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--cizgi); font-size: .82rem; font-weight: 700; color: var(--vurgu); }
+.bes-bulten { display: block; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--cizgi); font-size: .82rem; font-weight: 600; color: var(--vurgu); }
 .bes-bulten:hover { text-decoration: underline; }
 @media (max-width: 1399px) {
     .bes-liste li { flex: none; }
