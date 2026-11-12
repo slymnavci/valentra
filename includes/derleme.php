@@ -412,5 +412,10 @@ function derleme_taslak_ekle(array $veri): array
         'id'  => $sonuc['id'],
     ]);
 
+    // Derleme kaynak haberlerinin onceligini, olayini ve son onemli
+    // gelisme anini devralir (12.11.2026; bkz. oncelik_derleme_devral).
+    require_once __DIR__ . '/oncelik.php';
+    oncelik_derleme_devral((int) $sonuc['id'], array_map(static fn (array $k): int => (int) $k['id'], $kaynaklar));
+
     return $sonuc;
 }

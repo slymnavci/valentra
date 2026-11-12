@@ -476,7 +476,16 @@ function haber_sirasi(bool $anaSayfa = false): string
     // Son dakika her seyin onunde (bkz. haber_son_dakika_id). Manset ve
     // izgara ayni ORDER BY'i kullandigi icin haber iki kez cikmiyor.
     $sonDakika = haber_son_dakika_id();
-    $onu = $sonDakika !== null ? '(h.id = ' . $sonDakika . ') DESC, ' : '';
+
+    /*
+     * ONCELIK BASI (12.11.2026; bkz. includes/oncelik.php): editorun
+     * mansete aldiklari, sonra kritik ve yuksek oncelikli haberler. Son
+     * dakika yuvasi bunlarin ARKASINDA: son toplamanin en onemli olagan
+     * haberi, uc saat once dogrulanmis kritik haberin onune gecmesin.
+     */
+    require_once __DIR__ . '/oncelik.php';
+
+    $onu = oncelik_sira_ust() . ($sonDakika !== null ? '(h.id = ' . $sonDakika . ') DESC, ' : '');
 
     /*
      * Sonra puan sirasi. "En yeni 5 haber 4-8. slaytta" ve "gunun en onemli
@@ -588,7 +597,18 @@ function haber_sirasi_temel(bool $anaSayfa): string
      *
      * Ana sayfada gunun icinde TOPLAMA DALGASI (bkz. ANA_SAYFA_DALGA_DAKIKA).
      */
-    return '(h.one_cikan = 1 AND ' . $gun . ' = 0) DESC,
+    /*
+     * Ana sayfada ONCE oncelik sinifi (12.11.2026; bkz. oncelik_sira_ust):
+     * gun basamagi ve toplama dalgasi kritik/yuksek haberin onune gecmez.
+     * 12.11.2026 aksami onemi 92 olan askeri helikopter kazasi, iki saat
+     * sonraki toplamanin onemi 60 ve ustu butun haberlerinin arkasina
+     * dusmustu: dalga onemden once geliyordu.
+     */
+    if ($anaSayfa) {
+        require_once __DIR__ . '/oncelik.php';
+    }
+
+    return ($anaSayfa ? oncelik_sira_ust() : '') . '(h.one_cikan = 1 AND ' . $gun . ' = 0) DESC,
         ' . $gun . ' ASC,
         ' . ($anaSayfa ? '(h.onem >= ' . ANA_SAYFA_ONEM_ESIGI . ') DESC,
         ' . haber_arkadaki_spor_ifadesi() . ' ASC,
@@ -1443,7 +1463,11 @@ function haber_taslak_ekle(array $veri): array
         error_log('[valentra] haber sehri yazilamadi: ' . $e->getMessage());
     }
 
-    return ['durum' => 'eklendi', 'id' => $id];
+    // Oncelik sinifi, dogrulama, olay kimligi ve karar kaydi (12.11.2026).
+    require_once __DIR__ . '/oncelik.php';
+    $karar = oncelik_kaydet($id, $veri);
+
+    return ['durum' => 'eklendi', 'id' => $id, 'karar' => $karar];
 }
 
 /**
@@ -1514,6 +1538,9 @@ function haber_toplu_taslak_ekle(array $haberler): array
     $eklenen = 0;
     $yinelenen = 0;
     $yayinlanan = 0;
+    $incelemede = 0;
+    $kritik = 0;
+    $acil = [];
     $hatalar = [];
     $otomatik = haber_otomatik_yayin_acik();
 
@@ -1528,9 +1555,32 @@ function haber_toplu_taslak_ekle(array $haberler): array
 
             if ($sonuc['durum'] === 'eklendi') {
                 $eklenen++;
+                $karar = $sonuc['karar'] ?? null;
+                $yol   = (string) ($karar['yayin'] ?? 'kuyruk');
 
-                if ($otomatik && haber_otomatik_yayinla((int) $sonuc['id'])) {
+                /*
+                 * YAYIN YOLU (12.11.2026; bkz. oncelik_karar). Editor
+                 * incelemesine dusen haber (dogrulanmamis kritik, iddia)
+                 * yayimlanmaz. Dogrulanmis kritik haber konu/tekrar
+                 * bekletmesine takilmaz (olayin yayinda ayni bilgiyi veren
+                 * kritik haberi yoksa) ve sayfa kopyalari hemen gecersiz
+                 * kilinir.
+                 */
+                if ($yol === 'editor_acil' || $yol === 'editor') {
+                    $incelemede++;
+
+                    if ($yol === 'editor_acil') {
+                        $acil[] = (string) ($haber['baslik'] ?? '');
+                    }
+                } elseif ($otomatik && haber_otomatik_yayinla(
+                    (int) $sonuc['id'],
+                    $yol === 'hemen' && empty($karar['ayni_olay_yayinda'])
+                )) {
                     $yayinlanan++;
+
+                    if ($yol === 'hemen') {
+                        $kritik++;
+                    }
                 }
             } else {
                 $yinelenen++;
@@ -1555,7 +1605,11 @@ function haber_toplu_taslak_ekle(array $haberler): array
         'id'        => $kayitId,
     ]);
 
-    return ['eklenen' => $eklenen, 'yinelenen' => $yinelenen, 'yayinlanan' => $yayinlanan, 'hatalar' => $hatalar];
+    return [
+        'eklenen' => $eklenen, 'yinelenen' => $yinelenen, 'yayinlanan' => $yayinlanan, 'hatalar' => $hatalar,
+        // Editor incelemesine dusenler ve hizli yoldan yayimlanan kritik haberler.
+        'incelemede' => $incelemede, 'acil_inceleme' => $acil, 'kritik_yayinlanan' => $kritik,
+    ];
 }
 
 /**
@@ -1769,13 +1823,19 @@ function haber_onayla(int $id, int $yoneticiId): bool
             SET durum = :durum,
                 onaylayan_id = :yonetici,
                 onay_tarihi = NOW(),
-                yayin_tarihi = COALESCE(yayin_tarihi, NOW()),
+                yayin_tarihi = COALESCE(yayin_tarihi, NOW()),' . (haber_sutun_var('inceleme') ? "
+                inceleme = ''," : '') . '
                 guncellendi = guncellendi
           WHERE id = :id'
     );
     $ifade->execute(['durum' => HABER_YAYINDA, 'yonetici' => $yoneticiId, 'id' => $id]);
 
     if ($ifade->rowCount() > 0) {
+        // Editor onayladi: sayfa kopyalari yenilensin (kritik haber beklemesin).
+        require_once __DIR__ . '/oncelik.php';
+        oncelik_yayin_olcumu($id);
+        oncelik_onbellek_gecersiz();
+
         require_once __DIR__ . '/arama_bildirim.php';
         arama_bildir_kayit('haber', $id);
         // Son dakika ya da onemli haber: tarayici bildirimi (03.11.2026; bkz. includes/web_push.php).
@@ -1862,11 +1922,18 @@ function haber_otomatik_yayin_acik(): bool
  * Yalnizca guven puani esikte ve ustundeyse (bkz. haber_guven_esigi_kosulu); degilse
  * taslakta kalir (false) ve onay bekler.
  */
-function haber_otomatik_yayinla(int $id): bool
+function haber_otomatik_yayinla(int $id, bool $hizli = false): bool
 {
-    if (haber_tekrar_bekletilir($id)) {
+    require_once __DIR__ . '/oncelik.php';
+
+    // $hizli: dogrulanmis kritik haber konu/tekrar bekletmesine takilmaz.
+    if (!$hizli && haber_tekrar_bekletilir($id)) {
         return false;
     }
+
+    // Editor incelemesindeki (dogrulanmamis kritik, iddia, yayini
+    // durdurulmus) haber otomatik yayina girmez.
+    $incelemeYok = oncelik_hazir() ? " AND inceleme = ''" : '';
 
     $ifade = db()->prepare(
         'UPDATE haberler
@@ -1874,12 +1941,19 @@ function haber_otomatik_yayinla(int $id): bool
                 onay_tarihi = NOW(),
                 yayin_tarihi = COALESCE(yayin_tarihi, olusturuldu, NOW()),
                 guncellendi = guncellendi
-          WHERE id = :id AND durum = :taslak AND ' . haber_guven_esigi_kosulu()
+          WHERE id = :id AND durum = :taslak AND ' . haber_guven_esigi_kosulu() . $incelemeYok
     );
     $ifade->execute(['yayinda' => HABER_YAYINDA, 'taslak' => HABER_TASLAK, 'id' => $id]);
 
     if ($ifade->rowCount() === 0) {
         return false;
+    }
+
+    oncelik_yayin_olcumu($id);
+
+    // Kritik haber: ana sayfa ve haber sayfasi kopyalari hemen yenilensin.
+    if ($hizli) {
+        oncelik_onbellek_gecersiz();
     }
 
     // Ayni teslimdeki sonraki haberler bunu da "yayinda" gorsun.
@@ -1982,6 +2056,7 @@ function haber_bugunku_taslaklari_yayinla(): int
           WHERE durum = :taslak
             AND ' . haber_guven_esigi_kosulu() . '
             ' . (haber_sutun_var('tekrar_id') ? 'AND tekrar_id IS NULL' : '') . '
+            ' . (haber_sutun_var('inceleme') ? "AND inceleme = ''" : '') . '
           ORDER BY id'
     );
     $ifade->execute(['taslak' => HABER_TASLAK]);

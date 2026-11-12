@@ -48,6 +48,10 @@ ajan_json(200, [
     'eklenen'   => $sonuc['eklenen'],
     'yinelenen' => $sonuc['yinelenen'],
     'yayinlanan' => $sonuc['yayinlanan'],
+    // Oncelik (12.11.2026): editor incelemesine dusenler, hizli yayimlananlar.
+    'incelemede'        => $sonuc['incelemede'] ?? 0,
+    'acil_inceleme'     => $sonuc['acil_inceleme'] ?? [],
+    'kritik_yayinlanan' => $sonuc['kritik_yayinlanan'] ?? 0,
     'ana_sayfa'  => haber_ana_sayfa_durumu(),
     'hatalar'   => $sonuc['hatalar'],
     'not'       => $otomatik

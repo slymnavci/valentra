@@ -94,6 +94,41 @@ switch ($islem) {
         $bildirim = 'silindi';
         break;
 
+    /*
+     * Oncelik masasi (12.11.2026; bkz. includes/oncelik.php): editor
+     * mudahalesi. Gerekce ve bitis suresi zorunlu; eksikse islem yapilmaz.
+     */
+    case 'oncelik_ayarla':
+    case 'oncelik_kaldir':
+    case 'yayin_durdur':
+    case 'duzeltme':
+        require_once __DIR__ . '/../includes/oncelik.php';
+
+        try {
+            if ($islem === 'oncelik_ayarla') {
+                oncelik_editor_ayarla($id, [
+                    'manset'  => (int) ($_POST['manset'] ?? 0),
+                    'oncelik' => ($_POST['oncelik'] ?? '') === '' ? null : (int) $_POST['oncelik'],
+                    'saat'    => (float) str_replace(',', '.', (string) ($_POST['saat'] ?? '0')),
+                    'gerekce' => (string) ($_POST['gerekce'] ?? ''),
+                ], aktif_yonetici_id());
+                $bildirim = 'ayarlandi';
+            } elseif ($islem === 'oncelik_kaldir') {
+                oncelik_editor_kaldir($id);
+                $bildirim = 'kaldirildi';
+            } elseif ($islem === 'yayin_durdur') {
+                oncelik_yayin_durdur($id, (string) ($_POST['gerekce'] ?? ''));
+                $bildirim = 'durduruldu';
+            } else {
+                oncelik_duzeltme_yaz($id, (string) ($_POST['duzeltme'] ?? ''));
+                $bildirim = 'duzeltme';
+            }
+        } catch (InvalidArgumentException $e) {
+            yonlendir('oncelik.php?id=' . $id . '&hata=' . rawurlencode($e->getMessage()) . '#h' . $id);
+        }
+
+        yonlendir('oncelik.php?id=' . $id . '&bildirim=' . $bildirim . '#h' . $id);
+
     default:
         http_response_code(400);
         exit('Bilinmeyen işlem.');
@@ -105,6 +140,11 @@ if ($donus === 'istatistik' && ($islem === 'one_cikar' || $islem === 'one_cikarm
     $sorgu = (string) ($_POST['donus_sorgu'] ?? '');
     $sorgu = preg_match('/^[A-Za-z0-9_=&%.+-]*$/', $sorgu) === 1 ? $sorgu : '';
     yonlendir('istatistik.php?' . ($sorgu !== '' ? $sorgu . '&' : '') . 'bildirim=' . $bildirim . '#haberler');
+}
+
+// Oncelik masasindaki acil inceleme: onay ya da ret sonrasi ayni sayfaya.
+if ($donus === 'oncelik' && ($islem === 'onayla' || $islem === 'reddet')) {
+    yonlendir('oncelik.php?bildirim=' . $bildirim);
 }
 
 if ($donus === 'duzenle' && $islem !== 'sil') {

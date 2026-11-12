@@ -122,6 +122,28 @@ CREATE TABLE IF NOT EXISTS haberler (
     -- Yapay zekanin son dakika karari (04.11.2026): haberi okuyup veriyor;
     -- kaynagin "son dakika" demesi olcu degil (bkz. haber_son_dakika_mi).
     son_dakika      TINYINT(1)    NOT NULL DEFAULT 0,
+    -- Haber onceligi (12.11.2026; bkz. includes/oncelik.php): editoryal
+    -- onem sinifi (0 dusuk, 1 normal, 2 yuksek, 3 kritik), yayin aciliyeti
+    -- (0 normal, 1 oncelikli, 2 hemen), dogrulama durumu, olay kimligi,
+    -- son onemli gelisme zamani, karar kaydi ve editor mudahalesi.
+    oncelik         TINYINT       NOT NULL DEFAULT 1,
+    aciliyet        TINYINT       NOT NULL DEFAULT 0,
+    dogrulama       VARCHAR(16)   NOT NULL DEFAULT '',
+    can_kaybi       VARCHAR(12)   NOT NULL DEFAULT '',
+    olay_turu       VARCHAR(32)   NOT NULL DEFAULT '',
+    olay_kimlik     VARCHAR(40)   NULL,
+    olay_yeri       VARCHAR(80)   NOT NULL DEFAULT '',
+    olay_zamani     DATETIME      NULL,
+    gelisme_zamani  DATETIME      NULL,
+    inceleme        VARCHAR(12)   NOT NULL DEFAULT '',
+    karar_kaydi     TEXT          NULL,
+    editor_manset   TINYINT       NOT NULL DEFAULT 0,
+    editor_oncelik  TINYINT       NULL,
+    editor_bitis    DATETIME      NULL,
+    editor_gerekce  VARCHAR(300)  NOT NULL DEFAULT '',
+    editor_id       INT UNSIGNED  NULL,
+    editor_zaman    DATETIME      NULL,
+    duzeltme        VARCHAR(600)  NOT NULL DEFAULT '',
     ajan_notu       VARCHAR(600)  NOT NULL DEFAULT '',
     -- Haberi yazan model (23.10.2026; ornegin gpt-6-luna, gemini-3.8-flash).
     -- Otomatik yayin esigi buna gore seciliyor (bkz. haber_guven_esigi_kosulu).
@@ -215,6 +237,21 @@ CREATE TABLE IF NOT EXISTS ayarlar (
     deger       TEXT         NOT NULL,
     guncellendi DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (anahtar)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Olay gecmisi (12.11.2026; bkz. includes/oncelik.php): bir olayin
+-- haberleri, gelismeleri, kaynaklari ve editor mudahaleleri.
+CREATE TABLE IF NOT EXISTS haber_olay_gecmisi (
+    id           INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    olay_kimlik  VARCHAR(40)   NOT NULL,
+    haber_id     INT UNSIGNED  NULL,
+    zaman        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    tur          VARCHAR(24)   NOT NULL DEFAULT '',
+    aciklama     VARCHAR(600)  NOT NULL DEFAULT '',
+    kaynak       VARCHAR(200)  NOT NULL DEFAULT '',
+    PRIMARY KEY (id),
+    KEY idx_olay (olay_kimlik, id),
+    KEY idx_haber (haber_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------

@@ -106,6 +106,20 @@ function sayfa_onbellek(array $parametreler, bool $bayatSun = false, int $bayatS
 
     $zaman = @filemtime($dosya);
 
+    /*
+     * GECERSIZ KILMA DAMGASI (12.11.2026; bkz. oncelik_onbellek_gecersiz).
+     * Kritik haber yayina girince ya da editor siraya mudahale edince damga
+     * yenilenir; damgadan ONCE uretilmis kopya ne taze ne bayat olarak
+     * verilir, sayfa bu istekte bastan uretilir. Damga yoksa ya da eskiyse
+     * (butun kopyalar zaten ondan yeni) tek bir dosya zamani okumasi.
+     */
+    $damga = (int) @filemtime(SAYFA_ONBELLEK_DIZIN . '/.gecersiz');
+
+    if ($zaman !== false && $damga > 0 && time() - $damga < 2 * SAYFA_ONBELLEK_BAYAT_HABER
+        && sayfa_onbellek_uretim_ani($dosya, $zaman) <= $damga) {
+        $zaman = false;
+    }
+
     if ($zaman !== false && time() - $zaman < SAYFA_ONBELLEK_SURE && sayfa_onbellek_sun($dosya)) {
         exit;
     }
