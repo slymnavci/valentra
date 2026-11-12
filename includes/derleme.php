@@ -102,15 +102,108 @@ function derleme_kullanilan_idler(int $gun = 3): array
 
     $idler = [];
 
+    // Ham liste: yinelenen derlemeden eklenen, adsiz kaynaklar da
+    // "kullanilmis" (bkz. derleme_ayni_olaya_ekle).
     foreach ($ifade->fetchAll(PDO::FETCH_COLUMN) as $json) {
-        foreach (derleme_kaynaklari_coz((string) $json) as $k) {
-            if ($k['id'] > 0) {
-                $idler[$k['id']] = true;
+        foreach ((array) json_decode((string) $json, true) as $k) {
+            if (is_array($k) && (int) ($k['id'] ?? 0) > 0) {
+                $idler[(int) $k['id']] = true;
             }
         }
     }
 
     return $idler;
+}
+
+/*
+ * AYNI OLAY IKI KEZ DERLENMESIN (12.11.2026).
+ *
+ * Site sahibi: "futbol maci pes pese iki kez verilmis; gundemde helikopter
+ * kazasi da ayni haber iki kez yazilmis. Haber ayniysa birlestirelim
+ * demistik ama olmadi". Ucu de derlemeydi: "Malatya'da askeri helikopter
+ * kaza kirima ugradi: 4 asker sehit oldu" 21.11'de ve 21.20'de, Manchester
+ * United-Carrick 15.08'de ve 17.20'de, Turkiye-Belcika mac sonucu iki
+ * baslikla. Tekrar denetimi (haber_tekrar_bekletilir) derlemeleri bilerek
+ * atliyor; ayni olayin yeniden derlenmemesi yalnizca ajana verilen
+ * "onceki derlemeler" listesine ve modelin dikkatine kalmisti. Kullanilan
+ * kaynak haberler malzemeden cikiyor ama ayni olayin YENI gelen kaynak
+ * haberleri ikinci derlemenin malzemesi oluyordu.
+ *
+ * Artik sunucu bakiyor: son DERLEME_AYNI_OLAY_SAAT saatte, reddedilmemis
+ * bir derleme ayni olayi veriyorsa yenisi KAYDEDILMIYOR. Ayni olay:
+ *   - basliklar neredeyse ayni (konu_cok_benzer_mi) ya da ayni macin
+ *     sonucu (konu_ayni_mac_mi), VE
+ *   - yeni baslikta eskisinde olmayan bir sayi yok. Yeni sayi yeni
+ *     gelismedir (olu sayisi 4 -> 6, faiz, skor) ve derlenir; sira
+ *     sayilari ("ligde 18. sirada") sayilmaz.
+ * Yeni derlemenin kaynak haberleri eski derlemenin listesine ADSIZ
+ * ekleniyor: sayfada kaynak diye gosterilmiyor (metin onlardan
+ * yararlanmadi; bkz. derleme_kaynaklari_coz) ama "kullanilmis" sayiliyor,
+ * ajana yeniden malzeme diye gitmiyor ve ana sayfada derlemenin yaninda
+ * ayrica durmuyor (derleme_yayindaki_kaynak_idler).
+ */
+const DERLEME_AYNI_OLAY_SAAT = 24;
+
+/**
+ * Aynı olayı veren, son saatlerde yazılmış derleme (yoksa null).
+ *
+ * @return array{id:int,baslik:string,derleme_kaynaklari:string}|null
+ */
+function derleme_ayni_olay_bul(string $baslik): ?array
+{
+    $kokler  = konu_kokleri($baslik);
+    $sayilar = konu_sayilari_sirasiz($baslik);
+
+    $ifade = db()->prepare(
+        'SELECT id, baslik, derleme_kaynaklari FROM haberler
+          WHERE derleme = 1 AND durum <> :r AND olusturuldu >= NOW() - INTERVAL ' . DERLEME_AYNI_OLAY_SAAT . ' HOUR
+          ORDER BY olusturuldu DESC
+          LIMIT 200'
+    );
+    $ifade->execute(['r' => HABER_REDDEDILDI]);
+
+    foreach ($ifade->fetchAll() as $d) {
+        $eski = (string) $d['baslik'];
+
+        if (array_diff($sayilar, konu_sayilari_sirasiz($eski)) !== []) {
+            continue;
+        }
+
+        if (konu_ayni_mac_mi($baslik, $eski) || konu_cok_benzer_mi($kokler, konu_kokleri($eski))) {
+            return ['id' => (int) $d['id'], 'baslik' => $eski, 'derleme_kaynaklari' => (string) $d['derleme_kaynaklari']];
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Yinelenen derlemenin kaynak haberlerini var olan derlemeye adsız ekler.
+ *
+ * @param array{id:int,baslik:string,derleme_kaynaklari:string} $derleme
+ * @param list<int> $idler
+ */
+function derleme_ayni_olaya_ekle(array $derleme, array $idler): void
+{
+    $liste = json_decode($derleme['derleme_kaynaklari'], true);
+    $liste = is_array($liste) ? array_values(array_filter($liste, 'is_array')) : [];
+    $var   = array_flip(array_map(static fn (array $k): int => (int) ($k['id'] ?? 0), $liste));
+    $yeni  = 0;
+
+    foreach ($idler as $id) {
+        if ($id > 0 && $id !== $derleme['id'] && !isset($var[$id])) {
+            $liste[]  = ['id' => $id, 'ad' => '', 'url' => '', 'baslik' => ''];
+            $var[$id] = true;
+            $yeni++;
+        }
+    }
+
+    if ($yeni === 0) {
+        return;
+    }
+
+    db()->prepare('UPDATE haberler SET derleme_kaynaklari = :k, guncellendi = guncellendi WHERE id = :id')
+        ->execute(['k' => json_encode($liste, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'id' => $derleme['id']]);
 }
 
 /**
@@ -254,6 +347,17 @@ function derleme_taslak_ekle(array $veri): array
 
     if (count($adlar) < DERLEME_ASGARI_KAYNAK) {
         throw new InvalidArgumentException('En az ' . DERLEME_ASGARI_KAYNAK . ' farklı kaynak gerekli (' . count($adlar) . ' var).');
+    }
+
+    // Ayni olayin derlemesi zaten var: yenisi yazilmiyor, kaynaklari ona
+    // baglaniyor (bkz. AYNI OLAY IKI KEZ DERLENMESIN).
+    $ayni = derleme_ayni_olay_bul($baslik);
+
+    if ($ayni !== null) {
+        derleme_ayni_olaya_ekle($ayni, array_map(static fn (array $k): int => (int) $k['id'], $kaynakHaberler));
+        error_log('[valentra] derleme yinelenen: "' . $baslik . '" -> #' . $ayni['id'] . ' ' . $ayni['baslik']);
+
+        return ['durum' => 'yinelenen', 'id' => $ayni['id']];
     }
 
     // Gorsel ve baslik (kategori): en onemli kaynaktan; model kategori verdiyse o.

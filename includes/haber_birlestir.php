@@ -32,6 +32,8 @@ const HABER_BENZER_SAAT = 72;
  */
 function haber_benzer_ciftler(int $gun = 30, int $adet = 60): array
 {
+    require_once __DIR__ . '/konu_siniri.php';
+
     $ifade = db()->prepare(
         "SELECT h.id, h.baslik, h.slug, h.yayin_tarihi, h.onem, CHAR_LENGTH(h.icerik) AS uzunluk, k.ad AS kategori_adi
            FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
@@ -62,11 +64,16 @@ function haber_benzer_ciftler(int $gun = 30, int $adet = 60): array
             $ortak  = count(array_intersect_key($a['_kok'], $b['_kok']));
             $birlik = count($a['_kok'] + $b['_kok']);
 
-            if ($ortak < HABER_BENZER_ORTAK || $birlik === 0) {
+            // Ayni macin sonucu (12.11.2026; bkz. konu_ayni_mac_mi): kelimeleri
+            // az ortusse de ayni haber, listede gorunsun (bir gun icinde).
+            $ayniMac = $a['_zaman'] - $b['_zaman'] <= 86400
+                && konu_ayni_mac_mi((string) $a['baslik'], (string) $b['baslik']);
+
+            if (!$ayniMac && ($ortak < HABER_BENZER_ORTAK || $birlik === 0)) {
                 continue;
             }
 
-            $benzerlik = $ortak / $birlik;
+            $benzerlik = $ayniMac ? 1.0 : $ortak / $birlik;
 
             if ($benzerlik >= HABER_BENZER_ESIK) {
                 $ciftler[] = [
