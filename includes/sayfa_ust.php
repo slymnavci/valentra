@@ -80,6 +80,12 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
     if (!empty($lcpGorsel['src'])): ?>
     <link rel="preload" as="image" fetchpriority="high" href="<?= e((string) $lcpGorsel['src']) ?>"<?php if (!empty($lcpGorsel['srcset'])): ?> imagesrcset="<?= e((string) $lcpGorsel['srcset']) ?>" imagesizes="<?= e((string) ($lcpGorsel['sizes'] ?? '100vw')) ?>"<?php endif; ?>>
     <?php endif; ?>
+    <?php /* Yazi tipi erken istensin (12.11.2026): yoksa tarayici onu ancak
+             stil dosyasini isleyince fark ediyor, sayfa once sistem yazi
+             tipiyle gorunup sonra degisiyordu. crossorigin sart: yazi tipi
+             istekleri hep CORS kipinde, eksikse dosya iki kez iner. Adres
+             style.css'teki @font-face ile ayni olmali. */ ?>
+    <link rel="preload" as="font" type="font/woff2" href="/assets/yazi/source-sans-3.woff2" crossorigin>
     <link rel="stylesheet" href="<?= e(varlik('/assets/style.css')) ?>">
     <?php /* Sayfaya ozel stil paketleri (bkz. includes/stil_paketleri.php). */
     require_once __DIR__ . '/stil_paketleri.php';
