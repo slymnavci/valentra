@@ -41,11 +41,22 @@ const SAYFA_ONBELLEK_SURE   = 60;
  * Bu sureden genc bayat kopya varsa ziyaretciye HEMEN o veriliyor; yanit
  * gittikten sonra ayni istek sayfayi yeniden uretip kopyayi tazeliyor
  * (fastcgi/litespeed_finish_request). Sonraki ziyaretci tazesini gorur.
- * Yalnizca bunu isteyen sayfalarda (sayfa_onbellek'in ikinci parametresi):
- * arkada uretim sirasinda durum kodu degistirilemedigi icin 404/410/301
- * verebilen sayfalar (haber.php) bunu KULLANMAMALI.
+ * Yalnizca bunu isteyen sayfalarda (sayfa_onbellek'in ikinci parametresi).
+ * Arkada uretim sirasinda durum kodu degistirilemiyor (yanit coktan
+ * gitti): 404/410/301 verebilen sayfa o dallarda sayfa_onbellek_iptal()
+ * cagirmali, yoksa "bulunamadi" govdesi 200 diye kopyaya yazilir.
+ *
+ * HABER SAYFALARI DA (12.11.2026, site sahibi: "haber sayfalarinin
+ * onbellegini de iyilestir"). Haber sayfasi 60 saniyelik kopyayla
+ * calisiyordu; az trafikli sitede ayni habere bir dakika icinde ikinci
+ * ziyaret nadir, yani okur ve Googlebot sayfayi hemen her seferinde bastan
+ * urettiriyordu (ilk bayt ~0,85 sn). Haber sayfasi icin bayat suresi daha
+ * uzun (SAYFA_ONBELLEK_BAYAT_HABER): haber metni yayimlandiktan sonra
+ * seyrek degisiyor; degisirse bayat kopyayi en fazla BIR ziyaretci gorur,
+ * o ziyaret kopyayi tazeler.
  */
 const SAYFA_ONBELLEK_BAYAT  = 600;
+const SAYFA_ONBELLEK_BAYAT_HABER = 1800;
 const SAYFA_ONBELLEK_DIZIN  = __DIR__ . '/../onbellek/sayfa';
 const SAYFA_ONBELLEK_ZIYARET = '<!--valentra-ziyaret-betigi-->';
 
@@ -59,9 +70,11 @@ const SAYFA_ONBELLEK_YOK_SAYILAN = ['utm_source', 'utm_medium', 'utm_campaign', 
  *
  * @param list<string> $parametreler sayfanin kullandigi sorgu parametreleri
  * @param bool         $bayatSun     bayat kopyayi hemen ver, arkada yenile
- *                                   (bkz. SAYFA_ONBELLEK_BAYAT; her zaman 200 donen sayfalar)
+ *                                   (200 disi donebilen sayfa o dallarda
+ *                                   sayfa_onbellek_iptal() cagirmali)
+ * @param int          $bayatSure    bayat kopyanin en fazla yasi (saniye)
  */
-function sayfa_onbellek(array $parametreler, bool $bayatSun = false): void
+function sayfa_onbellek(array $parametreler, bool $bayatSun = false, int $bayatSure = SAYFA_ONBELLEK_BAYAT): void
 {
     $yontem = (string) ($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
@@ -106,7 +119,7 @@ function sayfa_onbellek(array $parametreler, bool $bayatSun = false): void
     // uretim ust uste dusse bile (disk dolu, hata) icerik en fazla
     // SAYFA_ONBELLEK_BAYAT kadar eski verilir, sonra bastan uretilir.
     if ($bayatSun && $bitir !== null && $zaman !== false
-        && time() - sayfa_onbellek_uretim_ani($dosya, $zaman) < SAYFA_ONBELLEK_BAYAT) {
+        && time() - sayfa_onbellek_uretim_ani($dosya, $zaman) < $bayatSure) {
         // Kopyayi "taze" isaretle: uretim surerken gelen diger istekler de
         // onu alsin, ayni anda birden cok istek sayfayi uretmesin. Uretim
         // dusarse sonraki deneme SAYFA_ONBELLEK_SURE sonra.
@@ -123,6 +136,33 @@ function sayfa_onbellek(array $parametreler, bool $bayatSun = false): void
     }
 
     ob_start('sayfa_onbellek_yaz');
+}
+
+/**
+ * Bu istegin ciktisi kopyaya YAZILMASIN ve eski kopya silinsin.
+ *
+ * Sayfa 200 disinda yanit verecekse (bulunamadi, kaldirildi, yonlendirme)
+ * cikti uretmeden once cagrilir. Arkada tazelemede sart: yanit coktan
+ * 200 olarak gitti, http_response_code() artik degismiyor ve "bulunamadi"
+ * govdesi 200 sayilip kopyaya yazilirdi. Eski kopya da siliniyor: yayindan
+ * kalkan haberin bayat kopyasi en fazla bir kez (bu istekte) verilmis olur.
+ * Arkada tazelemede istek burada biter.
+ */
+function sayfa_onbellek_iptal(): void
+{
+    $GLOBALS['sayfa_onbellek_iptal'] = true;
+
+    $dosya = (string) ($GLOBALS['sayfa_onbellek_dosya'] ?? '');
+
+    if ($dosya !== '') {
+        @unlink($dosya);
+    }
+
+    // Arkada tazeleme: yanit coktan gitti; yonlendirme basligi ya da
+    // "bulunamadi" sayfasi kimseye ulasmaz, uretmeye gerek yok.
+    if (sayfa_onbellek_arkada_mi()) {
+        exit;
+    }
 }
 
 /**
@@ -197,7 +237,7 @@ function sayfa_onbellek_yaz(string $html): string
     $dosya = (string) ($GLOBALS['sayfa_onbellek_dosya'] ?? '');
     $bilgi = $GLOBALS['sayfa_onbellek_bilgi'] ?? null;
 
-    if ($dosya !== '' && is_array($bilgi) && http_response_code() === 200
+    if ($dosya !== '' && is_array($bilgi) && empty($GLOBALS['sayfa_onbellek_iptal']) && http_response_code() === 200
         && str_contains($html, '</html>') && !headers_list_yonlendirme()) {
         if (!is_dir(SAYFA_ONBELLEK_DIZIN)) {
             @mkdir(SAYFA_ONBELLEK_DIZIN, 0755, true);
