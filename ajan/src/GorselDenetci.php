@@ -192,7 +192,17 @@ Halk TV, Sözcü, Hürriyet, Sabah, Milliyet, BBC, Euronews, DW, Sputnik.
 spor kulübü armaları ve formalar, marka/şirket logoları (ürün, bina,
 tabela), kamu kurumu amblemleri, bayraklar, stadyum reklam panoları,
 fotoğrafın doğal parçası olan yazılar.
-Emin değilsen ve yazı ya da amblem bir medya kuruluşuna benziyorsa temiz=false.
+SAHNENİN PARÇASI OLAN YAZI TEMİZDİR (12.11.2026: denetçi gerçek haber
+fotoğraflarını gereksiz yere değiştiriyordu). Fotoğraf çekilirken orada
+duran her yazı ve amblem sahnenin parçasıdır, temiz=true: etkinlik ve
+zirve arka plan panosu (COP31, BM, UEFA), kürsü ve masa tabelaları,
+bina tabelası, duvardaki poster ya da afiş, pankart, vitrin yazısı, araç
+plakası, saha kenarı panoları. "temiz=false" yalnızca iki durumda:
+(1) bir MEDYA kuruluşunun adı/logosu/filigranı, (2) fotoğrafın üstüne
+SONRADAN bindirilmiş yazı ya da tasarım. Görselin tamamı fotoğraf değil
+de logo/amblem/afiş grafiğiyse temiz=false.
+Emin değilsen ve yazı ya da amblem bir medya kuruluşuna benziyorsa
+temiz=false; medya kuruluşuna benzemiyorsa temiz=true.
 
 UYGUN MU? Görsel haberin konusuna uyuyor mu (yer, nesne, olay, alan)?
 Haberin başlığına değil KONUSUNA bak (özet verildiyse onu da oku).
