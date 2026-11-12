@@ -699,6 +699,40 @@ final class Site
     }
 
     /**
+     * Önem puanı yeniden verilecek haberler (api/onem-denetim.php).
+     *
+     * @return list<array{id:int,baslik:string,ozet:string,kategori:string,onem:int,kaynak_sayisi:int}>
+     */
+    public function onemDenetimListesi(int $saat = 36): array
+    {
+        [$kod, $govde] = $this->istek('GET', '/api/onem-denetim.php?saat=' . max(1, min(168, $saat)));
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Önem listesi alınamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return array_values((array) ($veri['haberler'] ?? []));
+    }
+
+    /**
+     * Yeni önem puanlarını yazar; değişen haber sayısını döndürür.
+     *
+     * @param list<array{id:int,onem:int}> $puanlar
+     */
+    public function onemDenetimGonder(array $puanlar): int
+    {
+        [$kod, $govde] = $this->istek('POST', '/api/onem-denetim.php', (string) json_encode(['puanlar' => $puanlar]));
+        $veri = json_decode($govde, true);
+
+        if ($kod !== 200 || !is_array($veri)) {
+            throw new \RuntimeException('Önem puanları yazılamadı (HTTP ' . $kod . '): ' . $this->hatayiOku($govde));
+        }
+
+        return (int) ($veri['degisen'] ?? 0);
+    }
+
+    /**
      * Görseli henüz denetlenmemiş haberler (api/gorsel-denetim.php), ana sayfadakiler önce.
      *
      * kullanilan: son iki haftada logolu görselin yerine konmuş adresler (tekrar konmasın).

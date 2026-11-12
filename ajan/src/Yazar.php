@@ -1140,6 +1140,23 @@ final class Yazar implements SemaliIstemci
     }
 
     /** Haber modeli (GEMINI_MODEL, yoksa varsayilan); kose yazisinin yedegi. */
+    /**
+     * Yönergenin ÖNEM PUANI bölümü, olduğu gibi (ajan/onem_denetle.php:
+     * yayındaki haberler aynı ölçüyle yeniden puanlanıyor; tek kaynak burası).
+     */
+    public static function onemOlcutu(): string
+    {
+        $bas = strpos(self::YONERGE, 'ÖNEM PUANI (0-100)');
+        $son = strpos(self::YONERGE, "GOOGLE'DA ÇOK ARANAN");
+
+        if ($bas === false || $son === false || $son <= $bas) {
+            throw new \LogicException('Yönergede ÖNEM PUANI bölümü bulunamadı.');
+        }
+
+        // Girintiyi at: bolum yonergenin icinde sekiz bosluk iceride.
+        return trim((string) preg_replace('/^ {8}/m', '', substr(self::YONERGE, $bas, $son - $bas)));
+    }
+
     public static function haberModeli(): string
     {
         return self::ortamModeli('GEMINI_MODEL', self::VARSAYILAN_MODEL);

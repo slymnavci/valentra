@@ -55,6 +55,7 @@ on:
           - topluluk
           - baslik-denetim
           - gorsel-denetim
+          - onem-denetim
       kuru:
         description: 'Kuru calisma (siteye gonderme, sadece ciktiyi goster)'
         type: boolean
@@ -360,6 +361,29 @@ jobs:
           ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
         run: php baslik_denetle.php ${{ inputs.mod == 'baslik-denetim' && '--gun=14 --sure=15' || '--sure=4' }} ${{ inputs.kuru == true && '--kuru' || '' }} || true
+
+      # Onem puanlarini yeniden ver (12.11.2026, site sahibi: "su anda
+      # manseti yeniden bu duzene gore puanlandir"). Onem puani haber
+      # toplanirken veriliyor; yonerge (ajan/src/Yazar.php, ONEM PUANI)
+      # degisince yayindaki haberler eski puaniyla kaliyor. Yalnizca elle,
+      # "onem-denetim" moduyla: son "saat" girdisi kadar saatin (2 yazildiysa
+      # 36) haberleri guncel yonergeyle yeniden puanlaniyor.
+      - name: Onem puanlarini yeniden ver
+        if: ${{ !cancelled() && inputs.mod == 'onem-denetim' }}
+        working-directory: ajan
+        env:
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
+          SAAT:                ${{ inputs.saat }}
+        run: |
+          case "$SAAT" in ''|*[!0-9]*|2) SAAT=36 ;; esac
+          php onem_denetle.php --saat="$SAAT" --sure=15 ${{ inputs.kuru == true && '--kuru' || '' }}
 
       # Haber gorsellerinde haber sitesi adi/logosu (08.11.2026, site sahibi:
       # "ana sayfada bir haberdeki resimde kesinlikle bir haber sitesinin
