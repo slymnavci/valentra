@@ -36,16 +36,29 @@ $takip = $uye !== null && (string) ($_GET['sekme'] ?? '') === 'takip';
 // Konu secili akis (06.11.2026, bkz. nw_konular): yalnizca o konunun haberleri ve yorumlari.
 $konu  = (string) ($_GET['konu'] ?? '');
 $konu  = isset(nw_konular()[$konu]) ? $konu : '';
+// Gazete secili akis (13.11.2026, bkz. nw_gazeteler): yalnizca o yayindan
+// ozetlenen haberler; paylasim ve yorum sayilmaz (akista da yoklar).
+$gazete = (string) ($_GET['gazete'] ?? '');
+$gazeteKaynaklari = $gazete !== '' ? (nw_gazeteler()[$gazete]['kaynaklar'] ?? []) : [];
+$gazeteKosulu = $gazete === '' ? '' : ($gazeteKaynaklari !== []
+    ? ' AND h.kaynak_adi IN (' . implode(', ', array_map(static fn (string $k): string => db()->quote($k), $gazeteKaynaklari)) . ')'
+    : ' AND 1 = 0');
+$konu  = $gazete !== '' ? '' : $konu;
 $sayi  = 0;
 
 try {
     $h = db()->prepare(
         "SELECT COUNT(*) FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
           WHERE h.durum = :d AND h.yayin_tarihi > FROM_UNIXTIME(:o) AND h.yayin_tarihi <= NOW()
-            AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')")
+            AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . $gazeteKosulu
     );
     $h->execute(['d' => HABER_YAYINDA, 'o' => $once]);
     $sayi += (int) $h->fetchColumn();
+
+    if ($gazete !== '') {
+        echo json_encode(['sayi' => min($sayi, 99)]);
+        exit;
+    }
 
     $kosul = $takip ? ' AND (g.uye_id = :u1 OR g.uye_id IN (SELECT takip_edilen FROM takipler WHERE takip_eden = :u2))' : '';
 

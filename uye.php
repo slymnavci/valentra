@@ -119,6 +119,25 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <p class="yorum-sonuc yorum-sonuc-hata" role="alert"><?= e($hata) ?></p>
         <?php endif; ?>
 
+        <?php
+        /* Google ile giris / uyelik (13.11.2026; bkz. includes/uye_google.php).
+           Panelden kurulmadiysa dugme cikmaz. ?google=: donusteki hata mesaji. */
+        require_once __DIR__ . '/includes/uye_google.php';
+        $googleHata   = mb_substr(trim((string) ($_GET['google'] ?? '')), 0, 200, 'UTF-8');
+        $googleDugme  = google_giris_dugmesi($donus, $kayit ? 'Google ile üye ol' : 'Google ile giriş yap');
+        ?>
+        <?php if ($googleHata !== '' && $hata === ''): ?>
+            <p class="yorum-sonuc yorum-sonuc-hata" role="alert"><?= e($googleHata) ?></p>
+        <?php endif; ?>
+        <?php if ($googleDugme !== ''): ?>
+            <?= $googleDugme ?>
+            <?php if ($kayit): ?>
+                <p class="uye-google-not">Google ile devam ederek <a href="/network/kurallar">Topluluk Kuralları</a>'nı ve
+                    <a href="/gizlilik">Gizlilik</a> metnini kabul etmiş olursunuz. Google'dan yalnızca adınız ve e-posta adresiniz alınır.</p>
+            <?php endif; ?>
+            <p class="uye-ayrac"><span>ya da e-postayla</span></p>
+        <?php endif; ?>
+
         <form method="post" action="<?= e(uye_yolu($islem)) ?>" class="uye-form">
             <input type="hidden" name="jeton" value="<?= e($jeton) ?>">
             <input type="hidden" name="donus" value="<?= e($donus) ?>">

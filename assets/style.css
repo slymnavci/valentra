@@ -3840,6 +3840,17 @@ a.menu-oge-network:hover .menu-network { transform: translateY(-1px); box-shadow
 }
 .uye-dugme:hover { background: var(--vurgu); }
 .uye-dugme-ikincil { background: var(--zemin); color: var(--metin) !important; border: 1px solid var(--cizgi); }
+/* Google ile giris (13.11.2026): beyaz dugme, sade "G"; Google'in marka gorseli kullanilmiyor. */
+.uye-dugme-google { display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff; color: #1f1f1f !important; border: 1px solid #dadce0; }
+.uye-dugme-google:hover { background: #f6f7f8; }
+.uye-google-g { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #1a73e8; color: #fff; font-weight: 800; font-size: .86rem; }
+.uye-google-not { margin: 8px 0 0; font-size: .78rem; line-height: 1.5; color: var(--metin-soluk); }
+.uye-google-not a { color: var(--vurgu); }
+.uye-ayrac { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: var(--metin-soluk); font-size: .8rem; }
+.uye-ayrac::before, .uye-ayrac::after { content: ""; flex: 1; height: 1px; background: var(--cizgi); }
+.nw-yan-kutu .uye-dugme-google { margin-bottom: 8px; }
+.nw-haber-ozet-bag { display: block; margin-top: 8px; font-size: .88rem; font-weight: 600; color: var(--metin-soluk); }
+.nw-haber-ozet-bag:hover { color: var(--altin); }
 .uye-dugme-ikincil:hover { background: var(--cizgi); }
 
 .nw-bant {

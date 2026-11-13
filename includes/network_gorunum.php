@@ -259,9 +259,29 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
     <article class="nw-gonderi" id="<?= e($anahtar) ?>"<?= !empty($oge['zaman']) ? ' data-zaman="' . (int) $oge['zaman'] . '"' : '' ?>>
         <header class="nw-gonderi-ust">
             <?php if ($haber): ?>
-                <span class="nw-hesap-simge" aria-hidden="true"><img src="/assets/logo.svg" alt="" width="24" height="19"></span>
+                <?php
+                /*
+                 * Kartin basinda haberin alindigi GAZETE (13.11.2026, site sahibi:
+                 * "basliklari ValHaber yapmayacagiz; gazetenin adi yazsin"). Ad o
+                 * gazetenin akisina gider. Logo kullanilmiyor: adin bas harfi.
+                 * Kaynagi olmayan haberde (Valentra derlemesi) eski "ValHaber".
+                 */
+                $gazeteAd   = trim((string) ($v['kaynak_adi'] ?? '')) !== '' ? nw_gazete_adi((string) $v['kaynak_adi']) : '';
+                $gazeteSlug = $gazeteAd !== '' ? nw_gazete_slug($gazeteAd) : '';
+                $kaynakUrl  = guvenli_url((string) ($v['kaynak_url'] ?? ''));
+                $kaynakUrl  = preg_match('#^https?://#i', $kaynakUrl) === 1 ? $kaynakUrl : '';
+                ?>
+                <?php if ($gazeteAd !== ''): ?>
+                    <a class="nw-hesap-simge nw-gazete-simge" href="<?= e(nw_yol('', ['gazete' => $gazeteSlug])) ?>" tabindex="-1" aria-hidden="true"><?= e(mb_strtoupper(mb_substr($gazeteAd, 0, 1, 'UTF-8'), 'UTF-8')) ?></a>
+                <?php else: ?>
+                    <span class="nw-hesap-simge" aria-hidden="true"><img src="/assets/logo.svg" alt="" width="24" height="19"></span>
+                <?php endif; ?>
                 <div>
-                    <strong class="nw-hesap">Val<span>Haber</span></strong>
+                    <?php if ($gazeteAd !== ''): ?>
+                        <a class="nw-hesap" href="<?= e(nw_yol('', ['gazete' => $gazeteSlug])) ?>"><?= e($gazeteAd) ?></a>
+                    <?php else: ?>
+                        <strong class="nw-hesap">Val<span>Haber</span></strong>
+                    <?php endif; ?>
                     <span class="nw-meta"><a href="<?= e($detayYol) ?>"><time datetime="<?= e(date('c', (int) strtotime($zaman))) ?>"><?= e(yorum_zaman($zaman)) ?></time></a><?php if (!empty($v['kategori_adi'])): ?> · <?= e((string) $v['kategori_adi']) ?><?php endif; ?></span>
                 </div>
             <?php else: ?>
@@ -292,11 +312,18 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
             <?php if (haber_video_adresi((string) ($v['iframe_url'] ?? '')) !== ''): ?>
                 <?= nw_video_html((string) $v['iframe_url'], (string) $v['baslik']) ?>
             <?php elseif (haber_gorsel($v) !== ''): ?>
+                <?php $konuGorseli = '/assets/kategori/' . haber_gorsel_konu_adi((string) ($v['kategori_slug'] ?? '')) . '.jpg'; ?>
                 <a class="nw-gorsel" href="<?= e($detayYol) ?>">
                     <?php $set = haber_gorsel_srcset($v); ?>
+                    <?php /* Gorsel yuklenemezse kart resimsiz kalmasin: konu gorseline dus (13.11.2026). */ ?>
                     <img src="<?= e(haber_gorsel_kucuk($v, 960)) ?>" alt="<?= e((string) $v['baslik']) ?>" loading="lazy" referrerpolicy="no-referrer"
                          <?php if ($set !== ''): ?>srcset="<?= e($set) ?>" sizes="(max-width: 680px) 100vw, 640px"<?php endif; ?>
-                         onerror="this.remove()">
+                         onerror="this.onerror=null;this.removeAttribute('srcset');this.src='<?= e($konuGorseli) ?>'">
+                </a>
+            <?php else: ?>
+                <?php /* Her haber resimli (site sahibi, 13.11.2026): gorseli olmayan haberde konu gorseli. */ ?>
+                <a class="nw-gorsel nw-gorsel-konu" href="<?= e($detayYol) ?>">
+                    <img src="<?= e('/assets/kategori/' . haber_gorsel_konu_adi((string) ($v['kategori_slug'] ?? '')) . '.jpg') ?>" alt="" loading="lazy">
                 </a>
             <?php endif; ?>
         <?php else: ?>
@@ -327,7 +354,12 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
         <div class="nw-eylemler">
             <?= nw_begen_html($anahtar, $begeniSayi, (string) ($begeni['benim'][$id] ?? ''), $donus) ?>
             <a class="nw-eylem" href="<?= e($detayYol) ?>#yorumlar"><span class="nw-simge" aria-hidden="true">💬</span> Yorum yap</a>
-            <?php if ($haber && !$detay): ?>
+            <?php /* "Haberi oku" gazetenin kendi haberine gider (site sahibi, 13.11.2026:
+                     "biz ozetini yazacagiz; haberi oku dedigimizde o gazetenin haberine
+                     gitsin"). Kaynak adresi yoksa Valentra'daki habere. */ ?>
+            <?php if ($haber && $kaynakUrl !== ''): ?>
+                <a class="nw-eylem" href="<?= e($kaynakUrl) ?>" target="_blank" rel="noopener nofollow"><span class="nw-simge" aria-hidden="true">📰</span> Haberi oku<span class="nw-uzun"> ↗</span></a>
+            <?php elseif ($haber && !$detay): ?>
                 <a class="nw-eylem" href="<?= e($detayYol) ?>"><span class="nw-simge" aria-hidden="true">📰</span> Habere git</a>
             <?php endif; ?>
         </div>

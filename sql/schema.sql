@@ -2298,11 +2298,15 @@ CREATE TABLE IF NOT EXISTS uyeler (
     -- (bkz. includes/topluluk.php).
     tur           ENUM('uye','yz','kurum') NOT NULL DEFAULT 'uye',
     kayit_ip      VARCHAR(45)   NOT NULL DEFAULT '',
+    -- Google ile giris (13.11.2026; bkz. includes/uye_google.php): Google
+    -- hesabinin degismez kimligi (sub). Bos: e-posta ve sifreyle uyelik.
+    google_kimlik VARCHAR(40)   NULL,
     son_giris     DATETIME      NULL,
     olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     PRIMARY KEY (id),
     UNIQUE KEY uq_uye_eposta (eposta),
+    UNIQUE KEY uq_uye_google (google_kimlik),
     KEY ix_uye_kayit_ip (kayit_ip, olusturuldu)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
