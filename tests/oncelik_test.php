@@ -915,6 +915,39 @@ senaryo('V', 'Manşet görseli: resimli, denetimden geçmiş (gazete adı yok), 
     }
 });
 
+senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', static function (): void {
+    require_once __DIR__ . '/../includes/topluluk.php';
+
+    bekle(nw_gazete_adi('Hürriyet Gündem') === 'Hürriyet' && nw_gazete_adi('TRT Haber Son Dakika') === 'TRT Haber'
+        && nw_gazete_adi('DW Türkçe (video)') === 'DW Türkçe', 'bölüm beslemeleri tek yayında toplanıyor (Hürriyet Gündem → Hürriyet)');
+    bekle(nw_gazete_slug('Habertürk') === 'haberturk' && nw_gazete_slug('İHA') === 'iha', 'yayın adının adresteki hali');
+
+    $olagan = ['oncelik' => 'normal', 'olay_turu' => 'diger', 'olay_guncel' => true, 'turkiye_dogrudan' => true, 'dogrulama' => 'tek_kaynak', 'can_kaybi' => 'yok'];
+    $konular = ['Belediye yeni otobüs hattı açtı', 'Baraj doluluk oranı açıklandı', 'Üniversite kontenjanları belli oldu', 'Turizm geliri rekor kırdı',
+        'Köprü bakım çalışması başladı', 'Sanayi üretimi verisi yayımlandı', 'Tapu harcı düzenlemesi Meclis\'te'];
+    $kaynaklar = ['Hürriyet Gündem', 'Hürriyet Dünya', 'Hürriyet Gündem', 'NTV Türkiye', 'NTV Türkiye', 'Sözcü Gündem', 'Tek Haberli Site'];
+    $liste = [];
+
+    foreach ($konular as $i => $b) {
+        $liste[] = haber('Sınavkent: ' . $b, $olagan + ['kaynak_adi' => $kaynaklar[$i], 'kategori' => ['gundem', 'dunya', 'ekonomi'][$i % 3]]);
+    }
+
+    ekle($liste);
+    db()->exec("UPDATE haberler SET durum = 'yayinda', yayin_tarihi = NOW() - INTERVAL id MINUTE, guncellendi = guncellendi");
+
+    $g = nw_gazeteler();
+    bekle(array_keys($g) === ['hurriyet', 'ntv'] && $g['hurriyet']['adet'] === 3, 'gazete listesi: en çok haberi olan önce; tek haberli kaynaklar listede yok', json_encode(array_map(static fn (array $x): int => $x['adet'], $g)));
+
+    $o = nw_gazete_ozetleri(10, 2);
+    bekle(count($o) === 2 && $o[0]['ad'] === 'Hürriyet' && count($o[0]['haberler']) === 2, '"gazete gazete" görünüm: her yayının son haberleri');
+
+    $akis = nw_akis(20, 0, null, null, '', 'hurriyet');
+    $adlar = array_unique(array_map(static fn (array $x): string => (string) $x['tur'], $akis['ogeler']));
+    bekle(count($akis['ogeler']) === 3 && $adlar === ['haber'], 'gazete seçilince yalnızca o yayından özetlenen haberler geliyor', count($akis['ogeler']) . ' öğe');
+    bekle(nw_akis(20, 0, null, null, '', 'olmayan-gazete')['ogeler'] === [], 'bilinmeyen gazete boş akış verir');
+    bekle(count(nw_akis(20, 0, null, null, 'ekonomi')['ogeler']) === 2, 'başlık seçilince o başlığın haberleri geliyor (ekonomi: 2)');
+});
+
 temizle();
 
 echo "\n" . str_repeat('─', 60) . "\n";

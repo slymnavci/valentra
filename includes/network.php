@@ -660,10 +660,17 @@ function mesaj_okunmamis(int $uyeId): int
  *
  * @return array{ogeler: list<array<string,mixed>>, sonraki: int}
  */
-function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUye = null, string $konu = ''): array
+function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUye = null, string $konu = '', string $gazete = ''): array
 {
     $once  = $once > 0 ? $once : time() + 60;
     $ogeler = [];
+
+    // Gazete secildiyse (13.11.2026, bkz. nw_gazeteler) yalnizca o yayindan
+    // ozetlenen haberler; uye paylasimlari ve yorum kartlari bu akista yok.
+    $gazeteKaynaklari = $gazete !== '' ? (nw_gazeteler()[$gazete]['kaynaklar'] ?? []) : [];
+    $gazeteKosulu     = $gazeteKaynaklari !== []
+        ? ' AND h.kaynak_adi IN (' . implode(', ', array_map(static fn (string $k): string => db()->quote($k), $gazeteKaynaklari)) . ')'
+        : ($gazete !== '' ? ' AND 1 = 0' : '');
 
     // Konu secildiyse (06.11.2026, bkz. nw_konular) yalnizca o konunun
     // haberleri ve o haberlere yazilan yorumlar; uye paylasimlarinin konusu
@@ -677,7 +684,7 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
                     UNIX_TIMESTAMP(h.yayin_tarihi) AS zaman, k.ad AS kategori_adi
                FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
               WHERE h.durum = :d AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
-                AND h.yayin_tarihi < FROM_UNIXTIME(:once)
+                AND h.yayin_tarihi < FROM_UNIXTIME(:once)" . $gazeteKosulu . "
               ORDER BY h.yayin_tarihi DESC, h.id DESC LIMIT :l"
         );
         $ifade->bindValue('d', HABER_YAYINDA);
@@ -703,8 +710,8 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
     }
 
     try {
-        if ($konu !== '') {
-            throw new RangeException('konu akisinda uye paylasimi yok');
+        if ($konu !== '' || $gazete !== '') {
+            throw new RangeException('konu ve gazete akisinda uye paylasimi yok');
         }
 
         $ifade = db()->prepare(
@@ -729,6 +736,10 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
     $kosul = str_replace('g.uye_id', 'y.uye_id', $kosul);
 
     try {
+        if ($gazete !== '') {
+            throw new PDOException('gazete akisinda yorum karti yok');
+        }
+
         $ifade = db()->prepare(
             "SELECT y.id, y.uye_id, y.metin, y.olusturuldu, UNIX_TIMESTAMP(y.olusturuldu) AS zaman,
                     u.ad, u.foto, u.tur, u.rol,
@@ -785,6 +796,147 @@ function nw_konular(): array
     }
 
     return $konular;
+}
+
+/* --- Gazeteler (13.11.2026) ---------------------------------------------
+ *
+ * Site sahibinin istegi: "Network sayfasinda haberlerin hangi gazeteden
+ * alindigini gazete gazete gosterelim; solda gazete adlari, tikladigimizda o
+ * gazetenin ozet haberleri gelsin. Ayrica ana basliklar: ekonomi dedigimizde
+ * ekonomi haberleri, gundem dedigimizde gundem asagi dogru gelsin."
+ *
+ * "Gazete" haberin KAYNAGIDIR (haberler.kaynak_adi): Valentra o yayinin
+ * haberini kendi cumleleriyle ozetledi, kaynak baglantisi haberde. Kaynak
+ * listesindeki bolum beslemeleri ("Hurriyet Gundem", "Hurriyet Dunya", "TRT
+ * Haber Son Dakika") tek yayinda toplanir.
+ * ---------------------------------------------------------------------- */
+
+/** Bir gazete listede gorunmek icin son gunlerde en az bu kadar haber. */
+const NW_GAZETE_EN_AZ_HABER = 2;
+
+/** Listede gosterilen en fazla gazete. */
+const NW_GAZETE_EN_FAZLA = 40;
+
+/** Kaynak adindan yayin adi: "Hürriyet Gündem" -> "Hürriyet". */
+function nw_gazete_adi(string $kaynakAdi): string
+{
+    $ad = trim((string) preg_replace('/\s*\((video|YouTube)\)\s*$/iu', '', trim($kaynakAdi)));
+    $ad = trim((string) preg_replace('/\s+(Son Dakika|Manşet|Yerel|Genel)$/u', '', $ad));
+
+    return kaynak_gorunen_ad($ad);
+}
+
+/** Yayin adinin adresteki hali: "Habertürk" -> "haberturk". */
+function nw_gazete_slug(string $ad): string
+{
+    $s = strtr(mb_strtolower(strtr($ad, ['İ' => 'i', 'I' => 'ı']), 'UTF-8'), [
+        'ç' => 'c', 'ğ' => 'g', 'ı' => 'i', 'ö' => 'o', 'ş' => 's', 'ü' => 'u', 'â' => 'a', 'î' => 'i', 'û' => 'u',
+    ]);
+
+    return trim((string) preg_replace('/[^a-z0-9]+/', '-', $s), '-');
+}
+
+/**
+ * Son gunlerde haberi ozetlenen yayinlar, haber sayisina gore.
+ *
+ * @return array<string,array{ad:string,adet:int,kaynaklar:list<string>}> slug => yayin
+ */
+function nw_gazeteler(int $gun = 3): array
+{
+    static $onbellek = [];
+
+    if (isset($onbellek[$gun])) {
+        return $onbellek[$gun];
+    }
+
+    $liste = [];
+
+    try {
+        $satirlar = db()->query(
+            "SELECT h.kaynak_adi, COUNT(*) AS adet
+               FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
+              WHERE h.durum = " . db()->quote(HABER_YAYINDA) . " AND h.kaynak_adi <> ''
+                AND (k.slug IS NULL OR k.slug <> 'yemek-tarifleri')
+                AND h.yayin_tarihi >= NOW() - INTERVAL " . max(1, min(14, $gun)) . " DAY
+              GROUP BY h.kaynak_adi"
+        )->fetchAll();
+    } catch (PDOException $e) {
+        return $onbellek[$gun] = [];
+    }
+
+    foreach ($satirlar as $s) {
+        $ad   = nw_gazete_adi((string) $s['kaynak_adi']);
+        $slug = nw_gazete_slug($ad);
+
+        if ($slug === '') {
+            continue;
+        }
+
+        $liste[$slug] ??= ['ad' => $ad, 'adet' => 0, 'kaynaklar' => []];
+        $liste[$slug]['adet'] += (int) $s['adet'];
+        $liste[$slug]['kaynaklar'][] = (string) $s['kaynak_adi'];
+    }
+
+    $liste = array_filter($liste, static fn (array $g): bool => $g['adet'] >= NW_GAZETE_EN_AZ_HABER);
+    uasort($liste, static fn (array $a, array $b): int => [$b['adet'], $a['ad']] <=> [$a['adet'], $b['ad']]);
+
+    return $onbellek[$gun] = array_slice($liste, 0, NW_GAZETE_EN_FAZLA, true);
+}
+
+/**
+ * "Gazete gazete" gorunumu: her yayinin son haberleri.
+ *
+ * @return list<array{slug:string,ad:string,adet:int,haberler:list<array<string,mixed>>}>
+ */
+function nw_gazete_ozetleri(int $gazeteAdet = 14, int $haberAdet = 4): array
+{
+    $gazeteler = nw_gazeteler();
+
+    if ($gazeteler === []) {
+        return [];
+    }
+
+    $sahip = [];
+
+    foreach ($gazeteler as $slug => $g) {
+        foreach ($g['kaynaklar'] as $k) {
+            $sahip[$k] = $slug;
+        }
+    }
+
+    try {
+        $satirlar = db()->query(
+            "SELECT h.id, h.baslik, h.slug, h.ozet, h.gorsel_url, h.gorsel_denetim, h.kaynak_adi, h.yayin_tarihi,
+                    k.ad AS kategori_adi, k.slug AS kategori_slug
+               FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
+              WHERE h.durum = " . db()->quote(HABER_YAYINDA) . " AND h.kaynak_adi <> ''
+                AND (k.slug IS NULL OR k.slug <> 'yemek-tarifleri')
+                AND h.yayin_tarihi >= NOW() - INTERVAL 3 DAY
+              ORDER BY h.yayin_tarihi DESC, h.id DESC LIMIT 900"
+        )->fetchAll();
+    } catch (PDOException $e) {
+        return [];
+    }
+
+    $haberler = [];
+
+    foreach ($satirlar as $h) {
+        $slug = $sahip[(string) $h['kaynak_adi']] ?? '';
+
+        if ($slug !== '' && count($haberler[$slug] ?? []) < $haberAdet) {
+            $haberler[$slug][] = $h;
+        }
+    }
+
+    $liste = [];
+
+    foreach (array_slice($gazeteler, 0, $gazeteAdet, true) as $slug => $g) {
+        if (($haberler[$slug] ?? []) !== []) {
+            $liste[] = ['slug' => $slug, 'ad' => $g['ad'], 'adet' => $g['adet'], 'haberler' => $haberler[$slug]];
+        }
+    }
+
+    return $liste;
 }
 
 /* --- Sag kenar: gundem -------------------------------------------------- */

@@ -32,13 +32,16 @@
         try { kayitli = kalici ? (kalici.getItem(KONU) || '') : ''; } catch (e) { kayitli = ''; }
 
         if (location.pathname === '/network' && !adres0.searchParams.has('konu') && !adres0.searchParams.get('once')
+            // Gazete ya da gorunum secildiyse (13.11.2026) hatirlanan konuya donulmez.
+            && !adres0.searchParams.has('gazete') && !adres0.searchParams.has('gorunum') && !adres0.searchParams.has('sekme')
             && /^[a-z0-9-]+$/.test(kayitli) && secici.querySelector('a[data-konu="' + kayitli + '"]')) {
             adres0.searchParams.set('konu', kayitli);
             location.replace(adres0.pathname + adres0.search + adres0.hash);
             return;
         }
 
-        secici.querySelectorAll('a[data-konu]').forEach(function (a) {
+        // Sol kenardaki basliklar, gazeteler ve gorunum sekmeleri de secimi yazar / siler.
+        document.querySelectorAll('.nw-konular-secici a[data-konu], .nw-sol a[data-konu], .nw-sekmeler a[data-konu]').forEach(function (a) {
             a.addEventListener('click', function () {
                 try { if (kalici) { kalici.setItem(KONU, a.getAttribute('data-konu') || ''); } } catch (e) {}
             });
