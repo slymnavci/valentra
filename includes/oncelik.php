@@ -907,7 +907,9 @@ function oncelik_sira_ust(): string
  * Editor bir haberi sureli olarak banda alabilir ya da banttan cikarabilir
  * (oncelik_bant_ayarla); sure dolunca otomatik karara doner.
  *
- * Ayar 'onizleme' iken (varsayilan) bant yalnizca panelde, mevcut seritle
+ * YAYINDA (site sahibi, 13.11.2026: ekran goruntulerini gorup "yayina al").
+ * Varsayilan artik 'yayin'; panelden onizlemeye geri alinabilir.
+ * Ayar 'onizleme' iken bant yalnizca panelde, mevcut seritle
  * yan yana gorunur; sitede bir sey degismez. 'yayin' yapilinca sitedeki
  * "Son Dakika" seridi bu bandi, altindaki kayan serit "Son Haberler"
  * adiyla kronolojik akisi gosterir.
@@ -934,7 +936,7 @@ function oncelik_bant_yayinda(): bool
 {
     require_once __DIR__ . '/ayarlar.php';
 
-    return oncelik_bant_hazir() && ayar_oku(ONCELIK_BANT_AYARI, 'onizleme') === 'yayin';
+    return oncelik_bant_hazir() && ayar_oku(ONCELIK_BANT_AYARI, 'yayin') === 'yayin';
 }
 
 /** Editorun bant karari yururlukte mi (SQL). */

@@ -597,10 +597,12 @@ senaryo('L', 'Şehit haberi: doğrulanınca manşet ve son dakika bandı; kronol
     $k = oncelik_bant_karari(satir($sehit));
     bekle($k['bantta'] && str_contains($k['gerekce'][0], 'resmî açıklama'), '"Neden bu öncelik?" bant gerekçesini veriyor', $k['gerekce'][0]);
 
-    bekle(haber_son_dakika_bandi() === [], 'ayar önizlemedeyken sitede bant çıkmıyor (eski düzen sürüyor)');
+    ayar_yaz(ONCELIK_BANT_AYARI, 'onizleme');
+    bekle(haber_son_dakika_bandi() === [] && !oncelik_bant_yayinda(), 'ayar önizlemedeyken sitede bant çıkmıyor (eski düzen sürüyor)');
     ayar_yaz(ONCELIK_BANT_AYARI, 'yayin');
     bekle(oncelik_bant_yayinda(), 'panelden yayına alınınca bant sitede açılıyor');
-    ayar_yaz(ONCELIK_BANT_AYARI, 'onizleme');
+    ayar_sil(ONCELIK_BANT_AYARI);
+    bekle(oncelik_bant_yayinda(), 'ayar hiç yazılmamışsa bant yayında (varsayılan)');
 });
 
 senaryo('M', 'Askerî helikopter kazası: kaza doğrulandı, can kaybı doğrulanmadı', static function (): void {
