@@ -972,6 +972,13 @@ senaryo('W', 'Kim ne yazdı: aynı olayı hangi yayın hangi başlıkla verdi', 
     ]);
     bekle(count($k) === 4 && $k[0]['uyeler'] === [1, 2], 'ayrı olaylar ayrı kaldı (Katar görüşmesi / iklim zirvesi / petrol / Bitcoin)', count($k) . ' olay');
 
+    $z = kny_kumele([
+        ['id' => 1, 'yayin' => 'a', 'baslik' => 'Cumhurbaşkanı Erdoğan Katar Emiri ile görüştü', 'zaman' => 1, 'manset' => 0],
+        ['id' => 2, 'yayin' => 'b', 'baslik' => 'Cumhurbaşkanı Erdoğan Katar Emiri ile iklim zirvesinde görüştü', 'zaman' => 2, 'manset' => 0],
+        ['id' => 3, 'yayin' => 'c', 'baslik' => 'Cumhurbaşkanı Erdoğan iklim zirvesinde liderlerle görüştü', 'zaman' => 3, 'manset' => 0],
+    ]);
+    bekle(count($z) === 2 && $z[0]['uyeler'] === [1, 2] && $z[1]['uyeler'] === [3], 'ara başlık köprü olmuyor: üçüncü başlık ilk olaya katılmadı', json_encode(array_column($z, 'uyeler')));
+
     bekle(kny_kutu_html() === '', 'üçten az olay varken ana sayfa kutusu boş: eski "5 gelişme" kutusu gösterilir');
     kny_kaydet([$g('sabah.com.tr', 'Okullarda ara tatil başladı: veliler dikkat', 5)]);
     kny_yenile();

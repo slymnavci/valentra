@@ -159,10 +159,12 @@ function kny_kaydet(array $girdiler): int
 /**
  * Basliklari olaylara kumeler. Veritabanina dokunmaz; testler dogrudan cagirir.
  *
- * Baglanti zinciri YOK (A~B, B~C diye A ile C birlesmez): her baslik, kok
- * kumesi kendisine benzeyen ILK olayin CEKIRDEK basligiyla karsilastirilir.
- * Zincir, gun icinde "Erdogan ... zirve" basliklari uzerinden ilgisiz
- * olaylari tek olayda topluyordu.
+ * Baglanti zinciri YOK (A~B, B~C diye A ile C birlesmez): her baslik
+ * yalnizca olayin ILK basligiyla (cekirdek) karsilastirilir; olaya katilan
+ * baslik yeni cekirdek OLMAZ. Yoksa "Erdogan Katar Emiri ile gorustu" ->
+ * "... Katar Emiri ile iklim zirvesinde gorustu" -> "... iklim zirvesinde
+ * liderlerle gorustu" zinciri iki ayri olayi tek olayda topluyor ve uc
+ * yayin esigini yanlis gecirtiyordu.
  *
  * @param list<array<string,mixed>> $satirlar id, yayin, baslik, zaman (unix), manset
  * @return list<array{kimlik:int,uyeler:list<int>,yayinlar:list<string>,son:int,manset:bool}>
@@ -210,10 +212,6 @@ function kny_kumele(array $satirlar): array
         if ($yer === null) {
             $olaylar[] = ['kimlik' => (int) $s['id'], 'uyeler' => [], 'yayinlar' => [], 'son' => 0, 'manset' => false, 'kokler' => [$kok]];
             $yer = count($olaylar) - 1;
-            $cekirdek = true;
-        } elseif (count($olaylar[$yer]['kokler']) < 3) {
-            // Ilk uc baslik cekirdek: ayni olayin farkli anlatimlari da eslessin.
-            $olaylar[$yer]['kokler'][] = $kok;
             $cekirdek = true;
         } else {
             $cekirdek = false;
