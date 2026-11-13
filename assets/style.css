@@ -4187,6 +4187,62 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
     .mac-bant-skor { min-width: 44px; font-size: .92rem; padding: 1px 6px; }
 }
 
+/* --- Kim ne yazdi (13.11.2026; includes/kim_ne_yazdi.php) ---------------
+   Ana sayfa kutusu "5 gelisme" kutusunun yerinde ve onun duzenini kullanir
+   (.bes-*); daire icindeki sayi sira degil, haberi veren yayin sayisi. */
+.kny-kutu .kny-sayi { border-radius: 8px; width: 30px; }
+.kny-kim { font-size: .74rem; color: var(--metin-soluk); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.kny-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.kny-olay-bag {
+    display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 14px; align-items: center;
+    padding: 14px 16px; background: var(--kart); border: 1px solid var(--cizgi); border-radius: 12px; color: var(--metin);
+}
+.kny-olay-bag:hover { border-color: var(--altin); }
+.kny-olay-sayi { text-align: center; font-size: .72rem; color: var(--metin-soluk); text-transform: uppercase; letter-spacing: .06em; line-height: 1.1; }
+.kny-olay-sayi strong { display: block; font-size: 1.7rem; font-weight: 800; color: var(--altin); letter-spacing: 0; }
+.kny-olay-govde { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.kny-olay-baslik { font-size: 1.08rem; font-weight: 700; line-height: 1.3; }
+.kny-olay-bag:hover .kny-olay-baslik { color: var(--altin); }
+.kny-olay-kim { font-size: .82rem; color: var(--metin-soluk); }
+.kny-olay-zaman { font-size: .8rem; color: var(--metin-soluk); white-space: nowrap; }
+
+.kny-geri { margin: 0 0 6px; font-size: .88rem; }
+.kny-geri a { color: var(--vurgu); font-weight: 600; }
+.kny-bolum { margin: 26px 0 12px; font-size: 1.05rem; font-weight: 800; }
+.kny-valentra {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center;
+    padding: 12px 16px; border-radius: 12px; background: var(--kart); border: 1px solid var(--cizgi); border-left: 4px solid var(--altin); color: var(--metin);
+}
+.kny-valentra-etiket { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--altin); }
+.kny-valentra-baslik { font-weight: 700; }
+.kny-valentra-ok { font-size: .86rem; font-weight: 700; color: var(--vurgu); white-space: nowrap; }
+
+.kny-izgara { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.kny-kart { display: flex; flex-direction: column; gap: 8px; padding: 16px; background: var(--kart); border: 1px solid var(--cizgi); border-radius: 12px; }
+.kny-kart-ust { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding-bottom: 8px; border-bottom: 2px solid var(--altin); }
+.kny-yayin { font-size: .8rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.kny-kart-ust time { font-size: .76rem; color: var(--metin-soluk); white-space: nowrap; }
+.kny-kart-baslik { margin: 0; font-size: 1.08rem; line-height: 1.32; font-weight: 700; }
+.kny-kart-baslik a { color: var(--metin); }
+.kny-kart-baslik a:hover { color: var(--altin); }
+.kny-kart-ozet { margin: 0; font-size: .9rem; line-height: 1.5; color: var(--metin-soluk); }
+.kny-kart-diger { margin: 0; padding: 8px 0 0; list-style: none; border-top: 1px dashed var(--cizgi); display: grid; gap: 6px; font-size: .86rem; }
+.kny-kart-diger a { color: var(--metin); }
+.kny-kart-diger a:hover { color: var(--altin); }
+.kny-kart-diger span { color: var(--metin-soluk); font-size: .74rem; white-space: nowrap; margin-left: 4px; }
+.kny-kart-git { margin-top: auto; padding-top: 6px; font-size: .82rem; font-weight: 700; color: var(--vurgu); }
+.kny-kart-git:hover { text-decoration: underline; }
+.kny-yok { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 8px; }
+.kny-yok span { padding: 5px 12px; border: 1px dashed var(--cizgi); border-radius: 999px; font-size: .84rem; color: var(--metin-soluk); }
+.kny-not { margin: 18px 0 0; font-size: .8rem; line-height: 1.55; color: var(--metin-soluk); max-width: 80ch; }
+.kny-not a { color: var(--vurgu); }
+@media (max-width: 640px) {
+    .kny-olay-bag { grid-template-columns: 52px minmax(0, 1fr); }
+    .kny-olay-zaman { grid-column: 2; }
+    .kny-valentra { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+}
+
 /* --- Bugun bilmeniz gereken 5 gelisme (vitrin; 08.11.2026) -------------- */
 .bes-gelisme { display: flex; flex-direction: column; }
 .bes-liste { list-style: none; margin: 0; padding: 0; flex: 1; display: flex; flex-direction: column; counter-reset: bes; }

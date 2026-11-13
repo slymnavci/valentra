@@ -224,6 +224,10 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^son-depremler/?$ deprem.php [L,QSA]
 
+    # Kim ne yazdi (13.11.2026; bkz. includes/kim_ne_yazdi.php)
+    RewriteRule ^kim-ne-yazdi/?$ kim-ne-yazdi.php [L,QSA]
+    RewriteRule ^kim-ne-yazdi/([0-9]+)/?$ kim-ne-yazdi.php?o=$1 [L,QSA]
+
     # Gunun kelimesi oyunu (08.11.2026)
     RewriteRule ^gunun-kelimesi/?$ gunun-kelimesi.php [L,QSA]
     # Gundem dosyalari (03.11.2026; bkz. includes/konu.php)

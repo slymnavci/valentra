@@ -120,26 +120,51 @@ function manset_sinyalleri(): array
 
 /**
  * Iki baslik ayni olayi mi anlatiyor. Siki olcu: en az dort ortak kok ve
- * kisa basligin yarisi, ya da uc ortak kok ve kisa basligin dortte ucu.
+ * kisa basligin yarisi, ya da uc ortak kok ve kisa basligin dortte ucu (ayiran kelime ozel ad degilse).
  * Gercek TRT basliklariyla olculdu (13.11.2026, 204 baslik): daha gevsek
  * olcu "Brent petrol 90 dolarin altina geriledi" ile "Bitcoin 70 bin
  * dolarin altina geriledi"yi, "tavuk eti uretimi eylulde artti" ile "sanayi
  * uretim endeksi eylulde artti"yi ayni olay sayiyordu. Yanlis haberi
  * yukseltmek, dogru haberi kacirmaktan kotu.
  *
- * @param list<string> $a
- * @param list<string> $b
+ * @param array<int|string,mixed> $a manset_sinyal_kokleri ciktisi (kokler + 'o': ozel adlar)
+ * @param array<int|string,mixed> $b
  */
 function manset_sinyal_ayni_olay(array $a, array $b): bool
 {
+    $ao = (array) ($a['o'] ?? []);
+    $bo = (array) ($b['o'] ?? []);
+    $a  = array_values(array_filter($a, 'is_string'));
+    $b  = array_values(array_filter($b, 'is_string'));
+
     if ($a === [] || $b === []) {
         return false;
     }
 
-    $ortak = count(array_intersect($a, $b));
-    $oran  = $ortak / min(count($a), count($b));
+    $ortakKokler = array_intersect($a, $b);
+    $ortak = count($ortakKokler);
+    $kisa  = min(count($a), count($b));
+    $oran  = $ortak / $kisa;
 
-    return ($ortak >= 4 && $oran >= 0.5) || ($ortak >= 3 && $oran >= 0.75);
+    if ($ortak >= 4 && $oran >= 0.5) {
+        return true;
+    }
+
+    if ($ortak < 3 || $oran < 0.75) {
+        return false;
+    }
+
+    /*
+     * Uc ortak kok (kisa basligin dortte ucu): kisa basligin TUTMAYAN koku
+     * bir ozel adsa (kisi, kurum, yer, urun) ayri olaydir. "Brent petrol 90
+     * dolarin altina geriledi" ile "Bitcoin 70 bin dolarin altina geriledi"
+     * uc kok paylasiyor ama ayiran kelime ozel ad. "Merkez Bankasi politika
+     * faizini indirdi" ile "Merkez Bankasi faiz kararini acikladi: politika
+     * faizi yuzde 40"ta ayiran kelime fiil: ayni olay.
+     */
+    [$kisaKok, $kisaOzel] = count($a) <= count($b) ? [$a, $ao] : [$b, $bo];
+
+    return array_intersect(array_diff($kisaKok, $ortakKokler), $kisaOzel) === [];
 }
 
 /** Basliklarin kokleri (karsilastirma icin; bkz. konu_kokleri). */
@@ -147,7 +172,12 @@ function manset_sinyal_kokleri(string $baslik): array
 {
     require_once __DIR__ . '/konu_siniri.php';
 
-    return konu_kokleri($baslik);
+    $kokler = konu_kokleri($baslik);
+
+    // 'o': buyuk harfle yazilmis kelimelerin kokleri (bkz. manset_sinyal_ayni_olay).
+    $kokler['o'] = konu_ozel_kokler($baslik);
+
+    return $kokler;
 }
 
 /**
@@ -246,6 +276,20 @@ function manset_sinyal_uygula(int $id, array $sonuc): bool
 function manset_sinyal_yaz(array $girdiler): array
 {
     require_once __DIR__ . '/ayarlar.php';
+
+    /*
+     * Kim ne yazdi (bkz. includes/kim_ne_yazdi.php): ayni basliklar,
+     * baglanti ve ozetleriyle, daha genis yayin listesiyle tabloya da
+     * yazilir ve olaylar yeniden kumelenir. Gundem puanindan bagimsiz:
+     * burada bir hata puanlamayi durdurmaz.
+     */
+    try {
+        require_once __DIR__ . '/kim_ne_yazdi.php';
+        kny_kaydet($girdiler);
+        kny_yenile();
+    } catch (Throwable $e) {
+        error_log('[valentra] kim ne yazdi: ' . $e->getMessage());
+    }
 
     $simdi = time();
     $sinir = $simdi - MANSET_SINYAL_SAAT * 3600;

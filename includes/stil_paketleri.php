@@ -50,6 +50,8 @@ const STIL_SAYFA_PAKETLERI = [
     'kanun.php'              => ['ek', 'bilgi'],
     'kanunlar.php'           => ['ek', 'bilgi'],
     'kategori.php'           => ['ek', 'sayfalar'],
+    // Kim ne yazdi (13.11.2026): kendi kurallari style.css'te.
+    'kim-ne-yazdi.php'       => ['ek', 'sayfalar'],
     'konu.php'               => ['ek', 'sayfalar'],
     'kose-yazilari.php'      => ['ek', 'sayfalar'],
     'kose-yazisi.php'        => ['ek', 'sayfalar'],
