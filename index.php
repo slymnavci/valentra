@@ -70,10 +70,23 @@ ajan_teslim_sayfa_sonunda();
 require_once __DIR__ . '/includes/deprem.php';
 deprem_denetle_sayfa_sonunda();
 
-$mansetler = $sayfa === 1 ? haber_manset($mansetAdet, true) : [];
 $tuketilen = min($mansetAdet, $toplam);
 
-$haberler = haber_yayindakiler($adet, $tuketilen + ($sayfa - 1) * $adet, true);
+/*
+ * MANSET GORSELI (13.11.2026; bkz. includes/manset_sinyal.php,
+ * manset_gorsel_durumu): kayan mansete yalnizca gorseli denetimden gecmis
+ * (uzerinde gazete/kanal/ajans adi yok) ve yuksek cozunurluklu haberler
+ * girer. Ilk sayfanin butun haberleri (manset + izgara) tek sorguda ve ayni
+ * sirayla alinir; kosulu tutan ilk 20'si manset, kalani ayni sirayla
+ * izgara. Hicbir haber kaybolmaz, sayfalama degismez.
+ */
+if ($sayfa === 1) {
+    require_once __DIR__ . '/includes/manset_sinyal.php';
+    [$mansetler, $haberler] = manset_gorsele_gore_ayir(haber_manset($mansetAdet + $adet, true), $mansetAdet);
+} else {
+    $mansetler = [];
+    $haberler  = haber_yayindakiler($adet, $tuketilen + ($sayfa - 1) * $adet, true);
+}
 
 $kalan    = max(0, $toplam - $tuketilen);
 $sonSayfa = max(1, (int) ceil($kalan / $adet));

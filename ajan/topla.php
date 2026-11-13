@@ -1202,6 +1202,11 @@ $kaynaklar = kaynaklari_sirala($kaynaklar, (int) floor(time() / 7200));
  */
 $kaynakDurumlari = [];
 
+/** Gundemine bakilan yayinlar (site tarafindaki MANSET_YAYINLARI ile ayni). */
+const GUNDEM_YAYINLARI = ['trthaber.com', 'hurriyet.com.tr', 'milliyet.com.tr', 'ntv.com.tr', 'haberturk.com', 'cnnturk.com', 'sozcu.com.tr', 'sabah.com.tr'];
+
+$gundemSinyalleri = [];
+
 foreach ($kaynaklar as $kaynak) {
     $sebep = '';
 
@@ -1309,6 +1314,31 @@ foreach ($kaynaklar as $kaynak) {
     }
 
     $kaynakDurumlari[] = ['id' => (int) ($kaynak['id'] ?? 0), 'durum' => 'tamam', 'neden' => '', 'girdi' => count($girdiler)];
+
+    /*
+     * BUYUK YAYINLARIN GUNDEMI (13.11.2026; bkz. includes/manset_sinyal.php).
+     * Bu yayinlarin gundem, politika, ekonomi ve dunya beslemelerindeki
+     * BUTUN basliklar (sitede zaten olanlar dahil) siteye bildirilir; site
+     * her haberin "kac buyuk yayin bu olayi gundemine aldi" puanini bundan
+     * sayar ve manset sirasinda kullanir. Aday secimi degismez.
+     */
+    $yayin = kaynak_yayincisi($kaynak);
+
+    if (in_array($yayin, GUNDEM_YAYINLARI, true)
+        && in_array(HaberAkisi::kova($kaynak), ['gundem', 'politika', 'ekonomi', 'dunya'], true)
+        && !str_contains((string) ($kaynak['besleme_url'] ?? ''), 'youtube.com')) {
+        $mansetListesi = (string) $kaynak['ad'] === 'TRT Haber Manşet';
+
+        foreach ($girdiler as $g) {
+            $z = ($g['tarih'] ?? null) !== null ? (int) strtotime((string) $g['tarih']) : 0;
+
+            if ($z > 0 && $z < time() - 12 * 3600) {
+                continue;
+            }
+
+            $gundemSinyalleri[] = ['baslik' => (string) $g['baslik'], 'yayin' => $yayin, 'manset' => $mansetListesi, 'zaman' => $z];
+        }
+    }
 
     $gecen = 0;
     $zatenVar = 0;
@@ -1468,6 +1498,17 @@ if (!$kuruCalisma && $kaynakDurumlari !== []) {
         $site->kaynakDurumu($kaynakDurumlari);
     } catch (Throwable $e) {
         gunluk('  kaynak durumu siteye bildirilemedi: ' . $e->getMessage());
+    }
+}
+
+// Buyuk yayinlarin gundemi siteye (manset sirasi icin). Bildirilemezse tarama surer.
+if (!$kuruCalisma && $gundemSinyalleri !== []) {
+    try {
+        $gundemSonucu = $site->mansetSinyali($gundemSinyalleri);
+        gunluk('  Büyük yayınların gündemi: ' . count($gundemSinyalleri) . ' başlık bildirildi; yayındaki '
+            . (int) ($gundemSonucu['yukselen'] ?? 0) . ' haberin önemi yükseldi.');
+    } catch (Throwable $e) {
+        gunluk('  büyük yayınların gündemi siteye bildirilemedi: ' . $e->getMessage());
     }
 }
 
