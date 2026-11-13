@@ -1203,7 +1203,9 @@ $kaynaklar = kaynaklari_sirala($kaynaklar, (int) floor(time() / 7200));
 $kaynakDurumlari = [];
 
 /** Gundemine bakilan yayinlar (site tarafindaki MANSET_YAYINLARI ile ayni). */
-const GUNDEM_YAYINLARI = ['trthaber.com', 'hurriyet.com.tr', 'milliyet.com.tr', 'ntv.com.tr', 'haberturk.com', 'cnnturk.com', 'sozcu.com.tr', 'sabah.com.tr'];
+const GUNDEM_YAYINLARI = ['trthaber.com', 'hurriyet.com.tr', 'milliyet.com.tr', 'ntv.com.tr', 'haberturk.com', 'cnnturk.com', 'sozcu.com.tr', 'sabah.com.tr',
+    // Kim ne yazdi sayfasi icin (13.11.2026; site tarafindaki KNY_YAYINLARI). Gundem puanina girmezler.
+    'bbc.com', 'dw.com', 'cumhuriyet.com.tr', 'yenisafak.com', 'star.com.tr', 'tr.euronews.com', 'bloomberght.com', 'dunya.com', 'ekonomim.com'];
 
 $gundemSinyalleri = [];
 
@@ -1336,7 +1338,12 @@ foreach ($kaynaklar as $kaynak) {
                 continue;
             }
 
-            $gundemSinyalleri[] = ['baslik' => (string) $g['baslik'], 'yayin' => $yayin, 'manset' => $mansetListesi, 'zaman' => $z];
+            $gundemSinyalleri[] = [
+                'baslik' => (string) $g['baslik'], 'yayin' => $yayin, 'manset' => $mansetListesi, 'zaman' => $z,
+                // Kim ne yazdi: yayinin kendi sayfasina baglanti ve kisa ozet (site 180 karaktere kirpiyor).
+                'adres'  => (string) ($g['baglanti'] ?? ''),
+                'ozet'   => mb_substr(trim(strip_tags((string) ($g['ozet'] ?? ''))), 0, 400, 'UTF-8'),
+            ];
         }
     }
 

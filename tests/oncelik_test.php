@@ -915,6 +915,81 @@ senaryo('V', 'Manşet görseli: resimli, denetimden geçmiş (gazete adı yok), 
     }
 });
 
+senaryo('W', 'Kim ne yazdı: aynı olayı hangi yayın hangi başlıkla verdi', static function (): void {
+    require_once __DIR__ . '/../includes/kim_ne_yazdi.php';
+    require_once __DIR__ . '/../includes/manset_sinyal.php';
+    db()->exec('DELETE FROM gundem_basliklari');
+    ayar_yaz(KNY_AYARI, '');
+    ayar_yaz(MANSET_SINYAL_AYARI, '[]');
+
+    $t = time();
+    $g = static fn (string $yayin, string $baslik, int $dk, string $ozet = ''): array =>
+        ['yayin' => $yayin, 'baslik' => $baslik, 'zaman' => $t - $dk * 60, 'adres' => 'https://' . $yayin . '/h/' . md5($baslik), 'ozet' => $ozet];
+
+    $liste = [
+        $g('trthaber.com', 'Merkez Bankası politika faizini yüzde 40\'a indirdi', 50, str_repeat('Uzun bir özet cümlesi. ', 30)),
+        $g('hurriyet.com.tr', 'Merkez Bankası faiz kararını açıkladı: politika faizi yüzde 40', 40, '<b>Karar</b> açıklandı &amp; piyasalar izliyor'),
+        $g('sozcu.com.tr', 'Merkez Bankası politika faizini yüzde 40\'a indirdi: dolar nasıl tepki verdi', 30),
+        $g('bloomberght.com', 'Merkez Bankası politika faizini yüzde 40\'a indirdi, beklenti aşıldı', 20),
+        $g('trthaber.com', 'Meclis yeni vergi paketini kabul etti', 45),
+        $g('milliyet.com.tr', 'Meclis yeni vergi paketini kabul etti: oylama tamamlandı', 35),
+        $g('ntv.com.tr', 'Yeni vergi paketi Meclis\'te kabul edildi', 25),
+        $g('haberturk.com', 'Okullarda ara tatil başladı', 60),
+        $g('cnnturk.com', 'Okullarda birinci ara tatil başladı', 55),
+        $g('ornek.test', 'Merkez Bankası politika faizini yüzde 40\'a indirdi', 10),
+        ['yayin' => 'ntv.com.tr', 'baslik' => 'Bağlantısı olmayan başlık alınmaz', 'zaman' => $t, 'adres' => ''],
+    ];
+
+    bekle(kny_kaydet($liste) === 9, 'listede olmayan yayın ve bağlantısız başlık alınmadı (9 başlık)');
+    bekle(kny_kaydet($liste) === 0, 'aynı başlıklar yeniden gelince ikinci kez yazılmadı');
+
+    $ozet = (string) db()->query("SELECT ozet FROM gundem_basliklari WHERE yayin = 'trthaber.com' ORDER BY id LIMIT 1")->fetchColumn();
+    bekle(mb_strlen($ozet, 'UTF-8') <= KNY_OZET_UZUNLUK + 1, 'yayının özeti en fazla ' . KNY_OZET_UZUNLUK . ' karakter gösteriliyor (' . mb_strlen($ozet, 'UTF-8') . ')');
+    bekle((string) db()->query("SELECT ozet FROM gundem_basliklari WHERE yayin = 'hurriyet.com.tr' LIMIT 1")->fetchColumn() === 'Karar açıklandı & piyasalar izliyor', 'özet düz metne çevrildi (HTML yok)');
+
+    bekle(kny_yenile() === 2, 'en az ' . KNY_EN_AZ_YAYIN . ' yayının verdiği iki olay listede; iki yayının verdiği olay değil');
+
+    $olaylar = kny_olaylar();
+    bekle(count($olaylar[0]['yayinlar']) === 4 && str_contains($olaylar[0]['baslik'], 'Merkez Bankası'), 'en çok yayının verdiği olay ilk sırada (4 yayın)', $olaylar[0]['baslik']);
+    bekle(in_array($olaylar[0]['baslik'], array_column($liste, 'baslik'), true), 'olayın başlığı yayınlardan birinin kendi başlığı (uydurulmadı)');
+    bekle($olaylar[0]['yayinlar'] === ['trthaber.com', 'hurriyet.com.tr', 'sozcu.com.tr', 'bloomberght.com'], 'yayınlar sabit sırada (görüşe göre dizilmiyor)', implode(',', $olaylar[0]['yayinlar']));
+
+    $o = kny_olay($olaylar[0]['kimlik']);
+    bekle($o !== null && count($o['yayinlar']) === 4, 'olay sayfası: dört yayının başlığı yan yana');
+    bekle(str_starts_with((string) $o['yayinlar']['hurriyet.com.tr'][0]['adres'], 'https://hurriyet.com.tr/'), 'her başlık yayının kendi sitesine bağlanıyor');
+    sort($o['yazmayanlar']);
+    bekle($o['yazmayanlar'] === ['cnnturk.com', 'haberturk.com', 'milliyet.com.tr', 'ntv.com.tr'],
+        '"rastlanmayanlar": yalnızca beslemesi okunmuş genel yayınlar (hiç okunmayan Sabah ve ekonomi yayınları listede yok)', implode(',', $o['yazmayanlar']));
+    bekle(kny_olay(999999) === null, 'olmayan olay boş döner (sayfa listeye yönlendirir)');
+
+    // Zincir yok: ortak kelimeler uzerinden ilgisiz olaylar tek olayda toplanmaz.
+    $k = kny_kumele([
+        ['id' => 1, 'yayin' => 'a', 'baslik' => 'Cumhurbaşkanı Erdoğan Katar Emiri ile görüştü', 'zaman' => 1, 'manset' => 0],
+        ['id' => 2, 'yayin' => 'b', 'baslik' => 'Cumhurbaşkanı Erdoğan Katar Emiri Al Sani ile Ankara\'da görüştü', 'zaman' => 2, 'manset' => 0],
+        ['id' => 3, 'yayin' => 'c', 'baslik' => 'Cumhurbaşkanı Erdoğan iklim zirvesinde liderlerle görüştü', 'zaman' => 3, 'manset' => 0],
+        ['id' => 4, 'yayin' => 'd', 'baslik' => 'Brent petrol 90 doların altına geriledi', 'zaman' => 4, 'manset' => 0],
+        ['id' => 5, 'yayin' => 'e', 'baslik' => 'Bitcoin 70 bin doların altına geriledi', 'zaman' => 5, 'manset' => 0],
+    ]);
+    bekle(count($k) === 4 && $k[0]['uyeler'] === [1, 2], 'ayrı olaylar ayrı kaldı (Katar görüşmesi / iklim zirvesi / petrol / Bitcoin)', count($k) . ' olay');
+
+    $z = kny_kumele([
+        ['id' => 1, 'yayin' => 'a', 'baslik' => 'Cumhurbaşkanı Erdoğan Katar Emiri ile görüştü', 'zaman' => 1, 'manset' => 0],
+        ['id' => 2, 'yayin' => 'b', 'baslik' => 'Cumhurbaşkanı Erdoğan Katar Emiri ile iklim zirvesinde görüştü', 'zaman' => 2, 'manset' => 0],
+        ['id' => 3, 'yayin' => 'c', 'baslik' => 'Cumhurbaşkanı Erdoğan iklim zirvesinde liderlerle görüştü', 'zaman' => 3, 'manset' => 0],
+    ]);
+    bekle(count($z) === 2 && $z[0]['uyeler'] === [1, 2] && $z[1]['uyeler'] === [3], 'ara başlık köprü olmuyor: üçüncü başlık ilk olaya katılmadı', json_encode(array_column($z, 'uyeler')));
+
+    bekle(kny_kutu_html() === '', 'üçten az olay varken ana sayfa kutusu boş: eski "5 gelişme" kutusu gösterilir');
+    kny_kaydet([$g('sabah.com.tr', 'Okullarda ara tatil başladı: veliler dikkat', 5)]);
+    kny_yenile();
+    $kutu = kny_kutu_html();
+    bekle(str_contains($kutu, 'Kim ne yazdı?') && substr_count($kutu, '<li>') === 3 && str_contains($kutu, '/kim-ne-yazdi/'), 'üç olay olunca kutu çıkıyor ve olay sayfalarına bağlanıyor');
+    bekle(!preg_match('/hükümet|muhalif|sağ|sol/iu', strip_tags($kutu)), 'kutuda yayınlar için eğilim etiketi yok');
+
+    db()->exec('DELETE FROM gundem_basliklari');
+    ayar_yaz(KNY_AYARI, '');
+});
+
 senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', static function (): void {
     require_once __DIR__ . '/../includes/topluluk.php';
 

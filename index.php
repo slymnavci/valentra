@@ -173,8 +173,19 @@ require __DIR__ . '/includes/sayfa_ust.php';
         <?php
         /* Hava kutusunun yerinde "Bugun bilmeniz gereken 5 gelisme"; hava piyasa
            seridinin altinda ince kayan seritte (site sahibi, 08.11.2026). */
-        require_once __DIR__ . '/includes/bes_gelisme.php';
-        echo bes_gelisme_html();
+        /* 13.11.2026, site sahibi: "5 gelisme yerine bu kutuya gunun onemli haber
+           basliklarini koyacagiz; secilen haberi hangi gazete nasil vermis
+           gorecegiz" (includes/kim_ne_yazdi.php). Yayinlarin basliklari henuz
+           toplanmadiysa (ilk kurulum, ajan durdu) eski kutu gosterilir. */
+        require_once __DIR__ . '/includes/kim_ne_yazdi.php';
+        $knyKutu = kny_kutu_html();
+
+        if ($knyKutu !== '') {
+            echo $knyKutu;
+        } else {
+            require_once __DIR__ . '/includes/bes_gelisme.php';
+            echo bes_gelisme_html();
+        }
         ?>
         <?php require __DIR__ . '/includes/kose_kutu.php'; ?>
 

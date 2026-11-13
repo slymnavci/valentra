@@ -2788,3 +2788,24 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) V
 INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
     ('TRT Haber Son Dakika', 'https://www.trthaber.com', 'https://www.trthaber.com/sondakika_articles.rss', 'rss', 'gundem', 1),
     ('TRT Haber Manşet',     'https://www.trthaber.com', 'https://www.trthaber.com/manset_articles.rss',    'rss', 'gundem', 1);
+
+-- ---------------------------------------------------------------------------
+-- Kim ne yazdi (13.11.2026; bkz. includes/kim_ne_yazdi.php): buyuk yayinlarin
+-- beslemelerindeki basliklar. Yalnizca baslik, kisa ozet ve baglanti; metin
+-- ve fotograf yok. Ayni olayi anlatan basliklar kumelenip "hangi yayin nasil
+-- verdi" sayfasinda yan yana gosterilir. Dort gunden eski satirlar silinir.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS gundem_basliklari (
+    id           INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    yayin        VARCHAR(40)   NOT NULL,
+    baslik       VARCHAR(300)  NOT NULL,
+    adres        VARCHAR(700)  NOT NULL,
+    adres_parmak CHAR(40)      NOT NULL,
+    ozet         VARCHAR(400)  NOT NULL DEFAULT '',
+    manset       TINYINT(1)    NOT NULL DEFAULT 0,
+    zaman        DATETIME      NOT NULL,
+    olusturuldu  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_gundem_adres (adres_parmak),
+    KEY ix_gundem_zaman (zaman)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
