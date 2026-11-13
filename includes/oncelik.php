@@ -1374,6 +1374,19 @@ function oncelik_aciklama(array $h): array
         'Toplanma: ' . (string) ($h['olusturuldu'] ?? ''),
     ];
 
+    if (array_key_exists('gorsel_denetim', $h)) {
+        require_once __DIR__ . '/manset_sinyal.php';
+        $mg = manset_gorsel_durumu($h);
+        $ayrinti[] = 'Kayan manşet: ' . ($mg['uygun'] ? 'girebilir' : 'giremez, haber ızgarada gösterilir') . ' (' . $mg['neden'] . ').';
+    }
+
+    if ((int) ($h['manset_sinyal'] ?? 0) > 0) {
+        require_once __DIR__ . '/manset_sinyal.php';
+        $gEk = manset_sinyal_eki((int) $h['manset_sinyal']);
+        $ayrinti[] = 'Büyük yayınların gündemi: ' . (string) ($h['manset_yayinlar'] ?? '') . ' — gündem puanı ' . (int) $h['manset_sinyal']
+            . ($gEk > 0 ? '; önem puanına +' . $gEk . ' eklendi (puana dahil).' : '; tek yayın, ek puan yok.');
+    }
+
     if (!empty($kayit['ajans'])) {
         $ayrinti[] = 'Haberi ilk veren ajans: ' . mb_strtoupper((string) $kayit['ajans'], 'UTF-8')
             . ' (aynı ajansın başka sitedeki kopyası ayrı doğrulama sayılmaz; bağımsız kaynak: ' . (int) ($kayit['bagimsiz_kaynak'] ?? 1) . ')';

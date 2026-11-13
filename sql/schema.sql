@@ -163,6 +163,11 @@ CREATE TABLE IF NOT EXISTS haberler (
     kaynak_ajans    VARCHAR(40)   NOT NULL DEFAULT '',
     bant_editor     TINYINT       NOT NULL DEFAULT 0,
     bant_bitis      DATETIME      NULL,
+    -- Gundem puani (13.11.2026; bkz. includes/manset_sinyal.php): olayi kac
+    -- buyuk yayin gundemine aldi (TRT mansetindeyse +1) ve hangileri. Onem
+    -- puanina ek verildi; puan yukselirse yalnizca fark eklenir.
+    manset_sinyal   TINYINT       NOT NULL DEFAULT 0,
+    manset_yayinlar VARCHAR(200)  NOT NULL DEFAULT '',
     ajan_notu       VARCHAR(600)  NOT NULL DEFAULT '',
     -- Haberi yazan model (23.10.2026; ornegin gpt-6-luna, gemini-3.8-flash).
     -- Otomatik yayin esigi buna gore seciliyor (bkz. haber_guven_esigi_kosulu).

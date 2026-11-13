@@ -267,6 +267,9 @@ function sema_yukselt(array &$hatalar = []): array
     $sutunEkle('haberler', 'kaynak_ajans', "VARCHAR(40) NOT NULL DEFAULT ''");
     $sutunEkle('haberler', 'bant_editor', 'TINYINT NOT NULL DEFAULT 0');
     $sutunEkle('haberler', 'bant_bitis', 'DATETIME NULL');
+    // Manset sinyali (13.11.2026; bkz. includes/manset_sinyal.php).
+    $sutunEkle('haberler', 'manset_sinyal', 'TINYINT NOT NULL DEFAULT 0');
+    $sutunEkle('haberler', 'manset_yayinlar', "VARCHAR(200) NOT NULL DEFAULT ''");
     // Kaynak tarama araligi ve hata bekletmesi (13.11.2026; bkz. kaynak_durum.php).
     $sutunEkle('kaynaklar', 'aralik_dk', 'SMALLINT UNSIGNED NOT NULL DEFAULT 0');
     $sutunEkle('kaynaklar', 'son_basari', 'DATETIME NULL');
@@ -743,6 +746,7 @@ function sema_guncel_mi(): bool
             ['haberler', 'editor_bitis'],
             ['haberler', 'duzeltme'],
             ['haberler', 'bant_bitis'],
+            ['haberler', 'manset_yayinlar'],
             ['kaynaklar', 'sonraki_deneme'],
             ['ziyaretler', 'kampanya'],
         ];

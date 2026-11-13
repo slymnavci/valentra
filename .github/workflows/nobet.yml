@@ -87,6 +87,23 @@ jobs:
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
         run: php topla.php --nobet --saat=1 --konu=gundem,politika
 
+      # Gorsel denetimi nobette de (13.11.2026): kayan mansete yalnizca
+      # gorseli denetlenmis (uzerinde gazete/kanal/ajans adi olmayan) haber
+      # giriyor (includes/manset_sinyal.php, manset_gorsel_durumu). Denetim
+      # yalnizca iki saatlik toplamada kosarsa yeni haber mansete iki saat
+      # gec girer. Bakilmamis gorsel yoksa adim hemen biter.
+      - name: Gorsel denetimi
+        if: ${{ !cancelled() }}
+        working-directory: ajan
+        env:
+          VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
+          VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL:        ${{ secrets.GEMINI_MODEL }}
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL:        ${{ secrets.CLAUDE_MODEL }}
+        run: php gorsel_denetle.php --sure=3 || true
+
       - name: Nobet deposunu kaydet
         if: always()
         uses: actions/cache/save@v4

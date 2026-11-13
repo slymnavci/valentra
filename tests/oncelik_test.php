@@ -784,6 +784,135 @@ senaryo('T', 'Editör: banda alma, banttan çıkarma, süre ve gerekçe', static
     bekle(sira()[0]['baslik'] === $kritik, 'ama manşet/üst haberlerde hâlâ önde (kademeli iniş)', sira()[0]['baslik']);
 });
 
+/* ---------------------------------------------------------------------------
+ * 13.11.2026: manset sistematigi. Buyuk yayinlarin ortak gundemi (gundem
+ * puani) ve manset gorseli kurali (bkz. includes/manset_sinyal.php).
+ * ------------------------------------------------------------------------- */
+
+senaryo('U', 'Manşet sistematiği: aynı olayı kaç büyük yayın gündemine aldıysa haber o kadar yükselir', static function (): void {
+    require_once __DIR__ . '/../includes/manset_sinyal.php';
+    ayar_yaz(MANSET_SINYAL_AYARI, '[]');
+
+    $olagan = ['oncelik' => 'normal', 'olay_turu' => 'diger', 'olay_guncel' => true, 'turkiye_dogrudan' => true, 'dogrulama' => 'tek_kaynak', 'can_kaybi' => 'yok', 'onem' => 60];
+    $faiz   = 'Merkez Bankası politika faizini yüzde 40\'a indirdi';
+    $kopru  = 'Sınavkent\'te yeni köprü trafiğe açıldı';
+    $yasa   = 'Meclis yeni vergi paketini kabul etti';
+    $mac    = 'Sınavspor derbide rakibini üç golle yendi';
+
+    $s = manset_sinyal_yaz([
+        ['baslik' => 'Merkez Bankası faiz kararını açıkladı: politika faizi yüzde 40', 'yayin' => 'hurriyet.com.tr'],
+        ['baslik' => 'Merkez Bankası politika faizini yüzde 40\'a düşürdü', 'yayin' => 'milliyet.com.tr'],
+        ['baslik' => 'Son dakika: Merkez Bankası politika faizi yüzde 40 oldu', 'yayin' => 'ntv.com.tr'],
+        ['baslik' => 'Merkez Bankası\'ndan faiz kararı: politika faizi yüzde 40\'a indi', 'yayin' => 'haberturk.com'],
+        ['baslik' => 'Merkez Bankası politika faizini yüzde 40\'a indirdi', 'yayin' => 'trthaber.com', 'manset' => true],
+        ['baslik' => 'Meclis yeni vergi paketini kabul etti: oylama tamamlandı', 'yayin' => 'sozcu.com.tr'],
+        ['baslik' => 'Yeni vergi paketi Meclis\'te kabul edildi', 'yayin' => 'sabah.com.tr'],
+        ['baslik' => 'Sınavkent\'te yeni köprü trafiğe açıldı', 'yayin' => 'cnnturk.com'],
+        ['baslik' => 'Sınavspor derbide rakibini üç golle yendi', 'yayin' => 'hurriyet.com.tr'],
+        ['baslik' => 'Sınavspor derbide rakibini üç golle yendi: maçın özeti', 'yayin' => 'milliyet.com.tr'],
+        ['baslik' => 'Derbide Sınavspor rakibini üç golle yendi', 'yayin' => 'ntv.com.tr'],
+        ['baslik' => 'Tanınmayan yayının haberi sayılmaz: Merkez Bankası politika faizini yüzde 40\'a indirdi', 'yayin' => 'ornek.test'],
+    ]);
+    bekle($s['kayitli'] === 11, 'listede olmayan yayının başlığı alınmadı (11 başlık kayıtlı)', (string) $s['kayitli']);
+
+    ekle([
+        haber($kopru, $olagan),
+        haber($yasa, $olagan + ['kategori' => 'politika']),
+        haber($faiz, $olagan + ['kategori' => 'ekonomi', 'kaynak_adi' => 'Yerel Ekonomi Sitesi']),
+        haber($mac, $olagan + ['kategori' => 'spor']),
+    ]);
+
+    $f = satir($faiz);
+    $y = satir($yasa);
+    $k = satir($kopru);
+    bekle((int) $f['manset_sinyal'] === 6 && (int) $f['onem'] === 80, 'beş büyük yayın + TRT manşeti: gündem puanı 6, önem 60 → 80', $f['manset_sinyal'] . ' / ' . $f['onem']);
+    bekle(str_contains((string) $f['manset_yayinlar'], 'Hürriyet') && str_contains((string) $f['manset_yayinlar'], 'TRT manşetinde'), 'hangi yayınların verdiği kayıtlı: ' . $f['manset_yayinlar']);
+    bekle((int) $y['manset_sinyal'] === 2 && (int) $y['onem'] === 66, 'iki yayın: önem 60 → 66', $y['manset_sinyal'] . ' / ' . $y['onem']);
+    bekle((int) $k['manset_sinyal'] === 1 && (int) $k['onem'] === 60, 'tek yayının verdiği haber yükselmedi (puan 1, önem 60)', $k['manset_sinyal'] . ' / ' . $k['onem']);
+    bekle((int) satir($mac)['onem'] === 60, 'spor haberi bu sistematiğin dışında');
+
+    $sira = array_column(sira(), 'baslik');
+    bekle($sira[0] === $faiz, 'manşet sırasında beş yayının verdiği haber ilk sırada (haberi yerel bir site yazmış olsa da)', $sira[0]);
+
+    // Olay sonradan buyuyor: uc yayin daha veriyor. Yalnizca fark eklenir.
+    $s2 = manset_sinyal_yaz([
+        ['baslik' => 'Vergi paketi Meclis\'te kabul edildi: yeni düzenleme neler getiriyor', 'yayin' => 'hurriyet.com.tr'],
+        ['baslik' => 'Meclis yeni vergi paketini kabul etti', 'yayin' => 'ntv.com.tr'],
+        ['baslik' => 'Meclis yeni vergi paketini kabul etti', 'yayin' => 'haberturk.com'],
+    ]);
+    $y2 = satir($yasa);
+    bekle($s2['yukselen'] === 1 && (int) $y2['manset_sinyal'] === 5 && (int) $y2['onem'] === 78, 'yayındaki haber olay büyüyünce yükseldi: puan 2 → 5, önem 66 → 78 (ek iki kez sayılmadı)', $y2['manset_sinyal'] . ' / ' . $y2['onem']);
+    bekle(manset_sinyal_yaz([])['yukselen'] === 0 && (int) satir($yasa)['onem'] === 78, 'aynı liste yeniden gelince puan şişmiyor');
+
+    $acik = implode(' ', oncelik_aciklama(array_merge($y2, ['etkin_sinif' => 1, 'sinif_puani' => 0, 'editor_gecerli' => 0, 'gelisme_dakika' => 5, 'editor_kalan_dakika' => null, 'dalga' => 0, 'etkin_onem' => 78]))['ayrinti']);
+    bekle(str_contains($acik, 'Büyük yayınların gündemi') && str_contains($acik, '+18'), '"Neden bu sırada?" gündem puanını ve eki gösteriyor');
+
+    // Kritik haber sistematigin ustunde.
+    $sehit = 'Sınavkent\'te bir asker şehit oldu: MSB açıkladı';
+    ekle([haber($sehit, kritik('sehit', ['can_kaybi' => 'dogrulandi', 'olay_yeri' => 'Sınavkent', 'onem' => 70]))]);
+    bekle(sira()[0]['baslik'] === $sehit, 'kritik haber, gündem puanı yüksek olağan haberin de önünde');
+
+    ayar_yaz(MANSET_SINYAL_AYARI, '[]');
+});
+
+senaryo('V', 'Manşet görseli: resimli, denetimden geçmiş (gazete adı yok), yüksek çözünürlüklü', static function (): void {
+    require_once __DIR__ . '/../includes/manset_sinyal.php';
+
+    $klasor = haber_gorsel_klasoru();
+    @mkdir($klasor, 0775, true);
+    $dosyalar = [];
+    $gorsel = static function (string $ad, int $genislik) use ($klasor, &$dosyalar): string {
+        $url = 'https://ornek.test/gorsel/' . $ad . '.jpg';
+        $r   = imagecreatetruecolor($genislik, (int) round($genislik * 0.56));
+        imagejpeg($r, $dosyalar[] = $klasor . '/' . sha1($url) . '.jpg', 60);
+        imagedestroy($r);
+
+        return $url;
+    };
+
+    $h = static fn (array $alan): array => $alan + ['id' => 1, 'oncelik' => ONCELIK_NORMAL, 'gorsel_url' => '', 'gorsel_denetim' => null];
+
+    try {
+        $buyuk = $gorsel('buyuk', 1600);
+        $kucuk = $gorsel('kucuk', 640);
+
+        $d = manset_gorsel_durumu($h(['gorsel_url' => $buyuk, 'gorsel_denetim' => 1]));
+        bekle($d['uygun'], 'denetimden geçmiş 1600 piksellik görsel manşete uygun', $d['neden']);
+        bekle(manset_gorsel_durumu($h(['gorsel_url' => $buyuk, 'gorsel_denetim' => 2]))['uygun'], 'logolu görselin yerine konan temiz fotoğraf uygun');
+
+        foreach ([
+            'görselsiz haber'                              => $h([]),
+            'görseli henüz denetlenmemiş haber'            => $h(['gorsel_url' => $buyuk]),
+            'görselinde yayın adı/logosu kalan haber'      => $h(['gorsel_url' => $buyuk, 'gorsel_denetim' => 3]),
+            'konu görseline düşmüş haber'                  => $h(['gorsel_url' => $buyuk, 'gorsel_denetim' => 0]),
+            'düşük çözünürlüklü (640 piksel) görsel'       => $h(['gorsel_url' => $kucuk, 'gorsel_denetim' => 1]),
+            'görseli sunucuya inmemiş (ölçülemeyen) haber' => $h(['gorsel_url' => 'https://ornek.test/gorsel/yok.jpg', 'gorsel_denetim' => 1]),
+        ] as $ne => $satir) {
+            $d = manset_gorsel_durumu($satir);
+            bekle(!$d['uygun'], $ne . ' manşete girmiyor: ' . $d['neden']);
+        }
+
+        bekle(manset_gorsel_durumu($h(['oncelik' => ONCELIK_KRITIK, 'gelisme_zamani' => date('Y-m-d H:i:s', time() - 600)]))['uygun'], 'kritik haber görsel beklemeden manşette');
+        bekle(manset_gorsel_durumu($h(['editor_manset' => 1, 'editor_bitis' => date('Y-m-d H:i:s', time() + 3600)]))['uygun'], 'editörün manşete aldığı haber görsel beklemeden manşette');
+
+        // Havuz ayrimi: sira korunur, uymayan haber izgaraya duser, kaybolmaz.
+        $havuz = [];
+
+        foreach ([[1, $buyuk, 1], [2, $buyuk, null], [3, $kucuk, 1], [4, $buyuk, 2], [5, '', null], [6, $buyuk, 1], [7, $buyuk, 1], [8, $buyuk, 1], [9, $buyuk, 1]] as [$id, $url, $denetim]) {
+            $havuz[] = $h(['id' => $id, 'gorsel_url' => $url, 'gorsel_denetim' => $denetim]);
+        }
+
+        [$manset, $izgara] = manset_gorsele_gore_ayir($havuz, 5);
+        bekle(array_column($manset, 'id') === [1, 4, 6, 7, 8], 'manşet: koşulu tutan ilk beş haber, sırası bozulmadan', implode(',', array_column($manset, 'id')));
+        bekle(array_column($izgara, 'id') === [2, 3, 5, 9], 'uymayanlar aynı sırayla ızgarada; hiçbir haber kaybolmadı', implode(',', array_column($izgara, 'id')));
+
+        [$m2, $i2] = manset_gorsele_gore_ayir(array_slice($havuz, 1, 4), 5);
+        bekle(count($m2) === 4 && $m2[0]['id'] === 4 && $i2 === [], 'uygun haber azsa manşet boş kalmıyor: sıradaki haberlerle tamamlanıyor', implode(',', array_column($m2, 'id')));
+    } finally {
+        array_map('unlink', $dosyalar);
+    }
+});
+
 temizle();
 
 echo "\n" . str_repeat('─', 60) . "\n";

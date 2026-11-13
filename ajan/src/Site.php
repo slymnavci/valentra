@@ -855,6 +855,27 @@ final class Site
     }
 
     /**
+     * Buyuk yayinlarin gundemindeki basliklar (13.11.2026; api/manset-sinyal.php).
+     *
+     * @param list<array{baslik:string,yayin:string,manset:bool,zaman:int}> $sinyaller
+     * @return array<string,mixed>
+     */
+    public function mansetSinyali(array $sinyaller): array
+    {
+        $json = json_encode(['sinyaller' => $sinyaller], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+
+        [$kod, $govde] = $this->istek('POST', '/api/manset-sinyal.php', is_string($json) ? $json : '{}');
+
+        if ($kod !== 200) {
+            throw new \RuntimeException('HTTP ' . $kod . ': ' . $this->hatayiOku($govde));
+        }
+
+        $veri = json_decode($govde, true);
+
+        return is_array($veri) ? $veri : [];
+    }
+
+    /**
      * @return array{0:int,1:string}
      */
     private function istek(

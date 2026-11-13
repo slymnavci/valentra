@@ -1508,6 +1508,17 @@ function haber_taslak_ekle(array $veri): array
     require_once __DIR__ . '/oncelik.php';
     $karar = oncelik_kaydet($id, $veri);
 
+    /*
+     * Gundem puani (13.11.2026; bkz. includes/manset_sinyal.php): olayi kac
+     * buyuk yayin gundemine aldiysa onem puanina o kadar ek.
+     */
+    try {
+        require_once __DIR__ . '/manset_sinyal.php';
+        manset_sinyal_uygula($id, manset_sinyal_puani([(string) ($veri['baslik'] ?? ''), (string) ($veri['kaynak_baslik'] ?? '')]));
+    } catch (Throwable $e) {
+        error_log('[valentra] gundem puani uygulanamadi: ' . $e->getMessage());
+    }
+
     return ['durum' => 'eklendi', 'id' => $id, 'karar' => $karar];
 }
 
