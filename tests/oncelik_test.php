@@ -30,6 +30,7 @@ if (PHP_SAPI !== 'cli') {
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/oncelik.php';
 require_once __DIR__ . '/../includes/konu_siniri.php';
+require_once __DIR__ . '/../includes/ayarlar.php';
 
 $vt = (string) db()->query('SELECT DATABASE()')->fetchColumn();
 
@@ -562,6 +563,225 @@ senaryo('J', 'Kritik haber yayımlanınca okurun gördüğü ana sayfa ve sayfa 
         proc_terminate($sunucu);
         proc_close($sunucu);
     }
+});
+
+/* ---------------------------------------------------------------------------
+ * 13.11.2026: son dakika bandi, ajans / bagimsiz kaynak, eski olayin yeniden
+ * paylasimi, sayi degisikligi, kaynak hata bekletmesi (site sahibinin yedi
+ * senaryosu). Bant bu testlerde dogrudan oncelik_bant() ile okunur: ayar
+ * 'onizleme' iken site gorunumu degismez, panel ayni fonksiyonu gosterir.
+ * ------------------------------------------------------------------------- */
+
+/** Bandin basliklari. */
+function bant(): array
+{
+    return array_map(static fn (array $s): string => (string) $s['baslik'], oncelik_bant(6));
+}
+
+senaryo('L', 'Şehit haberi: doğrulanınca manşet ve son dakika bandı; kronolojik akış ayrı', static function (): void {
+    ekle(olaganlar(8));
+    eskit(20);
+
+    $sehit = 'Sınavkent\'te bir asker şehit oldu: MSB açıkladı';
+    ekle([haber($sehit, kritik('sehit', ['can_kaybi' => 'dogrulandi', 'olay_yeri' => 'Sınavkent']))]);
+    ekle(olaganlar(3, 'Sonraki'));
+
+    $sira = sira();
+    bekle($sira[0]['baslik'] === $sehit, 'manşette ilk sıra şehit haberi', $sira[0]['baslik']);
+    bekle(bant() === [$sehit], 'son dakika bandında yalnızca şehit haberi var', implode(' | ', bant()));
+
+    $serit = array_column(haber_son_dakika_seridi(), 'baslik');
+    bekle(count(array_diff($serit, bant())) >= 1,
+        'kronolojik "son haberler" akışı banttan bağımsız: olağan haberler orada', implode(' | ', $serit));
+
+    $k = oncelik_bant_karari(satir($sehit));
+    bekle($k['bantta'] && str_contains($k['gerekce'][0], 'resmî açıklama'), '"Neden bu öncelik?" bant gerekçesini veriyor', $k['gerekce'][0]);
+
+    bekle(haber_son_dakika_bandi() === [], 'ayar önizlemedeyken sitede bant çıkmıyor (eski düzen sürüyor)');
+    ayar_yaz(ONCELIK_BANT_AYARI, 'yayin');
+    bekle(oncelik_bant_yayinda(), 'panelden yayına alınınca bant sitede açılıyor');
+    ayar_yaz(ONCELIK_BANT_AYARI, 'onizleme');
+});
+
+senaryo('M', 'Askerî helikopter kazası: kaza doğrulandı, can kaybı doğrulanmadı', static function (): void {
+    $kaza = 'Sınavkent\'te askerî helikopter kaza kırıma uğradı';
+    ekle([haber($kaza, kritik('askeri_hava_araci_kazasi', ['olay_yeri' => 'Sınavkent']))]);
+    $s = satir($kaza);
+    bekle($s['durum'] === HABER_YAYINDA && (int) $s['oncelik'] === ONCELIK_KRITIK, 'kaza haberi kritik olarak yayımlandı');
+    bekle($s['can_kaybi'] === 'dogrulanmadi', 'can kaybı "doğrulanmadı" olarak kayıtlı');
+    bekle(bant() === [$kaza], 'bantta');
+
+    $iddia = 'Sınavkent\'teki helikopter kazasında 4 asker şehit oldu';
+    ekle([haber($iddia, kritik('askeri_hava_araci_kazasi', ['olay_yeri' => 'Sınavkent', 'dogrulama' => 'tek_kaynak', 'resmi_kurum' => '']))]);
+    $i = satir($iddia);
+    bekle($i['durum'] !== HABER_YAYINDA && $i['inceleme'] === 'acil', 'can kaybını kesin veren doğrulanmamış haber yayımlanmadı, acil incelemede', $i['durum'] . '/' . $i['inceleme']);
+    bekle(!in_array($iddia, bant(), true), 'doğrulanmamış haber bantta değil');
+});
+
+senaryo('N', 'Cumhurbaşkanı kararı ve geniş etkili ekonomi kararı; rutin açıklama ve fiyat haberi bantta değil', static function (): void {
+    $karar = 'Cumhurbaşkanı kararı Resmî Gazete\'de: ülke genelinde okullar bir hafta tatil';
+    $ucret = 'Asgari ücret açıklandı: yeni tutar Resmî Gazete\'de yayımlandı';
+    $rutin = 'Cumhurbaşkanı açılış töreninde konuştu';
+    $fiyat = 'Benzine bu gece zam geliyor';
+    $dis   = 'Uzak bir ülkede hükûmet istifa etti';
+
+    ekle([
+        haber($karar, kritik('cumhurbaskani_acil_karar', ['resmi_kurum' => 'Cumhurbaşkanlığı', 'can_kaybi' => 'yok'])),
+        haber($ucret, kritik('genis_etkili_ekonomi', ['resmi_kurum' => 'Çalışma ve Sosyal Güvenlik Bakanlığı', 'can_kaybi' => 'yok', 'kategori' => 'ekonomi'])),
+        haber($rutin, ['oncelik' => 'normal', 'olay_turu' => 'diger', 'olay_guncel' => true, 'turkiye_dogrudan' => true, 'dogrulama' => 'resmi', 'resmi_kurum' => 'Cumhurbaşkanlığı', 'can_kaybi' => 'yok', 'onem' => 60, 'son_dakika' => true]),
+        haber($fiyat, ['oncelik' => 'normal', 'olay_turu' => 'diger', 'olay_guncel' => true, 'turkiye_dogrudan' => true, 'dogrulama' => 'tek_kaynak', 'can_kaybi' => 'yok', 'onem' => 70, 'kategori' => 'ekonomi', 'son_dakika' => true]),
+        haber($dis, ['oncelik' => 'yuksek', 'olay_turu' => 'diger', 'olay_guncel' => true, 'turkiye_dogrudan' => false, 'dogrulama' => 'bagimsiz', 'bagimsiz_kaynak_sayisi' => 2,
+            'ek_kaynaklar' => [['ad' => 'Başka Kaynak', 'url' => 'https://ornek.test/b']], 'can_kaybi' => 'yok', 'onem' => 75, 'kategori' => 'dunya']),
+    ]);
+
+    $b = bant();
+    bekle(in_array($karar, $b, true), 'ülke genelini etkileyen Cumhurbaşkanı kararı bantta');
+    bekle(in_array($ucret, $b, true) && (int) satir($ucret)['oncelik'] === ONCELIK_KRITIK, 'açıklanan asgari ücret kararı kritik ve bantta');
+    bekle(!in_array($rutin, $b, true), 'rutin Cumhurbaşkanı konuşması bantta değil ("son dakika" işaretli olsa da)');
+    bekle(!in_array($fiyat, $b, true), 'tek ürünün fiyat değişikliği bantta değil');
+    bekle(!in_array($dis, $b, true), 'Türkiye\'yi doğrudan ilgilendirmeyen dış haber bantta değil', oncelik_bant_karari(satir($dis))['gerekce'][0]);
+
+    $sira = array_column(sira(), 'baslik');
+    bekle(array_search($rutin, $sira, true) > max(array_search($karar, $sira, true), array_search($ucret, $sira, true)), 'manşet sırasında iki karar rutin konuşmanın önünde');
+});
+
+senaryo('O', 'Eski bir olayın bugün yeniden paylaşılması son dakika gibi işlenmez', static function (): void {
+    ekle(olaganlar(5));
+    $eski = 'O görüntüler yeniden gündemde: Sınavkent\'teki büyük patlama';
+    ekle([haber($eski, kritik('buyuk_kaza', ['olay_guncel' => false, 'olay_tarihi' => date('Y-m-d', time() - 400 * 86400), 'can_kaybi' => 'dogrulandi', 'son_dakika' => true, 'kaynak_zamani' => time() - 60]))]);
+
+    $s = satir($eski);
+    bekle((int) $s['oncelik'] === ONCELIK_NORMAL, 'kaynak bugün yayımlasa da olay güncel değil: normal sınıf', ONCELIK_ADLAR[(int) $s['oncelik']]);
+    bekle(!in_array($eski, bant(), true), 'bantta değil');
+    bekle(sira()[0]['baslik'] !== $eski, 'manşette ilk sırada değil');
+    bekle(str_contains(implode(' ', json_decode((string) $s['karar_kaydi'], true)['gerekce']), 'güncel değil'), 'karar kaydı nedenini yazıyor');
+});
+
+senaryo('P', 'Aynı haber üç kaynaktan: tek olay; aynı ajansın iki sitedeki kopyası iki doğrulama değil', static function (): void {
+    $ortak = ['olay_yeri' => 'Sınavkent', 'resmi_kurum' => '', 'can_kaybi' => 'yok'];
+
+    // Iki site de AA'nin haberini veriyor; model "bagimsiz, 2 kaynak" dese de tek kaynak.
+    $ajans = 'Sınavkent\'te rafineride büyük patlama';
+    ekle([haber($ajans, kritik('buyuk_kaza', $ortak + [
+        'dogrulama' => 'bagimsiz', 'bagimsiz_kaynak_sayisi' => 2, 'kaynak_adi' => 'TRT Haber Son Dakika', 'kaynak_ajans' => 'AA',
+        'ek_kaynaklar' => [['ad' => 'Örnek Gazete', 'url' => 'https://ornek.test/aa-kopya', 'ajans' => 'Anadolu Ajansı']],
+    ]))]);
+    $a = satir($ajans);
+    bekle($a['dogrulama'] === 'tek_kaynak' && $a['durum'] !== HABER_YAYINDA && $a['inceleme'] === 'acil',
+        'AA haberini veren iki site tek kaynak sayıldı; kritik haber yayımlanmadı, acil incelemede', $a['dogrulama'] . '/' . $a['durum']);
+    bekle($a['kaynak_ajans'] === 'AA', 'haberi ilk veren ajans kaydedildi');
+    bekle(bant() === [], 'bant boş');
+
+    // Ucuncu kaynak kendi muhabiriyle veriyor: AA + bagimsiz kaynak = iki bagimsiz dogrulama.
+    $uc = 'Sınavkent rafinerisindeki patlama: üç kaynak doğruladı';
+    ekle([haber($uc, kritik('buyuk_kaza', $ortak + [
+        'dogrulama' => 'bagimsiz', 'bagimsiz_kaynak_sayisi' => 2, 'kaynak_adi' => 'TRT Haber Son Dakika', 'kaynak_ajans' => 'AA', 'gelisme' => 'yeni_gelisme',
+        'ek_kaynaklar' => [
+            ['ad' => 'Örnek Gazete', 'url' => 'https://ornek.test/aa-kopya-2', 'ajans' => 'AA'],
+            ['ad' => 'Bağımsız Haber', 'url' => 'https://ornek.test/muhabir', 'ajans' => 'Muhabir Adı'],
+        ],
+    ]))]);
+    $u = satir($uc);
+    bekle($u['dogrulama'] === 'bagimsiz' && $u['durum'] === HABER_YAYINDA, 'üç kaynağın ikisi bağımsız: doğrulandı ve yayımlandı', $u['dogrulama'] . '/' . $u['durum']);
+    bekle($u['olay_kimlik'] === $a['olay_kimlik'], 'iki haber aynı olaya bağlandı');
+    bekle(bant() === [$uc], 'bantta olay tek satır', implode(' | ', bant()));
+    bekle((int) json_decode((string) $u['karar_kaydi'], true)['bagimsiz_kaynak'] === 2, 'karar kaydı: 3 kaynak, 2 bağımsız');
+});
+
+senaryo('R', 'Can kaybı sayısının değişmesi: yeni gelişme, olay güncelliği yenilenir, bantta tek satır', static function (): void {
+    $ilk = 'Sınavkent\'te maden ocağında göçük: Valilik 3 can kaybını açıkladı';
+    ekle([haber($ilk, kritik('buyuk_can_kaybi', ['resmi_kurum' => 'Sınavkent Valiliği', 'can_kaybi' => 'dogrulandi', 'olay_yeri' => 'Sınavkent']))]);
+    eskit(5 * 60);
+
+    $yeni = 'Sınavkent\'teki maden göçüğünde can kaybı 7\'ye yükseldi: Valilik açıkladı';
+    ekle([haber($yeni, kritik('buyuk_can_kaybi', ['resmi_kurum' => 'Sınavkent Valiliği', 'can_kaybi' => 'dogrulandi', 'olay_yeri' => 'Sınavkent', 'gelisme' => 'yeni_gelisme']))]);
+
+    $i = satir($ilk);
+    $y = satir($yeni);
+    bekle($y['durum'] === HABER_YAYINDA && $y['olay_kimlik'] === $i['olay_kimlik'], 'yeni sayı aynı olayın haberi olarak yayımlandı (kopya diye elenmedi)', $y['durum']);
+    bekle(strtotime((string) $y['gelisme_zamani']) > strtotime((string) $i['gelisme_zamani']) + 4 * 3600, 'son önemli gelişme zamanı yenilendi');
+    bekle(bant() === [$yeni], 'bantta olayın yalnızca güncel sayılı haberi var', implode(' | ', bant()));
+    bekle(sira()[0]['baslik'] === $yeni, 'manşette güncel sayı ilk sırada');
+
+    $gecmis = array_column(oncelik_gecmis((string) $y['olay_kimlik']), 'tur');
+    bekle(in_array('gelisme', $gecmis, true) && in_array('ilk', $gecmis, true), 'olay geçmişinde ilk haber ve gelişme ayrı ayrı kayıtlı');
+
+    oncelik_duzeltme_yaz((int) $i['id'], 'Can kaybı sayısı Valiliğin son açıklamasıyla 7 olarak güncellendi.');
+    bekle(str_contains((string) satir($ilk)['duzeltme'], '7 olarak'), 'eski habere düzeltme notu düşülebiliyor');
+
+    // Ayni sayiyi baska kaynak tekrar ederse guncellik YENILENMEZ.
+    eskit(60);
+    ekle([haber('Sınavkent maden göçüğü: can kaybı 7 (başka kaynak)', kritik('buyuk_can_kaybi', ['resmi_kurum' => 'Sınavkent Valiliği', 'can_kaybi' => 'dogrulandi', 'olay_yeri' => 'Sınavkent', 'gelisme' => 'ayni_bilgi']))]);
+    $t = satir('Sınavkent maden göçüğü: can kaybı 7 (başka kaynak)');
+    bekle(strtotime((string) $t['gelisme_zamani']) <= strtotime((string) satir($yeni)['gelisme_zamani']) + 60, 'aynı bilgiyi tekrarlayan kaynak güncelliği yenilemedi');
+});
+
+senaryo('S', 'RSS geçici olarak erişilemez: bekletme katlanır, başarıda sıfırlanır; başarısız adres çalışıyor sayılmaz', static function (): void {
+    require_once __DIR__ . '/../includes/kaynak_durum.php';
+
+    db()->exec("DELETE FROM kaynaklar WHERE ad = 'Test Beslemesi'");
+    db()->exec("INSERT INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES ('Test Beslemesi', 'https://ornek.test', 'https://ornek.test/rss', 'rss', 'gundem', 1)");
+    $id    = (int) db()->lastInsertId();
+    $oku   = static fn (): array => db()->query('SELECT * FROM kaynaklar WHERE id = ' . $id)->fetch();
+    $ajana = static fn (): bool => (bool) db()->query('SELECT 1 FROM kaynaklar WHERE aktif = 1 AND id = ' . $id . kaynak_durum_kosulu())->fetch();
+
+    bekle($ajana(), 'yeni kaynak ajana veriliyor');
+    bekle(kaynak_durum_ozeti($oku())['sinif'] === 'bilinmiyor', 'hiç okunmamış kaynak "çalışıyor" görünmüyor');
+
+    $bekleme = [];
+
+    foreach ([1, 2, 3] as $n) {
+        $bekleme[] = kaynak_durum_yaz($id, 'hata', 'HTTP 503')['bekleme_dk'];
+    }
+
+    bekle($bekleme === [15, 30, 60], 'üst üste hatada bekleme katlanıyor: ' . implode(', ', $bekleme) . ' dk');
+    bekle(!$ajana(), 'bekletilen kaynak ajana verilmiyor (sunucu zorlanmıyor)');
+    bekle(kaynak_durum_ozeti($oku())['sinif'] === 'hata' && $oku()['son_hata'] === 'HTTP 503', 'panelde hata ve nedeni görünüyor');
+    bekle(kaynak_hata_beklemesi(12) === KAYNAK_HATA_EN_FAZLA_DK, 'bekleme en fazla ' . KAYNAK_HATA_EN_FAZLA_DK . ' dk');
+
+    db()->exec('UPDATE kaynaklar SET sonraki_deneme = NOW() - INTERVAL 1 MINUTE WHERE id = ' . $id);
+    bekle($ajana(), 'bekleme dolunca kaynak yeniden deneniyor');
+
+    kaynak_durum_yaz($id, 'tamam');
+    $k = $oku();
+    bekle((int) $k['hata_sayisi'] === 0 && $k['sonraki_deneme'] === null && kaynak_durum_ozeti($k)['sinif'] === 'tamam', 'ilk başarılı okumada sayaç sıfırlandı');
+
+    db()->exec('UPDATE kaynaklar SET aralik_dk = 30 WHERE id = ' . $id);
+    kaynak_durum_yaz($id, 'bos');
+    bekle(!$ajana() && (int) $oku()['hata_sayisi'] === 0, 'tarama aralığı 30 dk: aralık dolmadan yeniden taranmıyor; boş besleme hata sayılmıyor');
+    db()->exec('DELETE FROM kaynaklar WHERE id = ' . $id);
+});
+
+senaryo('T', 'Editör: banda alma, banttan çıkarma, süre ve gerekçe', static function (): void {
+    $kritik = 'Sınavkent\'te büyük orman yangını: AFAD tahliye uyarısı yaptı';
+    $olagan = 'Sınavkent\'te belediye yeni otobüs hattı açtı';
+    ekle([
+        haber($kritik, kritik('kamu_guvenligi_uyarisi', ['resmi_kurum' => 'AFAD', 'can_kaybi' => 'yok', 'olay_yeri' => 'Sınavkent'])),
+        haber($olagan, ['oncelik' => 'normal', 'olay_turu' => 'diger', 'olay_guncel' => true, 'turkiye_dogrudan' => true, 'dogrulama' => 'tek_kaynak', 'can_kaybi' => 'yok']),
+    ]);
+    bekle(bant() === [$kritik], 'otomatik bant: yalnızca kamu güvenliği uyarısı');
+
+    $hata = '';
+
+    try {
+        oncelik_bant_ayarla((int) satir($olagan)['id'], 1, 2, '');
+    } catch (InvalidArgumentException $e) {
+        $hata = $e->getMessage();
+    }
+
+    bekle($hata !== '', 'gerekçesiz bant kararı reddedildi', $hata);
+
+    oncelik_bant_ayarla((int) satir($olagan)['id'], 1, 2, 'Test: editör banda aldı');
+    oncelik_bant_ayarla((int) satir($kritik)['id'], -1, 2, 'Test: editör banttan çıkardı');
+    bekle(bant() === [$olagan], 'editör kararı uygulandı: alınan bantta, çıkarılan değil', implode(' | ', bant()));
+    bekle(str_contains(oncelik_bant_karari(satir($olagan))['gerekce'][0], 'Editör banda aldı'), 'açıklama editör kararını gösteriyor');
+
+    db()->exec('UPDATE haberler SET bant_bitis = NOW() - INTERVAL 1 MINUTE, guncellendi = guncellendi');
+    bekle(bant() === [$kritik], 'süre dolunca bant otomatik karara döndü', implode(' | ', bant()));
+
+    eskit(ONCELIK_BANT_KRITIK_SAAT * 60 + 5, $kritik);
+    bekle(bant() === [], 'yeni gelişme gelmeyen kritik haber ' . ONCELIK_BANT_KRITIK_SAAT . ' saat sonra banttan düşüyor');
+    bekle(sira()[0]['baslik'] === $kritik, 'ama manşet/üst haberlerde hâlâ önde (kademeli iniş)', sira()[0]['baslik']);
 });
 
 temizle();

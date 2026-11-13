@@ -22,10 +22,17 @@ if (ajan_anahtar_dogrula($neden) === null) {
     ajan_json(401, ajan_yetki_hatasi($neden));
 }
 
+/*
+ * Tarama araligi dolmamis ya da hata bekletmesindeki kaynak verilmez
+ * (13.11.2026; bkz. includes/kaynak_durum.php). Sutunlar henuz inmediyse
+ * eski sorgu: yukseltme bitmeden ajan kaynaksiz kalmasin.
+ */
+require_once __DIR__ . '/../includes/kaynak_durum.php';
+
 $kaynaklar = db()->query(
     'SELECT id, ad, site_url, besleme_url, liste_url, liste_secici, tur, kategori, sehir
        FROM kaynaklar
-      WHERE aktif = 1
+      WHERE aktif = 1' . kaynak_durum_kosulu() . '
       ORDER BY ad'
 )->fetchAll();
 

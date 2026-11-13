@@ -454,11 +454,37 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
      * kaymiyor, yatay kaydirilabiliyor.
      */
     $sonDakikaSeridi = haber_son_dakika_seridi();
+
+    /*
+     * SON DAKIKA BANDI ve SON HABERLER ayrimi (13.11.2026; bkz. oncelik_bant).
+     * Bant yayindaysa (panel > Oncelik): ustte yalnizca acil, dogrulanmis,
+     * Turkiye'yi dogrudan ilgilendiren haberlerin bandi (yoksa hic cikmaz);
+     * kayan serit "Son Haberler" adiyla kronolojik akisi verir. Bant
+     * onizlemedeyse eski duzen aynen surer.
+     */
+    require_once __DIR__ . '/oncelik.php';
+    $sdBantYayinda  = oncelik_bant_yayinda();
+    $sonDakikaBandi = $sdBantYayinda ? haber_son_dakika_bandi() : [];
     ?>
+    <?php if ($sonDakikaBandi !== []): ?>
+        <div class="sd-bant" role="region" aria-label="Son dakika">
+            <div class="sinirli sd-bant-satir">
+                <span class="sd-bant-etiket">Son Dakika</span>
+                <ul class="sd-bant-liste">
+                    <?php foreach ($sonDakikaBandi as $sd): ?>
+                        <li>
+                            <span class="sd-saat"><?= e($sd['zaman']) ?></span>
+                            <a href="<?= e(haber_yolu($sd['slug'])) ?>"><?= e($sd['baslik']) ?></a>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        </div>
+    <?php endif; ?>
     <?php if ($sonDakikaSeridi !== []): ?>
-        <div class="sd-serit" aria-label="Son dakika haberleri">
+        <div class="sd-serit<?= $sdBantYayinda ? ' sd-serit-akis' : '' ?>" aria-label="<?= $sdBantYayinda ? 'Son haberler' : 'Son dakika haberleri' ?>">
             <div class="sinirli sd-satir">
-                <span class="sd-etiket">Son Dakika</span>
+                <span class="sd-etiket"><?= $sdBantYayinda ? 'Son Haberler' : 'Son Dakika' ?></span>
                 <div class="sd-pencere">
                     <div class="sd-akis" id="sdAkis" style="--sure: <?= max(30, count($sonDakikaSeridi) * 7) ?>s">
                         <ul class="sd-liste">

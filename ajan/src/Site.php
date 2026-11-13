@@ -838,6 +838,23 @@ final class Site
     }
 
     /**
+     * Kaynaklarin bu taramadaki durumu (13.11.2026; api/kaynak-durum.php):
+     * site ust uste hata veren kaynagi katlanan surelerle bekletiyor.
+     *
+     * @param list<array{id:int,durum:string,neden:string,girdi?:int}> $durumlar
+     */
+    public function kaynakDurumu(array $durumlar): void
+    {
+        $json = json_encode(['kaynaklar' => $durumlar], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+
+        [$kod, $govde] = $this->istek('POST', '/api/kaynak-durum.php', is_string($json) ? $json : '{}');
+
+        if ($kod !== 200) {
+            throw new \RuntimeException('HTTP ' . $kod . ': ' . $this->hatayiOku($govde));
+        }
+    }
+
+    /**
      * @return array{0:int,1:string}
      */
     private function istek(

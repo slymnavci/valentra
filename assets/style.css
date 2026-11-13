@@ -346,6 +346,58 @@ body.okuma .sinirli { max-width: 1320px; }
     .sd-liste[aria-hidden="true"] { display: none; }
 }
 
+/* --- Son dakika bandi (13.11.2026): yalnizca acil, dogrulanmis, Turkiye'yi
+   dogrudan ilgilendiren haberler; kayan serit bu durumda "Son Haberler".
+   Kaymaz: acil haber okunmadan gecmesin; sigmazsa yatay kaydirilir. -------- */
+
+.sd-bant { background: var(--altin); color: var(--vurgu-ustu, #fff); }
+.sd-bant-satir { display: flex; align-items: stretch; gap: 0; min-height: 42px; }
+.sd-bant-etiket {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 14px 0 0;
+    font-size: .82rem;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.sd-bant-etiket::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    margin-right: 8px;
+    border-radius: 50%;
+    background: currentColor;
+}
+.sd-bant-liste {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 26px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+}
+.sd-bant-liste::-webkit-scrollbar { display: none; }
+.sd-bant-liste li { display: inline-flex; align-items: center; gap: 8px; }
+.sd-bant .sd-saat { color: inherit; opacity: .85; }
+.sd-bant-liste a { color: inherit; font-weight: 700; font-size: .96rem; }
+.sd-bant-liste a:hover { text-decoration: underline; }
+@media (max-width: 640px) {
+    /* Dar ekranda baslik kesilmesin: alt alta, satir kirarak. */
+    .sd-bant-satir { flex-direction: column; padding-top: 8px; padding-bottom: 8px; gap: 4px; }
+    .sd-bant-liste { flex-direction: column; align-items: flex-start; gap: 6px; white-space: normal; overflow: visible; }
+    .sd-bant-liste li { align-items: baseline; }
+}
+/* Bant yayindayken kayan serit ikincil: etiketi dolgusuz. */
+.sd-serit-akis .sd-etiket { background: transparent; color: var(--altin); padding-left: 0; }
+
 /* Sayfanin ustundeki kirmizi cizgi logo bandinda (eskiden ayri tarih
    seridindeydi, 30.10.2026). */
 .ust-bant { border-top: 3px solid var(--altin); }

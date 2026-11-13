@@ -1193,7 +1193,18 @@ $atlanan         = 0;
 
 $kaynaklar = kaynaklari_sirala($kaynaklar, (int) floor(time() / 7200));
 
+/*
+ * KAYNAK DURUMU (13.11.2026): her kaynagin okunup okunamadigi siteye
+ * bildiriliyor (api/kaynak-durum.php). Site ust uste hata veren kaynagi
+ * katlanan surelerle bekletiyor (15 dk ... 6 saat) ve panelde gosteriyor;
+ * basarisiz adres "calisiyor" sayilmiyor. Bekleyen ya da tarama araligi
+ * dolmamis kaynak yapilandirmada hic gelmiyor.
+ */
+$kaynakDurumlari = [];
+
 foreach ($kaynaklar as $kaynak) {
+    $sebep = '';
+
     if (time() - $taramaBaslangic > $taramaButcesi) {
         $atlanan++;
         continue;
@@ -1257,6 +1268,7 @@ foreach ($kaynaklar as $kaynak) {
             basename($e->getFile()),
             $e->getLine()
         ));
+        $kaynakDurumlari[] = ['id' => (int) ($kaynak['id'] ?? 0), 'durum' => 'hata', 'neden' => $e->getMessage()];
         continue;
     }
 
@@ -1287,8 +1299,16 @@ foreach ($kaynaklar as $kaynak) {
 
         gunluk("  {$kaynak['ad']}: {$neden}");
         $kanalRaporu[(string) $kaynak['ad']] = $neden;
+        // Adrese ulasilip yeni girdi cikmamasi hata degil; alinamamasi hata.
+        $kaynakDurumlari[] = [
+            'id'    => (int) ($kaynak['id'] ?? 0),
+            'durum' => ($beslemeUrl === '' && $listeUrl === '') || ($sebep ?? '') !== '' ? 'hata' : 'bos',
+            'neden' => $neden,
+        ];
         continue;
     }
+
+    $kaynakDurumlari[] = ['id' => (int) ($kaynak['id'] ?? 0), 'durum' => 'tamam', 'neden' => '', 'girdi' => count($girdiler)];
 
     $gecen = 0;
     $zatenVar = 0;
@@ -1440,6 +1460,15 @@ if ($atlanan > 0) {
         . '(tarama ' . (time() - $taramaBaslangic) . ' sn sürdü). '
         . 'Sıra her çalışmada kaydığı için sonraki çalışmalarda öne geçecekler.'
     );
+}
+
+// Kaynak durumu siteye (bekletme ve panel icin). Bildirilemezse tarama surer.
+if (!$kuruCalisma && $kaynakDurumlari !== []) {
+    try {
+        $site->kaynakDurumu($kaynakDurumlari);
+    } catch (Throwable $e) {
+        gunluk('  kaynak durumu siteye bildirilemedi: ' . $e->getMessage());
+    }
 }
 
 if ($adaylar === []) {
@@ -2039,6 +2068,8 @@ foreach ($gruplar as $grupNo => $grup) {
                 $ekKaynaklar[] = [
                     'kaynakAdi' => (string) $ek['kaynak']['ad'],
                     'baglanti'  => (string) $ek['girdi']['baglanti'],
+                    // Beslemedeki yazar alani: haberi ilk veren ajans (bkz. kaynak_ajans).
+                    'ajans'     => (string) ($ek['girdi']['yazar'] ?? ''),
                     'metin'     => $ekMetin,
                 ];
             }
@@ -2201,13 +2232,20 @@ foreach ($gruplar as $grupNo => $grup) {
             // kullaniyor (ayni haber baska sitede ayni baslikla gelirse).
             'kaynak_baslik' => (string) $girdi['baslik'],
             /*
+             * Haberi ilk veren ajans (13.11.2026): beslemedeki yazar alani
+             * (TRT Haber'de "AA", "DHA", "TRT Haber"). Site, ayni ajansin
+             * iki sitedeki kopyasini iki ayri dogrulama saymamak icin
+             * kullaniyor (includes/oncelik.php).
+             */
+            'kaynak_ajans'  => (string) ($girdi['yazar'] ?? ''),
+            /*
              * Haberi yazarken okunan diger kaynaklar (30.10.2026, site
              * sahibi: "birkac kaynak varsa yapay zeka hepsini okusun ve
              * kendi ozgun haberini yapsin; tek kaynaksa tek kaynagi
              * verelim"). Doluysa sayfada "Kaynaklar: A, B, C" yaziyor.
              */
             'ek_kaynaklar' => array_map(
-                static fn (array $ek): array => ['ad' => (string) $ek['kaynakAdi'], 'url' => (string) $ek['baglanti']],
+                static fn (array $ek): array => ['ad' => (string) $ek['kaynakAdi'], 'url' => (string) $ek['baglanti'], 'ajans' => (string) ($ek['ajans'] ?? '')],
                 $modelAdaylari[$sira]['ekKaynaklar'] ?? []
             ),
             'guven_skoru' => (int) ($sonuc['guven_skoru'] ?? 0),

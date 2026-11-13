@@ -39,6 +39,16 @@ CREATE TABLE IF NOT EXISTS kaynaklar (
     sehir         VARCHAR(40)   NULL,
     aktif         TINYINT(1)    NOT NULL DEFAULT 1,
     son_tarama    DATETIME      NULL,
+    -- Tarama araligi ve hata bekletmesi (13.11.2026; bkz. includes/
+    -- kaynak_durum.php). aralik_dk: kaynak en erken kac dakikada bir
+    -- taranir (0: ajanin her calismasinda). Ust uste hata veren kaynak
+    -- sonraki_deneme'ye kadar ajana verilmez (15 dk'dan 6 saate katlanir);
+    -- ilk basarili okumada sayac sifirlanir.
+    aralik_dk      SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    son_basari     DATETIME      NULL,
+    hata_sayisi    SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    son_hata       VARCHAR(300)  NOT NULL DEFAULT '',
+    sonraki_deneme DATETIME      NULL,
     olusturuldu   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_kaynak_besleme (besleme_url(190)),
@@ -144,6 +154,15 @@ CREATE TABLE IF NOT EXISTS haberler (
     editor_id       INT UNSIGNED  NULL,
     editor_zaman    DATETIME      NULL,
     duzeltme        VARCHAR(600)  NOT NULL DEFAULT '',
+    -- Son dakika bandi (13.11.2026; bkz. oncelik_bant_kosulu): olay
+    -- Turkiye'yi dogrudan ilgilendiriyor mu (yapay zeka), haberi ilk veren
+    -- ajans (beslemedeki yazar alani: AA, DHA...; ayni ajansin iki sitedeki
+    -- kopyasi iki ayri dogrulama sayilmaz) ve editorun banda alma /
+    -- banttan cikarma karari (1 / -1; bant_bitis'e kadar gecerli).
+    turkiye         TINYINT(1)    NOT NULL DEFAULT 0,
+    kaynak_ajans    VARCHAR(40)   NOT NULL DEFAULT '',
+    bant_editor     TINYINT       NOT NULL DEFAULT 0,
+    bant_bitis      DATETIME      NULL,
     ajan_notu       VARCHAR(600)  NOT NULL DEFAULT '',
     -- Haberi yazan model (23.10.2026; ornegin gpt-6-luna, gemini-3.8-flash).
     -- Otomatik yayin esigi buna gore seciliyor (bkz. haber_guven_esigi_kosulu).
@@ -2745,3 +2764,17 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) V
     ('Wired',                   'https://www.wired.com',                    'https://www.wired.com/feed/rss',                            'rss', 'teknoloji', 1),
     ('MIT Technology Review',   'https://www.technologyreview.com',         'https://www.technologyreview.com/feed/',                    'rss', 'teknoloji', 1),
     ('Engadget',                'https://www.engadget.com',                 'https://www.engadget.com/rss.xml',                          'rss', 'teknoloji', 1);
+
+-- ---------------------------------------------------------------------------
+-- TRT Haber son dakika ve manset beslemeleri (13.11.2026, site sahibi: "TRT
+-- Haber'in resmi RSS beslemelerini ekle"). Dort adres 13.11.2026'da tek tek
+-- indirilip dogrulandi (HTTP 200, 60'ar girdi): sondakika, manset, gundem,
+-- ekonomi. Gundem ve ekonomi zaten kayitliydi; eksik ikisi ekleniyor.
+-- Ikisi de gundem basliginda: 15 dakikalik nobet taramasina girer. Tarama
+-- araligi kaynak basina panelden (Kaynaklar) ayarlanabilir (aralik_dk).
+-- Beslemedeki yazar alani haberi ilk veren ajansi tasiyor (cogu AA): ayni
+-- ajansin TRT'deki ve baska sitedeki kopyasi iki ayri dogrulama sayilmaz.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif) VALUES
+    ('TRT Haber Son Dakika', 'https://www.trthaber.com', 'https://www.trthaber.com/sondakika_articles.rss', 'rss', 'gundem', 1),
+    ('TRT Haber Manşet',     'https://www.trthaber.com', 'https://www.trthaber.com/manset_articles.rss',    'rss', 'gundem', 1);
