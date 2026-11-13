@@ -415,3 +415,15 @@
     .nw-gazete-serit { display: flex; }
     .nw-gazete-bas { flex-wrap: wrap; }
 }
+
+/* Haber kartinin basinda gazete (13.11.2026): logo yerine adin bas harfi. */
+.nw-gazete-simge {
+    display: grid; place-items: center; text-decoration: none;
+    background: var(--altin); color: var(--vurgu-ustu, #fff); font-weight: 800; font-size: 1.1rem;
+}
+a.nw-hesap { color: var(--metin); text-decoration: none; }
+a.nw-hesap:hover { color: var(--altin); }
+.nw-gazete-liste a { display: flex; gap: 14px; align-items: center; }
+.nw-gazete-resim { flex: none; width: 112px; height: 76px; object-fit: cover; border-radius: 8px; background: var(--cizgi); }
+.nw-gazete-yazi { min-width: 0; }
+@media (max-width: 520px) { .nw-gazete-resim { width: 88px; height: 62px; } }

@@ -681,7 +681,8 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
     if ($yalnizUye === null) {
         $ifade = db()->prepare(
             "SELECT h.id, h.baslik, h.slug, h.ozet, h.gorsel_url, h.iframe_url, h.yayin_tarihi,
-                    UNIX_TIMESTAMP(h.yayin_tarihi) AS zaman, k.ad AS kategori_adi
+                    h.kaynak_adi, h.kaynak_url,
+                    UNIX_TIMESTAMP(h.yayin_tarihi) AS zaman, k.ad AS kategori_adi, k.slug AS kategori_slug
                FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
               WHERE h.durum = :d AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
                 AND h.yayin_tarihi < FROM_UNIXTIME(:once)" . $gazeteKosulu . "

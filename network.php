@@ -171,7 +171,8 @@ switch ($sayfa) {
 
     case 'haber':
         $h = db()->prepare(
-            "SELECT h.id, h.baslik, h.slug, h.ozet, h.gorsel_url, h.iframe_url, h.yayin_tarihi, k.ad AS kategori_adi
+            "SELECT h.id, h.baslik, h.slug, h.ozet, h.gorsel_url, h.iframe_url, h.yayin_tarihi, h.kaynak_adi, h.kaynak_url,
+                    k.ad AS kategori_adi, k.slug AS kategori_slug
                FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
               WHERE h.id = :id AND h.durum = :d"
         );
@@ -478,9 +479,18 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                         <ul class="nw-gazete-liste">
                             <?php foreach ($g['haberler'] as $h): ?>
                                 <li>
+                                    <?php
+                                    // Her haber resimli (13.11.2026): gorseli yoksa ya da yuklenemezse konu gorseli.
+                                    $knGorsel = '/assets/kategori/' . haber_gorsel_konu_adi((string) ($h['kategori_slug'] ?? '')) . '.jpg';
+                                    $hGorsel  = haber_gorsel($h) !== '' ? haber_gorsel_kucuk($h, 480) : $knGorsel;
+                                    ?>
                                     <a href="<?= e(nw_yol('h/' . (int) $h['id'])) ?>">
-                                        <span class="nw-gazete-baslik"><?= e((string) $h['baslik']) ?></span>
-                                        <span class="nw-gazete-meta"><?= e(yorum_zaman((string) $h['yayin_tarihi'])) ?><?= !empty($h['kategori_adi']) ? ' · ' . e((string) $h['kategori_adi']) : '' ?></span>
+                                        <img class="nw-gazete-resim" src="<?= e($hGorsel) ?>" alt="" width="112" height="76" loading="lazy" referrerpolicy="no-referrer"
+                                             onerror="this.onerror=null;this.src='<?= e($knGorsel) ?>'">
+                                        <span class="nw-gazete-yazi">
+                                            <span class="nw-gazete-baslik"><?= e((string) $h['baslik']) ?></span>
+                                            <span class="nw-gazete-meta"><?= e(yorum_zaman((string) $h['yayin_tarihi'])) ?><?= !empty($h['kategori_adi']) ? ' · ' . e((string) $h['kategori_adi']) : '' ?></span>
+                                        </span>
                                     </a>
                                 </li>
                             <?php endforeach; ?>
