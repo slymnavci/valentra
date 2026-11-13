@@ -130,6 +130,8 @@
                     'Künye ve iletişim' => 'kunye.php',
                     // Uyelik e-postalari: dogrulama ve sifre yenileme (31.10.2026).
                     'E-posta'      => 'eposta.php',
+                    // Google ile giris / uyelik (13.11.2026; bkz. includes/uye_google.php).
+                    'Google ile giriş' => 'google-giris.php',
                     // Onemli haberler Telegram kanalina (03.11.2026).
                     'Telegram'     => 'telegram.php',
                     'Spor verisi'  => 'spor.php',

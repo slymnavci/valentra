@@ -948,6 +948,109 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     bekle(count(nw_akis(20, 0, null, null, 'ekonomi')['ogeler']) === 2, 'başlık seçilince o başlığın haberleri geliyor (ekonomi: 2)');
 });
 
+senaryo('Y', 'Google ile giriş: kimlik doğrulama, yeni üye, e-postayla eşleşen üyelik, engeller', static function (): void {
+    require_once __DIR__ . '/../includes/yorumlar.php';
+    require_once __DIR__ . '/../includes/uye_google.php';
+
+    db()->exec("DELETE FROM uyeler WHERE eposta LIKE '%@ornek.test'");
+    $istemci = '1234567890-abcdef.apps.googleusercontent.com';
+    $eskiI = ayar_oku(GOOGLE_GIRIS_ISTEMCI_AYARI, '');
+    $eskiG = ayar_oku(GOOGLE_GIRIS_GIZLI_AYARI, '');
+
+    ayar_yaz(GOOGLE_GIRIS_ISTEMCI_AYARI, '');
+    bekle(!google_giris_acik() && google_giris_dugmesi('/network') === '', 'kurulmadan düğme sitede görünmüyor');
+    ayar_yaz(GOOGLE_GIRIS_ISTEMCI_AYARI, $istemci);
+    ayar_yaz(GOOGLE_GIRIS_GIZLI_AYARI, 'test-gizli');
+    bekle(google_giris_acik() && str_contains(google_giris_dugmesi('/network'), '/uye-google.php?donus=%2Fnetwork'), 'kurulunca düğme çıkıyor ve dönüş yolunu taşıyor');
+    bekle(google_giris_yolu('https://kotu.test/x') === '/uye-google.php', 'site dışı dönüş adresi alınmıyor (açık yönlendirme yok)');
+
+    // Google'in jeton ucunun yerine gecen sahte yanit.
+    $jeton = static fn (array $yuk): string => 'x.' . rtrim(strtr(base64_encode((string) json_encode($yuk)), '+/', '-_'), '=') . '.y';
+    $yanit = static fn (array $yuk, int $kod = 200): callable => static fn (array $alanlar): array => [$kod, (string) json_encode(['id_token' => $jeton($yuk)])];
+    $gecerli = ['aud' => $istemci, 'iss' => 'https://accounts.google.com', 'exp' => time() + 600, 'sub' => '1001', 'email' => 'Ayse@Ornek.test', 'email_verified' => true, 'name' => 'Ayşe Yılmaz'];
+
+    $k = google_giris_kimlik('kod', $yanit($gecerli));
+    bekle($k === ['sub' => '1001', 'eposta' => 'ayse@ornek.test', 'ad' => 'Ayşe Yılmaz'], 'geçerli kimlik jetonu okunuyor');
+
+    foreach ([
+        'başka uygulamaya verilmiş jeton (aud)' => ['aud' => 'baska.apps.googleusercontent.com'],
+        'Google dışı veren (iss)'               => ['iss' => 'https://kotu.test'],
+        'süresi dolmuş jeton'                   => ['exp' => time() - 3600],
+        'e-postası doğrulanmamış hesap'         => ['email_verified' => false],
+    ] as $ne => $degisen) {
+        $red = false;
+
+        try {
+            google_giris_kimlik('kod', $yanit($degisen + $gecerli));
+        } catch (InvalidArgumentException $e) {
+            $red = true;
+        }
+
+        bekle($red, $ne . ' reddediliyor');
+    }
+
+    $red = false;
+
+    try {
+        google_giris_kimlik('kod', $yanit($gecerli, 400));
+    } catch (InvalidArgumentException $e) {
+        $red = true;
+    }
+
+    bekle($red, 'Google kodu kabul etmezse (HTTP 400) giriş olmuyor');
+
+    $u1 = google_giris_uye($k);
+    $satir = db()->query('SELECT * FROM uyeler WHERE id = ' . $u1['id'])->fetch();
+    bekle($u1['yeni'] && $satir['ad'] === 'AyşeYılmaz' && $satir['eposta_dogrulandi'] !== null && $satir['google_kimlik'] === '1001',
+        'yeni üye açıldı: rumuz Google adından, e-posta doğrulanmış', (string) $satir['ad']);
+    bekle(google_giris_uye($k) === ['id' => $u1['id'], 'yeni' => false], 'aynı Google hesabı ikinci kez aynı üyeye giriyor');
+
+    $u2 = google_giris_uye(['sub' => '1002', 'eposta' => 'ayse2@ornek.test', 'ad' => 'Ayşe Yılmaz']);
+    $ad2 = (string) db()->query('SELECT ad FROM uyeler WHERE id = ' . $u2['id'])->fetchColumn();
+    bekle($ad2 !== 'AyşeYılmaz' && str_starts_with($ad2, 'AyşeYılmaz'), 'aynı adlı ikinci kişiye benzersiz rumuz verildi', $ad2);
+
+    // E-posta ve sifreyle uye olmus kisi Google ile gelirse AYNI hesap.
+    db()->prepare("INSERT INTO uyeler (ad, eposta, sifre) VALUES ('eskiuye', 'eski@ornek.test', :s)")->execute(['s' => password_hash('gizli-sifre', PASSWORD_DEFAULT)]);
+    $eskiId = (int) db()->lastInsertId();
+    $u3 = google_giris_uye(['sub' => '1003', 'eposta' => 'eski@ornek.test', 'ad' => 'Eski Üye']);
+    bekle($u3 === ['id' => $eskiId, 'yeni' => false] && (string) db()->query('SELECT google_kimlik FROM uyeler WHERE id = ' . $eskiId)->fetchColumn() === '1003',
+        'aynı e-postalı mevcut üyelik Google hesabına bağlandı (ikinci hesap açılmadı)');
+
+    bekle(!password_verify('gizli-sifre', (string) db()->query('SELECT sifre FROM uyeler WHERE id = ' . $eskiId)->fetchColumn()),
+        'e-postası doğrulanmamış üyelik bağlanırken eski şifre geçersiz kılındı (adresi önceden başkası kaydetmiş olabilir)');
+
+    db()->prepare("INSERT INTO uyeler (ad, eposta, sifre, eposta_dogrulandi) VALUES ('dogrulanmisuye', 'dogru@ornek.test', :s, NOW())")->execute(['s' => password_hash('benim-sifrem', PASSWORD_DEFAULT)]);
+    $dogruId = (int) db()->lastInsertId();
+    google_giris_uye(['sub' => '1004', 'eposta' => 'dogru@ornek.test', 'ad' => 'Doğru']);
+    bekle(password_verify('benim-sifrem', (string) db()->query('SELECT sifre FROM uyeler WHERE id = ' . $dogruId)->fetchColumn()),
+        'e-postası doğrulanmış üyenin şifresi korunuyor (hem şifreyle hem Google ile girebilir)');
+
+    $red = false;
+
+    try {
+        google_giris_uye(['sub' => '9999', 'eposta' => 'eski@ornek.test', 'ad' => 'Başkası']);
+    } catch (InvalidArgumentException $e) {
+        $red = true;
+    }
+
+    bekle($red, 'başka bir Google hesabına bağlı üyelik devralınamıyor');
+
+    db()->exec("UPDATE uyeler SET durum = 'engelli' WHERE id = " . $eskiId);
+    $red = false;
+
+    try {
+        google_giris_uye(['sub' => '1003', 'eposta' => 'eski@ornek.test', 'ad' => 'Eski Üye']);
+    } catch (InvalidArgumentException $e) {
+        $red = true;
+    }
+
+    bekle($red, 'engellenmiş üye Google ile de giremiyor');
+
+    db()->exec("DELETE FROM uyeler WHERE eposta LIKE '%@ornek.test'");
+    ayar_yaz(GOOGLE_GIRIS_ISTEMCI_AYARI, $eskiI);
+    ayar_yaz(GOOGLE_GIRIS_GIZLI_AYARI, $eskiG);
+});
+
 temizle();
 
 echo "\n" . str_repeat('─', 60) . "\n";

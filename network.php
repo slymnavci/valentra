@@ -312,6 +312,8 @@ $solKenar = static function () use ($uye, $kisilerAcik, $sayfa): void {
             <div class="nw-yan-kutu">
                 <strong>V Network'e katılın</strong>
                 <p>Haberleri konuşun, paylaşım yapın, yeni insanlarla tanışın.</p>
+                <?php require_once __DIR__ . '/includes/uye_google.php'; ?>
+                <?= google_giris_dugmesi(nw_yol(), 'Google ile üye ol') ?>
                 <a class="uye-dugme" href="<?= e(uye_yolu('kayit', nw_yol())) ?>">Ücretsiz üye ol</a>
                 <a class="uye-dugme uye-dugme-ikincil" href="<?= e(uye_yolu('giris', nw_yol())) ?>">Giriş yap</a>
             </div>
@@ -574,7 +576,20 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
         <?= nw_kart_html($oge, $baglam, $buYol, true) ?>
         <?php if ($sayfa === 'haber'): ?>
             <?php // Haberin tamami altta; ayni sekmede acilir, geri tusu buraya dondurur (site sahibi, 31.10.2026). ?>
-            <a class="nw-haber-tamami" href="<?= e(haber_yolu((string) $haber['slug'])) ?>">Haberin tamamını oku →</a>
+            <?php
+            /* Ayrinti asil gazetede (site sahibi, 13.11.2026: "haberler kisaca olayi
+               anlatacak, detay asil gazetede olsun"). Kaynak adresi varsa ana dugme
+               gazetenin haberi; Valentra'daki ozet ikincil. */
+            $nwKaynakUrl = guvenli_url((string) ($haber['kaynak_url'] ?? ''));
+            $nwKaynakUrl = preg_match('#^https?://#i', $nwKaynakUrl) === 1 ? $nwKaynakUrl : '';
+            $nwKaynakAd  = trim((string) ($haber['kaynak_adi'] ?? '')) !== '' ? nw_gazete_adi((string) $haber['kaynak_adi']) : '';
+            ?>
+            <?php if ($nwKaynakUrl !== ''): ?>
+                <a class="nw-haber-tamami" href="<?= e($nwKaynakUrl) ?>" target="_blank" rel="noopener nofollow">Haberin ayrıntısı<?= $nwKaynakAd !== '' ? ': ' . e($nwKaynakAd) . ' sitesinde oku' : ' kaynağında' ?> ↗</a>
+                <a class="nw-haber-ozet-bag" href="<?= e(haber_yolu((string) $haber['slug'])) ?>">Valentra özetinin tamamı →</a>
+            <?php else: ?>
+                <a class="nw-haber-tamami" href="<?= e(haber_yolu((string) $haber['slug'])) ?>">Haberin tamamını oku →</a>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 
@@ -786,6 +801,11 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
 <?php elseif ($sayfa === 'ayarlar'): ?>
     <div class="nw-tek">
         <h1 class="nw-baslik">Profili düzenle</h1>
+        <?php if (isset($_GET['hosgeldin'])): ?>
+            <?php // Google ile yeni uye olan (13.11.2026): rumuz Google adindan uretildi, burada degistirilebilir. ?>
+            <p class="yorum-sonuc yorum-sonuc-tamam" role="status">V Network'e hoş geldiniz. Rumuzunuzu Google adınızdan oluşturduk;
+                isterseniz aşağıdan değiştirin, sonra <a href="<?= e(nw_yol()) ?>">akışa geçin</a>.</p>
+        <?php endif; ?>
         <form method="post" action="/network-islem.php" class="uye-form nw-yan-kutu" id="nw-profil-form">
             <?= nw_form_alanlari('profil', nw_yol('ayarlar')) ?>
             <input type="hidden" name="foto" value="">
