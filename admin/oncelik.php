@@ -28,6 +28,9 @@ $bildirimler  = [
     'kaldirildi' => 'Müdahale kaldırıldı; haber otomatik sıraya döndü.',
     'durduruldu' => 'Haberin otomatik yayını durduruldu ve haber geri çekildi.',
     'duzeltme'   => 'Düzeltme notu kaydedildi.',
+    'bant'       => 'Son dakika bandı kararı kaydedildi.',
+    'bant_kaldirildi' => 'Bant kararı kaldırıldı; haber otomatik karara döndü.',
+    'bant_modu'  => 'Son dakika bandının modu değiştirildi.',
     'onaylandi'  => 'Haber yayımlandı.',
     'reddedildi' => 'Haber reddedildi.',
 ];
@@ -145,6 +148,36 @@ $kart = static function (array $h, ?int $siraNo) use ($sinifRengi): void {
                 </form>
             </div>
 
+            <?php if (oncelik_bant_hazir()): ?>
+                <?php $bantEditor = (int) ($h['bant_editor'] ?? 0) !== 0 && strtotime((string) ($h['bant_bitis'] ?? '')) > time(); ?>
+                <form method="post" action="islem.php" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-top:10px;">
+                    <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+                    <input type="hidden" name="id" value="<?= (int) $h['id'] ?>">
+                    <input type="hidden" name="islem" value="bant_ayarla">
+                    <label>Son dakika bandı<br>
+                        <select name="yon">
+                            <option value="1">banda al</option>
+                            <option value="-1">banttan çıkar</option>
+                        </select>
+                    </label>
+                    <label>Bitiş (saat sonra)<br>
+                        <input type="number" name="saat" min="0.5" max="<?= (int) ONCELIK_EDITOR_EN_FAZLA_SAAT ?>" step="0.5" value="2" required style="width:8ch;">
+                    </label>
+                    <label style="flex:1;min-width:220px;">Gerekçe (zorunlu)<br>
+                        <input type="text" name="gerekce" maxlength="300" required style="width:100%;">
+                    </label>
+                    <button class="dugme" type="submit">Bant kararını uygula</button>
+                    <?php if ($bantEditor): ?>
+                        <button class="dugme" type="submit" name="islem" value="bant_kaldir" formnovalidate>Bant kararını kaldır</button>
+                    <?php endif; ?>
+                </form>
+            <?php endif; ?>
+
+            <p style="margin:10px 0 0;">
+                <a class="dugme" href="birlestir.php">Aynı olayın haberlerini birleştir →</a>
+                <a class="dugme" href="ajan.php">Otomatik yayını tümden durdur / aç →</a>
+            </p>
+
             <form method="post" action="islem.php" style="display:flex;gap:8px;margin-top:10px;">
                 <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
                 <input type="hidden" name="id" value="<?= (int) $h['id'] ?>">
@@ -207,6 +240,58 @@ Editör kararı, bitiş süresi dolana kadar otomasyonun önündedir.</p>
             </div>
         </div>
     <?php endforeach; ?>
+
+    <?php
+    /*
+     * SON DAKIKA BANDI: ONIZLEME / KARSILASTIRMA (13.11.2026). Solda sitede
+     * su an "Son Dakika" adiyla kayan serit (en yeni haberler, kronolojik);
+     * sagda yeni bant (acil + onemli + dogrulanmis + Turkiye). Yayina
+     * alininca soldaki "Son Haberler" adini alir, sagdaki "Son Dakika" olur.
+     */
+    $bantHazir   = oncelik_bant_hazir();
+    $bantYayinda = oncelik_bant_yayinda();
+    $yeniBant    = $bantHazir ? oncelik_bant(6) : [];
+    $eskiSerit   = haber_son_dakika_seridi();
+    ?>
+    <h2 id="bant">Son dakika bandı <span class="rozet <?= $bantYayinda ? 'rozet-yayinda' : 'rozet-taslak' ?>"><?= $bantYayinda ? 'yayında' : 'önizleme' ?></span></h2>
+    <?php if (!$bantHazir): ?>
+        <div class="uyari uyari-hata">Bant sütunları veritabanında yok. <a href="veritabani.php">Veritabanı</a> sayfasından şemayı güncelleyin.</div>
+    <?php else: ?>
+        <p class="ozet">Banda yalnızca <strong>acil</strong> (kritik: son önemli gelişmeden <?= (int) ONCELIK_BANT_KRITIK_SAAT ?> saat; yüksek: <?= (int) ONCELIK_BANT_YUKSEK_SAAT ?> saat),
+        <strong>doğrulanmış</strong> (resmî açıklama ya da bağımsız kaynaklar) ve <strong>Türkiye'yi doğrudan ilgilendiren</strong> haberler girer; her olaydan tek haber.
+        Kronolojik akış ayrı şeritte "Son Haberler" adıyla kalır. <?= $bantYayinda
+            ? 'Bant sitede yayında.'
+            : 'Şu an <strong>önizleme</strong>: sitede hiçbir şey değişmedi; aşağıda mevcut şerit ile yeni bandı karşılaştırın, uygun bulursanız yayına alın.' ?></p>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;">
+            <div class="kutu">
+                <strong><?= $bantYayinda ? 'Son Haberler şeridi (kronolojik)' : 'Mevcut "Son Dakika" şeridi (kronolojik, en yeni haberler)' ?></strong>
+                <ol style="margin:8px 0 0;padding-left:20px;">
+                    <?php foreach ($eskiSerit as $s): ?><li><?= e($s['zaman']) ?> — <?= e($s['baslik']) ?></li><?php endforeach; ?>
+                </ol>
+            </div>
+            <div class="kutu" style="border-left:4px solid #c62828;">
+                <strong>Yeni "Son Dakika" bandı (<?= count($yeniBant) ?> haber)</strong>
+                <?php if ($yeniBant === []): ?>
+                    <p class="ozet" style="margin:8px 0 0;">Şu an koşulları tutan haber yok: bant sitede hiç görünmez (boş "son dakika" olmaz).</p>
+                <?php endif; ?>
+                <ol style="margin:8px 0 0;padding-left:20px;">
+                    <?php foreach ($yeniBant as $s): ?>
+                        <li><?= e((string) $s['zaman']) ?> — <a href="oncelik.php?id=<?= (int) $s['id'] ?>#h<?= (int) $s['id'] ?>"><?= e((string) $s['baslik']) ?></a>
+                            <br><small><?= e(implode(' ', oncelik_bant_karari($s)['gerekce'])) ?></small></li>
+                    <?php endforeach; ?>
+                </ol>
+            </div>
+        </div>
+
+        <form method="post" action="islem.php" style="margin:10px 0 18px;"
+              onsubmit="return confirm('Son dakika bandının sitedeki görünümü değişecek. Emin misiniz?');">
+            <input type="hidden" name="csrf" value="<?= e(csrf_jeton()) ?>">
+            <input type="hidden" name="islem" value="bant_modu">
+            <input type="hidden" name="mod" value="<?= $bantYayinda ? 'onizleme' : 'yayin' ?>">
+            <button class="dugme <?= $bantYayinda ? '' : 'dugme-ana' ?>" type="submit"><?= $bantYayinda ? 'Önizlemeye geri al (sitede eski şerit)' : 'Yeni bandı yayına al' ?></button>
+        </form>
+    <?php endif; ?>
 
     <?php if ($odakHaber !== null): ?>
         <h2>Seçilen haber</h2>

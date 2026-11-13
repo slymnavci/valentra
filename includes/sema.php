@@ -262,6 +262,17 @@ function sema_yukselt(array &$hatalar = []): array
     $sutunEkle('haberler', 'editor_id', 'INT UNSIGNED NULL');
     $sutunEkle('haberler', 'editor_zaman', 'DATETIME NULL');
     $sutunEkle('haberler', 'duzeltme', "VARCHAR(600) NOT NULL DEFAULT ''");
+    // Son dakika bandi ve ajans bilgisi (13.11.2026; bkz. oncelik_bant_kosulu).
+    $sutunEkle('haberler', 'turkiye', 'TINYINT(1) NOT NULL DEFAULT 0');
+    $sutunEkle('haberler', 'kaynak_ajans', "VARCHAR(40) NOT NULL DEFAULT ''");
+    $sutunEkle('haberler', 'bant_editor', 'TINYINT NOT NULL DEFAULT 0');
+    $sutunEkle('haberler', 'bant_bitis', 'DATETIME NULL');
+    // Kaynak tarama araligi ve hata bekletmesi (13.11.2026; bkz. kaynak_durum.php).
+    $sutunEkle('kaynaklar', 'aralik_dk', 'SMALLINT UNSIGNED NOT NULL DEFAULT 0');
+    $sutunEkle('kaynaklar', 'son_basari', 'DATETIME NULL');
+    $sutunEkle('kaynaklar', 'hata_sayisi', 'SMALLINT UNSIGNED NOT NULL DEFAULT 0');
+    $sutunEkle('kaynaklar', 'son_hata', "VARCHAR(300) NOT NULL DEFAULT ''");
+    $sutunEkle('kaynaklar', 'sonraki_deneme', 'DATETIME NULL');
     $adim('haberler.olay_kimlik indeksi', static function (): bool {
         if (sema_indeks_var('haberler', 'idx_olay_kimlik')) {
             return false;
@@ -731,6 +742,8 @@ function sema_guncel_mi(): bool
             ['haberler', 'oncelik'],
             ['haberler', 'editor_bitis'],
             ['haberler', 'duzeltme'],
+            ['haberler', 'bant_bitis'],
+            ['kaynaklar', 'sonraki_deneme'],
             ['ziyaretler', 'kampanya'],
         ];
 

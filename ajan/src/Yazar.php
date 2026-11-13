@@ -472,7 +472,21 @@ final class Yazar implements SemaliIstemci
           * Cumhurbaşkanı'nın ACİL ya da geniş etkili kararı (olağanüstü
             hâl, seferberlik, sokağa çıkma kısıtlaması, ülke çapında
             güvenlik ya da ekonomi kararı);
-          * ülke çapında olağanüstü gelişme.
+          * ülke çapında olağanüstü gelişme;
+          * büyük kaza, patlama ya da yangın (çok sayıda ölü ya da yaralı,
+            geniş tahliye, fabrika/maden/rafineri/liman çapında);
+          * kamu güvenliği uyarısı (AFAD, valilik, Meteoroloji, Sağlık
+            Bakanlığı halkı tahliyeye, evde kalmaya ya da acil önleme
+            çağırıyor; rutin hava tahmini ve sarı kod uyarısı DEĞİL);
+          * geniş kesimleri etkileyen ücret, emeklilik, vergi ya da
+            ekonomi KARARI (asgari ücret, memur ve emekli zammı, vergi
+            oranı, EYT gibi düzenleme AÇIKLANDI ya da Resmî Gazete'de
+            yayımlandı; beklenti, talep, tahmin, anket, "masada" haberi
+            ve tek ürünün fiyat değişikliği DEĞİL);
+          * Türkiye'nin güvenliğini ilgilendiren uluslararası gelişme
+            (sınırda çatışma, Türk askerine ya da temsilciliğine saldırı,
+            Türkiye'yi hedef alan askerî ya da siyasi karar; başka
+            ülkenin iç meselesi DEĞİL).
         - "yuksek": ülke gündemini bugün belirleyen ama yukarıdakilerden
           olmayan gelişme (faiz kararı, enflasyon verisi, önemli kanun,
           zam oranı, ölümlü kaza, Türkiye'yi etkileyen büyük dış gelişme).
@@ -487,7 +501,8 @@ final class Yazar implements SemaliIstemci
 
         olay_turu: "sehit", "askeri_hava_araci_kazasi", "buyuk_can_kaybi",
         "yikici_afet", "buyuk_teror", "cumhurbaskani_acil_karar",
-        "ulke_capi_olaganustu" ya da "diger". Anma ve yıldönümü haberinde
+        "ulke_capi_olaganustu", "buyuk_kaza", "kamu_guvenligi_uyarisi",
+        "genis_etkili_ekonomi", "turkiye_guvenligi_dis" ya da "diger". Anma ve yıldönümü haberinde
         de olayın türünü yaz ama olay_guncel=false ver.
         olay_guncel: olayın KENDİSİ bugün ya da son 24 saatte olduysa true;
         yıldönümü, anma, eski olayın ayrıntısı, benzetme, değerlendirme
@@ -524,6 +539,19 @@ final class Yazar implements SemaliIstemci
         KRİTİK HABERDE KISA İLK SÜRÜM: doğrulanmış bilgi azsa haber de
         kısa olur (2-3 paragraf: ne oldu, nerede, kim açıkladı, ne
         bilinmiyor). Uzun metin için arka plan uydurma.
+        ESKİ HABERİN YENİDEN PAYLAŞIMI: kaynak eski bir olayı bugün
+        yeniden yayımladıysa (yayın saati yeni ama olay günler ya da
+        yıllar önce; "o görüntüler yeniden gündemde", arşiv haberi,
+        tarihsiz paylaşım) olay_guncel=false ver ve son_dakika=false
+        bırak; olay_tarihi'ne olayın GERÇEK gününü yaz.
+        SAYI DEĞİŞİKLİĞİ VE DÜZELTME: aynı olayda can kaybı ya da yaralı
+        sayısı değiştiyse ya da kaynak önceki bilgisini düzelttiyse
+        (yalanlama, geri çekme) gelisme="yeni_gelisme" ver; yeni sayıyı
+        yalnızca açıklayan kurumla birlikte yaz ("Valilik: can kaybı
+        7'ye yükseldi") ve ajan_notu'na "önceki bilgi düzeltildi: ..."
+        diye not düş. Sayıyı kaynakların ortalamasıyla ya da tahminle
+        TAMAMLAMA; kaynaklar çelişiyorsa resmî olanı yaz, yoksa
+        çelişkiyi belirt.
 
         AYNI OLAYIN YENİ GELİŞMESİ (gelisme alanı): "ilk" (olayın ilk
         haberi), "yeni_gelisme" ya da "ayni_bilgi". "DAHA ÖNCE
@@ -699,7 +727,7 @@ final class Yazar implements SemaliIstemci
             // Editoryal oncelik ve dogrulama (12.11.2026; bkz. EDITORYAL ONCELIK,
             // sitede includes/oncelik.php). Onem puanindan ayri alanlar.
             'oncelik'     => ['type' => 'string', 'enum' => ['kritik', 'yuksek', 'normal', 'dusuk'], 'description' => 'Editoryal önem sınıfı (bkz. EDİTORYAL ÖNCELİK); haberi okuyarak, başlıktaki kelimelere göre değil'],
-            'olay_turu'   => ['type' => 'string', 'enum' => ['sehit', 'askeri_hava_araci_kazasi', 'buyuk_can_kaybi', 'yikici_afet', 'buyuk_teror', 'cumhurbaskani_acil_karar', 'ulke_capi_olaganustu', 'diger'], 'description' => 'Olayın türü; listede yoksa diger'],
+            'olay_turu'   => ['type' => 'string', 'enum' => ['sehit', 'askeri_hava_araci_kazasi', 'buyuk_can_kaybi', 'yikici_afet', 'buyuk_teror', 'cumhurbaskani_acil_karar', 'ulke_capi_olaganustu', 'buyuk_kaza', 'kamu_guvenligi_uyarisi', 'genis_etkili_ekonomi', 'turkiye_guvenligi_dis', 'diger'], 'description' => 'Olayın türü; listede yoksa diger'],
             'olay_guncel' => ['type' => 'boolean', 'description' => 'Olayın kendisi bugün ya da son 24 saatte mi oldu (yıldönümü, anma, benzetme, değerlendirme: false)'],
             'turkiye_dogrudan' => ['type' => 'boolean', 'description' => 'Olay Türkiye\'de mi ya da Türkiye\'yi doğrudan etkiliyor mu'],
             'dogrulama'   => ['type' => 'string', 'enum' => ['resmi', 'bagimsiz', 'tek_kaynak', 'iddia'], 'description' => 'Bilginin doğrulama durumu (bkz. DOĞRULAMA)'],
@@ -758,7 +786,7 @@ final class Yazar implements SemaliIstemci
             // Editoryal oncelik ve dogrulama (12.11.2026; bkz. EDITORYAL ONCELIK,
             // sitede includes/oncelik.php). Onem puanindan ayri alanlar.
             'oncelik'     => ['type' => 'string', 'enum' => ['kritik', 'yuksek', 'normal', 'dusuk'], 'description' => 'Editoryal önem sınıfı (bkz. EDİTORYAL ÖNCELİK); haberi okuyarak, başlıktaki kelimelere göre değil'],
-            'olay_turu'   => ['type' => 'string', 'enum' => ['sehit', 'askeri_hava_araci_kazasi', 'buyuk_can_kaybi', 'yikici_afet', 'buyuk_teror', 'cumhurbaskani_acil_karar', 'ulke_capi_olaganustu', 'diger'], 'description' => 'Olayın türü; listede yoksa diger'],
+            'olay_turu'   => ['type' => 'string', 'enum' => ['sehit', 'askeri_hava_araci_kazasi', 'buyuk_can_kaybi', 'yikici_afet', 'buyuk_teror', 'cumhurbaskani_acil_karar', 'ulke_capi_olaganustu', 'buyuk_kaza', 'kamu_guvenligi_uyarisi', 'genis_etkili_ekonomi', 'turkiye_guvenligi_dis', 'diger'], 'description' => 'Olayın türü; listede yoksa diger'],
             'olay_guncel' => ['type' => 'boolean', 'description' => 'Olayın kendisi bugün ya da son 24 saatte mi oldu (yıldönümü, anma, benzetme, değerlendirme: false)'],
             'turkiye_dogrudan' => ['type' => 'boolean', 'description' => 'Olay Türkiye\'de mi ya da Türkiye\'yi doğrudan etkiliyor mu'],
             'dogrulama'   => ['type' => 'string', 'enum' => ['resmi', 'bagimsiz', 'tek_kaynak', 'iddia'], 'description' => 'Bilginin doğrulama durumu (bkz. DOĞRULAMA)'],

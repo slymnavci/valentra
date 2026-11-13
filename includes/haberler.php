@@ -350,7 +350,37 @@ const HABER_TOPLAMA_BOSLUGU_SANIYE = 600;
 const HABER_SON_DAKIKA_EN_FAZLA_DAKIKA = 180;
 
 /**
- * Üstteki kayan "Son Dakika" şeridi: kaynaktaki yayın anına göre en yeni haberler.
+ * SON DAKIKA BANDI (13.11.2026; bkz. includes/oncelik.php, oncelik_bant):
+ * yalnizca acil, onemli, dogrulanmis ve Turkiye'yi dogrudan ilgilendiren
+ * haberler. Bant ayari 'yayin' degilse (onizleme) bos doner: sitede eski
+ * duzen surer, yeni bant panelde mevcut seritle karsilastirilir.
+ *
+ * @return list<array{baslik:string,slug:string,zaman:string}>
+ */
+function haber_son_dakika_bandi(int $adet = 6): array
+{
+    static $onbellek = null;
+
+    if ($onbellek !== null) {
+        return $onbellek;
+    }
+
+    require_once __DIR__ . '/oncelik.php';
+
+    if (!oncelik_bant_yayinda()) {
+        return $onbellek = [];
+    }
+
+    return $onbellek = array_map(static fn (array $s): array => [
+        'baslik' => (string) $s['baslik'],
+        'slug'   => (string) $s['slug'],
+        'zaman'  => (string) $s['zaman'],
+    ], oncelik_bant($adet));
+}
+
+/**
+ * Üstteki kayan şerit: kaynaktaki yayın anına göre en yeni haberler
+ * (kronolojik "son haberler"; bant yayındayken adı "Son Haberler").
  *
  * Site sahibinin istegi (24.10.2026): "en ustte de kayan son dakika
  * haberleri gecsin". Sira kaynaktaki yayin anina gore (en yeni once);

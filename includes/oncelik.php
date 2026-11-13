@@ -82,7 +82,55 @@ const ONCELIK_POLITIKA_TURLERI = [
     'buyuk_teror'              => 'büyük terör saldırısı',
     'cumhurbaskani_acil_karar' => 'Cumhurbaşkanı\'nın acil ya da geniş etkili kararı',
     'ulke_capi_olaganustu'     => 'ülke çapında olağanüstü gelişme',
+    // 13.11.2026, site sahibinin Türkiye odaklı öncelik listesi.
+    'buyuk_kaza'               => 'büyük kaza, patlama ya da yangın',
+    'kamu_guvenligi_uyarisi'   => 'kamu güvenliği uyarısı (tahliye, fırtına, sel, salgın)',
+    'genis_etkili_ekonomi'     => 'geniş kesimleri etkileyen ücret, emeklilik, vergi ya da ekonomi kararı',
+    'turkiye_guvenligi_dis'    => 'Türkiye\'nin güvenliğini ilgilendiren uluslararası gelişme',
 ];
+
+/**
+ * Haberi ilk veren ajans: beslemedeki yazar alanindan (TRT Haber "AA",
+ * "DHA" yaziyor). Ayni ajansin iki sitedeki kopyasi iki ayri dogrulama
+ * degildir (site sahibi, 13.11.2026). Taninan ajans degilse bos doner:
+ * muhabir adi ya da sitenin kendi adi ajans sayilmaz.
+ */
+const ONCELIK_AJANSLAR = [
+    'aa'      => '/^(aa|anadolu ajans[ıi])$/u',
+    'dha'     => '/^(dha|demirören haber ajans[ıi])$/u',
+    'iha'     => '/^([iİı]ha|[iİ]hlas haber ajans[ıi])$/u',
+    'anka'    => '/^(anka|anka haber ajans[ıi])$/u',
+    'reuters' => '/^reuters$/u',
+    'afp'     => '/^afp$/u',
+    'ap'      => '/^(ap|associated press)$/u',
+];
+
+function oncelik_ajans(string $yazar): string
+{
+    // "TRT Haber-AA", "TRT Haber, AA": parcalardan biri ajanssa haber ajansin.
+    $parcalar = preg_split('/\s*[,\/–-]\s*/u', mb_strtolower(str_replace(['İ', 'I'], ['i', 'ı'], $yazar), 'UTF-8')) ?: [];
+
+    foreach ($parcalar as $y) {
+        $y = trim($y);
+
+        foreach (ONCELIK_AJANSLAR as $ajans => $kalip) {
+            if ($y !== '' && preg_match($kalip, $y) === 1) {
+                return $ajans;
+            }
+        }
+    }
+
+    return '';
+}
+
+/** Son dakika bandinin ayari: 'onizleme' (yalnizca panelde) ya da 'yayin'. */
+const ONCELIK_BANT_AYARI = 'son_dakika_bandi';
+
+/** Kritik haber son onemli gelismeden bu kadar saat bantta. */
+const ONCELIK_BANT_KRITIK_SAAT = 6;
+
+/** Yuksek oncelikli haber bu kadar saat bantta. */
+const ONCELIK_BANT_YUKSEK_SAAT = 3;
 
 const DOGRULAMA_ADLAR = [
     'resmi'      => 'resmî açıklama',
@@ -150,13 +198,23 @@ function oncelik_can_kaybi_iddiasi(array $veri): bool
 function oncelik_bagimsiz_kaynak_sayisi(array $veri): int
 {
     $adlar = [];
+    $ilk   = ['ad' => $veri['kaynak_adi'] ?? '', 'ajans' => $veri['kaynak_ajans'] ?? ''];
 
-    foreach (array_merge([['ad' => $veri['kaynak_adi'] ?? '']], (array) ($veri['ek_kaynaklar'] ?? [])) as $k) {
+    foreach (array_merge([$ilk], (array) ($veri['ek_kaynaklar'] ?? [])) as $k) {
         $ad = is_array($k) ? trim((string) ($k['ad'] ?? '')) : '';
 
-        if ($ad !== '') {
-            $adlar[mb_strtolower(kaynak_gorunen_ad($ad), 'UTF-8')] = true;
+        if ($ad === '') {
+            continue;
         }
+
+        /*
+         * Haber bir ajanstan aliniyorsa (beslemedeki yazar alani) kaynak o
+         * ajanstir: AA'nin haberini veren TRT Haber ile ayni haberi veren
+         * baska bir site tek kaynak (13.11.2026).
+         */
+        $ajans = oncelik_ajans(is_array($k) ? (string) ($k['ajans'] ?? '') : '');
+
+        $adlar[$ajans !== '' ? 'ajans:' . $ajans : mb_strtolower(kaynak_gorunen_ad($ad), 'UTF-8')] = true;
     }
 
     $farkli = count($adlar);
@@ -555,6 +613,8 @@ function oncelik_kaydet(int $id, array $veri): ?array
         'aciliyet'     => ACILIYET_ADLAR[$karar['aciliyet']],
         'dogrulama'    => $karar['dogrulama'],
         'can_kaybi'    => $karar['can_kaybi'],
+        'ajans'        => oncelik_ajans((string) ($veri['kaynak_ajans'] ?? '')),
+        'bagimsiz_kaynak' => oncelik_bagimsiz_kaynak_sayisi($veri),
         'kaynaklar'    => array_values(array_filter(array_merge(
             [trim((string) ($veri['kaynak_adi'] ?? ''))],
             array_map(static fn ($k): string => is_array($k) ? trim((string) ($k['ad'] ?? '')) : '', (array) ($veri['ek_kaynaklar'] ?? []))
@@ -587,7 +647,9 @@ function oncelik_kaydet(int $id, array $veri): ?array
                     olay_turu = :olay_turu, olay_kimlik = :olay, olay_yeri = :yer,
                     olay_zamani = IF(:oz > 0, NOW() - INTERVAL GREATEST(0, :simdi1 - :oz2) SECOND, NULL),
                     gelisme_zamani = NOW() - INTERVAL GREATEST(0, :simdi2 - :gelisme) SECOND,
-                    inceleme = :inceleme, karar_kaydi = :kayit, guncellendi = guncellendi
+                    inceleme = :inceleme, karar_kaydi = :kayit, guncellendi = guncellendi' . (oncelik_bant_hazir() ? ',
+                    turkiye = ' . (!empty($veri['turkiye_dogrudan']) ? 1 : 0) . ',
+                    kaynak_ajans = ' . db()->quote(mb_substr(trim((string) ($veri['kaynak_ajans'] ?? '')), 0, 40, 'UTF-8')) : '') . '
               WHERE id = :id'
         )->execute([
             'oncelik'   => $karar['sinif'],
@@ -825,6 +887,237 @@ function oncelik_sira_ust(): string
         (CASE WHEN ' . $sinif . ' >= 2 THEN ' . $sinif . ' ELSE 1 END) DESC,
         (CASE WHEN ' . $sinif . ' >= 2 THEN ' . oncelik_sinif_puani_ifadesi() . ' ELSE 0 END) DESC,
         ';
+}
+
+/* -------------------------------------------------------------------------
+ * SON DAKIKA BANDI (13.11.2026)
+ *
+ * Site sahibinin istegi: "Son haberler akisi ile son dakika bandini
+ * birbirinden ayir. Son haberler: kronolojik. Son dakika bandi: yalnizca
+ * acil, onemli, dogrulanmis ve Turkiye acisindan yuksek etkili haberler."
+ *
+ * Bantta olmak icin dort kosul birden:
+ *   1. ACIL: kritik haber son onemli gelismeden ONCELIK_BANT_KRITIK_SAAT,
+ *      yuksek oncelikli haber ONCELIK_BANT_YUKSEK_SAAT saat icinde;
+ *   2. ONEMLI: sinifi kritik ya da yuksek (kelimeye gore degil; bkz.
+ *      oncelik_karar);
+ *   3. DOGRULANMIS: resmi aciklama ya da birbirinden bagimsiz kaynaklar;
+ *   4. TURKIYE: olay Turkiye'yi dogrudan ilgilendiriyor.
+ * Yayinda olmayan, incelemedeki ya da ana akis disindaki haber zaten yok.
+ * Editor bir haberi sureli olarak banda alabilir ya da banttan cikarabilir
+ * (oncelik_bant_ayarla); sure dolunca otomatik karara doner.
+ *
+ * Ayar 'onizleme' iken (varsayilan) bant yalnizca panelde, mevcut seritle
+ * yan yana gorunur; sitede bir sey degismez. 'yayin' yapilinca sitedeki
+ * "Son Dakika" seridi bu bandi, altindaki kayan serit "Son Haberler"
+ * adiyla kronolojik akisi gosterir.
+ * ---------------------------------------------------------------------- */
+
+/** Bant sutunlari veritabaninda var mi. */
+function oncelik_bant_hazir(): bool
+{
+    static $hazir = null;
+
+    if ($hazir === null) {
+        try {
+            $hazir = oncelik_hazir() && (bool) db()->query("SHOW COLUMNS FROM haberler LIKE 'bant_bitis'")->fetch();
+        } catch (Throwable $e) {
+            $hazir = false;
+        }
+    }
+
+    return $hazir;
+}
+
+/** Bant sitede yayinda mi (degilse yalnizca panelde onizleme). */
+function oncelik_bant_yayinda(): bool
+{
+    require_once __DIR__ . '/ayarlar.php';
+
+    return oncelik_bant_hazir() && ayar_oku(ONCELIK_BANT_AYARI, 'onizleme') === 'yayin';
+}
+
+/** Editorun bant karari yururlukte mi (SQL). */
+function oncelik_bant_editor_ifadesi(int $yon): string
+{
+    return '(h.bant_editor = ' . ($yon >= 0 ? 1 : -1) . ' AND h.bant_bitis IS NOT NULL AND h.bant_bitis > NOW())';
+}
+
+/** Haber otomatik olarak bantta mi (SQL; editor karari haric). */
+function oncelik_bant_otomatik_ifadesi(): string
+{
+    $gz = 'COALESCE(h.gelisme_zamani, h.kaynak_tarihi, h.olusturuldu)';
+
+    return "(h.dogrulama IN ('resmi', 'bagimsiz') AND h.turkiye = 1 AND h.inceleme = '' AND (
+        (h.oncelik = " . ONCELIK_KRITIK . " AND $gz >= NOW() - INTERVAL " . ONCELIK_BANT_KRITIK_SAAT . " HOUR)
+        OR (h.oncelik = " . ONCELIK_YUKSEK . " AND $gz >= NOW() - INTERVAL " . ONCELIK_BANT_YUKSEK_SAAT . ' HOUR)))';
+}
+
+/** Bandin kosulu (SQL). */
+function oncelik_bant_kosulu(): string
+{
+    return '(' . oncelik_bant_editor_ifadesi(1) . ' OR (NOT ' . oncelik_bant_editor_ifadesi(-1) . ' AND ' . oncelik_bant_otomatik_ifadesi() . '))';
+}
+
+/**
+ * Bir haberin bant karari ve gerekcesi (panel, "Neden bu oncelik verildi?"
+ * ve testler). Veritabanina dokunmaz.
+ *
+ * @param array<string,mixed> $h haberler satiri
+ * @return array{bantta:bool,gerekce:list<string>}
+ */
+function oncelik_bant_karari(array $h, ?int $simdi = null): array
+{
+    $simdi   = $simdi ?? time();
+    $bitis   = strtotime((string) ($h['bant_bitis'] ?? '')) ?: 0;
+    $editor  = $bitis > $simdi ? (int) ($h['bant_editor'] ?? 0) : 0;
+
+    if ($editor === 1) {
+        return ['bantta' => true, 'gerekce' => ['Editör banda aldı (' . date('d.m H:i', $bitis) . '\'e kadar).']];
+    }
+
+    if ($editor === -1) {
+        return ['bantta' => false, 'gerekce' => ['Editör banttan çıkardı (' . date('d.m H:i', $bitis) . '\'e kadar).']];
+    }
+
+    $sinif     = (int) ($h['oncelik'] ?? ONCELIK_NORMAL);
+    $dogrulama = (string) ($h['dogrulama'] ?? '');
+    $gelisme   = strtotime((string) ($h['gelisme_zamani'] ?? '')) ?: (strtotime((string) ($h['kaynak_tarihi'] ?? '')) ?: (strtotime((string) ($h['olusturuldu'] ?? '')) ?: $simdi));
+    $saat      = $sinif === ONCELIK_KRITIK ? ONCELIK_BANT_KRITIK_SAAT : ONCELIK_BANT_YUKSEK_SAAT;
+    $eksik     = [];
+
+    if ($sinif < ONCELIK_YUKSEK) {
+        $eksik[] = 'önceliği ' . ONCELIK_ADLAR[$sinif] . ' (bant için yüksek ya da kritik gerekir)';
+    }
+
+    if (!in_array($dogrulama, ['resmi', 'bagimsiz'], true)) {
+        $eksik[] = 'doğrulanmadı (' . (DOGRULAMA_ADLAR[$dogrulama] ?? 'bilinmiyor') . ')';
+    }
+
+    if (empty($h['turkiye'])) {
+        $eksik[] = 'Türkiye\'yi doğrudan ilgilendirmiyor';
+    }
+
+    if ((string) ($h['inceleme'] ?? '') !== '') {
+        $eksik[] = 'editör incelemesinde';
+    }
+
+    if ($sinif >= ONCELIK_YUKSEK && $gelisme < $simdi - $saat * 3600) {
+        $eksik[] = 'son önemli gelişmenin üzerinden ' . $saat . ' saatten fazla geçti';
+    }
+
+    if ($eksik !== []) {
+        return ['bantta' => false, 'gerekce' => ['Son dakika bandında değil: ' . implode('; ', $eksik) . '.']];
+    }
+
+    return ['bantta' => true, 'gerekce' => [
+        'Son dakika bandında: ' . ONCELIK_ADLAR[$sinif] . ' öncelikli, ' . DOGRULAMA_ADLAR[$dogrulama]
+        . ' ile doğrulandı, Türkiye\'yi doğrudan ilgilendiriyor, son önemli gelişme ' . $saat . ' saat içinde.',
+    ]];
+}
+
+/**
+ * Son dakika bandi: her olaydan tek haber (en son gelismesi), once kritik.
+ *
+ * @return list<array<string,mixed>>
+ */
+function oncelik_bant(int $adet = 6): array
+{
+    if (!oncelik_bant_hazir()) {
+        return [];
+    }
+
+    $gz = 'COALESCE(h.gelisme_zamani, h.kaynak_tarihi, h.olusturuldu)';
+
+    try {
+        $satirlar = db()->query(
+            'SELECT h.id, h.baslik, h.slug, h.oncelik, h.dogrulama, h.turkiye, h.inceleme, h.olay_kimlik,
+                    h.gelisme_zamani, h.kaynak_tarihi, h.olusturuldu, h.bant_editor, h.bant_bitis, h.kaynak_adi,
+                    DATE_FORMAT(' . $gz . ', \'%H:%i\') AS zaman
+               FROM haberler h
+              WHERE h.durum = ' . db()->quote(HABER_YAYINDA) . ' AND ' . haber_ana_akis_kosulu(false, false) . '
+                AND ' . oncelik_bant_kosulu() . '
+              ORDER BY ' . oncelik_bant_editor_ifadesi(1) . ' DESC, h.oncelik DESC, ' . $gz . ' DESC, h.id DESC
+              LIMIT ' . max(1, min(12, $adet)) * 4
+        )->fetchAll();
+    } catch (Throwable $e) {
+        error_log('[valentra] son dakika bandi: ' . $e->getMessage());
+
+        return [];
+    }
+
+    // Ayni olay bantta bir kez: on kaynaktan gelen tek olay on satir olmasin.
+    $olaylar = [];
+    $bant    = [];
+
+    foreach ($satirlar as $s) {
+        $olay = (string) ($s['olay_kimlik'] ?? '');
+
+        if ($olay !== '' && isset($olaylar[$olay])) {
+            continue;
+        }
+
+        $olaylar[$olay !== '' ? $olay : 'h' . $s['id']] = true;
+        $bant[] = $s;
+
+        if (count($bant) >= $adet) {
+            break;
+        }
+    }
+
+    return $bant;
+}
+
+/**
+ * Editor bir haberi sureli olarak banda alir (1) ya da banttan cikarir (-1).
+ * Gerekce ve bitis zorunlu; sure dolunca haber otomatik karara doner.
+ */
+function oncelik_bant_ayarla(int $id, int $yon, float $saat, string $gerekce): void
+{
+    $gerekce = trim($gerekce);
+
+    if (!oncelik_bant_hazir()) {
+        throw new InvalidArgumentException('Veritabanı güncellenmeden bant ayarlanamaz.');
+    }
+
+    if ($gerekce === '') {
+        throw new InvalidArgumentException('Gerekçe zorunlu.');
+    }
+
+    if ($saat <= 0 || $saat > ONCELIK_EDITOR_EN_FAZLA_SAAT) {
+        throw new InvalidArgumentException('Bitiş süresi 0-' . ONCELIK_EDITOR_EN_FAZLA_SAAT . ' saat arasında olmalı.');
+    }
+
+    $h = haber_bul($id);
+
+    db()->prepare(
+        'UPDATE haberler SET bant_editor = :y, bant_bitis = NOW() + INTERVAL :dk MINUTE, guncellendi = guncellendi WHERE id = :id'
+    )->execute(['y' => $yon >= 0 ? 1 : -1, 'dk' => (int) round($saat * 60), 'id' => $id]);
+
+    oncelik_gecmis_yaz(
+        (string) ($h['olay_kimlik'] ?? '') ?: 'haber-' . $id,
+        $id,
+        'editor',
+        'Editör: son dakika ' . ($yon >= 0 ? 'bandına aldı' : 'bandından çıkardı') . ' ('
+        . rtrim(rtrim(number_format($saat, 1, ',', ''), '0'), ',') . ' saat). Gerekçe: ' . $gerekce
+    );
+    oncelik_onbellek_gecersiz();
+}
+
+/** Editorun bant kararini kaldirir: haber otomatik karara doner. */
+function oncelik_bant_kaldir(int $id): void
+{
+    if (!oncelik_bant_hazir()) {
+        return;
+    }
+
+    $h = haber_bul($id);
+
+    db()->prepare('UPDATE haberler SET bant_editor = 0, bant_bitis = NULL, guncellendi = guncellendi WHERE id = :id')
+        ->execute(['id' => $id]);
+
+    oncelik_gecmis_yaz((string) ($h['olay_kimlik'] ?? '') ?: 'haber-' . $id, $id, 'editor', 'Editör bant kararını kaldırdı; haber otomatik karara döndü.');
+    oncelik_onbellek_gecersiz();
 }
 
 /* -------------------------------------------------------------------------
@@ -1081,8 +1374,19 @@ function oncelik_aciklama(array $h): array
         'Toplanma: ' . (string) ($h['olusturuldu'] ?? ''),
     ];
 
+    if (!empty($kayit['ajans'])) {
+        $ayrinti[] = 'Haberi ilk veren ajans: ' . mb_strtoupper((string) $kayit['ajans'], 'UTF-8')
+            . ' (aynı ajansın başka sitedeki kopyası ayrı doğrulama sayılmaz; bağımsız kaynak: ' . (int) ($kayit['bagimsiz_kaynak'] ?? 1) . ')';
+    }
+
     foreach ((array) ($kayit['gerekce'] ?? []) as $g) {
         $ayrinti[] = 'Karar: ' . (string) $g;
+    }
+
+    if (array_key_exists('bant_editor', $h)) {
+        foreach (oncelik_bant_karari($h)['gerekce'] as $g) {
+            $ayrinti[] = $g;
+        }
     }
 
     if (!empty($kayit['yapay_zeka']['gerekce'])) {

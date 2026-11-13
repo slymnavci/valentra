@@ -10,6 +10,7 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/besleme_test.php';
 require_once __DIR__ . '/../includes/kazima.php';
+require_once __DIR__ . '/../includes/kaynak_durum.php';
 
 giris_zorunlu();
 
@@ -154,7 +155,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             db()->prepare(
                 'UPDATE kaynaklar
                     SET besleme_url = :besleme, liste_url = :liste, liste_secici = :secici,
-                        kategori = :kategori
+                        kategori = :kategori' . (kaynak_durum_hazir()
+                            // Tarama araligi (dakika; 0: her calismada). Degisince bekleme sifirlanir.
+                            ? ', aralik_dk = ' . max(0, min(1440, (int) ($_POST['aralik_dk'] ?? 0))) . ', sonraki_deneme = NULL, hata_sayisi = 0'
+                            : '') . '
                   WHERE id = :id'
             )->execute([
                 'besleme' => $beslemeUrl !== '' ? $beslemeUrl : null,
@@ -316,6 +320,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $kaynaklar = db()->query('SELECT * FROM kaynaklar ORDER BY aktif DESC, ad')->fetchAll();
 
+// Baglayicilar: ajans abonelikleri yapilandirilmamis olarak gorunur (13.11.2026).
+require_once __DIR__ . '/../includes/baglayicilar.php';
+$baglayicilar = baglayici_listesi();
+
 $turAdlari = ['resmi' => 'Resmî', 'rss' => 'RSS', 'web' => 'Web'];
 
 $panelBasligi = 'Haber kaynakları';
@@ -401,6 +409,23 @@ require __DIR__ . '/ust.php';
     </form>
 </div>
 
+<div class="kutu" id="baglayicilar" style="margin-bottom:18px;">
+    <h2 style="margin:0 0 6px;font-size:1.05rem;">Bağlayıcılar</h2>
+    <p class="ipucu" style="margin:0 0 10px;">Her kaynak bir bağlayıcıyla okunur. Ajans abonelikleri için altyapı hazır ama
+        bağlantı <strong>yapılandırılmamış</strong>: abonelik alınmadan servis adresi ve erişim bilgisi bilinemez, o yüzden
+        sistemde ikisi de yok. Ajans haberleri şu an yalnızca onları yayımlayan sitelerin beslemelerinden, ajans adıyla izlenir.</p>
+    <?php foreach ($baglayicilar as $b): ?>
+        <div style="padding:8px 0;border-top:1px solid var(--cizgi);">
+            <strong style="color:var(--metin);"><?= e($b['ad']) ?></strong>
+            <span class="rozet <?= $b['durum'] === 'calisiyor' ? 'rozet-yayinda' : 'rozet-taslak' ?>"><?= $b['durum'] === 'calisiyor' ? 'çalışıyor' : 'yapılandırılmamış' ?></span>
+            <?php if ($b['kaynak'] > 0): ?><span class="rozet rozet-skor"><?= (int) $b['kaynak'] ?> aktif kaynak</span><?php endif; ?>
+            <?php if ($b['abonelik']): ?><span class="rozet rozet-skor">abonelik gerekir</span><?php endif; ?>
+            <div class="ipucu" style="margin-top:4px;"><?= e($b['aciklama']) ?> <?= e($b['kullanim']) ?>
+                <?php if (!empty($b['gereken']) && $b['durum'] !== 'calisiyor'): ?><br>Gerekenler: <?= e(implode('; ', $b['gereken'])) ?>.<?php endif; ?></div>
+        </div>
+    <?php endforeach; ?>
+</div>
+
 <div class="kutu">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
         <h2 style="margin:0;font-size:1.05rem;">Kaynaklar (<?= count($kaynaklar) ?>)</h2>
@@ -469,6 +494,15 @@ require __DIR__ . '/ust.php';
                         son tarama:
                         <?= $kaynak['son_tarama'] !== null ? e(tarih_bicimle($kaynak['son_tarama'])) : 'hiç' ?>
                     </span>
+
+                    <?php if (kaynak_durum_hazir()): ?>
+                        <?php $kd = kaynak_durum_ozeti($kaynak); ?>
+                        <span class="rozet <?= ['hata' => 'rozet-reddedildi', 'tamam' => 'rozet-yayinda'][$kd['sinif']] ?? 'rozet-skor' ?>"
+                              title="<?= e($kd['neden']) ?>"><?= e($kd['yazi']) ?></span>
+                        <?php if ((int) ($kaynak['aralik_dk'] ?? 0) > 0): ?>
+                            <span class="rozet rozet-skor"><?= (int) $kaynak['aralik_dk'] ?> dk'da bir</span>
+                        <?php endif; ?>
+                    <?php endif; ?>
 
                     <span style="margin-left:auto;display:flex;gap:8px;">
                         <form method="post" action="kaynaklar.php#kaynak-<?= (int) $kaynak['id'] ?>">
@@ -569,6 +603,16 @@ require __DIR__ . '/ust.php';
                                 <?= kaynak_kategori_secenekleri((string) ($kaynak['kategori'] ?? '')) ?>
                             </select>
                         </div>
+
+                        <?php if (kaynak_durum_hazir()): ?>
+                            <div class="alan" style="margin-bottom:10px;">
+                                <label>Tarama aralığı (dakika)</label>
+                                <input type="number" name="aralik_dk" min="0" max="1440" step="5"
+                                       value="<?= (int) ($kaynak['aralik_dk'] ?? 0) ?>" style="width:12ch;">
+                                <div class="ipucu">0: ajanın her çalışmasında (gündem ve politika 15 dakikada bir, diğerleri 2 saatte bir).
+                                    Daha seyrek taransın isterseniz dakika yazın. Kaydedince hata beklemesi de sıfırlanır.</div>
+                            </div>
+                        <?php endif; ?>
 
                         <button type="submit" class="dugme dugme-ana">Kaydet</button>
                     </form>

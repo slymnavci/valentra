@@ -296,7 +296,31 @@ final class Besleme
             'ozet'     => $this->metin($oge->description),
             'zaman'    => $this->zaman($tarih),
             'gorsel'   => $this->gorsel($oge),
+            'yazar'    => $this->rssYazari($oge),
         ];
+    }
+
+    /**
+     * RSS girdisinin yazari: <author> ya da <dc:creator>.
+     *
+     * TRT Haber gibi beslemeler burada haberi ilk veren ajansi tasiyor
+     * ("AA", "DHA", "TRT Haber"). Site bunu kaydediyor: ayni ajansin iki
+     * sitedeki kopyasi iki ayri dogrulama sayilmasin (13.11.2026; bkz.
+     * includes/oncelik.php, oncelik_bagimsiz_kaynak_sayisi).
+     */
+    private function rssYazari(\SimpleXMLElement $oge): string
+    {
+        $yazar = isset($oge->author) ? $this->metin($oge->author) : '';
+
+        if ($yazar === '') {
+            $dc = $oge->children('http://purl.org/dc/elements/1.1/');
+
+            if ($dc !== null && isset($dc->creator)) {
+                $yazar = $this->metin($dc->creator);
+            }
+        }
+
+        return mb_substr($yazar, 0, 80, 'UTF-8');
     }
 
     /**

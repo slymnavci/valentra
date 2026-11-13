@@ -102,10 +102,32 @@ switch ($islem) {
     case 'oncelik_kaldir':
     case 'yayin_durdur':
     case 'duzeltme':
+    case 'bant_ayarla':
+    case 'bant_kaldir':
+    case 'bant_modu':
         require_once __DIR__ . '/../includes/oncelik.php';
 
+        // Son dakika bandi: onizleme / yayin (13.11.2026; bkz. oncelik_bant_yayinda).
+        if ($islem === 'bant_modu') {
+            require_once __DIR__ . '/../includes/ayarlar.php';
+            ayar_yaz(ONCELIK_BANT_AYARI, ($_POST['mod'] ?? '') === 'yayin' ? 'yayin' : 'onizleme');
+            oncelik_onbellek_gecersiz();
+            yonlendir('oncelik.php?bildirim=bant_modu#bant');
+        }
+
         try {
-            if ($islem === 'oncelik_ayarla') {
+            if ($islem === 'bant_ayarla') {
+                oncelik_bant_ayarla(
+                    $id,
+                    (int) ($_POST['yon'] ?? 1),
+                    (float) str_replace(',', '.', (string) ($_POST['saat'] ?? '0')),
+                    (string) ($_POST['gerekce'] ?? '')
+                );
+                $bildirim = 'bant';
+            } elseif ($islem === 'bant_kaldir') {
+                oncelik_bant_kaldir($id);
+                $bildirim = 'bant_kaldirildi';
+            } elseif ($islem === 'oncelik_ayarla') {
                 oncelik_editor_ayarla($id, [
                     'manset'  => (int) ($_POST['manset'] ?? 0),
                     'oncelik' => ($_POST['oncelik'] ?? '') === '' ? null : (int) $_POST['oncelik'],
