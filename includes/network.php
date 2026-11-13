@@ -660,7 +660,7 @@ function mesaj_okunmamis(int $uyeId): int
  *
  * @return array{ogeler: list<array<string,mixed>>, sonraki: int}
  */
-function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUye = null, string $konu = '', string $gazete = ''): array
+function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUye = null, string $konu = '', string $gazete = '', bool $yalnizHaber = false): array
 {
     $once  = $once > 0 ? $once : time() + 60;
     $ogeler = [];
@@ -711,8 +711,10 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
     }
 
     try {
-        if ($konu !== '' || $gazete !== '') {
-            throw new RangeException('konu ve gazete akisinda uye paylasimi yok');
+        // $yalnizHaber (13.11.2026, site sahibi: "akista kullanici yorumu olmayacak,
+        // sadece haber olacak; kullanici her haberin altina yorum yapabilir").
+        if ($konu !== '' || $gazete !== '' || $yalnizHaber) {
+            throw new RangeException('bu akista uye paylasimi yok');
         }
 
         $ifade = db()->prepare(
@@ -737,8 +739,8 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
     $kosul = str_replace('g.uye_id', 'y.uye_id', $kosul);
 
     try {
-        if ($gazete !== '') {
-            throw new PDOException('gazete akisinda yorum karti yok');
+        if ($gazete !== '' || $yalnizHaber) {
+            throw new PDOException('bu akista yorum karti yok');
         }
 
         $ifade = db()->prepare(
@@ -815,14 +817,20 @@ function nw_konular(): array
 /** Bir gazete listede gorunmek icin son gunlerde en az bu kadar haber. */
 const NW_GAZETE_EN_AZ_HABER = 2;
 
+/** Ozet sayfasinda Turkiye disindaki her ulkeden gosterilen gazete sayisi. */
+const NW_OZET_ULKE_GAZETE = 2;
+
 /** Listede gosterilen en fazla gazete. */
-const NW_GAZETE_EN_FAZLA = 40;
+const NW_GAZETE_EN_FAZLA = 120;
 
 /** Kaynak adindan yayin adi: "Hürriyet Gündem" -> "Hürriyet". */
 function nw_gazete_adi(string $kaynakAdi): string
 {
     $ad = trim((string) preg_replace('/\s*\((video|YouTube)\)\s*$/iu', '', trim($kaynakAdi)));
     $ad = trim((string) preg_replace('/\s+(Son Dakika|Manşet|Yerel|Genel)$/u', '', $ad));
+    // Yabanci yayinlar: "The Guardian Health" -> "The Guardian", "Le Monde (Fransa)" -> "Le Monde".
+    $ad = trim((string) preg_replace('/\s*\([^)]*\)\s*$/u', '', $ad));
+    $ad = trim((string) preg_replace('/\s+(Health|Technology|Business|Markets|World|Science|News|İş|Finans|Vergi|Kripto|Borsa|Magazin|Yemek Tarifleri)$/u', '', $ad)) ?: $ad;
 
     return kaynak_gorunen_ad($ad);
 }
@@ -837,10 +845,166 @@ function nw_gazete_slug(string $ad): string
     return trim((string) preg_replace('/[^a-z0-9]+/', '-', $s), '-');
 }
 
+/*
+ * ULKELER (13.11.2026, site sahibi: "gazeteleri ulke ulke bolelim; Turkiye
+ * altinda ana gazeteler ve yerel, altinda ulke adlari ve gazeteleri").
+ * Ulke, kaynagin SITE ADRESINDEN bulunur (kaynaklar.site_url): once bilinen
+ * alan adlari, sonra ulke uzantisi (.de, .fr...); hicbiri tutmazsa Turkiye.
+ * Yabanci yayinlarin Turkce servisleri (BBC Turkce, DW Turkce) kendi
+ * ulkelerinin altindadir. Sira: NW_ULKELER sirasi.
+ */
+const NW_ULKELER = [
+    'tr' => 'Türkiye',
+    'us' => 'ABD',
+    'gb' => 'Birleşik Krallık',
+    'de' => 'Almanya',
+    'fr' => 'Fransa',
+    'it' => 'İtalya',
+    'es' => 'İspanya',
+    'ru' => 'Rusya',
+    'cn' => 'Çin',
+    'jp' => 'Japonya',
+    'in' => 'Hindistan',
+    'gr' => 'Yunanistan',
+    'ua' => 'Ukrayna',
+    'qa' => 'Katar',
+    'ca' => 'Kanada',
+    'au' => 'Avustralya',
+    'br' => 'Brezilya',
+    'ar' => 'Arjantin',
+    'eu' => 'Avrupa',
+    'un' => 'Uluslararası kuruluşlar',
+];
+
+/** Alan adi (sonu) => ulke. Ulke uzantisi olmayan (.com, .org) yabanci yayinlar. */
+const NW_ALAN_ULKELERI = [
+    'nytimes.com' => 'us', 'washingtonpost.com' => 'us', 'cnn.com' => 'us', 'foxnews.com' => 'us', 'apnews.com' => 'us',
+    'npr.org' => 'us', 'cnbc.com' => 'us', 'bloomberg.com' => 'us', 'marketwatch.com' => 'us', 'yahoo.com' => 'us',
+    'wired.com' => 'us', 'theverge.com' => 'us', 'techcrunch.com' => 'us', 'arstechnica.com' => 'us', 'engadget.com' => 'us',
+    'technologyreview.com' => 'us', 'statnews.com' => 'us', 'sciencedaily.com' => 'us', 'medicalxpress.com' => 'us',
+    'coindesk.com' => 'us', 'cointelegraph.com' => 'us',
+    'bbc.com' => 'gb', 'bbci.co.uk' => 'gb', 'theguardian.com' => 'gb', 'ft.com' => 'gb', 'economist.com' => 'gb',
+    'reuters.com' => 'gb', 'accountancyage.com' => 'gb', 'icaew.com' => 'gb', 'iasplus.com' => 'gb',
+    'dw.com' => 'de', 'faz.net' => 'de',
+    'france24.com' => 'fr',
+    'euronews.com' => 'eu', 'europa.eu' => 'eu', 'efrag.org' => 'eu',
+    'elpais.com' => 'es', 'elmundo.es' => 'es',
+    'tass.com' => 'ru', 'themoscowtimes.com' => 'ru',
+    'scmp.com' => 'cn', 'xinhuanet.com' => 'cn',
+    'asahi.com' => 'jp', 'livedoor.com' => 'jp',
+    'hindustantimes.com' => 'in', 'indiatimes.com' => 'in', 'thehindu.com' => 'in',
+    'ekathimerini.com' => 'gr', 'kyivindependent.com' => 'ua', 'aljazeera.com' => 'qa',
+    'clarin.com' => 'ar', 'infobae.com' => 'ar', 'globo.com' => 'br',
+    'who.int' => 'un', 'imf.org' => 'un', 'worldbank.org' => 'un', 'oecd.org' => 'un', 'bis.org' => 'un', 'ifrs.org' => 'un', 'ifac.org' => 'un',
+];
+
+/** Ulke uzantisi => ulke. */
+const NW_UZANTI_ULKELERI = [
+    'uk' => 'gb', 'de' => 'de', 'fr' => 'fr', 'it' => 'it', 'es' => 'es', 'ru' => 'ru', 'cn' => 'cn', 'jp' => 'jp', 'in' => 'in',
+    'gr' => 'gr', 'ua' => 'ua', 'qa' => 'qa', 'ca' => 'ca', 'au' => 'au', 'br' => 'br', 'ar' => 'ar', 'tr' => 'tr',
+];
+
+/** Kaynagin site adresinden ulke kodu; bilinmiyorsa 'tr'. */
+function nw_kaynak_ulkesi(string $siteUrl): string
+{
+    $alan = strtolower((string) parse_url($siteUrl, PHP_URL_HOST));
+
+    if ($alan === '') {
+        return 'tr';
+    }
+
+    foreach (NW_ALAN_ULKELERI as $son => $ulke) {
+        if ($alan === $son || str_ends_with($alan, '.' . $son)) {
+            return $ulke;
+        }
+    }
+
+    $uzanti = substr((string) strrchr($alan, '.'), 1);
+
+    return NW_UZANTI_ULKELERI[$uzanti] ?? 'tr';
+}
+
+/* --- Simgeler (13.11.2026): baslik ikonu, ulke bayragi, gazete simgesi ------ */
+
+/** Basliklarin kucuk ikonlari (24x24, cizgi). Bilinmeyen baslik: genel ikon. */
+const NW_KONU_IKONLARI = [
+    'gundem'          => '<path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v8a2 2 0 0 1-2 2"/><path d="M7.5 9h6M7.5 12.5h6M7.5 16h4"/>',
+    'politika'        => '<path d="M3 20h18M5 20V10M9.5 20V10M14.5 20V10M19 20V10M3 10h18L12 4z"/>',
+    'ekonomi'         => '<path d="M4 19h16M6 15l4-4 3 3 5-6"/><path d="M15 8h3v3"/>',
+    'dunya'           => '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c3 3 3 14 0 17M12 3.5c-3 3-3 14 0 17"/>',
+    'spor'            => '<circle cx="12" cy="12" r="8.5"/><path d="m12 7.5 4 3-1.5 4.5h-5L8 10.5zM12 3.5v4M20 10l-4 .5M17.5 19l-3-4M6.5 19l3-4M4 10l4 .5"/>',
+    'teknoloji'       => '<rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 3.5V7M14 3.5V7M10 17v3.5M14 17v3.5M3.5 10H7M3.5 14H7M17 10h3.5M17 14h3.5"/>',
+    'saglik'          => '<path d="M12 20s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 7.5 4.2 4.2 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z"/><path d="M12 10.500v5M9.5 13h5"/>',
+    'kultur-sanat'    => '<path d="M5 4.5h14v8a7 7 0 0 1-14 0z"/><path d="M8.5 9h.01M15.5 9h.01M9 13c1.8 1.6 4.2 1.6 6 0"/>',
+    'magazin'         => '<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
+    'yemek-tarifleri' => '<path d="M7 3.500v7a2.5 2.5 0 0 0 5 0v-7M9.5 3.500V20.500M16.5 20.500V3.500c2.5 1 3.5 4 3.5 8h-3.5"/>',
+    'egitim'          => '<path d="m2.5 9 9.5-5 9.5 5-9.5 5z"/><path d="M6.5 11.500V16c3.5 2.5 7.5 2.5 11 0v-4.5"/>',
+];
+
+function nw_konu_ikonu(string $slug): string
+{
+    $yol = NW_KONU_IKONLARI[$slug] ?? '<circle cx="12" cy="12" r="8.5"/><path d="M12 8v4.500l3 2"/>';
+
+    return '<svg class="nw-ikon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $yol . '</svg>';
+}
+
+/** Ulke bayragi (assets/bayrak; flag-icons, MIT). */
+function nw_bayrak_html(string $kod): string
+{
+    return isset(NW_ULKELER[$kod]) && is_file(__DIR__ . '/../assets/bayrak/' . $kod . '.svg')
+        ? '<img class="nw-bayrak" src="' . e(varlik('/assets/bayrak/' . $kod . '.svg')) . '" alt="" width="20" height="15" loading="lazy">'
+        : '';
+}
+
+/** Gazete simgelerinin sunucudaki klasoru (deploy silmez; bkz. gorseller/haber). */
+function nw_gazete_simge_klasoru(): string
+{
+    return dirname(__DIR__) . '/gorseller/gazete';
+}
+
+/**
+ * Gazetenin kucuk simgesi: yayinin kendi site simgesi (favicon), altinda
+ * adin bas harfi. Simge sunucuda bir kez indirilip saklanir
+ * (gazete-simge.php); inmemisse ya da yuklenemezse bas harf gorunur.
+ * Site sahibinin istegi (13.11.2026): "gazetelerin baslarina kendi
+ * logolarini ekleyelim". Yalnizca yayini tanitmak icin, adinin yaninda ve
+ * kucuk boyutta kullanilir.
+ */
+function nw_gazete_simge_html(string $slug, string $ad, int $boyut = 20): string
+{
+    $harf = mb_strtoupper(mb_substr($ad, 0, 1, 'UTF-8'), 'UTF-8');
+    $yerel = '/gorseller/gazete/' . $slug . '.png';
+    $src  = is_file(nw_gazete_simge_klasoru() . '/' . $slug . '.png') ? $yerel : '/gazete-simge.php?g=' . rawurlencode($slug);
+
+    return '<span class="nw-gz-simge" style="--b:' . $boyut . 'px" aria-hidden="true">' . e($harf)
+        . (is_file(nw_gazete_simge_klasoru() . '/' . $slug . '.yok') ? ''
+            : '<img src="' . e($src) . '" alt="" width="' . $boyut . '" height="' . $boyut . '" loading="lazy" onerror="this.remove()">')
+        . '</span>';
+}
+
+/**
+ * Gazeteler ulke ulke: Turkiye (ana, yerel) ve diger ulkeler, NW_ULKELER sirasiyla.
+ *
+ * @return list<array{kod:string,ad:string,adet:int,ana:array<string,array<string,mixed>>,yerel:array<string,array<string,mixed>>}>
+ */
+function nw_gazete_gruplari(): array
+{
+    $gruplar = [];
+
+    foreach (nw_gazeteler() as $slug => $g) {
+        $kod = isset(NW_ULKELER[$g['ulke']]) ? $g['ulke'] : 'tr';
+        $gruplar[$kod] ??= ['kod' => $kod, 'ad' => NW_ULKELER[$kod], 'adet' => 0, 'ana' => [], 'yerel' => []];
+        $gruplar[$kod]['adet'] += $g['adet'];
+        $gruplar[$kod][$kod === 'tr' && $g['yerel'] ? 'yerel' : 'ana'][$slug] = $g;
+    }
+
+    return array_values(array_replace(array_intersect_key(array_fill_keys(array_keys(NW_ULKELER), null), $gruplar), $gruplar));
+}
+
 /**
  * Son gunlerde haberi ozetlenen yayinlar, haber sayisina gore.
  *
- * @return array<string,array{ad:string,adet:int,kaynaklar:list<string>}> slug => yayin
+ * @return array<string,array{ad:string,adet:int,kaynaklar:list<string>,ulke:string,yerel:bool}> slug => yayin
  */
 function nw_gazeteler(int $gun = 3): array
 {
@@ -854,8 +1018,10 @@ function nw_gazeteler(int $gun = 3): array
 
     try {
         $satirlar = db()->query(
-            "SELECT h.kaynak_adi, COUNT(*) AS adet
+            "SELECT h.kaynak_adi, COUNT(*) AS adet, MAX(ky.site_url) AS site_url,
+                    MAX(COALESCE(ky.sehir, '') <> '' OR COALESCE(h.sehir, '') <> '') AS yerel
                FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
+               LEFT JOIN kaynaklar ky ON ky.id = h.kaynak_id
               WHERE h.durum = " . db()->quote(HABER_YAYINDA) . " AND h.kaynak_adi <> ''
                 AND (k.slug IS NULL OR k.slug <> 'yemek-tarifleri')
                 AND h.yayin_tarihi >= NOW() - INTERVAL " . max(1, min(14, $gun)) . " DAY
@@ -873,9 +1039,23 @@ function nw_gazeteler(int $gun = 3): array
             continue;
         }
 
-        $liste[$slug] ??= ['ad' => $ad, 'adet' => 0, 'kaynaklar' => []];
+        $liste[$slug] ??= ['ad' => $ad, 'adet' => 0, 'kaynaklar' => [], 'ulke' => 'tr', 'yerel' => true, 'ulkeHaber' => [], 'alan' => ''];
+
+        if ($liste[$slug]['alan'] === '') {
+            $liste[$slug]['alan'] = (string) preg_replace('/^www\./', '', strtolower((string) parse_url((string) ($s['site_url'] ?? ''), PHP_URL_HOST)));
+        }
         $liste[$slug]['adet'] += (int) $s['adet'];
         $liste[$slug]['kaynaklar'][] = (string) $s['kaynak_adi'];
+        // Yayinin ulkesi: en cok haber veren beslemesinin ulkesi. Yerel: BUTUN beslemeleri bir ile bagliysa.
+        $u = nw_kaynak_ulkesi((string) ($s['site_url'] ?? ''));
+        $liste[$slug]['ulkeHaber'][$u] = ($liste[$slug]['ulkeHaber'][$u] ?? 0) + (int) $s['adet'];
+        $liste[$slug]['yerel'] = $liste[$slug]['yerel'] && (int) $s['yerel'] === 1;
+    }
+
+    foreach ($liste as $slug => $g) {
+        arsort($g['ulkeHaber']);
+        $liste[$slug]['ulke'] = (string) array_key_first($g['ulkeHaber']);
+        unset($liste[$slug]['ulkeHaber']);
     }
 
     $liste = array_filter($liste, static fn (array $g): bool => $g['adet'] >= NW_GAZETE_EN_AZ_HABER);
@@ -887,9 +1067,9 @@ function nw_gazeteler(int $gun = 3): array
 /**
  * "Gazete gazete" gorunumu: her yayinin son haberleri.
  *
- * @return list<array{slug:string,ad:string,adet:int,haberler:list<array<string,mixed>>}>
+ * @return list<array{slug:string,ad:string,adet:int,haberler:list<array<string,mixed>>,ulke:string,ulke_adi:string}>
  */
-function nw_gazete_ozetleri(int $gazeteAdet = 14, int $haberAdet = 4): array
+function nw_gazete_ozetleri(int $gazeteAdet = 10, int $haberAdet = 4): array
 {
     $gazeteler = nw_gazeteler();
 
@@ -929,11 +1109,21 @@ function nw_gazete_ozetleri(int $gazeteAdet = 14, int $haberAdet = 4): array
         }
     }
 
+    /*
+     * Ulke ulke (13.11.2026): once Turkiye'nin ana gazeteleri ($gazeteAdet
+     * kadar), sonra her ulkenin en cok haberi olan NW_OZET_ULKE_GAZETE
+     * gazetesi. Yerel gazeteler ozet sayfasinda yok; sol kenardan acilir.
+     */
     $liste = [];
 
-    foreach (array_slice($gazeteler, 0, $gazeteAdet, true) as $slug => $g) {
-        if (($haberler[$slug] ?? []) !== []) {
-            $liste[] = ['slug' => $slug, 'ad' => $g['ad'], 'adet' => $g['adet'], 'haberler' => $haberler[$slug]];
+    foreach (nw_gazete_gruplari() as $grup) {
+        $sinir = $grup['kod'] === 'tr' ? $gazeteAdet : NW_OZET_ULKE_GAZETE;
+
+        foreach (array_slice($grup['ana'], 0, $sinir, true) as $slug => $g) {
+            if (($haberler[$slug] ?? []) !== []) {
+                $liste[] = ['slug' => $slug, 'ad' => $g['ad'], 'adet' => $g['adet'], 'haberler' => $haberler[$slug],
+                    'ulke' => $grup['kod'], 'ulke_adi' => $grup['ad']];
+            }
         }
     }
 

@@ -1021,6 +1021,35 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     bekle(count($akis['ogeler']) === 3 && $adlar === ['haber'], 'gazete seçilince yalnızca o yayından özetlenen haberler geliyor', count($akis['ogeler']) . ' öğe');
     bekle(nw_akis(20, 0, null, null, '', 'olmayan-gazete')['ogeler'] === [], 'bilinmeyen gazete boş akış verir');
     bekle(count(nw_akis(20, 0, null, null, 'ekonomi')['ogeler']) === 2, 'başlık seçilince o başlığın haberleri geliyor (ekonomi: 2)');
+
+    // Ulke ulke (13.11.2026): ulke kaynagin site adresinden; Turkiye'de ana / yerel ayrimi.
+    bekle(nw_kaynak_ulkesi('https://www.theguardian.com/world') === 'gb' && nw_kaynak_ulkesi('https://www.spiegel.de') === 'de'
+        && nw_kaynak_ulkesi('https://www.bbc.com/turkce') === 'gb' && nw_kaynak_ulkesi('https://www.haberturk.com') === 'tr'
+        && nw_kaynak_ulkesi('https://www.who.int/news') === 'un' && nw_kaynak_ulkesi('') === 'tr', 'ülke site adresinden bulunuyor; bilinmeyen adres Türkiye');
+    bekle(nw_gazete_adi('Le Monde (Fransa)') === 'Le Monde' && nw_gazete_adi('The Guardian Health') === 'The Guardian', 'yabancı yayınların bölüm ve ülke ekleri ada katılmıyor');
+
+    db()->exec("DELETE FROM kaynaklar WHERE ad IN ('Test Guardian', 'Test Yerel Gazete')");
+    db()->exec("INSERT INTO kaynaklar (ad, site_url, tur, kategori, aktif) VALUES ('Test Guardian', 'https://www.theguardian.com', 'rss', 'dunya', 1)");
+    $gId = (int) db()->lastInsertId();
+    db()->exec("INSERT INTO kaynaklar (ad, site_url, tur, kategori, sehir, aktif) VALUES ('Test Yerel Gazete', 'https://www.ornekyerel.com.tr', 'rss', 'gundem', 'kayseri', 1)");
+    $yId = (int) db()->lastInsertId();
+    db()->exec("UPDATE haberler SET kaynak_adi = 'Test Guardian', kaynak_id = $gId, guncellendi = guncellendi WHERE kaynak_adi = 'NTV Türkiye'");
+    db()->exec("UPDATE haberler SET kaynak_adi = 'Test Yerel Gazete', kaynak_id = $yId, guncellendi = guncellendi WHERE kaynak_adi IN ('Hürriyet Dünya', 'Sözcü Gündem')");
+
+    // Istek basina onbellek: yeni surecte oku.
+    $gruplar = json_decode((string) shell_exec(escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg(
+        'require "' . __DIR__ . '/../includes/bootstrap.php"; require "' . __DIR__ . '/../includes/topluluk.php";'
+        . 'echo json_encode(array_map(fn($g) => [$g["kod"], array_keys($g["ana"]), array_keys($g["yerel"])], nw_gazete_gruplari()));'
+    )), true);
+    bekle($gruplar === [['tr', ['hurriyet'], ['test-yerel-gazete']], ['gb', ['test-guardian'], []]],
+        'gruplar: Türkiye (ana: Hürriyet, yerel: yerel gazete), sonra Birleşik Krallık', json_encode($gruplar, JSON_UNESCAPED_UNICODE));
+    db()->exec("DELETE FROM kaynaklar WHERE id IN ($gId, $yId)");
+
+    $yalniz = nw_akis(30, 0, null, null, '', '', true);
+    bekle(array_unique(array_column($yalniz['ogeler'], 'tur')) === ['haber'], 'akışta yalnızca haber var (üye paylaşımı ve yorum kartı yok)');
+    bekle(str_contains(nw_konu_ikonu('ekonomi'), '<svg') && str_contains(nw_bayrak_html('de'), '/assets/bayrak/de.svg') && nw_bayrak_html('xx') === '',
+        'başlık ikonu ve ülke bayrağı üretiliyor; bilinmeyen ülkeye bayrak yok');
+    bekle(str_contains(nw_gazete_simge_html('hurriyet', 'Hürriyet'), '>H<') , 'gazete simgesi yüklenemezse adın baş harfi görünür');
 });
 
 senaryo('Y', 'Google ile giriş: kimlik doğrulama, yeni üye, e-postayla eşleşen üyelik, engeller', static function (): void {

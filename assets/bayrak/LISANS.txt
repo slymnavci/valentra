@@ -1,0 +1,3 @@
+Bayraklar: flag-icons 7.2.3 (https://github.com/lipis/flag-icons), MIT lisansi,
+Copyright (c) 2013 Panayiotis Lipiridis. es.svg (armasiz, sade) ve un.svg
+(uluslararasi kuruluslar icin sade simge) bu depo icin elle yazildi.

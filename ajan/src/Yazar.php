@@ -169,6 +169,18 @@ final class Yazar implements SemaliIstemci
               videoları. Bunları aktaran haber de yayımlanmaz. Devlet
               büyüklerinin açıklama, karar ve faaliyetleri saygılı ve
               olgusal bir dille yazılır.
+           k) KAYNAĞIN BÜYÜKLÜĞÜ İSTİSNA DEĞİLDİR (site sahibi, 13.11.2026:
+              "en çok okunan gazetelerin haberlerini alalım ama kural
+              şuydu: kimseye hakaret yok; hakaret içeren ve güvenilmez
+              haberleri yayımlama"). Yukarıdaki maddeler çok okunan
+              gazete, yabancı gazete ya da ajans için de aynen geçerlidir.
+              Kaynak bir kişiye, kuruma, inanca, ülkeye ya da topluluğa
+              hakaret ediyor, onu aşağılıyor ya da kanıtsız suçluyorsa
+              ilgili=false. Haberin olgusu yayımlanabilir ama kaynağın
+              dili hakaret içeriyorsa hakareti, sıfatı ve yaftayı
+              AKTARMA (tırnak içinde de): yalnızca olguyu yaz. Tek
+              kaynağa dayanan, başka yerde doğrulanmayan sansasyonel
+              iddiayı güvenilir bilgi gibi yazma (bkz. a).
 
            YAZAR MAKALESİ HABER DEĞİLDİR. Bir kişinin imzasını taşıyan
            makale, köşe yazısı ya da görüş yazısı (sayfada yazar adı,

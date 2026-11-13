@@ -272,7 +272,7 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
                 $kaynakUrl  = preg_match('#^https?://#i', $kaynakUrl) === 1 ? $kaynakUrl : '';
                 ?>
                 <?php if ($gazeteAd !== ''): ?>
-                    <a class="nw-hesap-simge nw-gazete-simge" href="<?= e(nw_yol('', ['gazete' => $gazeteSlug])) ?>" tabindex="-1" aria-hidden="true"><?= e(mb_strtoupper(mb_substr($gazeteAd, 0, 1, 'UTF-8'), 'UTF-8')) ?></a>
+                    <a class="nw-hesap-simge nw-gazete-simge" href="<?= e(nw_yol('', ['gazete' => $gazeteSlug])) ?>" tabindex="-1" aria-hidden="true"><?= nw_gazete_simge_html($gazeteSlug, $gazeteAd, 40) ?></a>
                 <?php else: ?>
                     <span class="nw-hesap-simge" aria-hidden="true"><img src="/assets/logo.svg" alt="" width="24" height="19"></span>
                 <?php endif; ?>
