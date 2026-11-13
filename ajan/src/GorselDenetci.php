@@ -230,6 +230,16 @@ gibi durmalı. Şunlar uygun=false: bulanık, pikselli ya da çok karanlık
 fotoğraf; kartpostal, gravür, tablo, çizim, karikatür; eski siyah-beyaz
 arşiv fotoğrafı ya da gazete/dergi taraması; grafik, tablo, harita,
 şema, logo, amblem, pul, afiş; ekran görüntüsü; kolaj.
+KADRAJ (site sahibi, 13.11.2026: "milli maç haberinde neden gökyüzü resmi
+var?"; stadyumun dışarıdan çekilmiş, üçte ikisi gökyüzü olan fotoğrafı
+konmuştu): Haberin konusu karenin ana öğesi olmalı. Karenin yarısından
+fazlası boş gökyüzü, boş yol, zemin, duvar ya da su ise; konu küçük,
+uzakta ya da kenarda kalıyorsa uygun=false.
+MAÇ VE SPOR HABERİ: Maç, sonuç, gol, transfer ya da antrenman haberine
+stadyumun DIŞ cephesi, boş tribün, boş saha ya da şehir manzarası
+uygun=false; haberdeki oyuncuyu, teknik direktörü, takımı ya da oyun
+anını gösteren fotoğraf uygundur. Stadyum fotoğrafı yalnızca haberin
+konusu stadyumun kendisiyse (açılış, inşaat, kapasite, isim) uygundur.
 KİŞİ: Haber bir kişiyle ilgiliyse (ör. "Erdoğan Bakü'de") o kişinin
 başka bir yerde/tarihte çekilmiş fotoğrafı UYGUNDUR. Başka bir kişiyi
 gösteren fotoğraf uygun=false. Görselin arşivdeki adı verildiyse ona da
@@ -529,6 +539,16 @@ Sonra özgül yer/kurum/nesne (ör. "Grand National Assembly of Turkey",
 "Borsa Istanbul", "Baku"), en son genel ve kesin sonuç veren (ör. "gold
 bars", "football stadium", "wheat field"). Haber sitesi, kanal ya da
 ajans adı yazma. Bayrak ya da slogan aratma.
+
+MAÇ VE SPOR HABERİ (site sahibi, 13.11.2026: milli maç haberine stadyumun
+dışarıdan çekilmiş, çoğu gökyüzü olan fotoğrafı konmuştu): Maç, sonuç,
+gol ya da transfer haberinde sırayla: (1) haberde adı geçen oyuncu ya da
+teknik direktörün tam adı ("Arda Güler", "Vincenzo Montella"); (2) takım
+("Turkey national football team", "Galatasaray players"); (3) yalnızca
+bunlar yoksa oyun anı ("football match action"). Stadyum, şehir ya da
+bina adı YAZMA ("Izmir stadium", "Gürsel Aksel Stadium" YAZMA): bunlar
+bina ve manzara fotoğrafı getirir. Stadyumu yalnızca haberin konusu
+stadyumun kendisiyse ara.
 
 KONUYA GÖRE (site sahibi, 11.11.2026: "sadece başlığa göre değil konuya
 göre"): Sorguları başlıktaki kelimelerden değil haberin METNİNDEN çıkar:

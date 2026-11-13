@@ -105,6 +105,29 @@ if ($yontem === 'GET') {
         );
     }
 
+    /*
+     * Bir kez (13.11.2026, site sahibi: "milli takimin Belcika'ya yenildigi
+     * macta neden gokyuzu resmi var?"): son 3 gunun, ozgur lisansli gorselle
+     * degismis SPOR haberleri eski gorseline donup yeniden listelensin. Ajan
+     * artik mac haberinde stadyum/bina yerine oyuncu ve takim ariyor ve
+     * kadrajin cogu gokyuzu olan gorseli almiyor (bkz. GorselDenetci).
+     */
+    if (ayar_oku('gorsel_spor_kadraj_v1') === '') {
+        ayar_yaz('gorsel_spor_kadraj_v1', date('Y-m-d H:i:s'));
+        db()->exec(
+            // Atif yalnizca eski gorsele DONULEN kayitta silinir. Eski gorseli
+            // olmayan haberde ozgur lisansli gorsel yerinde kaliyor; atfi da
+            // kalmali (lisans sarti), yeniden denetimde degisirse yenisi yazilir.
+            "UPDATE haberler SET gorsel_atif = IF(gorsel_eski <> '', '', gorsel_atif),
+                    gorsel_url = IF(gorsel_eski <> '', gorsel_eski, gorsel_url),
+                    gorsel_denetim = NULL, guncellendi = guncellendi
+              WHERE gorsel_denetim = 2 AND olusturuldu >= NOW() - INTERVAL 3 DAY
+                AND kategori_id IN (SELECT id FROM kategoriler
+                                     WHERE slug = 'spor'
+                                        OR ust_id IN (SELECT id FROM (SELECT id FROM kategoriler WHERE slug = 'spor') AS s))"
+        );
+    }
+
     $gun  = max(1, min(60, (int) ($_GET['gun'] ?? 3)));
     $adet = max(1, min(400, (int) ($_GET['adet'] ?? 80)));
 
