@@ -342,7 +342,9 @@ function uye_guvenli_donus(string $donus): string
  */
 function network_logo_html(int $yukseklik, string $sinif = ''): string
 {
-    $genislik = (int) round($yukseklik * 480 / 218);
+    // Yeni logo (13.11.2026, site sahibinin verdigi gorsel: kirmizi V, "VALENTRA"
+    // ve altinda "NETWORK"; 960x279). Gece modunda yazisi acik renk olan kopya.
+    $genislik = (int) round($yukseklik * 960 / 279);
     $ozellik  = 'width="' . $genislik . '" height="' . $yukseklik . '" alt="" decoding="async"';
 
     return '<span class="nw-logo ' . e($sinif) . '">'

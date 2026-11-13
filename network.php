@@ -43,7 +43,7 @@ require_once __DIR__ . '/includes/topluluk.php';
 // YZ begenileri (en fazla 5 dakikada bir, istegin sonunda).
 topluluk_begeni_zamanla();
 
-sayfa_onbellek(['yol', 'sekme', 'once', 'ara', 'sira', 'konu']);
+sayfa_onbellek(['yol', 'sekme', 'once', 'ara', 'sira', 'konu', 'gazete', 'gorunum']);
 
 require_once __DIR__ . '/includes/seo.php';
 require_once __DIR__ . '/includes/network_gorunum.php';
@@ -133,7 +133,23 @@ switch ($sayfa) {
         $konular = nw_konular();
         $konu   = (string) ($_GET['konu'] ?? '');
         $konu   = isset($konular[$konu]) ? $konu : '';
-        $akis   = nw_akis(NW_AKIS_ADEDI, $once, $sekme === 'takip' ? $uyeId : null, null, $konu);
+        /*
+         * Gazeteler (13.11.2026, bkz. nw_gazeteler): ?gazete=hurriyet o
+         * yayindan ozetlenen haberleri verir. Hicbir sey secilmemisken
+         * Network'un ilk sayfasi "gazete gazete" gorunumudur: her yayinin
+         * son haberleri. Eski karisik akis ?gorunum=akis ile duruyor.
+         */
+        $gazeteler = nw_gazeteler();
+        $gazete = (string) ($_GET['gazete'] ?? '');
+        $gazete = isset($gazeteler[$gazete]) ? $gazete : '';
+        $konu   = $gazete !== '' ? '' : $konu;
+        $gazeteGorunumu = $gazete === '' && $konu === '' && $sekme === 'herkes' && $once === 0
+            && (string) ($_GET['gorunum'] ?? '') !== 'akis' && $gazeteler !== [];
+        $gazeteOzetleri = $gazeteGorunumu ? nw_gazete_ozetleri() : [];
+        $gazeteGorunumu = $gazeteOzetleri !== [];
+        $akis   = $gazeteGorunumu
+            ? ['ogeler' => [], 'sonraki' => 0]
+            : nw_akis(NW_AKIS_ADEDI, $once, $sekme === 'takip' ? $uyeId : null, null, $konu, $gazete);
         $baglam = nw_baglam($akis['ogeler']);
         $takipEdilenler = $uyeId !== null ? nw_takip_edilenler($uyeId) : [];
         $oneriler = !$kisilerAcik ? [] : array_slice(array_values(array_filter(
@@ -143,15 +159,20 @@ switch ($sayfa) {
         $populerKonular = nw_populer_konular(10);
         $etkilesimHaberleri = nw_etkilesim_haberleri(6);
         $begenilenHaberler  = nw_begenilen_haberler(6);
-        $buYol  = nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'once' => $once]);
-        $sayfaBasligi = $konu !== ''
-            ? $konular[$konu] . ' — V Network | Valentra'
-            : 'V Network — Valentra okurlarının buluşma yeri';
+        $akisGorunumu = !$gazeteGorunumu && $gazete === '' && $konu === '' && $sekme === 'herkes';
+        $buYol  = nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'gazete' => $gazete,
+            'gorunum' => $akisGorunumu ? 'akis' : '', 'once' => $once]);
+        $sayfaBasligi = match (true) {
+            $gazete !== '' => $gazeteler[$gazete]['ad'] . ' haberleri — V Network | Valentra',
+            $konu !== ''   => $konular[$konu] . ' — V Network | Valentra',
+            default        => 'V Network — Valentra okurlarının buluşma yeri',
+        };
         break;
 
     case 'haber':
         $h = db()->prepare(
-            "SELECT h.id, h.baslik, h.slug, h.ozet, h.gorsel_url, h.iframe_url, h.yayin_tarihi, k.ad AS kategori_adi
+            "SELECT h.id, h.baslik, h.slug, h.ozet, h.gorsel_url, h.iframe_url, h.yayin_tarihi, h.kaynak_adi, h.kaynak_url,
+                    k.ad AS kategori_adi, k.slug AS kategori_slug
                FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
               WHERE h.id = :id AND h.durum = :d"
         );
@@ -276,7 +297,13 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
 /* --- Sol ve sag kenar, paylasim kutusu ------------------------------------ */
 
-$solKenar = static function () use ($uye, $kisilerAcik): void {
+$solKenar = static function () use ($uye, $kisilerAcik, $sayfa): void {
+    // Akis sayfasinda secili baslik / gazete (baska sayfalarda bos).
+    $nwKonular   = $sayfa === 'akis' ? ($GLOBALS['konular'] ?? []) : nw_konular();
+    $nwGazeteler = $sayfa === 'akis' ? ($GLOBALS['gazeteler'] ?? []) : nw_gazeteler();
+    $nwKonu      = $sayfa === 'akis' ? (string) ($GLOBALS['konu'] ?? '') : '';
+    $nwGazete    = $sayfa === 'akis' ? (string) ($GLOBALS['gazete'] ?? '') : '';
+    $nwTumu      = $sayfa === 'akis' && !empty($GLOBALS['gazeteGorunumu']);
     ?>
     <aside class="nw-sol">
         <?php if ($uye !== null): ?>
@@ -285,6 +312,8 @@ $solKenar = static function () use ($uye, $kisilerAcik): void {
             <div class="nw-yan-kutu">
                 <strong>V Network'e katılın</strong>
                 <p>Haberleri konuşun, paylaşım yapın, yeni insanlarla tanışın.</p>
+                <?php require_once __DIR__ . '/includes/uye_google.php'; ?>
+                <?= google_giris_dugmesi(nw_yol(), 'Google ile üye ol') ?>
                 <a class="uye-dugme" href="<?= e(uye_yolu('kayit', nw_yol())) ?>">Ücretsiz üye ol</a>
                 <a class="uye-dugme uye-dugme-ikincil" href="<?= e(uye_yolu('giris', nw_yol())) ?>">Giriş yap</a>
             </div>
@@ -297,6 +326,29 @@ $solKenar = static function () use ($uye, $kisilerAcik): void {
             <a class="nw-sol-oge" href="<?= e(nw_yol('mesajlar')) ?>"><span class="nw-sol-simge" aria-hidden="true">💬</span>Mesajlar</a>
             <a class="nw-sol-oge" href="<?= e(nw_yol('bildirimler')) ?>"><span class="nw-sol-simge" aria-hidden="true">🔔</span>Bildirimler</a>
             <a class="nw-sol-oge" href="<?= e(nw_yol('ayarlar')) ?>"><span class="nw-sol-simge" aria-hidden="true">⚙️</span>Profili düzenle</a>
+        <?php endif; ?>
+        <?php /* Basliklar ve gazeteler (13.11.2026): secilen baslik ya da gazetenin
+                 haberleri ortada asagi dogru akar. data-konu: secim tarayicida
+                 hatirlaniyor (assets/network-akis.js); gazete secimi hatirlanmaz. */ ?>
+        <?php if ($nwKonular !== []): ?>
+            <nav class="nw-sol-grup" aria-label="Başlıklar">
+                <strong class="nw-sol-baslik">Başlıklar</strong>
+                <?php foreach ($nwKonular as $slug => $ad): ?>
+                    <a class="nw-sol-satir<?= $nwKonu === $slug ? ' aktif' : '' ?>" href="<?= e(nw_yol('', ['konu' => $slug])) ?>" data-konu="<?= e($slug) ?>"
+                       <?= $nwKonu === $slug ? 'aria-current="page"' : '' ?>><?= e($ad) ?></a>
+                <?php endforeach; ?>
+            </nav>
+        <?php endif; ?>
+        <?php if ($nwGazeteler !== []): ?>
+            <nav class="nw-sol-grup" aria-label="Gazeteler">
+                <strong class="nw-sol-baslik">Gazeteler</strong>
+                <a class="nw-sol-satir<?= $nwTumu ? ' aktif' : '' ?>" href="<?= e(nw_yol('', ['gorunum' => 'gazeteler'])) ?>" data-konu=""
+                   <?= $nwTumu ? 'aria-current="page"' : '' ?>>Tüm gazeteler</a>
+                <?php foreach ($nwGazeteler as $slug => $g): ?>
+                    <a class="nw-sol-satir<?= $nwGazete === $slug ? ' aktif' : '' ?>" href="<?= e(nw_yol('', ['gazete' => $slug])) ?>" data-konu=""
+                       <?= $nwGazete === $slug ? 'aria-current="page"' : '' ?>><span><?= e($g['ad']) ?></span><small><?= (int) $g['adet'] ?></small></a>
+                <?php endforeach; ?>
+            </nav>
         <?php endif; ?>
         <a class="nw-sol-oge" href="<?= e(nw_yol('kurallar')) ?>"><span class="nw-sol-simge" aria-hidden="true">📜</span>Topluluk Kuralları</a>
         <a class="nw-sol-oge" href="/"><span class="nw-sol-simge" aria-hidden="true">📰</span>Valentra Haber</a>
@@ -377,19 +429,23 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                     <small>Son 24 saatin haberleri ve 2 günün paylaşımları, beğeni hedeflerine hemen ulaşır. Yalnızca siz görürsünüz.</small>
                 </form>
             <?php endif; ?>
-            <?php if ($uyeId !== null): ?>
-                <nav class="nw-sekmeler" aria-label="Akış">
-                    <a href="<?= e(nw_yol('', ['konu' => $konu])) ?>" class="<?= $sekme === 'herkes' ? 'aktif' : '' ?>">Herkes</a>
+            <?php /* Gorunum sekmeleri (13.11.2026): Gazeteler (ilk sayfa), Akis (haberler,
+                     paylasimlar ve yorumlar karisik, en yeni ustte), uyeye Takip ettiklerim. */ ?>
+            <nav class="nw-sekmeler" aria-label="Görünüm">
+                <?php /* gorunum=gazeteler: hatirlanan baslik secimine donulmesin (network-akis.js). */ ?>
+                <a href="<?= e(nw_yol('', ['gorunum' => 'gazeteler'])) ?>" data-konu="" class="<?= $gazeteGorunumu || $gazete !== '' ? 'aktif' : '' ?>">Gazeteler</a>
+                <a href="<?= e(nw_yol('', ['gorunum' => 'akis'])) ?>" data-konu="" class="<?= !$gazeteGorunumu && $gazete === '' && $konu === '' && $sekme === 'herkes' ? 'aktif' : '' ?>">Akış</a>
+                <?php if ($uyeId !== null): ?>
                     <a href="<?= e(nw_yol('', ['sekme' => 'takip', 'konu' => $konu])) ?>" class="<?= $sekme === 'takip' ? 'aktif' : '' ?>">Takip ettiklerim</a>
-                </nav>
-            <?php endif; ?>
+                <?php endif; ?>
+            </nav>
 
             <?php if ($konular !== []): ?>
                 <?php /* Konu secici (06.11.2026): okur akista hangi haberleri gorecegini secer.
                          Secim tarayicida hatirlaniyor (assets/network-akis.js). */ ?>
                 <nav class="nw-konular-secici" aria-label="Haber konusu">
                     <a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : ''])) ?>" data-konu=""
-                       class="<?= $konu === '' ? 'aktif' : '' ?>"<?= $konu === '' ? ' aria-current="page"' : '' ?>>Tümü</a>
+                       class="<?= $konu === '' && $gazete === '' ? 'aktif' : '' ?>"<?= $konu === '' && $gazete === '' ? ' aria-current="page"' : '' ?>>Tümü</a>
                     <?php foreach ($konular as $slug => $ad): ?>
                         <a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $slug])) ?>" data-konu="<?= e($slug) ?>"
                            class="<?= $konu === $slug ? 'aktif' : '' ?>"<?= $konu === $slug ? ' aria-current="page"' : '' ?>><?= e($ad) ?></a>
@@ -397,7 +453,55 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 </nav>
             <?php endif; ?>
 
-            <?php if ($akis['ogeler'] === []): ?>
+            <?php if ($gazeteler !== []): ?>
+                <?php /* Dar ekranda sol kenar yok: gazeteler yatay kayan seritte. */ ?>
+                <nav class="nw-konular-secici nw-gazete-serit" aria-label="Gazeteler">
+                    <?php foreach ($gazeteler as $slug => $g): ?>
+                        <a href="<?= e(nw_yol('', ['gazete' => $slug])) ?>" class="<?= $gazete === $slug ? 'aktif' : '' ?>"
+                           <?= $gazete === $slug ? 'aria-current="page"' : '' ?>><?= e($g['ad']) ?></a>
+                    <?php endforeach; ?>
+                </nav>
+            <?php endif; ?>
+
+            <?php if ($gazete !== ''): ?>
+                <header class="nw-gazete-ust">
+                    <h1><?= e($gazeteler[$gazete]['ad']) ?></h1>
+                    <p>Son üç günde bu yayından özetlenen <?= (int) $gazeteler[$gazete]['adet'] ?> haber. Özetleri Valentra yazdı;
+                        her haberde kaynağın bağlantısı var.</p>
+                </header>
+            <?php endif; ?>
+
+            <?php if ($gazeteGorunumu): ?>
+                <?php foreach ($gazeteOzetleri as $g): ?>
+                    <section class="nw-gazete">
+                        <header class="nw-gazete-bas">
+                            <h2><a href="<?= e(nw_yol('', ['gazete' => $g['slug']])) ?>"><?= e($g['ad']) ?></a></h2>
+                            <a class="nw-gazete-tumu" href="<?= e(nw_yol('', ['gazete' => $g['slug']])) ?>"><?= (int) $g['adet'] ?> haberin tümü →</a>
+                        </header>
+                        <ul class="nw-gazete-liste">
+                            <?php foreach ($g['haberler'] as $h): ?>
+                                <li>
+                                    <?php
+                                    // Her haber resimli (13.11.2026): gorseli yoksa ya da yuklenemezse konu gorseli.
+                                    $knGorsel = '/assets/kategori/' . haber_gorsel_konu_adi((string) ($h['kategori_slug'] ?? '')) . '.jpg';
+                                    $hGorsel  = haber_gorsel($h) !== '' ? haber_gorsel_kucuk($h, 480) : $knGorsel;
+                                    ?>
+                                    <a href="<?= e(nw_yol('h/' . (int) $h['id'])) ?>">
+                                        <img class="nw-gazete-resim" src="<?= e($hGorsel) ?>" alt="" width="112" height="76" loading="lazy" referrerpolicy="no-referrer"
+                                             onerror="this.onerror=null;this.src='<?= e($knGorsel) ?>'">
+                                        <span class="nw-gazete-yazi">
+                                            <span class="nw-gazete-baslik"><?= e((string) $h['baslik']) ?></span>
+                                            <span class="nw-gazete-meta"><?= e(yorum_zaman((string) $h['yayin_tarihi'])) ?><?= !empty($h['kategori_adi']) ? ' · ' . e((string) $h['kategori_adi']) : '' ?></span>
+                                        </span>
+                                    </a>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </section>
+                <?php endforeach; ?>
+            <?php endif; ?>
+
+            <?php if ($akis['ogeler'] === [] && !$gazeteGorunumu): ?>
                 <div class="bos-durum"><strong><?= $konu !== '' ? e($konular[$konu]) . ' başlığında henüz haber yok.' : 'Henüz paylaşım yok.' ?></strong> <?= $konu !== '' ? 'Başka bir konu seçin ya da “Tümü”ne dönün.' : ($sekme === 'takip' ? 'Paylaşım ve yorumlardaki isimlere tıklayıp insanları takip edin; paylaşımları burada görünür.' : 'Yeni haberler geldikçe burada akacak.') ?></div>
             <?php endif; ?>
 
@@ -406,7 +510,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <?php endforeach; ?>
 
             <?php if ($akis['sonraki'] > 0): ?>
-                <nav class="nw-sayfalar"><a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'once' => $akis['sonraki']])) ?>">Daha eski <?= $konu !== '' ? 'haberler' : 'paylaşımlar' ?> →</a></nav>
+                <nav class="nw-sayfalar"><a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'gazete' => $gazete, 'once' => $akis['sonraki']])) ?>">Daha eski <?= $konu !== '' ? 'haberler' : 'paylaşımlar' ?> →</a></nav>
             <?php endif; ?>
         </div>
         <aside class="nw-sag">
@@ -472,7 +576,20 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
         <?= nw_kart_html($oge, $baglam, $buYol, true) ?>
         <?php if ($sayfa === 'haber'): ?>
             <?php // Haberin tamami altta; ayni sekmede acilir, geri tusu buraya dondurur (site sahibi, 31.10.2026). ?>
-            <a class="nw-haber-tamami" href="<?= e(haber_yolu((string) $haber['slug'])) ?>">Haberin tamamını oku →</a>
+            <?php
+            /* Ayrinti asil gazetede (site sahibi, 13.11.2026: "haberler kisaca olayi
+               anlatacak, detay asil gazetede olsun"). Kaynak adresi varsa ana dugme
+               gazetenin haberi; Valentra'daki ozet ikincil. */
+            $nwKaynakUrl = guvenli_url((string) ($haber['kaynak_url'] ?? ''));
+            $nwKaynakUrl = preg_match('#^https?://#i', $nwKaynakUrl) === 1 ? $nwKaynakUrl : '';
+            $nwKaynakAd  = trim((string) ($haber['kaynak_adi'] ?? '')) !== '' ? nw_gazete_adi((string) $haber['kaynak_adi']) : '';
+            ?>
+            <?php if ($nwKaynakUrl !== ''): ?>
+                <a class="nw-haber-tamami" href="<?= e($nwKaynakUrl) ?>" target="_blank" rel="noopener nofollow">Haberin ayrıntısı<?= $nwKaynakAd !== '' ? ': ' . e($nwKaynakAd) . ' sitesinde oku' : ' kaynağında' ?> ↗</a>
+                <a class="nw-haber-ozet-bag" href="<?= e(haber_yolu((string) $haber['slug'])) ?>">Valentra özetinin tamamı →</a>
+            <?php else: ?>
+                <a class="nw-haber-tamami" href="<?= e(haber_yolu((string) $haber['slug'])) ?>">Haberin tamamını oku →</a>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 
@@ -684,6 +801,11 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
 <?php elseif ($sayfa === 'ayarlar'): ?>
     <div class="nw-tek">
         <h1 class="nw-baslik">Profili düzenle</h1>
+        <?php if (isset($_GET['hosgeldin'])): ?>
+            <?php // Google ile yeni uye olan (13.11.2026): rumuz Google adindan uretildi, burada degistirilebilir. ?>
+            <p class="yorum-sonuc yorum-sonuc-tamam" role="status">V Network'e hoş geldiniz. Rumuzunuzu Google adınızdan oluşturduk;
+                isterseniz aşağıdan değiştirin, sonra <a href="<?= e(nw_yol()) ?>">akışa geçin</a>.</p>
+        <?php endif; ?>
         <form method="post" action="/network-islem.php" class="uye-form nw-yan-kutu" id="nw-profil-form">
             <?= nw_form_alanlari('profil', nw_yol('ayarlar')) ?>
             <input type="hidden" name="foto" value="">

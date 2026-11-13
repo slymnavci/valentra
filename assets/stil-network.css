@@ -376,3 +376,54 @@
 }
 .nw-konular-secici a:hover { border-color: var(--altin); color: var(--altin); }
 .nw-konular-secici a.aktif { background: var(--altin); border-color: var(--altin); color: var(--vurgu-ustu, #fff); }
+
+/* --- Gazeteler ve basliklar (13.11.2026; bkz. nw_gazeteler) ---------------
+   Sol kenarda basliklar ve gazeteler; ortada secilenin haberleri asagi dogru.
+   Hicbir sey secili degilken "gazete gazete" gorunumu. */
+.nw-sol { max-height: calc(100vh - 92px); overflow-y: auto; scrollbar-width: thin; padding-right: 4px; }
+.nw-sol-grup { display: grid; gap: 1px; margin: 10px 0 6px; padding-top: 10px; border-top: 1px solid var(--cizgi); }
+.nw-sol-baslik { padding: 0 10px 6px; font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--metin-soluk); }
+.nw-sol-satir {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    padding: 7px 10px; border-radius: 8px; color: var(--metin); text-decoration: none; font-weight: 600; font-size: .93rem;
+}
+.nw-sol-satir:hover { background: color-mix(in srgb, var(--metin) 7%, transparent); }
+.nw-sol-satir.aktif { background: color-mix(in srgb, var(--altin) 12%, transparent); color: var(--altin); font-weight: 800; }
+.nw-sol-satir small { color: var(--metin-soluk); font-weight: 600; font-size: .76rem; font-variant-numeric: tabular-nums; }
+.nw-sol-satir span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.nw-gazete-serit { display: none; }
+.nw-gazete-ust { margin: 0 0 14px; padding: 16px 18px; background: var(--kart); border: 1px solid var(--cizgi); border-left: 4px solid var(--altin); border-radius: var(--yuvarlak); }
+.nw-gazete-ust h1 { margin: 0 0 4px; font-size: 1.35rem; }
+.nw-gazete-ust p { margin: 0; color: var(--metin-soluk); font-size: .9rem; }
+
+.nw-gazete { margin: 0 0 16px; background: var(--kart); border: 1px solid var(--cizgi); border-radius: var(--yuvarlak); box-shadow: var(--golge); overflow: hidden; }
+.nw-gazete-bas { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 16px; border-bottom: 2px solid var(--altin); }
+.nw-gazete-bas h2 { margin: 0; font-size: .92rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.nw-gazete-bas h2 a { color: var(--metin); text-decoration: none; }
+.nw-gazete-bas h2 a:hover { color: var(--altin); }
+.nw-gazete-tumu { flex: none; font-size: .82rem; font-weight: 700; color: var(--vurgu); text-decoration: none; white-space: nowrap; }
+.nw-gazete-tumu:hover { text-decoration: underline; }
+.nw-gazete-liste { list-style: none; margin: 0; padding: 0; }
+.nw-gazete-liste li + li { border-top: 1px solid var(--cizgi); }
+.nw-gazete-liste a { display: block; padding: 11px 16px; color: var(--metin); text-decoration: none; }
+.nw-gazete-liste a:hover .nw-gazete-baslik { color: var(--altin); }
+.nw-gazete-baslik { display: block; font-weight: 700; font-size: 1rem; line-height: 1.35; }
+.nw-gazete-meta { display: block; margin-top: 3px; font-size: .78rem; color: var(--metin-soluk); }
+@media (max-width: 860px) {
+    /* Sol kenar gizli (bkz. .nw-sol): gazeteler yatay seritte. */
+    .nw-gazete-serit { display: flex; }
+    .nw-gazete-bas { flex-wrap: wrap; }
+}
+
+/* Haber kartinin basinda gazete (13.11.2026): logo yerine adin bas harfi. */
+.nw-gazete-simge {
+    display: grid; place-items: center; text-decoration: none;
+    background: var(--altin); color: var(--vurgu-ustu, #fff); font-weight: 800; font-size: 1.1rem;
+}
+a.nw-hesap { color: var(--metin); text-decoration: none; }
+a.nw-hesap:hover { color: var(--altin); }
+.nw-gazete-liste a { display: flex; gap: 14px; align-items: center; }
+.nw-gazete-resim { flex: none; width: 112px; height: 76px; object-fit: cover; border-radius: 8px; background: var(--cizgi); }
+.nw-gazete-yazi { min-width: 0; }
+@media (max-width: 520px) { .nw-gazete-resim { width: 88px; height: 62px; } }

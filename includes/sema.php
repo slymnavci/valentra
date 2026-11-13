@@ -279,6 +279,16 @@ function sema_yukselt(array &$hatalar = []): array
 
         return true;
     });
+    // Google ile giris (13.11.2026; bkz. includes/uye_google.php).
+    $adim('uyeler.google_kimlik sutunu', static function (): bool {
+        if (sema_sutun_var('uyeler', 'google_kimlik')) {
+            return false;
+        }
+
+        db()->exec('ALTER TABLE uyeler ADD COLUMN google_kimlik VARCHAR(40) NULL, ADD UNIQUE KEY uq_uye_google (google_kimlik)');
+
+        return true;
+    });
     // Manset sinyali (13.11.2026; bkz. includes/manset_sinyal.php).
     $sutunEkle('haberler', 'manset_sinyal', 'TINYINT NOT NULL DEFAULT 0');
     $sutunEkle('haberler', 'manset_yayinlar', "VARCHAR(200) NOT NULL DEFAULT ''");
