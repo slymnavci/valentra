@@ -339,7 +339,7 @@ $solKenar = static function () use ($uye, $kisilerAcik, $sayfa): void {
         <?php if ($nwGazeteler !== []): ?>
             <nav class="nw-sol-grup" aria-label="Gazeteler">
                 <strong class="nw-sol-baslik">Gazeteler</strong>
-                <a class="nw-sol-satir<?= $nwTumu ? ' aktif' : '' ?>" href="<?= e(nw_yol()) ?>" data-konu=""
+                <a class="nw-sol-satir<?= $nwTumu ? ' aktif' : '' ?>" href="<?= e(nw_yol('', ['gorunum' => 'gazeteler'])) ?>" data-konu=""
                    <?= $nwTumu ? 'aria-current="page"' : '' ?>>Tüm gazeteler</a>
                 <?php foreach ($nwGazeteler as $slug => $g): ?>
                     <a class="nw-sol-satir<?= $nwGazete === $slug ? ' aktif' : '' ?>" href="<?= e(nw_yol('', ['gazete' => $slug])) ?>" data-konu=""
@@ -429,7 +429,8 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <?php /* Gorunum sekmeleri (13.11.2026): Gazeteler (ilk sayfa), Akis (haberler,
                      paylasimlar ve yorumlar karisik, en yeni ustte), uyeye Takip ettiklerim. */ ?>
             <nav class="nw-sekmeler" aria-label="Görünüm">
-                <a href="<?= e(nw_yol()) ?>" data-konu="" class="<?= $gazeteGorunumu || $gazete !== '' ? 'aktif' : '' ?>">Gazeteler</a>
+                <?php /* gorunum=gazeteler: hatirlanan baslik secimine donulmesin (network-akis.js). */ ?>
+                <a href="<?= e(nw_yol('', ['gorunum' => 'gazeteler'])) ?>" data-konu="" class="<?= $gazeteGorunumu || $gazete !== '' ? 'aktif' : '' ?>">Gazeteler</a>
                 <a href="<?= e(nw_yol('', ['gorunum' => 'akis'])) ?>" data-konu="" class="<?= !$gazeteGorunumu && $gazete === '' && $konu === '' && $sekme === 'herkes' ? 'aktif' : '' ?>">Akış</a>
                 <?php if ($uyeId !== null): ?>
                     <a href="<?= e(nw_yol('', ['sekme' => 'takip', 'konu' => $konu])) ?>" class="<?= $sekme === 'takip' ? 'aktif' : '' ?>">Takip ettiklerim</a>
