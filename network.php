@@ -442,8 +442,12 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 <?php /* Konu secici (06.11.2026): okur akista hangi haberleri gorecegini secer.
                          Secim tarayicida hatirlaniyor (assets/network-akis.js). */ ?>
                 <nav class="nw-konular-secici nw-yalniz-dar" aria-label="Haber konusu">
-                    <a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : ''])) ?>" data-konu=""
-                       class="<?= $konu === '' && $gazete === '' ? 'aktif' : '' ?>"<?= $konu === '' && $gazete === '' ? ' aria-current="page"' : '' ?>>Tümü</a>
+                    <?php /* Dar ekranda sol kenar yok: gazete ozeti ve kronolojik akis burada (sol kenardaki
+                             "Tum gazeteler" ve "Son haberler" ile ayni adresler). */ ?>
+                    <a href="<?= e(nw_yol('', ['gorunum' => 'gazeteler'])) ?>" data-konu=""
+                       class="<?= $gazeteGorunumu ? 'aktif' : '' ?>"<?= $gazeteGorunumu ? ' aria-current="page"' : '' ?>>Gazeteler</a>
+                    <a href="<?= e(nw_yol('', ['gorunum' => 'akis'])) ?>" data-konu=""
+                       class="<?= $akisGorunumu ? 'aktif' : '' ?>"<?= $akisGorunumu ? ' aria-current="page"' : '' ?>>Son haberler</a>
                     <?php foreach ($konular as $slug => $ad): ?>
                         <a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $slug])) ?>" data-konu="<?= e($slug) ?>"
                            class="<?= $konu === $slug ? 'aktif' : '' ?>"<?= $konu === $slug ? ' aria-current="page"' : '' ?>><?= e($ad) ?></a>

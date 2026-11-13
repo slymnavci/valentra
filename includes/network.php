@@ -977,7 +977,8 @@ function nw_gazete_simge_html(string $slug, string $ad, int $boyut = 20): string
     $src  = is_file(nw_gazete_simge_klasoru() . '/' . $slug . '.png') ? $yerel : '/gazete-simge.php?g=' . rawurlencode($slug);
 
     return '<span class="nw-gz-simge" style="--b:' . $boyut . 'px" aria-hidden="true">' . e($harf)
-        . (is_file(nw_gazete_simge_klasoru() . '/' . $slug . '.yok') ? ''
+        // Indirilemedi isareti bir gun gecerli (gazete-simge.php ile ayni sure): sonra yeniden denenir.
+        . (is_file($yok = nw_gazete_simge_klasoru() . '/' . $slug . '.yok') && filemtime($yok) > time() - 86400 ? ''
             : '<img src="' . e($src) . '" alt="" width="' . $boyut . '" height="' . $boyut . '" loading="lazy" onerror="this.remove()">')
         . '</span>';
 }
