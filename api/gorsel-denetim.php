@@ -115,7 +115,11 @@ if ($yontem === 'GET') {
     if (ayar_oku('gorsel_spor_kadraj_v1') === '') {
         ayar_yaz('gorsel_spor_kadraj_v1', date('Y-m-d H:i:s'));
         db()->exec(
-            "UPDATE haberler SET gorsel_url = IF(gorsel_eski <> '', gorsel_eski, gorsel_url), gorsel_atif = '',
+            // Atif yalnizca eski gorsele DONULEN kayitta silinir. Eski gorseli
+            // olmayan haberde ozgur lisansli gorsel yerinde kaliyor; atfi da
+            // kalmali (lisans sarti), yeniden denetimde degisirse yenisi yazilir.
+            "UPDATE haberler SET gorsel_atif = IF(gorsel_eski <> '', '', gorsel_atif),
+                    gorsel_url = IF(gorsel_eski <> '', gorsel_eski, gorsel_url),
                     gorsel_denetim = NULL, guncellendi = guncellendi
               WHERE gorsel_denetim = 2 AND olusturuldu >= NOW() - INTERVAL 3 DAY
                 AND kategori_id IN (SELECT id FROM kategoriler
