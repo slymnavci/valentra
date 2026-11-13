@@ -258,7 +258,8 @@ CREATE TABLE IF NOT EXISTS ajan_anahtarlari (
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ayarlar (
     anahtar     VARCHAR(80)  NOT NULL,
-    deger       TEXT         NOT NULL,
+    -- MEDIUMTEXT (13.11.2026): manset_sinyal listesi 64 KB'yi asabiliyor.
+    deger       MEDIUMTEXT   NOT NULL,
     guncellendi DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (anahtar)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

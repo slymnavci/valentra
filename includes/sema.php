@@ -267,6 +267,18 @@ function sema_yukselt(array &$hatalar = []): array
     $sutunEkle('haberler', 'kaynak_ajans', "VARCHAR(40) NOT NULL DEFAULT ''");
     $sutunEkle('haberler', 'bant_editor', 'TINYINT NOT NULL DEFAULT 0');
     $sutunEkle('haberler', 'bant_bitis', 'DATETIME NULL');
+    // ayarlar.deger TEXT (64 KB) manset_sinyal listesine yetmiyor (13.11.2026).
+    $adim('ayarlar.deger MEDIUMTEXT', static function (): bool {
+        $s = db()->query("SHOW COLUMNS FROM ayarlar LIKE 'deger'")->fetch();
+
+        if ($s === false || stripos((string) $s['Type'], 'mediumtext') !== false) {
+            return false;
+        }
+
+        db()->exec('ALTER TABLE ayarlar MODIFY deger MEDIUMTEXT NOT NULL');
+
+        return true;
+    });
     // Manset sinyali (13.11.2026; bkz. includes/manset_sinyal.php).
     $sutunEkle('haberler', 'manset_sinyal', 'TINYINT NOT NULL DEFAULT 0');
     $sutunEkle('haberler', 'manset_yayinlar', "VARCHAR(200) NOT NULL DEFAULT ''");

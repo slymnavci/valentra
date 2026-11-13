@@ -82,6 +82,18 @@ function manset_sinyal_hazir(): bool
     return $hazir;
 }
 
+/** ayarlar.deger MEDIUMTEXT'e genisletildi mi (bkz. sema_yukselt). */
+function manset_sinyal_genis_sutun(): bool
+{
+    try {
+        $s = db()->query("SHOW COLUMNS FROM ayarlar LIKE 'deger'")->fetch();
+
+        return $s !== false && stripos((string) $s['Type'], 'mediumtext') !== false;
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
 /** Gundem puaninin onem eki: 0, 0, 6, 10, 14, 18, 20. */
 function manset_sinyal_eki(int $puan): int
 {
@@ -268,7 +280,21 @@ function manset_sinyal_yaz(array $girdiler): array
     usort($liste, static fn (array $a, array $b): int => $b['z'] <=> $a['z']);
     $liste = array_slice($liste, 0, MANSET_SINYAL_EN_FAZLA);
 
-    ayar_yaz(MANSET_SINYAL_AYARI, (string) json_encode($liste, JSON_UNESCAPED_UNICODE));
+    /*
+     * Ayar sutunu genisletilmeden once (TEXT, 64 KB) liste sigmayabilir:
+     * yazma hata verir ya da kirpilan JSON bos liste gibi okunur. Sutun
+     * MEDIUMTEXT degilse liste 60 KB'ye sigana dek en eski basliklar atilir.
+     */
+    $json = (string) json_encode($liste, JSON_UNESCAPED_UNICODE);
+
+    if (strlen($json) > 60000 && !manset_sinyal_genis_sutun()) {
+        while ($liste !== [] && strlen($json) > 60000) {
+            $liste = array_slice($liste, 0, (int) floor(count($liste) * 0.9));
+            $json  = (string) json_encode($liste, JSON_UNESCAPED_UNICODE);
+        }
+    }
+
+    ayar_yaz(MANSET_SINYAL_AYARI, $json);
 
     if (!manset_sinyal_hazir() || $liste === []) {
         return ['kayitli' => count($liste), 'yukselen' => 0];
