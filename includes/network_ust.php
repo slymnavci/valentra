@@ -63,14 +63,53 @@ if (!uye_yonetici_mi($nwUye)) {
             <button type="button" class="tema-dugme nw-tema" id="tema-dugme" aria-label="Gece/gündüz modu">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
             </button>
+            <?php
+            /*
+             * HESAP MENUSU (site sahibi, 13.11.2026: "akis, mesajlar ve profili
+             * duzenle sagdaki kullanici adinin alt menusu olsun; uye degilse
+             * oradan uye olabilsin"). Uyede: ad ve acilir menu. Ziyaretcide:
+             * "Giris yap" ve "Uye ol" menusu (Google ile, e-postayla).
+             */
+            require_once __DIR__ . '/uye_google.php';
+            ?>
             <?php if ($nwUye !== null): ?>
-                <a class="nw-bant-uye<?= $nwAktif === 'profil' ? ' aktif' : '' ?>" href="<?= e(nw_profil_yolu((int) $nwUye['id'])) ?>" title="Profilim">
-                    <?= uye_simge_html($nwUye, 34) ?>
-                    <span><?= e((string) $nwUye['ad']) ?></span>
-                </a>
+                <details class="nw-hesap-menu">
+                    <summary class="nw-bant-uye<?= $nwAktif === 'profil' ? ' aktif' : '' ?>" title="Hesap menüsü">
+                        <?= uye_simge_html($nwUye, 34) ?>
+                        <span><?= e((string) $nwUye['ad']) ?></span>
+                        <?php if ($nwMesajSayi + $nwBildirimSayi > 0): ?><b class="nw-rozet"><?= min(99, $nwMesajSayi + $nwBildirimSayi) ?></b><?php endif; ?>
+                        <svg class="nw-hesap-ok" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="nw-hesap-liste" role="menu">
+                        <a role="menuitem" href="<?= e(nw_profil_yolu((int) $nwUye['id'])) ?>">Profilim</a>
+                        <a role="menuitem" href="<?= e(nw_yol()) ?>">Akış</a>
+                        <?php if (uye_yonetici_mi($nwUye)): ?><a role="menuitem" href="<?= e(nw_yol('kisiler')) ?>">Kişiler</a><?php endif; ?>
+                        <a role="menuitem" href="<?= e(nw_yol('mesajlar')) ?>">Mesajlar<?php if ($nwMesajSayi > 0): ?><b class="nw-rozet"><?= min(99, $nwMesajSayi) ?></b><?php endif; ?></a>
+                        <a role="menuitem" href="<?= e(nw_yol('bildirimler')) ?>">Bildirimler<?php if ($nwBildirimSayi > 0): ?><b class="nw-rozet"><?= min(99, $nwBildirimSayi) ?></b><?php endif; ?></a>
+                        <a role="menuitem" href="<?= e(nw_yol('ayarlar')) ?>">Profili düzenle</a>
+                        <hr>
+                        <a role="menuitem" href="<?= e(nw_yol('kurallar')) ?>">Topluluk Kuralları</a>
+                        <a role="menuitem" href="/">Valentra Haber</a>
+                        <form method="post" action="<?= e(uye_yolu('cikis')) ?>">
+                            <input type="hidden" name="jeton" value="<?= e(uye_form_jetonu()) ?>">
+                            <input type="hidden" name="donus" value="<?= e(nw_yol()) ?>">
+                            <button type="submit" role="menuitem">Çıkış yap</button>
+                        </form>
+                    </div>
+                </details>
             <?php else: ?>
                 <a class="uye-dugme nw-bant-giris" href="<?= e(uye_yolu('giris', nw_yol())) ?>">Giriş yap</a>
-                <a class="uye-dugme uye-dugme-ikincil nw-bant-kayit" href="<?= e(uye_yolu('kayit', nw_yol())) ?>">Üye ol</a>
+                <details class="nw-hesap-menu">
+                    <summary class="uye-dugme uye-dugme-ikincil nw-bant-kayit">Üye ol</summary>
+                    <div class="nw-hesap-liste nw-hesap-uyelik" role="menu">
+                        <strong>V Network'e katılın</strong>
+                        <p>Haberleri konuşun, paylaşım yapın.</p>
+                        <?= google_giris_dugmesi(nw_yol(), 'Google ile üye ol') ?>
+                        <a class="uye-dugme" href="<?= e(uye_yolu('kayit', nw_yol())) ?>">E-postayla üye ol</a>
+                        <a class="uye-dugme uye-dugme-ikincil" href="<?= e(uye_yolu('giris', nw_yol())) ?>">Giriş yap</a>
+                        <a class="nw-hesap-kucuk" href="<?= e(nw_yol('kurallar')) ?>">Topluluk Kuralları</a>
+                    </div>
+                </details>
             <?php endif; ?>
         </div>
     </div>
@@ -87,6 +126,15 @@ if (!uye_yonetici_mi($nwUye)) {
 <script>
 (function () {
     // Gece/gunduz dugmesi: sitenin tema tercihiyle ayni anahtar (bkz. sayfa_ust.php).
+    // Hesap menusu (13.11.2026): disari tiklaninca ya da Esc ile kapanir.
+    var menuler = document.querySelectorAll('.nw-hesap-menu');
+    document.addEventListener('click', function (o) {
+        menuler.forEach(function (m) { if (m.open && !m.contains(o.target)) { m.open = false; } });
+    });
+    document.addEventListener('keydown', function (o) {
+        if (o.key === 'Escape') { menuler.forEach(function (m) { m.open = false; }); }
+    });
+
     var d = document.getElementById('tema-dugme');
     if (!d) { return; }
     d.addEventListener('click', function () {

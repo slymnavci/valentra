@@ -297,7 +297,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
 
 /* --- Sol ve sag kenar, paylasim kutusu ------------------------------------ */
 
-$solKenar = static function () use ($uye, $kisilerAcik, $sayfa): void {
+$solKenar = static function () use ($sayfa): void {
     // Akis sayfasinda secili baslik / gazete (baska sayfalarda bos).
     $nwKonular   = $sayfa === 'akis' ? ($GLOBALS['konular'] ?? []) : nw_konular();
     $nwGazeteler = $sayfa === 'akis' ? ($GLOBALS['gazeteler'] ?? []) : nw_gazeteler();
@@ -305,28 +305,11 @@ $solKenar = static function () use ($uye, $kisilerAcik, $sayfa): void {
     $nwGazete    = $sayfa === 'akis' ? (string) ($GLOBALS['gazete'] ?? '') : '';
     $nwTumu      = $sayfa === 'akis' && !empty($GLOBALS['gazeteGorunumu']);
     ?>
+    <?php /* Sol kenarda yalnizca basliklar ve gazeteler (site sahibi, 13.11.2026:
+             "akis, mesajlar, profili duzenle sagdaki kullanici adinin alt menusu
+             olsun; solda gazeteler ve konu basliklari olsun"). Hesap baglantilari
+             ust bandin sagindaki menude (includes/network_ust.php). */ ?>
     <aside class="nw-sol">
-        <?php if ($uye !== null): ?>
-            <a class="nw-sol-oge" href="<?= e(nw_profil_yolu((int) $uye['id'])) ?>"><?= uye_simge_html($uye, 36) ?><strong><?= e((string) $uye['ad']) ?></strong></a>
-        <?php else: ?>
-            <div class="nw-yan-kutu">
-                <strong>V Network'e katılın</strong>
-                <p>Haberleri konuşun, paylaşım yapın, yeni insanlarla tanışın.</p>
-                <?php require_once __DIR__ . '/includes/uye_google.php'; ?>
-                <?= google_giris_dugmesi(nw_yol(), 'Google ile üye ol') ?>
-                <a class="uye-dugme" href="<?= e(uye_yolu('kayit', nw_yol())) ?>">Ücretsiz üye ol</a>
-                <a class="uye-dugme uye-dugme-ikincil" href="<?= e(uye_yolu('giris', nw_yol())) ?>">Giriş yap</a>
-            </div>
-        <?php endif; ?>
-        <a class="nw-sol-oge" href="<?= e(nw_yol()) ?>"><span class="nw-sol-simge" aria-hidden="true">🏠</span>Akış</a>
-        <?php if ($kisilerAcik): ?>
-            <a class="nw-sol-oge" href="<?= e(nw_yol('kisiler')) ?>"><span class="nw-sol-simge" aria-hidden="true">👥</span>Kişiler</a>
-        <?php endif; ?>
-        <?php if ($uye !== null): ?>
-            <a class="nw-sol-oge" href="<?= e(nw_yol('mesajlar')) ?>"><span class="nw-sol-simge" aria-hidden="true">💬</span>Mesajlar</a>
-            <a class="nw-sol-oge" href="<?= e(nw_yol('bildirimler')) ?>"><span class="nw-sol-simge" aria-hidden="true">🔔</span>Bildirimler</a>
-            <a class="nw-sol-oge" href="<?= e(nw_yol('ayarlar')) ?>"><span class="nw-sol-simge" aria-hidden="true">⚙️</span>Profili düzenle</a>
-        <?php endif; ?>
         <?php /* Basliklar ve gazeteler (13.11.2026): secilen baslik ya da gazetenin
                  haberleri ortada asagi dogru akar. data-konu: secim tarayicida
                  hatirlaniyor (assets/network-akis.js); gazete secimi hatirlanmaz. */ ?>
@@ -349,15 +332,6 @@ $solKenar = static function () use ($uye, $kisilerAcik, $sayfa): void {
                        <?= $nwGazete === $slug ? 'aria-current="page"' : '' ?>><span><?= e($g['ad']) ?></span><small><?= (int) $g['adet'] ?></small></a>
                 <?php endforeach; ?>
             </nav>
-        <?php endif; ?>
-        <a class="nw-sol-oge" href="<?= e(nw_yol('kurallar')) ?>"><span class="nw-sol-simge" aria-hidden="true">📜</span>Topluluk Kuralları</a>
-        <a class="nw-sol-oge" href="/"><span class="nw-sol-simge" aria-hidden="true">📰</span>Valentra Haber</a>
-        <?php if ($uye !== null): ?>
-            <form method="post" action="<?= e(uye_yolu('cikis')) ?>" class="nw-sol-cikis">
-                <input type="hidden" name="jeton" value="<?= e(uye_form_jetonu()) ?>">
-                <input type="hidden" name="donus" value="<?= e(nw_yol()) ?>">
-                <button type="submit">Çıkış yap</button>
-            </form>
         <?php endif; ?>
     </aside>
     <?php
@@ -514,6 +488,17 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <?php endif; ?>
         </div>
         <aside class="nw-sag">
+            <?php if ($uye === null): ?>
+                <?php // Uye olmayan ziyaretci sagdan uye olur (13.11.2026); ust banttaki "Uye ol" menusu de ayni secenekleri verir. ?>
+                <div class="nw-yan-kutu">
+                    <strong>V Network'e katılın</strong>
+                    <p>Haberleri konuşun, paylaşım yapın, yeni insanlarla tanışın.</p>
+                    <?php require_once __DIR__ . '/includes/uye_google.php'; ?>
+                    <?= google_giris_dugmesi(nw_yol(), 'Google ile üye ol') ?>
+                    <a class="uye-dugme" href="<?= e(uye_yolu('kayit', nw_yol())) ?>">Ücretsiz üye ol</a>
+                    <a class="uye-dugme uye-dugme-ikincil" href="<?= e(uye_yolu('giris', nw_yol())) ?>">Giriş yap</a>
+                </div>
+            <?php endif; ?>
             <?php if ($etkilesimHaberleri !== []): ?>
                 <div class="nw-yan-kutu nw-gundem">
                     <strong>En çok etkileşim alan haberler</strong>

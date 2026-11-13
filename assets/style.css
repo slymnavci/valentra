@@ -3897,6 +3897,33 @@ a.menu-oge-network:hover .menu-network { transform: translateY(-1px); box-shadow
 .nw-bant-uye { display: inline-flex; align-items: center; gap: 8px; padding: 3px 12px 3px 3px; border-radius: 22px; color: var(--metin); text-decoration: none; font-weight: 700; }
 .nw-bant-uye:hover, .nw-bant-uye.aktif { background: var(--zemin); }
 .nw-bant-giris, .nw-bant-kayit { min-height: 38px !important; padding: 0 14px !important; }
+/* Hesap menusu (13.11.2026): ust bandin sagindaki uye adinin acilir menusu;
+   ziyaretcide "Uye ol" menusu. */
+.nw-hesap-menu { position: relative; }
+.nw-hesap-menu > summary { list-style: none; cursor: pointer; user-select: none; }
+.nw-hesap-menu > summary::-webkit-details-marker { display: none; }
+.nw-hesap-menu > summary.nw-bant-uye { position: relative; padding-right: 10px; }
+.nw-hesap-menu > summary .nw-rozet { margin-left: -2px; }
+.nw-hesap-ok { color: var(--metin-soluk); transition: transform .15s; }
+.nw-hesap-menu[open] .nw-hesap-ok { transform: rotate(180deg); }
+.nw-hesap-liste {
+    position: absolute; right: 0; top: calc(100% + 8px); z-index: 60; min-width: 230px;
+    display: grid; gap: 2px; padding: 8px;
+    background: var(--kart); border: 1px solid var(--cizgi); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, .18);
+}
+.nw-hesap-liste > a:not(.uye-dugme), .nw-hesap-liste button[role="menuitem"] {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%;
+    padding: 9px 12px; border: none; border-radius: 8px; background: none; text-align: left;
+    color: var(--metin); font: inherit; font-weight: 600; font-size: .94rem; text-decoration: none; cursor: pointer;
+}
+.nw-hesap-liste > a:not(.uye-dugme):hover, .nw-hesap-liste button[role="menuitem"]:hover { background: var(--zemin); color: var(--altin); }
+.nw-hesap-liste hr { width: 100%; margin: 4px 0; border: none; border-top: 1px solid var(--cizgi); }
+.nw-hesap-liste form { margin: 0; }
+.nw-hesap-uyelik { min-width: 270px; padding: 16px; gap: 8px; }
+.nw-hesap-uyelik strong { font-size: 1rem; }
+.nw-hesap-uyelik p { margin: 0 0 4px; font-size: .86rem; color: var(--metin-soluk); }
+.nw-hesap-uyelik .uye-dugme { width: 100%; text-align: center; justify-content: center; }
+.nw-hesap-liste > a.nw-hesap-kucuk { justify-content: center; font-size: .8rem; font-weight: 600; color: var(--metin-soluk); padding: 4px; }
 .nw-sol-cikis button:hover { color: var(--altin); }
 
 /*
@@ -3963,7 +3990,8 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
     .nw-bant-menu .nw-rozet { top: 2px; right: calc(50% - 22px); }
     .nw-bant-uye span { display: none; }
     .nw-bant-uye { padding: 2px; }
-    .nw-bant-kayit { display: none !important; }
+    /* Telefonda "Uye ol" menusu gorunur (13.11.2026): ziyaretci sagdan uye olur. */
+    .nw-bant-giris { display: none !important; }
 }
 
 /* E-posta dogrulama hatirlatmasi (31.10.2026) */
