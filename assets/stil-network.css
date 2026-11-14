@@ -437,7 +437,7 @@ a.nw-hesap:hover { color: var(--altin); }
 }
 .nw-ulke > summary::-webkit-details-marker { display: none; }
 .nw-ulke > summary:hover { background: color-mix(in srgb, var(--metin) 7%, transparent); }
-.nw-ulke > summary::after { content: "▸"; color: var(--metin-soluk); font-size: .8rem; transition: transform .15s; }
+.nw-ulke > summary::after { content: "▸"; margin-left: auto; color: var(--metin-soluk); font-size: .8rem; transition: transform .15s; }
 .nw-ulke[open] > summary::after { transform: rotate(90deg); }
 .nw-ulke > summary small { margin-left: auto; color: var(--metin-soluk); font-weight: 600; font-size: .74rem; }
 .nw-ulke-ic { display: grid; gap: 1px; padding: 0 0 6px 10px; border-left: 2px solid var(--cizgi); margin-left: 12px; }

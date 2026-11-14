@@ -344,7 +344,7 @@ $solKenar = static function () use ($sayfa): void {
         $nwSatir = static function (string $slug, array $g) use ($nwGazete): string {
             return '<a class="nw-sol-satir' . ($nwGazete === $slug ? ' aktif' : '') . '" href="' . e(nw_yol('', ['gazete' => $slug])) . '" data-konu=""'
                 . ($nwGazete === $slug ? ' aria-current="page"' : '') . '><span class="nw-sol-ad">' . nw_gazete_simge_html($slug, (string) $g['ad'])
-                . '<span>' . e((string) $g['ad']) . '</span></span><small>' . (int) $g['adet'] . '</small></a>';
+                . '<span>' . e((string) $g['ad']) . '</span></span></a>';
         };
         ?>
         <?php if ($nwGruplar !== []): ?>
@@ -355,13 +355,13 @@ $solKenar = static function () use ($sayfa): void {
                 <?php foreach ($nwGruplar as $grup): ?>
                     <?php $secili = isset($grup['ana'][$nwGazete]) || isset($grup['yerel'][$nwGazete]); ?>
                     <details class="nw-ulke" data-ulke="<?= e($grup['kod']) ?>"<?= $grup['kod'] === 'tr' || $secili ? ' open' : '' ?>>
-                        <summary><?= nw_bayrak_html($grup['kod']) ?><span><?= e($grup['ad']) ?></span><small><?= (int) $grup['adet'] ?></small></summary>
+                        <summary><?= nw_bayrak_html($grup['kod']) ?><span><?= e($grup['ad']) ?></span></summary>
                         <div class="nw-ulke-ic">
                             <?php if ($grup['kod'] === 'tr' && $grup['ana'] !== []): ?><span class="nw-ulke-alt">Ana gazeteler</span><?php endif; ?>
                             <?php foreach ($grup['ana'] as $slug => $g): ?><?= $nwSatir((string) $slug, $g) ?><?php endforeach; ?>
                             <?php if ($grup['yerel'] !== []): ?>
                                 <details class="nw-ulke nw-ulke-yerel" data-ulke="<?= e($grup['kod']) ?>-yerel"<?= isset($grup['yerel'][$nwGazete]) ? ' open' : '' ?>>
-                                    <summary><span>Yerel gazeteler</span><small><?= count($grup['yerel']) ?></small></summary>
+                                    <summary><span>Yerel gazeteler</span></summary>
                                     <div class="nw-ulke-ic">
                                         <?php foreach ($grup['yerel'] as $slug => $g): ?><?= $nwSatir((string) $slug, $g) ?><?php endforeach; ?>
                                     </div>
@@ -543,8 +543,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 <header class="nw-gazete-ust">
                     <h1><?= nw_gazete_simge_html($gazete, $gazeteler[$gazete]['ad'], 28) ?><?= e($gazeteler[$gazete]['ad']) ?>
                         <small><?= nw_bayrak_html($gazeteler[$gazete]['ulke']) ?><?= e(NW_ULKELER[$gazeteler[$gazete]['ulke']] ?? '') ?></small></h1>
-                    <p>Son üç günde bu yayından özetlenen <?= (int) $gazeteler[$gazete]['adet'] ?> haber. Özetleri Valentra yazdı;
-                        her haberde kaynağın bağlantısı var.</p>
+                    <p>Bu yayından özetlenen haberler. Özetleri Valentra yazdı; her haberde kaynağın bağlantısı var.</p>
                 </header>
             <?php endif; ?>
 
@@ -557,7 +556,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                     <section class="nw-gazete">
                         <header class="nw-gazete-bas">
                             <h3><a href="<?= e(nw_yol('', ['gazete' => $g['slug']])) ?>"><?= nw_gazete_simge_html($g['slug'], $g['ad'], 22) ?><?= e($g['ad']) ?></a></h3>
-                            <a class="nw-gazete-tumu" href="<?= e(nw_yol('', ['gazete' => $g['slug']])) ?>"><?= (int) $g['adet'] ?> haberin tümü →</a>
+                            <a class="nw-gazete-tumu" href="<?= e(nw_yol('', ['gazete' => $g['slug']])) ?>">Haberlerin tümü →</a>
                         </header>
                         <ul class="nw-gazete-liste">
                             <?php foreach ($g['haberler'] as $h): ?>
