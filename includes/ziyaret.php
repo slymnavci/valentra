@@ -578,12 +578,21 @@ function ziyaret_insan_kosulu(string $takma = '', bool $ham = false): string
     return '(' . $p . 'insan = 1 OR ' . $p . 'zaman < ' . db()->quote($baslangic) . ')';
 }
 
-/** Ziyaretçi kimliği ifadesi: tarayıcı kimliği varsa o, yoksa takma imza. */
+/**
+ * Ziyaretçi kimliği ifadesi: HER IP ADRESI BIR KISI (site sahibi, 14.11.2026:
+ * "ziyaretcileri sayarken her IP'yi bir kisi olarak sayalim"). Adres
+ * kaydedilmemis eski satirlarda tarayici kimligi, o da yoksa takma imza.
+ *
+ * Onceki olcu tarayici kimligiydi: ayni evden iki cihaz iki kisi, cerezini
+ * silen ya da gizli sekme acan ayni kisi de her seferinde yeni kisi
+ * sayiliyordu. IP ile sayimda ayni adresi paylasanlar (ev, is yeri, mobil
+ * operatorun ortak adresi) tek kisi; adresi degisen kisi iki kisi sayilir.
+ */
 function ziyaret_kimlik_ifadesi(string $takma = ''): string
 {
     $p = $takma !== '' ? $takma . '.' : '';
 
-    return 'COALESCE(NULLIF(' . $p . "tarayici_id, ''), " . $p . 'ziyaretci)';
+    return 'COALESCE(NULLIF(' . $p . "ip, ''), NULLIF(" . $p . "tarayici_id, ''), " . $p . 'ziyaretci)';
 }
 
 /** Doğrulamanın başladığı an ('' = henüz hiç doğrulama gelmedi). */

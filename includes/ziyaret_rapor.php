@@ -662,11 +662,14 @@ function zr_ziyaretciler(array $a, bool $ham, int $adet = 100): array
  */
 function zr_gezinti(string $kimlik, int $adet = 300): array
 {
-    if (preg_match('/^[0-9a-f]{16}$/', $kimlik) !== 1) {
+    // Kimlik artik IP adresi (14.11.2026); eski baglantilar icin 16 haneli kimlik de gecerli.
+    $ipMi = filter_var($kimlik, FILTER_VALIDATE_IP) !== false;
+
+    if (!$ipMi && preg_match('/^[0-9a-f]{16}$/', $kimlik) !== 1) {
         return [];
     }
 
-    $kosul = ziyaret_yeni_sema() ? '(z.tarayici_id = :a OR z.ziyaretci = :b)' : 'z.ziyaretci = :a';
+    $kosul = $ipMi ? '(z.ip = :a OR z.ip = :b)' : (ziyaret_yeni_sema() ? '(z.tarayici_id = :a OR z.ziyaretci = :b)' : 'z.ziyaretci = :a');
 
     try {
         $ifade = db()->prepare(
@@ -677,12 +680,92 @@ function zr_gezinti(string $kimlik, int $adet = 300): array
               ORDER BY z.id
               LIMIT ' . max(1, min(1000, $adet))
         );
-        $ifade->execute(ziyaret_yeni_sema() ? ['a' => $kimlik, 'b' => $kimlik] : ['a' => $kimlik]);
+        $ifade->execute($ipMi || ziyaret_yeni_sema() ? ['a' => $kimlik, 'b' => $kimlik] : ['a' => $kimlik]);
 
         return $ifade->fetchAll();
     } catch (Throwable $e) {
         return [];
     }
+}
+
+/* ------------------------------------------------------------------ *
+ * Bot suphelileri (14.11.2026)
+ * ------------------------------------------------------------------ */
+
+/** Bir adresin supheli sayilmasi icin esikler. */
+const ZR_BOT_DOGRULANMAMIS_SAYFA = 3;   // hic dogrulanmamis en az bu kadar sayfa
+const ZR_BOT_COK_SAYFA           = 150; // aralikta bu kadar sayfa ve ustu
+const ZR_BOT_HIZ_SAYFA           = 20;  // hiz olcusu icin en az sayfa
+const ZR_BOT_HIZ_SANIYE          = 5;   // sayfa basina bundan kisa ortalama aralik
+
+/**
+ * Bot olma ihtimali olan adresler (site sahibi: "bot olma ihtimali olan
+ * hesaplari ayri bir tabloda bana goster").
+ *
+ * Kendini bot diye tanitanlar (Googlebot, yapay zeka botlari, WhatsApp
+ * onizlemesi...) hic kaydedilmiyor (ziyaret_bot_mu); buradakiler kendini
+ * tarayici gibi gosteren ama su isaretlerden en az birini tasiyan adresler:
+ *
+ *   - dogrulanmadi: actigi hicbir sayfa tarayicida goruntulenmedi (sayfadaki
+ *     betik calismadi) ve en az ZR_BOT_DOGRULANMAMIS_SAYFA sayfa acti,
+ *   - bulut: adres bir bulut / veri merkezi araliginda (ziyaret_bulut.php),
+ *   - cok sayfa: aralikta ZR_BOT_COK_SAYFA ve uzeri sayfa,
+ *   - cok hizli: en az ZR_BOT_HIZ_SAYFA sayfa, sayfa basina ortalama
+ *     ZR_BOT_HIZ_SANIYE saniyeden kisa aralikla.
+ *
+ * Dogrulama yok sayilarak (ham) okunur: rapora girmeyen satirlar da burada.
+ * Supheli olmak kesin bot demek degildir; liste karar vermek icin.
+ *
+ * @return list<array<string,mixed>> ip, sayfa, dogru, ilk, son, cihaz, tarayici, isletim, nedenler (list<string>)
+ */
+function zr_bot_suphelileri(array $a, int $adet = 100): array
+{
+    if (!ziyaret_yeni_sema()) {
+        return [];
+    }
+
+    require_once __DIR__ . '/ziyaret_bulut.php';
+
+    $bulut = ziyaret_bulut_sql_kosulu('z.ip');
+
+    $satirlar = zr_sorgu(
+        "SELECT z.ip, COUNT(*) AS sayfa, SUM(z.insan = 1) AS dogru, MIN(z.zaman) AS ilk, MAX(z.zaman) AS son,
+                TIMESTAMPDIFF(SECOND, MIN(z.zaman), MAX(z.zaman)) AS saniye,
+                MAX(z.cihaz) AS cihaz, MAX(z.tarayici) AS tarayici, MAX(z.isletim) AS isletim,
+                MAX($bulut) AS bulut
+           FROM ziyaretler z
+          WHERE " . zr_kosul($a['bas'], $a['bit'], true) . " AND z.ip <> ''
+          GROUP BY z.ip
+         HAVING (dogru = 0 AND sayfa >= " . ZR_BOT_DOGRULANMAMIS_SAYFA . ")
+             OR bulut = 1
+             OR sayfa >= " . ZR_BOT_COK_SAYFA . "
+             OR (sayfa >= " . ZR_BOT_HIZ_SAYFA . " AND saniye < sayfa * " . ZR_BOT_HIZ_SANIYE . ")
+          ORDER BY sayfa DESC, son DESC
+          LIMIT " . max(1, min(500, $adet))
+    );
+
+    foreach ($satirlar as &$s) {
+        $sayfa = (int) $s['sayfa'];
+        $n     = [];
+
+        if ((int) $s['bulut'] === 1) {
+            $n[] = 'bulut / veri merkezi adresi';
+        }
+        if ((int) $s['dogru'] === 0 && $sayfa >= ZR_BOT_DOGRULANMAMIS_SAYFA) {
+            $n[] = 'hiçbir sayfası tarayıcıda doğrulanmadı';
+        }
+        if ($sayfa >= ZR_BOT_COK_SAYFA) {
+            $n[] = 'çok sayfa';
+        }
+        if ($sayfa >= ZR_BOT_HIZ_SAYFA && (int) $s['saniye'] < $sayfa * ZR_BOT_HIZ_SANIYE) {
+            $n[] = 'çok hızlı (sayfa başına ' . number_format((int) $s['saniye'] / max(1, $sayfa), 1, ',', '') . ' sn)';
+        }
+
+        $s['nedenler'] = $n;
+    }
+    unset($s);
+
+    return $satirlar;
 }
 
 /* ------------------------------------------------------------------ *

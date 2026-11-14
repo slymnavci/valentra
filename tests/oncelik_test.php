@@ -1292,6 +1292,33 @@ senaryo('Y', 'Google ile giriş: kimlik doğrulama, yeni üye, e-postayla eşle�
     ayar_yaz(GOOGLE_GIRIS_GIZLI_AYARI, $eskiG);
 });
 
+senaryo('Z', 'Ziyaret sayımı: her IP bir kişi; bot şüphelileri ayrı listede', static function (): void {
+    require_once __DIR__ . '/../includes/ziyaret.php';
+    require_once __DIR__ . '/../includes/ziyaret_rapor.php';
+
+    db()->exec("DELETE FROM ziyaretler WHERE yol LIKE '/sinama%'");
+    $e = db()->prepare('INSERT INTO ziyaretler (zaman, ziyaretci, ip, yol, insan, tarayici_id, cihaz) VALUES (NOW() - INTERVAL ? SECOND, ?, ?, ?, ?, ?, ?)');
+    $e->execute([60, 'aaaaaaaaaaaaaaaa', '85.100.1.1', '/sinama1', 1, '1111111111111111', 'mobil']);
+    $e->execute([50, 'bbbbbbbbbbbbbbbb', '85.100.1.1', '/sinama2', 1, '2222222222222222', 'masaustu']);
+    $e->execute([40, 'cccccccccccccccc', '88.200.2.2', '/sinama3', 1, '3333333333333333', 'mobil']);
+
+    for ($i = 0; $i < 4; $i++) {
+        $e->execute([30, 'dddddddddddddddd', '45.9.9.9', '/sinama-d' . $i, 0, '', 'masaustu']);
+    }
+    $e->execute([20, 'eeeeeeeeeeeeeeee', '47.74.1.1', '/sinama-b', 1, '5555555555555555', 'masaustu']);
+
+    bekle((int) db()->query("SELECT COUNT(DISTINCT " . zr_kimlik('z') . ") FROM ziyaretler z WHERE z.yol IN ('/sinama1', '/sinama2', '/sinama3')")->fetchColumn() === 2,
+        'aynı IP\'den iki ayrı tarayıcı tek kişi; iki IP iki kişi');
+
+    $bot = array_column(zr_bot_suphelileri(zr_aralik(['aralik' => 'bugun'])), null, 'ip');
+    bekle(isset($bot['45.9.9.9']) && str_contains(implode(' ', $bot['45.9.9.9']['nedenler']), 'doğrulanmadı'), 'hiçbir sayfası doğrulanmayan adres şüpheli listesinde');
+    bekle(isset($bot['47.74.1.1']) && str_contains(implode(' ', $bot['47.74.1.1']['nedenler']), 'bulut'), 'bulut / veri merkezi adresi şüpheli listesinde');
+    bekle(!isset($bot['85.100.1.1']) && !isset($bot['88.200.2.2']), 'olağan okuyucu şüpheli listesinde değil');
+    bekle(count(zr_gezinti('85.100.1.1')) === 2 && zr_gezinti("1' OR '1") === [], 'gezinti IP ile açılıyor; geçersiz kimlik sorguya girmiyor');
+
+    db()->exec("DELETE FROM ziyaretler WHERE yol LIKE '/sinama%'");
+});
+
 temizle();
 
 echo "\n" . str_repeat('─', 60) . "\n";
