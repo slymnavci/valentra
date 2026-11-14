@@ -1088,7 +1088,10 @@ function nw_gazete_adi(string $kaynakAdi): string
     $ad = trim((string) preg_replace('/\s*\([^)]*\)\s*$/u', '', $ad));
     $ad = trim((string) preg_replace('/\s+(Health|Technology|Business|Markets|World|Science|News|İş|Finans|Vergi|Kripto|Borsa|Magazin|Yemek Tarifleri)$/u', '', $ad)) ?: $ad;
 
-    return kaynak_gorunen_ad($ad);
+    $ad = kaynak_gorunen_ad($ad);
+
+    // Ayni yayinin iki adi tek gazetede toplansin (14.11.2026: "Sözcü Gazetesi" ile "Sözcü Gündem" ayri gorunmesin).
+    return ['Sözcü Gazetesi' => 'Sözcü'][$ad] ?? $ad;
 }
 
 /** Yayin adinin adresteki hali: "Habertürk" -> "haberturk". */
