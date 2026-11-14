@@ -1007,6 +1007,9 @@ senaryo('W', 'Kim ne yazdı: aynı olayı hangi yayın hangi başlıkla verdi', 
 senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', static function (): void {
     require_once __DIR__ . '/../includes/topluluk.php';
 
+    // Bu senaryodaki ornek gazetelerin 2-3 haberi var: "Diger" esigi (canlida 40) burada 2.
+    putenv('NW_GAZETE_AYRI_EN_AZ=2');
+
     bekle(nw_gazete_adi('Hürriyet Gündem') === 'Hürriyet' && nw_gazete_adi('TRT Haber Son Dakika') === 'TRT Haber'
         && nw_gazete_adi('DW Türkçe (video)') === 'DW Türkçe', 'bölüm beslemeleri tek yayında toplanıyor (Hürriyet Gündem → Hürriyet)');
     bekle(nw_gazete_slug('Habertürk') === 'haberturk' && nw_gazete_slug('İHA') === 'iha', 'yayın adının adresteki hali');
@@ -1025,10 +1028,17 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     db()->exec("UPDATE haberler SET durum = 'yayinda', yayin_tarihi = NOW() - INTERVAL id MINUTE, guncellendi = guncellendi");
 
     $g = nw_gazeteler();
-    bekle(array_keys($g) === ['hurriyet', 'ntv'] && $g['hurriyet']['adet'] === 3, 'gazete listesi: en çok haberi olan önce; tek haberli kaynaklar listede yok', json_encode(array_map(static fn (array $x): int => $x['adet'], $g)));
+    bekle(array_keys($g) === ['hurriyet', 'ntv', 'diger'] && $g['hurriyet']['adet'] === 3 && $g['diger']['adet'] === 2, 'gazete listesi: en çok haberi olan önce; tek haberli kaynaklar "Diğer"de, en sonda', json_encode(array_map(static fn (array $x): int => $x['adet'], $g)));
+
+    // Canlidaki esikle (40): az haberli Turk gazeteleri tek "Diger gazeteler" satirinda; akisi hepsinin haberleri.
+    $digerli = (array) json_decode((string) shell_exec('NW_GAZETE_AYRI_EN_AZ=40 ' . escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg(
+        'require "' . __DIR__ . '/../includes/bootstrap.php"; require "' . __DIR__ . '/../includes/topluluk.php"; $g = nw_gazeteler();'
+        . 'echo json_encode([array_keys($g), $g["diger"]["adet"] ?? 0, count(nw_akis(30, 0, null, null, "", "diger", true)["ogeler"]), nw_gazete_alani("hurriyet")]);'
+    )), true);
+    bekle($digerli === [['diger'], 7, 7, 'hurriyet.com.tr'], 'az haberli gazeteler "Diğer gazeteler"de toplanıyor; akışı hepsinin haberleri; logoları korunuyor', json_encode($digerli));
 
     $o = nw_gazete_ozetleri(10, 2);
-    bekle(count($o) === 2 && $o[0]['ad'] === 'Hürriyet' && count($o[0]['haberler']) === 2, '"gazete gazete" görünüm: her yayının son haberleri');
+    bekle(count($o) === 3 && $o[0]['ad'] === 'Hürriyet' && count($o[0]['haberler']) === 2, '"gazete gazete" görünüm: her yayının son haberleri');
 
     $akis = nw_akis(20, 0, null, null, '', 'hurriyet');
     $adlar = array_unique(array_map(static fn (array $x): string => (string) $x['tur'], $akis['ogeler']));
@@ -1055,7 +1065,7 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
         'require "' . __DIR__ . '/../includes/bootstrap.php"; require "' . __DIR__ . '/../includes/topluluk.php";'
         . 'echo json_encode(array_map(fn($g) => [$g["kod"], array_keys($g["ana"]), array_keys($g["yerel"])], nw_gazete_gruplari()));'
     )), true);
-    bekle($gruplar === [['tr', ['hurriyet'], ['test-yerel-gazete']], ['gb', ['test-guardian'], []]],
+    bekle($gruplar === [['tr', ['hurriyet', 'diger'], ['test-yerel-gazete']], ['gb', ['test-guardian'], []]],
         'gruplar: Türkiye (ana: Hürriyet, yerel: yerel gazete), sonra Birleşik Krallık', json_encode($gruplar, JSON_UNESCAPED_UNICODE));
     db()->exec("DELETE FROM kaynaklar WHERE id IN ($gId, $yId)");
 
