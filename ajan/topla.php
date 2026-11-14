@@ -1279,6 +1279,35 @@ foreach ($kaynaklar as $kaynak) {
         continue;
     }
 
+    /*
+     * MANSET LISTELERI ZAMAN PENCERESINE BAKILMADAN BILDIRILIR (14.11.2026;
+     * TRT Haber Manset ve gazetelerin "Ana Sayfa" beslemeleri).
+     * Liste akis degil, editorun SU AN mansette tuttugu haberler; cogu iki
+     * saatten eski. Toplama penceresi (2 saat, nobette 1) bunlari eledigi
+     * icin besleme 9 calismanin 8'inde "yeni girdi yok" dondu ve "TRT
+     * mansetinde" puani hic verilmedi. Sinyal icin son 24 saatin girdileri
+     * okunur ve zamani "simdi" yazilir (haber su an mansette); aday secimi
+     * degismez, eski haber yine toplanmaz.
+     */
+    if (preg_match('/ (Manşet|Ana Sayfa)$/u', (string) $kaynak['ad']) === 1 && $beslemeUrl !== ''
+        && in_array(kaynak_yayincisi($kaynak), GUNDEM_YAYINLARI, true)) {
+        try {
+            $mansettekiler = $besleme->oku($beslemeUrl, 24);
+        } catch (Throwable $e) {
+            $mansettekiler = [];
+        }
+
+        foreach ($mansettekiler as $g) {
+            $gundemSinyalleri[] = [
+                'baslik' => (string) $g['baslik'], 'yayin' => kaynak_yayincisi($kaynak), 'manset' => true, 'zaman' => time(),
+                'adres'  => (string) ($g['baglanti'] ?? ''),
+                'ozet'   => mb_substr(trim(strip_tags((string) ($g['ozet'] ?? ''))), 0, 400, 'UTF-8'),
+            ];
+        }
+
+        gunluk('  ' . $kaynak['ad'] . ': ' . count($mansettekiler) . ' manşet başlığı gündem puanı için bildirilecek.');
+    }
+
     if ($girdiler === []) {
         /*
          * SEBEBI YAZ, "okunamadi" deyip gecme.
@@ -1333,7 +1362,8 @@ foreach ($kaynaklar as $kaynak) {
         // adinin sonu "Manşet" ya da "Ana Sayfa". Bu basliklar "Gazetelerin manşetleri"nde one gecer.
         $mansetListesi = preg_match('/ (Manşet|Ana Sayfa)$/u', (string) $kaynak['ad']) === 1;
 
-        foreach ($girdiler as $g) {
+        // Manset listeleri yukarida, zaman penceresinden bagimsiz bildirildi.
+        foreach ($mansetListesi ? [] : $girdiler as $g) {
             $z = ($g['tarih'] ?? null) !== null ? (int) strtotime((string) $g['tarih']) : 0;
 
             if ($z > 0 && $z < time() - 12 * 3600) {

@@ -85,7 +85,9 @@ jobs:
           OPENAI_MODEL:        ${{ secrets.OPENAI_MODEL }}
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
-        run: php topla.php --nobet --saat=1 --konu=gundem,politika
+        # --saat=2: bir saatlik pencere onceliklilerin cogunu "eski" diye eliyordu
+        # (14.11.2026: 8 adayin 7'si); nobet seyrek calistiginda arada kalan haber kacmasin.
+        run: php topla.php --nobet --saat=2 --konu=gundem,politika
 
       # Gorsel denetimi nobette de (13.11.2026): kayan mansete yalnizca
       # gorseli denetlenmis (uzerinde gazete/kanal/ajans adi olmayan) haber
