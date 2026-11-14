@@ -1310,10 +1310,18 @@ senaryo('Z', 'Ziyaret sayımı: her IP bir kişi; bot şüphelileri ayrı listed
     bekle((int) db()->query("SELECT COUNT(DISTINCT " . zr_kimlik('z') . ") FROM ziyaretler z WHERE z.yol IN ('/sinama1', '/sinama2', '/sinama3')")->fetchColumn() === 2,
         'aynı IP\'den iki ayrı tarayıcı tek kişi; iki IP iki kişi');
 
+    // Ziyaretci = haber okuyan IP (14.11.2026): yalnizca 85.100.1.1 haber okudu.
+    db()->exec("UPDATE ziyaretler SET haber_id = 1 WHERE yol = '/sinama1'");
+    $okurlu = zr_olculer(date('Y-m-d'), date('Y-m-d'), false);
+    $hamOlcu = zr_olculer(date('Y-m-d'), date('Y-m-d'), true);
+    bekle($okurlu['ziyaretci'] === 1 && $okurlu['goruntulenme'] === 2 && $hamOlcu['ziyaretci'] === 4,
+        'ziyaretçi = haber okuyan IP: okumayan adresler (ve sayfaları) sayılmıyor; ham sayımda hepsi', json_encode([$okurlu['ziyaretci'], $okurlu['goruntulenme'], $hamOlcu['ziyaretci']]));
+
     $bot = array_column(zr_bot_suphelileri(zr_aralik(['aralik' => 'bugun'])), null, 'ip');
     bekle(isset($bot['45.9.9.9']) && str_contains(implode(' ', $bot['45.9.9.9']['nedenler']), 'doğrulanmadı'), 'hiçbir sayfası doğrulanmayan adres şüpheli listesinde');
     bekle(isset($bot['47.74.1.1']) && str_contains(implode(' ', $bot['47.74.1.1']['nedenler']), 'bulut'), 'bulut / veri merkezi adresi şüpheli listesinde');
-    bekle(!isset($bot['85.100.1.1']) && !isset($bot['88.200.2.2']), 'olağan okuyucu şüpheli listesinde değil');
+    bekle(!isset($bot['85.100.1.1']) && isset($bot['88.200.2.2']) && str_contains(implode(' ', $bot['88.200.2.2']['nedenler']), 'haber okumadı'),
+        'haber okuyan şüpheli listesinde değil; hiç haber okumayan "hiç haber okumadı" diye listede');
     bekle(count(zr_gezinti('85.100.1.1')) === 2 && zr_gezinti("1' OR '1") === [], 'gezinti IP ile açılıyor; geçersiz kimlik sorguya girmiyor');
 
     db()->exec("DELETE FROM ziyaretler WHERE yol LIKE '/sinama%'");
