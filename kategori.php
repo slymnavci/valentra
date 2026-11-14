@@ -103,6 +103,7 @@ if ($kategori['slug'] === 'spor') {
     if (isset(SPOR_BOLUMLERI[$istenen]) || isset(SPOR_ALT_BOLUMLER[$istenen])) {
         $sporBolum     = $istenen;
         $aktifKategori = match ($sporBolum) {
+            'canli-skor'   => 'spor-canli',
             'puan-durumu'  => 'spor-puan',
             'fikstur'      => 'spor-fikstur',
             'gol-kralligi' => 'spor-gol',
@@ -110,9 +111,10 @@ if ($kategori['slug'] === 'spor') {
             default        => 'spor',
         };
 
-        $ligAdi = futbol_api_acik()
+        // Canli skorlar (14.11.2026) butun liglerin maclarini verir: baslikta lig adi yok.
+        $ligAdi = $sporBolum === 'canli-skor' ? '' : (futbol_api_acik()
             ? (futbol_lig_katalog_adi($sporP['lig']) ?: (string) (futbol_lig($sporP['lig'])['ad'] ?? ''))
-            : 'Süper Lig';
+            : 'Süper Lig');
         $baslik = SPOR_BOLUMLERI[$sporBolum] ?? SPOR_ALT_BOLUMLER[$sporBolum];
 
         // Bolum sayfasinin kanonigi kendisi (28.10.2026 Google denetimi):
@@ -155,7 +157,7 @@ require __DIR__ . '/includes/sayfa_ust.php';
 <?php endif; ?>
 
 <?php if ($kategori['slug'] === 'spor'): ?>
-    <?php if (isset(SPOR_BOLUMLERI[$sporBolum])): ?>
+    <?php if (isset(SPOR_BOLUMLERI[$sporBolum]) && $sporBolum !== 'canli-skor'): ?>
         <?= spor_secici_html($sporBolum, $sporP) ?>
     <?php endif; ?>
 <?php endif; ?>

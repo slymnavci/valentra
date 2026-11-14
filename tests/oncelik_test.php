@@ -1050,6 +1050,19 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     bekle(str_contains(nw_konu_ikonu('ekonomi'), '<svg') && str_contains(nw_bayrak_html('de'), '/assets/bayrak/de.svg') && nw_bayrak_html('xx') === '',
         'başlık ikonu ve ülke bayrağı üretiliyor; bilinmeyen ülkeye bayrak yok');
     bekle(str_contains(nw_gazete_simge_html('hurriyet', 'Hürriyet'), '>H<') , 'gazete simgesi yüklenemezse adın baş harfi görünür');
+
+    // Sag kenar kutulari (14.11.2026): kaynaklari beklemez, veri yoksa da cizilir.
+    $eko = nw_ekonomi_kutusu_html();
+    bekle(str_contains($eko, 'Döviz') && str_contains($eko, 'Kripto paralar') && str_contains($eko, 'bolum=doviz') && !str_contains($eko, '—'),
+        'ekonomi kutusu: döviz, borsa, altın, kripto bağlantıları; değer yokken çizgi yerine açıklama');
+    $spor = nw_spor_kutusu_html();
+    bekle(strpos($spor, 'Canlı skorlar') < strpos($spor, 'Puan durumları') && str_contains($spor, 'bolum=canli-skor') && str_contains($spor, 'bolum=fikstur'),
+        'spor kutusu: en başta canlı skorlar, sonra puan durumları ve fikstür');
+    bekle(nw_spor_skor_satirlari_html([['canli' => true, 'durum' => 'LIVE', 'durum_yazi' => "34'", 'saat' => '20:00', 'ev' => 'A <b>', 'dep' => 'B', 'ev_gol' => 1, 'dep_gol' => 0, 'adres' => '/x']])
+        === '<a class="nw-skor canli" href="/x"><span class="nw-skor-durum">34&#039;</span><span class="nw-skor-takim">A &lt;b&gt;</span><b class="nw-skor-sonuc">1 - 0</b><span class="nw-skor-takim">B</span></a>',
+        'canlı skor satırı: dakika, takımlar, skor; takım adı güvenli yazılıyor');
+    require_once __DIR__ . '/../includes/spor_panel.php';
+    bekle(array_key_first(SPOR_BOLUMLERI) === 'canli-skor' && str_contains(spor_bolum_yolu('canli-skor'), 'bolum=canli-skor'), 'spor bölümlerinde ilk sırada Canlı Skorlar');
 });
 
 senaryo('Y', 'Google ile giriş: kimlik doğrulama, yeni üye, e-postayla eşleşen üyelik, engeller', static function (): void {

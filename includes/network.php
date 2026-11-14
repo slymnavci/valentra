@@ -1131,6 +1131,161 @@ function nw_gazete_ozetleri(int $gazeteAdet = 10, int $haberAdet = 4): array
     return $liste;
 }
 
+/* --- Sag kenar: ekonomi ve spor kutulari (14.11.2026) ----------------------
+ *
+ * Site sahibinin istegi: "Sagdaki kutuda: bir kutuda ekonomi alt basliklari
+ * (doviz, borsa, kripto paralar); altinda spor: en basta canli skorlar,
+ * puan durumlari, fiksturler. Tikladigimizda canli sporda ne oluyorsa onu
+ * gostersin." Degerler sitenin kendi canli verisinden (piyasa onbellegi,
+ * buyuk_maclar); kutu kaynaklari BEKLEMEZ: onbellekte ne varsa onu yazar.
+ * ---------------------------------------------------------------------- */
+
+/** "42,15" / "9.850" */
+function nw_sayi(?float $d, int $hane = 2): string
+{
+    return $d === null ? '—' : number_format($d, $hane, ',', '.');
+}
+
+/** Gunluk degisim rozeti; veri yoksa bos. */
+function nw_degisim_html(?float $yuzde): string
+{
+    if ($yuzde === null) {
+        return '';
+    }
+
+    return '<small class="nw-degisim ' . ($yuzde > 0 ? 'artti' : ($yuzde < 0 ? 'dustu' : '')) . '">'
+        . ($yuzde > 0 ? '▲' : ($yuzde < 0 ? '▼' : '')) . ' %' . number_format(abs($yuzde), 2, ',', '.') . '</small>';
+}
+
+function nw_ekonomi_kutusu_html(): string
+{
+    try {
+        require_once __DIR__ . '/piyasa.php';
+        require_once __DIR__ . '/piyasa_panel.php';
+        require_once __DIR__ . '/piyasa_tablolari.php';
+
+        $p   = piyasa_onbellekten(true) ?? [];
+        $btc = canli_onbellek_oku('tablo_kripto')['veri']['BTC-USD']['fiyat'] ?? null;
+    } catch (Throwable $e) {
+        return '';
+    }
+
+    // Deger onbellekte yoksa cizgi yerine bolumun icerigi yazilir.
+    $satirlar = [
+        ['Döviz', 'doviz', isset($p['usd'], $p['eur']) ? 'Dolar ' . nw_sayi((float) $p['usd']) . ' · Euro ' . nw_sayi((float) $p['eur']) : 'Dolar, euro, sterlin ve pariteler', $p['usd_degisim'] ?? null],
+        ['Borsa', 'bist', isset($p['bist']) ? 'BIST 100 ' . nw_sayi((float) $p['bist'], 0) : 'BIST 100, endeksler ve hisseler', $p['bist_degisim'] ?? null],
+        ['Altın', 'altin', isset($p['altin']) ? 'Gram ' . nw_sayi((float) $p['altin'], 0) . ' TL' : 'Gram, çeyrek ve ons altın', $p['altin_degisim'] ?? null],
+        ['Kripto paralar', 'kripto', $btc !== null ? 'Bitcoin ' . nw_sayi((float) $btc, 0) . ' $' : 'Bitcoin, Ethereum ve diğerleri', null],
+        ['Emtia', 'petrol', 'Petrol, gümüş, doğal gaz', null],
+        ['Dünya borsaları', 'dunya', 'S&P 500, DAX, Nikkei', null],
+    ];
+
+    $html = '';
+
+    foreach ($satirlar as [$ad, $bolum, $deger, $degisim]) {
+        $html .= '<a class="nw-kutu-satir" href="' . e(piyasa_bolum_yolu($bolum)) . '"><span><strong>' . e($ad) . '</strong><em>' . e($deger) . '</em></span>'
+            . nw_degisim_html(is_numeric($degisim) ? (float) $degisim : null) . '</a>';
+    }
+
+    return '<div class="nw-yan-kutu nw-kutu-liste"><strong class="nw-kutu-bas">' . nw_konu_ikonu('ekonomi') . 'Ekonomi</strong>' . $html
+        . '<a class="nw-kutu-tumu" href="' . e(piyasalar_yolu()) . '">Bütün piyasalar →</a></div>';
+}
+
+/** Spor kutusundaki canli skor satirlari (api/canli-skor.php ile ayni veri). */
+function nw_spor_skor_satirlari_html(array $maclar, int $adet = 4): string
+{
+    $html = '';
+
+    foreach (array_slice($maclar, 0, $adet) as $m) {
+        $oynandi = $m['canli'] || in_array($m['durum'], FUTBOL_BITTI, true);
+
+        $html .= '<a class="nw-skor' . ($m['canli'] ? ' canli' : '') . '" href="' . e((string) $m['adres']) . '">'
+            . '<span class="nw-skor-durum">' . e($m['canli'] || $oynandi ? (string) $m['durum_yazi'] : (string) $m['saat']) . '</span>'
+            . '<span class="nw-skor-takim">' . e((string) $m['ev']) . '</span>'
+            . '<b class="nw-skor-sonuc">' . ($oynandi ? (int) $m['ev_gol'] . ' - ' . (int) $m['dep_gol'] : 'vs') . '</b>'
+            . '<span class="nw-skor-takim">' . e((string) $m['dep']) . '</span></a>';
+    }
+
+    return $html;
+}
+
+function nw_spor_kutusu_html(): string
+{
+    try {
+        require_once __DIR__ . '/buyuk_mac.php';
+        require_once __DIR__ . '/spor_panel.php';
+        require_once __DIR__ . '/mac_ozeti.php';
+
+        // Onbellekten (false): sayfa uretimi ESPN'i beklemez; tazesi betikle gelir.
+        $maclar = buyuk_maclar(false);
+    } catch (Throwable $e) {
+        $maclar = [];
+    }
+
+    $canli = count(array_filter($maclar, static fn (array $m): bool => !empty($m['canli'])));
+
+    return '<div class="nw-yan-kutu nw-kutu-liste nw-spor-kutu" data-canli-skor="/api/canli-skor.php">'
+        . '<strong class="nw-kutu-bas">' . nw_konu_ikonu('spor') . 'Spor</strong>'
+        . '<a class="nw-kutu-satir nw-canli-bas" href="' . e(spor_bolum_yolu('canli-skor')) . '"><span><strong>'
+        . '<i class="nw-canli-nokta' . ($canli > 0 ? ' yaniyor' : '') . '" aria-hidden="true"></i>Canlı skorlar</strong>'
+        . '<em class="nw-canli-ozet">' . ($canli > 0 ? $canli . ' maç oynanıyor' : ($maclar !== [] ? 'Bugünün maçları' : 'Bugünün maçları ve sonuçları')) . '</em></span><small>→</small></a>'
+        . '<div class="nw-skorlar">' . nw_spor_skor_satirlari_html($maclar) . '</div>'
+        . '<a class="nw-kutu-satir" href="' . e(spor_bolum_yolu('puan-durumu')) . '"><span><strong>Puan durumları</strong><em>Süper Lig ve Avrupa ligleri</em></span></a>'
+        . '<a class="nw-kutu-satir" href="' . e(spor_bolum_yolu('fikstur')) . '"><span><strong>Fikstür</strong><em>Haftanın maçları ve sonuçlar</em></span></a>'
+        . '<a class="nw-kutu-satir" href="' . e(spor_bolum_yolu('gol-kralligi')) . '"><span><strong>Gol krallığı</strong><em>Gol ve asist sıralaması</em></span></a>'
+        . '<a class="nw-kutu-satir" href="' . e(mac_ozetleri_yolu()) . '"><span><strong>Maç özetleri</strong><em>Videolu özetler</em></span></a>'
+        . '<a class="nw-kutu-tumu" href="' . e(nw_yol('', ['konu' => 'spor'])) . '">Spor haberleri →</a></div>'
+        . nw_spor_kutusu_betigi();
+}
+
+/**
+ * Spor kutusundaki skorlari canli tutar: api/canli-skor.php'yi, ucun
+ * soyledigi aralikla (mac oynanirken ~20 sn, yoksa 5 dk) yeniden sorar.
+ * Sayfa onbellekten gelse de skorlar taze olur. Sekme arkadayken sormaz.
+ */
+function nw_spor_kutusu_betigi(): string
+{
+    return <<<'JS'
+<script>
+(function () {
+    var k = document.querySelector('.nw-spor-kutu[data-canli-skor]');
+    if (!k || !window.fetch) { return; }
+    var liste = k.querySelector('.nw-skorlar'), nokta = k.querySelector('.nw-canli-nokta'), ozet = k.querySelector('.nw-canli-ozet');
+    function yaz(d) {
+        var m = (d.maclar || []).slice(0, 4), canli = 0;
+        liste.textContent = '';
+        m.forEach(function (x) {
+            var bitti = ['FT', 'AET', 'PEN'].indexOf(x.durum) !== -1, oynandi = x.canli || bitti;
+            if (x.canli) { canli++; }
+            var a = document.createElement('a');
+            a.className = 'nw-skor' + (x.canli ? ' canli' : '');
+            a.href = x.adres;
+            [['nw-skor-durum', oynandi ? x.durum_yazi : x.saat], ['nw-skor-takim', x.ev],
+             ['nw-skor-sonuc', oynandi ? (x.ev_gol || 0) + ' - ' + (x.dep_gol || 0) : 'vs'], ['nw-skor-takim', x.dep]].forEach(function (p, i) {
+                var e = document.createElement(i === 2 ? 'b' : 'span');
+                e.className = p[0]; e.textContent = p[1]; a.appendChild(e);
+            });
+            liste.appendChild(a);
+        });
+        (d.maclar || []).forEach(function (x, i) { if (i >= 4 && x.canli) { canli++; } });
+        nokta.classList.toggle('yaniyor', canli > 0);
+        ozet.textContent = canli > 0 ? canli + ' maç oynanıyor' : 'Bugünün maçları ve sonuçları';
+    }
+    function sor() {
+        if (document.hidden) { setTimeout(sor, 15000); return; }
+        fetch(k.getAttribute('data-canli-skor'), { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (d) {
+            yaz(d);
+            // Mac yokken uc "sorma" (0) der; kutu hep gorundugu icin bes dakikada bir yine sorulur:
+            // sayfa acikken baslayan mac kutuya dusmeli.
+            setTimeout(sor, (d.yenile > 0 ? Math.max(15, d.yenile) : 300) * 1000);
+        }).catch(function () { setTimeout(sor, 120000); });
+    }
+    sor();
+})();
+</script>
+JS;
+}
+
 /* --- Sag kenar: gundem -------------------------------------------------- */
 
 /*

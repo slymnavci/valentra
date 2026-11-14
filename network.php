@@ -347,13 +347,13 @@ $solKenar = static function () use ($sayfa): void {
                    <?= $nwTumu ? 'aria-current="page"' : '' ?>><span class="nw-sol-ad"><?= nw_konu_ikonu('gundem') ?>Tüm gazeteler</span></a>
                 <?php foreach ($nwGruplar as $grup): ?>
                     <?php $secili = isset($grup['ana'][$nwGazete]) || isset($grup['yerel'][$nwGazete]); ?>
-                    <details class="nw-ulke"<?= $grup['kod'] === 'tr' || $secili ? ' open' : '' ?>>
+                    <details class="nw-ulke" data-ulke="<?= e($grup['kod']) ?>"<?= $grup['kod'] === 'tr' || $secili ? ' open' : '' ?>>
                         <summary><?= nw_bayrak_html($grup['kod']) ?><span><?= e($grup['ad']) ?></span><small><?= (int) $grup['adet'] ?></small></summary>
                         <div class="nw-ulke-ic">
                             <?php if ($grup['kod'] === 'tr' && $grup['ana'] !== []): ?><span class="nw-ulke-alt">Ana gazeteler</span><?php endif; ?>
                             <?php foreach ($grup['ana'] as $slug => $g): ?><?= $nwSatir((string) $slug, $g) ?><?php endforeach; ?>
                             <?php if ($grup['yerel'] !== []): ?>
-                                <details class="nw-ulke nw-ulke-yerel"<?= isset($grup['yerel'][$nwGazete]) ? ' open' : '' ?>>
+                                <details class="nw-ulke nw-ulke-yerel" data-ulke="<?= e($grup['kod']) ?>-yerel"<?= isset($grup['yerel'][$nwGazete]) ? ' open' : '' ?>>
                                     <summary><span>Yerel gazeteler</span><small><?= count($grup['yerel']) ?></small></summary>
                                     <div class="nw-ulke-ic">
                                         <?php foreach ($grup['yerel'] as $slug => $g): ?><?= $nwSatir((string) $slug, $g) ?><?php endforeach; ?>
@@ -366,6 +366,42 @@ $solKenar = static function () use ($sayfa): void {
             </nav>
         <?php endif; ?>
     </aside>
+    <?php /* MENU YERINDEN OYNAMASIN (site sahibi, 14.11.2026: "gazeteye tikladigimizda menu
+             yerinden oynamasin, sadece ortadaki sayfa degissin"). Sayfa yeniden yuklense de
+             sol kenarin acik ulke gruplari ve kaydirma konumu oturum belleginden HEMEN
+             (cizimden once, bu satirda) geri yuklenir; menu ayni yerde kalir. */ ?>
+    <script>
+    (function () {
+        var sol = document.querySelector('.nw-sol');
+        if (!sol) { return; }
+        var bellek = null;
+        try { bellek = window.sessionStorage; } catch (e) { bellek = null; }
+        var gruplar = sol.querySelectorAll('details[data-ulke]');
+
+        try {
+            var kayit = bellek ? JSON.parse(bellek.getItem('nw-sol') || 'null') : null;
+            if (kayit && kayit.acik) {
+                gruplar.forEach(function (d) {
+                    // Secili gazetenin grubu sunucudan acik gelir; o kapatilmaz.
+                    if (kayit.acik.indexOf(d.getAttribute('data-ulke')) !== -1) { d.open = true; }
+                    else if (!d.querySelector('.nw-sol-satir.aktif')) { d.open = false; }
+                });
+                sol.scrollTop = kayit.kaydirma || 0;
+            }
+        } catch (e) {}
+
+        function yaz() {
+            if (!bellek) { return; }
+            var acik = [];
+            gruplar.forEach(function (d) { if (d.open) { acik.push(d.getAttribute('data-ulke')); } });
+            try { bellek.setItem('nw-sol', JSON.stringify({ acik: acik, kaydirma: sol.scrollTop })); } catch (e) {}
+        }
+
+        gruplar.forEach(function (d) { d.addEventListener('toggle', yaz); });
+        sol.addEventListener('click', yaz, true);
+        window.addEventListener('pagehide', yaz);
+    })();
+    </script>
     <?php
 };
 
@@ -532,6 +568,9 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                     <a class="uye-dugme uye-dugme-ikincil" href="<?= e(uye_yolu('giris', nw_yol())) ?>">Giriş yap</a>
                 </div>
             <?php endif; ?>
+            <?php /* Ekonomi ve spor kutulari (14.11.2026; bkz. nw_ekonomi_kutusu_html, nw_spor_kutusu_html). */ ?>
+            <?= nw_ekonomi_kutusu_html() ?>
+            <?= nw_spor_kutusu_html() ?>
             <?php if ($etkilesimHaberleri !== []): ?>
                 <div class="nw-yan-kutu nw-gundem">
                     <strong>En çok etkileşim alan haberler</strong>
