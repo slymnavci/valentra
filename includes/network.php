@@ -706,7 +706,7 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
                " . ($gundem ? haber_okunma_birlesimi() : '') . "
               WHERE h.durum = :d" . ($turkiyeGundemi ? nw_turkiye_gundemi_kosulu() : '') . " AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
                 AND h.yayin_tarihi < FROM_UNIXTIME(:once)" . $gazeteKosulu . ($konu === 'spor' ? nw_spor_dal_kosulu($dal) : '') . "
-              ORDER BY " . ($gundem ? haber_sirasi(true) . ', ' : ($onemli ? "DATE(h.yayin_tarihi) DESC, (h.manset_yayinlar LIKE '%(manşette)%') DESC, h.manset_sinyal DESC, h.onem DESC, " : '')) . "h.yayin_tarihi DESC, h.id DESC LIMIT :l" . ($gundem || $onemli ? ' OFFSET ' . $atla : '')
+              ORDER BY " . ($gundem ? haber_sirasi(true) . ', ' : ($onemli ? "DATE(h.yayin_tarihi) DESC, (h.manset_yayinlar LIKE '%manşet%') DESC, h.manset_sinyal DESC, h.onem DESC, " : '')) . "h.yayin_tarihi DESC, h.id DESC LIMIT :l" . ($gundem || $onemli ? ' OFFSET ' . $atla : '')
         );
         $ifade->bindValue('d', HABER_YAYINDA);
         $ifade->bindValue('once', $once, PDO::PARAM_INT);
