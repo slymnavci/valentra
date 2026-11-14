@@ -505,3 +505,9 @@ a.nw-hesap:hover { color: var(--altin); }
 .nw-skor-sonuc { font-variant-numeric: tabular-nums; font-weight: 800; }
 /* Sag kenar ekrandan uzunsa kendi icinde kayar (kutular artti). */
 .nw-sag { max-height: calc(100vh - 92px); overflow-y: auto; scrollbar-width: thin; padding-right: 4px; align-content: start; }
+
+/* Spor dallari (14.11.2026): Spor basliginin ustunde Tumu / Futbol / Basketbol / Diger. */
+.nw-dallar { display: flex; gap: 8px; margin: 0 0 14px; padding: 6px; background: var(--kart); border: 1px solid var(--cizgi); border-radius: var(--yuvarlak); box-shadow: var(--golge); overflow-x: auto; }
+.nw-dallar a { flex: 1 0 auto; padding: 10px 18px; border-radius: 8px; text-align: center; color: var(--metin-soluk); text-decoration: none; font-weight: 800; white-space: nowrap; }
+.nw-dallar a:hover { color: var(--altin); }
+.nw-dallar a.aktif { background: color-mix(in srgb, var(--altin) 12%, transparent); color: var(--altin); }

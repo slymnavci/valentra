@@ -1051,6 +1051,24 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
         'başlık ikonu ve ülke bayrağı üretiliyor; bilinmeyen ülkeye bayrak yok');
     bekle(str_contains(nw_gazete_simge_html('hurriyet', 'Hürriyet'), '>H<') , 'gazete simgesi yüklenemezse adın baş harfi görünür');
 
+    // Spor dallari (14.11.2026): Futbol, Basketbol, Diger (ValSpor kosullariyla).
+    ekle([
+        haber('Sınavspor Süper Lig maçında rakibini iki golle geçti', $olagan + ['kategori' => 'spor', 'etiketler' => 'futbol, Süper Lig']),
+        haber('Sınavkent basketbol takımı EuroLeague maçını kazandı', $olagan + ['kategori' => 'spor', 'etiketler' => 'basketbol, EuroLeague']),
+        haber('Milli tenisçi Wimbledon tenis turnuvasında çeyrek finalde', $olagan + ['kategori' => 'spor', 'etiketler' => 'tenis, Wimbledon']),
+    ]);
+    db()->exec("UPDATE haberler SET durum = 'yayinda', yayin_tarihi = COALESCE(yayin_tarihi, NOW()), guncellendi = guncellendi");
+    // Baslik listesi (nw_konular) istek basina onbellekte: yeni surecte oku.
+    $dalBasliklari = static fn (string $dal): array => (array) json_decode((string) shell_exec(escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg(
+        'require "' . __DIR__ . '/../includes/bootstrap.php"; require "' . __DIR__ . '/../includes/topluluk.php";'
+        . 'echo json_encode(array_map(fn($o) => (string) $o["veri"]["baslik"], nw_akis(30, 0, null, null, "spor", "", true, ' . var_export($dal, true) . ')["ogeler"]));'
+    )), true);
+    bekle(count($dalBasliklari('')) === 3, 'spor başlığı: dal seçilmeden bütün spor haberleri', implode(' | ', $dalBasliklari('')));
+    bekle($dalBasliklari('futbol') === ['Sınavspor Süper Lig maçında rakibini iki golle geçti'], 'Futbol: yalnızca futbol haberi', implode(' | ', $dalBasliklari('futbol')));
+    bekle($dalBasliklari('basketbol') === ['Sınavkent basketbol takımı EuroLeague maçını kazandı'], 'Basketbol: yalnızca basketbol haberi', implode(' | ', $dalBasliklari('basketbol')));
+    bekle($dalBasliklari('diger') === ['Milli tenisçi Wimbledon tenis turnuvasında çeyrek finalde'], 'Diğer: diğer sporların haberi', implode(' | ', $dalBasliklari('diger')));
+    bekle(nw_spor_dal_kosulu('olmayan') === '' && count($dalBasliklari('olmayan')) === 3, 'bilinmeyen dal süzmez');
+
     // Sag kenar kutulari (14.11.2026): kaynaklari beklemez, veri yoksa da cizilir.
     $eko = nw_ekonomi_kutusu_html();
     bekle(str_contains($eko, 'Döviz') && str_contains($eko, 'Kripto paralar') && str_contains($eko, 'bolum=doviz') && !str_contains($eko, '—'),

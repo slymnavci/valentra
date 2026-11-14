@@ -660,7 +660,7 @@ function mesaj_okunmamis(int $uyeId): int
  *
  * @return array{ogeler: list<array<string,mixed>>, sonraki: int}
  */
-function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUye = null, string $konu = '', string $gazete = '', bool $yalnizHaber = false): array
+function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUye = null, string $konu = '', string $gazete = '', bool $yalnizHaber = false, string $dal = ''): array
 {
     $once  = $once > 0 ? $once : time() + 60;
     $ogeler = [];
@@ -685,7 +685,7 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
                     UNIX_TIMESTAMP(h.yayin_tarihi) AS zaman, k.ad AS kategori_adi, k.slug AS kategori_slug
                FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
               WHERE h.durum = :d AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
-                AND h.yayin_tarihi < FROM_UNIXTIME(:once)" . $gazeteKosulu . "
+                AND h.yayin_tarihi < FROM_UNIXTIME(:once)" . $gazeteKosulu . ($konu === 'spor' ? nw_spor_dal_kosulu($dal) : '') . "
               ORDER BY h.yayin_tarihi DESC, h.id DESC LIMIT :l"
         );
         $ifade->bindValue('d', HABER_YAYINDA);
@@ -799,6 +799,37 @@ function nw_konular(): array
     }
 
     return $konular;
+}
+
+/* --- Spor dallari (14.11.2026) ---------------------------------------------
+ *
+ * Site sahibinin istegi: "Spora bastigimizda en ustte futbol, basketbol ve
+ * diger diye baslik ciksin; butona bastigimizda futbol haberleri, basketbol
+ * haberleri ve diger gruplanmis sporlarin haberleri gelsin."
+ * Dallar ValSpor'un bolum kosullarini kullanir (includes/gazeteler.php):
+ * ayni haber iki yerde farkli dala dusmesin. "Diger": voleybol ve diger
+ * sporlar (tenis, Formula 1, atletizm, gures...).
+ * ---------------------------------------------------------------------- */
+
+/** Dal => [ad, ValSpor bolumleri]. */
+const NW_SPOR_DALLARI = [
+    'futbol'    => ['Futbol', ['futbol']],
+    'basketbol' => ['Basketbol', ['basketbol']],
+    'diger'     => ['Diğer', ['voleybol', 'diger-sporlar']],
+];
+
+/** Spor akisinin dal kosulu (SQL, basinda AND); dal yoksa ya da bilinmiyorsa bos. */
+function nw_spor_dal_kosulu(string $dal): string
+{
+    if (!isset(NW_SPOR_DALLARI[$dal])) {
+        return '';
+    }
+
+    require_once __DIR__ . '/gazeteler.php';
+
+    $parcalar = array_map(static fn (string $b): string => gazete_kosulu('valspor', $b), NW_SPOR_DALLARI[$dal][1]);
+
+    return ' AND (' . implode(' OR ', $parcalar) . ')';
 }
 
 /* --- Gazeteler (13.11.2026) ---------------------------------------------
