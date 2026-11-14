@@ -620,7 +620,9 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 <nav class="nw-sayfalar"><a href="<?= e(nw_yol('', ['konu' => $konu, 'dal' => $dal, 'gazete' => $gazete, 'gorunum' => $akisGorunumu ? 'akis' : '',
                     'sec' => $onemli || $sekme !== 'herkes' ? '' : 'son', 'atla' => $akis['atla']])) ?>">Daha fazla haber →</a></nav>
             <?php elseif ($akis['sonraki'] > 0): ?>
-                <nav class="nw-sayfalar"><a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'dal' => $dal, 'gazete' => $gazete, 'once' => $akis['sonraki']])) ?>">Daha eski haberler →</a></nav>
+                <nav class="nw-sayfalar"><a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'dal' => $dal, 'gazete' => $gazete,
+                    // sec=son: varsayilan gorunum "Onemli haberler" oldugu icin (14.11.2026) sonraki sayfa da "Son haberler" kalsin.
+                    'sec' => $sekme === 'herkes' ? 'son' : '', 'once' => $akis['sonraki']])) ?>">Daha eski haberler →</a></nav>
             <?php endif; ?>
         </div>
         <?php /* Sag kutulardan haber sitesine gidene "Network'e don" seridi (14.11.2026; bkz. sayfa_ust.php):
