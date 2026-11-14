@@ -697,37 +697,54 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
 
     // Profil akisinda haber yok, yalnizca o uyenin paylasimlari.
     if ($yalnizUye === null) {
-        $ifade = db()->prepare(
-            "SELECT h.id, h.baslik, h.slug, h.ozet, LEFT(h.icerik, 1600) AS icerik_basi, h.gorsel_url, h.iframe_url, h.yayin_tarihi,
+        $sutunlar = "h.id, h.baslik, h.slug, h.ozet, LEFT(h.icerik, 1600) AS icerik_basi, h.gorsel_url, h.iframe_url, h.yayin_tarihi,
                     h.kaynak_adi, h.kaynak_url, h.manset_yayinlar,
-                    UNIX_TIMESTAMP(h.yayin_tarihi) AS zaman, k.ad AS kategori_adi, k.slug AS kategori_slug
+                    UNIX_TIMESTAMP(h.yayin_tarihi) AS zaman, k.ad AS kategori_adi, k.slug AS kategori_slug";
+        $govde    = "
                FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
                " . ($turkiyeGundemi ? 'LEFT JOIN kaynaklar ky ON ky.id = h.kaynak_id' : '') . "
                " . ($gundem ? haber_okunma_birlesimi() : '') . "
-              WHERE h.durum = :d" . ($turkiyeGundemi ? nw_turkiye_gundemi_kosulu() : '') . " AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
-                AND h.yayin_tarihi < FROM_UNIXTIME(:once)" . $gazeteKosulu . ($konu === 'spor' ? nw_spor_dal_kosulu($dal) : '') . "
-              ORDER BY " . ($gundem ? haber_sirasi(true) . ', ' : ($onemli ? nw_onemli_sirasi() . ', ' : '')) . "h.yayin_tarihi DESC, h.id DESC LIMIT :l" . ($gundem || $onemli ? ' OFFSET ' . $atla : '')
-        );
+              WHERE h.durum = :d" . ($turkiyeGundemi ? nw_turkiye_gundemi_kosulu() : '')
+                  // Hiz (14.11.2026): onem siralari butun arsivi siralamasin; son NW_SIRA_PENCERE_GUN gun (durum, yayin_tarihi dizini).
+                  . ($onemli || $gundem ? ' AND h.yayin_tarihi >= NOW() - INTERVAL ' . ($gundem ? NW_GUNDEM_PENCERE_GUN : NW_SIRA_PENCERE_GUN) . ' DAY' : '') . " AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
+                AND h.yayin_tarihi < FROM_UNIXTIME(:once)" . $gazeteKosulu . ($konu === 'spor' ? nw_spor_dal_kosulu($dal) : '') . "";
+        $siraSql  = "
+              ORDER BY " . ($gundem ? haber_sirasi(true) . ', ' : ($onemli ? nw_onemli_sirasi() . ', ' : '')) . "h.yayin_tarihi DESC, h.id DESC LIMIT :l" . ($gundem || $onemli ? ' OFFSET ' . $atla : '');
+
+        /*
+         * Onem siralari IKI ADIMDA (14.11.2026, hiz): once yalnizca numaralar
+         * siralanir (dar satir), sonra o 15 haberin metni okunur. Tek sorguda
+         * veritabani her adayin metnini (icerik) siralama icin tasiyordu.
+         */
+        if ($gundem || $onemli) {
+            $ifade = db()->prepare('SELECT h.id' . $govde . $siraSql);
+            $ifade->bindValue('d', HABER_YAYINDA);
+            $ifade->bindValue('once', $once, PDO::PARAM_INT);
+            $ifade->bindValue('l', $adet, PDO::PARAM_INT);
+            $ifade->execute();
+            $numaralar = array_map('intval', $ifade->fetchAll(PDO::FETCH_COLUMN));
+            $satirlar  = [];
+
+            if ($numaralar !== []) {
+                $bul = array_column(db()->query(
+                    'SELECT ' . $sutunlar . ' FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id WHERE h.id IN (' . implode(',', $numaralar) . ')'
+                )->fetchAll(), null, 'id');
+
+                foreach ($numaralar as $n) {
+                    if (isset($bul[$n])) {
+                        $satirlar[] = $bul[$n];
+                    }
+                }
+            }
+
+            return ['ogeler' => array_map(static fn (array $h): array => ['tur' => 'haber', 'zaman' => 0, 'veri' => $h], $satirlar),
+                'sonraki' => 0, 'atla' => count($numaralar) === $adet ? $atla + $adet : 0];
+        }
+
+        $ifade = db()->prepare('SELECT ' . $sutunlar . $govde . $siraSql);
         $ifade->bindValue('d', HABER_YAYINDA);
         $ifade->bindValue('once', $once, PDO::PARAM_INT);
         $ifade->bindValue('l', $adet, PDO::PARAM_INT);
-
-        /*
-         * "Onemli haberler" (site sahibi, 14.11.2026: "onemli haberlere
-         * bastigimizda o gun ana sayfada gundemdeki haberleri versin; mesela
-         * Milliyet'in ana sayfasindaki en onemli haberler gorunsun"): son 24
-         * saatin haberleri, once buyuk yayinlarin ana sayfasinda / mansetinde
-         * olanlar (manset_sinyal, bkz. manset_sinyal.php), sonra onem puani.
-         * O gun az haber varsa (5'ten az) son uc gune bakilir. Tek sayfa;
-         * kartta data-zaman yok (yeni haber sayaci bu siralamada anlamsiz).
-         */
-        if ($gundem || $onemli) {
-            $ifade->execute();
-            $satirlar = $ifade->fetchAll();
-
-            return ['ogeler' => array_map(static fn (array $h): array => ['tur' => 'haber', 'zaman' => 0, 'veri' => $h], $satirlar),
-                'sonraki' => 0, 'atla' => count($satirlar) === $adet ? $atla + $adet : 0];
-        }
 
         $ifade->execute();
 
@@ -819,6 +836,13 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
  * @return array<string,string> slug => ad
  */
 function nw_konular(): array
+{
+    static $bellek = null;
+
+    return $bellek ??= nw_kisa_onbellek('konular', 300, static fn (): array => nw_konular_ham());
+}
+
+function nw_konular_ham(): array
 {
     static $konular = null;
 
@@ -920,6 +944,55 @@ function nw_haber_ozeti(array $v, int $hedef = 480): string
     }
 
     return $sonuc !== '' ? $sonuc : kisalt($metin, $hedef);
+}
+
+/** Onem siralarinin (Onemli haberler, Son haberler) baktigi sure: bundan eski haber siralamaya girmez. */
+const NW_SIRA_PENCERE_GUN = 7;
+/** "Son haberler" (ana sayfa sirasi) daha pahali bir siralama; uc gun yeter. */
+const NW_GUNDEM_PENCERE_GUN = 3;
+
+/**
+ * Kisa omurlu dosya onbellegi (14.11.2026, hiz): her sayfa aciliginda yeniden
+ * hesaplanan ama dakikalarca degismeyen listeler (gazete listesi, basliklar,
+ * populer konular) icin. Uyenin sayfasi sayfa onbellegine girmedigi icin bu
+ * sorgular her tiklamada calisiyordu. Komut satirinda (testler, ajan)
+ * onbellek yok: her cagri taze hesaplar.
+ *
+ * @template T of array
+ * @param callable():T $uret
+ * @return T
+ */
+function nw_kisa_onbellek(string $anahtar, int $saniye, callable $uret): array
+{
+    if (PHP_SAPI === 'cli' || preg_match('/^[a-z0-9-]{1,40}$/', $anahtar) !== 1) {
+        return $uret();
+    }
+
+    $dosya = dirname(__DIR__) . '/onbellek/nw/' . $anahtar . '.json';
+    $zaman = @filemtime($dosya);
+
+    if ($zaman !== false && time() - $zaman < $saniye) {
+        $veri = json_decode((string) @file_get_contents($dosya), true);
+
+        if (is_array($veri)) {
+            return $veri;
+        }
+    }
+
+    $veri = $uret();
+
+    // Bos sonuc saklanmaz: gecici bir veritabani hatasi dakikalarca bos liste gostermesin.
+    if ($veri !== []) {
+        if (!is_dir(dirname($dosya))) {
+            @mkdir(dirname($dosya), 0775, true);
+        }
+
+        if (@file_put_contents($dosya . '.tmp', json_encode($veri, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE), LOCK_EX) !== false) {
+            @rename($dosya . '.tmp', $dosya);
+        }
+    }
+
+    return $veri;
 }
 
 /**
@@ -1333,6 +1406,11 @@ function nw_gazete_gruplari(): array
  */
 function nw_gazeteler(int $gun = 3): array
 {
+    return nw_kisa_onbellek('gazeteler-' . $gun, 300, static fn (): array => nw_gazeteler_ham($gun));
+}
+
+function nw_gazeteler_ham(int $gun = 3): array
+{
     static $onbellek = [];
 
     if (isset($onbellek[$gun])) {
@@ -1627,6 +1705,11 @@ JS;
  */
 function nw_populer_konular(int $limit = 10): array
 {
+    return nw_kisa_onbellek('populer-' . $limit, 300, static fn (): array => nw_populer_konular_ham($limit));
+}
+
+function nw_populer_konular_ham(int $limit = 10): array
+{
     try {
         $ifade = db()->prepare(
             'SELECT etiketler FROM haberler WHERE durum = :d AND yayin_tarihi >= NOW() - INTERVAL 2 DAY'
@@ -1663,6 +1746,11 @@ function nw_populer_konular(int $limit = 10): array
  * @return list<array<string,mixed>>
  */
 function nw_etkilesim_haberleri(int $limit = 6): array
+{
+    return nw_kisa_onbellek('etkilesim-' . $limit, 120, static fn (): array => nw_etkilesim_haberleri_ham($limit));
+}
+
+function nw_etkilesim_haberleri_ham(int $limit = 6): array
 {
     // Siralamada "okuyucu" takma adi yazilmiyor: ORDER BY'da zo.okuyucu
     // sutununa cozuluyor (okunmamis haberde NULL) ve sira bozuluyordu.

@@ -46,3 +46,6 @@ gorseller/uye/*
 
 # Gazete simgeleri (gazete-simge.php); sunucuda duruyor.
 gorseller/gazete/*
+
+# Network kisa omurlu liste onbellegi (includes/network.php, nw_kisa_onbellek); sunucuda uretilir.
+onbellek/nw/

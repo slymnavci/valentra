@@ -43,7 +43,9 @@ require_once __DIR__ . '/includes/topluluk.php';
 // YZ begenileri (en fazla 5 dakikada bir, istegin sonunda).
 topluluk_begeni_zamanla();
 
-sayfa_onbellek(['yol', 'sekme', 'once', 'ara', 'sira', 'konu', 'gazete', 'gorunum', 'dal', 'sec', 'atla']);
+// Ikinci parametre (14.11.2026, hiz): suresi dolan kopya hemen verilir, yenisi yanit gittikten sonra uretilir;
+// dakikada bir ziyaretci sayfanin uretilmesini (~0,5 sn) beklemez. Ana sayfa (index.php) ile ayni yol.
+sayfa_onbellek(['yol', 'sekme', 'once', 'ara', 'sira', 'konu', 'gazete', 'gorunum', 'dal', 'sec', 'atla'], true);
 
 require_once __DIR__ . '/includes/seo.php';
 require_once __DIR__ . '/includes/network_gorunum.php';
