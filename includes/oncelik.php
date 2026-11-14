@@ -296,15 +296,35 @@ function oncelik_karar(array $veri): array
     // --- Yayin yolu -------------------------------------------------------
     $canIddiasi = $politika && $canKaybi === 'dogrulanmadi' && oncelik_can_kaybi_iddiasi($veri);
 
+    /*
+     * ONAY BEKLEME YOK (site sahibinin karari, 14.11.2026: "haber eklerken
+     * bana sormadan haberleri kabul et"). 12-14.11.2026 arasinda kritik ama
+     * dogrulanmamis haber ve iddia yayimlanmayip panelde acil incelemeye
+     * dusuyordu; 14.11 sabahi helikopter kazasi haberi "tek kaynak" diye
+     * bekledi, gunde 20 haber onayda kaldi. Artik hicbir haber editoru
+     * beklemez; dogrulanmamis olan yalnizca MANSET ADAYI OLMAZ:
+     *   - kritik ama dogrulanmamis (ya da can kaybini dogrulanmadan kesin
+     *     bilgi gibi veren) haber YUKSEK sinifta yayimlanir;
+     *   - dogrulanmamis iddia NORMAL sinifta yayimlanir.
+     * Ayni olayin resmi aciklamali ya da bagimsiz ikinci kaynakli haberi
+     * gelince o haber kritik sinifta yayimlanir ve olayin ana sayfadaki
+     * haberi olur. Editorun elle durdurdugu olay yine bekler (oncelik_kaydet).
+     */
     if ($dogrulama === 'iddia') {
-        $yayin     = $sinif >= ONCELIK_YUKSEK ? 'editor_acil' : 'editor';
-        $gerekce[] = 'Doğrulanmamış iddia (sosyal medya ya da kaynağı belirsiz): otomatik yayımlanmadı.';
+        if ($sinif > ONCELIK_NORMAL) {
+            $sinif = ONCELIK_NORMAL;
+        }
+
+        $yayin     = 'kuyruk';
+        $gerekce[] = 'Doğrulanmamış iddia (sosyal medya ya da kaynağı belirsiz): onay beklemeden, normal sınıfta yayımlanır; manşet adayı değil.';
     } elseif ($canIddiasi) {
-        $yayin     = 'editor_acil';
-        $gerekce[] = 'Can kaybı doğrulanmamış ama başlık ya da spot can kaybını kesin bilgi gibi veriyor: otomatik yayımlanmadı.';
+        $sinif     = min($sinif, ONCELIK_YUKSEK);
+        $yayin     = $sinif === ONCELIK_YUKSEK ? 'oncelikli' : 'kuyruk';
+        $gerekce[] = 'Can kaybı doğrulanmamış ama başlık ya da spot can kaybı bildiriyor: onay beklemeden yayımlanır, manşet adayı değil.';
     } elseif ($sinif === ONCELIK_KRITIK && !$dogrulandi) {
-        $yayin     = 'editor_acil';
-        $gerekce[] = 'Kritik ama doğrulanmadı (' . DOGRULAMA_ADLAR[$dogrulama] . '): acil editör incelemesine alındı.';
+        $sinif     = ONCELIK_YUKSEK;
+        $yayin     = 'oncelikli';
+        $gerekce[] = 'Kritik ama doğrulanmadı (' . DOGRULAMA_ADLAR[$dogrulama] . '): onay beklemeden yüksek sınıfta yayımlanır; resmî açıklama ya da bağımsız ikinci kaynak gelince olay manşet adayı olur.';
     } elseif ($sinif === ONCELIK_KRITIK) {
         $yayin     = 'hemen';
         $gerekce[] = 'Doğrulandı (' . DOGRULAMA_ADLAR[$dogrulama]

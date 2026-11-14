@@ -2116,6 +2116,20 @@ function haber_bugunku_taslaklari_yayinla(): int
         return 0;
     }
 
+    /*
+     * Onay bekleme kalkti (14.11.2026; bkz. oncelik_karar): 12-14.11 arasinda
+     * incelemeye dusmus haberler de serbest. Kritik olanlar yuksek sinifa
+     * iner (dogrulanmadan manset adayi olmaz). Editorun elle durdurduklari
+     * ("durduruldu") yerinde kalir.
+     */
+    if (haber_sutun_var('inceleme')) {
+        db()->prepare(
+            "UPDATE haberler
+                SET oncelik = LEAST(oncelik, 2), aciliyet = LEAST(aciliyet, 1), inceleme = '', guncellendi = guncellendi
+              WHERE durum = :t AND inceleme IN ('acil', 'bekliyor')"
+        )->execute(['t' => HABER_TASLAK]);
+    }
+
     $ifade = db()->prepare(
         'SELECT id FROM haberler
           WHERE durum = :taslak
