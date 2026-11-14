@@ -665,7 +665,11 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
     /*
      * $sira (14.11.2026):
      *   ''       en yeni ustte (zamana gore sayfalanir: $once),
-     *   'onemli' gunun onemli haberleri: tek sayfa, onem esigiyle,
+     *   'onemli' "Onemli haberler" (site sahibi, 14.11.2026: "her gazetenin
+     *            mansetindeki haberlerden asagiya indikce daha onemsiz habere
+     *            dogru surekli bir akis"): gun gun; gunun icinde once gazetelerin
+     *            MANSETINDE olan haberler, sonra en cok gazetenin yer verdigi,
+     *            sonra onem puani. Esik ve sure siniri yok; $atla ile sayfalanir.
      *   'gundem' "Son haberler" (site sahibi: "her gazetede en cok gosterilen
      *            haberler en onde olsun, yavas yavas onemsize dogru inelim;
      *            burada Valentra Haber'deki kural gecerli olabilir"): Valentra
@@ -675,7 +679,7 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
      */
     $onemli = $sira === 'onemli';
     $gundem = $sira === 'gundem';
-    $atla   = $gundem ? max(0, min(2000, $atla)) : 0;
+    $atla   = $gundem || $onemli ? max(0, min(2000, $atla)) : 0;
     $once  = $once > 0 ? $once : time() + 60;
     $ogeler = [];
 
@@ -695,14 +699,14 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
     if ($yalnizUye === null) {
         $ifade = db()->prepare(
             "SELECT h.id, h.baslik, h.slug, h.ozet, LEFT(h.icerik, 1600) AS icerik_basi, h.gorsel_url, h.iframe_url, h.yayin_tarihi,
-                    h.kaynak_adi, h.kaynak_url,
+                    h.kaynak_adi, h.kaynak_url, h.manset_yayinlar,
                     UNIX_TIMESTAMP(h.yayin_tarihi) AS zaman, k.ad AS kategori_adi, k.slug AS kategori_slug
                FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
                " . ($turkiyeGundemi ? 'LEFT JOIN kaynaklar ky ON ky.id = h.kaynak_id' : '') . "
                " . ($gundem ? haber_okunma_birlesimi() : '') . "
-              WHERE h.durum = :d" . ($turkiyeGundemi ? nw_turkiye_gundemi_kosulu($onemli) : '') . ($onemli ? ' AND h.yayin_tarihi >= NOW() - INTERVAL :saat HOUR' : '') . " AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
+              WHERE h.durum = :d" . ($turkiyeGundemi ? nw_turkiye_gundemi_kosulu() : '') . " AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
                 AND h.yayin_tarihi < FROM_UNIXTIME(:once)" . $gazeteKosulu . ($konu === 'spor' ? nw_spor_dal_kosulu($dal) : '') . "
-              ORDER BY " . ($gundem ? haber_sirasi(true) . ', ' : ($onemli ? 'h.manset_sinyal DESC, h.onem DESC, ' : '')) . "h.yayin_tarihi DESC, h.id DESC LIMIT :l" . ($gundem ? ' OFFSET ' . $atla : '')
+              ORDER BY " . ($gundem ? haber_sirasi(true) . ', ' : ($onemli ? "DATE(h.yayin_tarihi) DESC, (h.manset_yayinlar LIKE '%(manşette)%') DESC, h.manset_sinyal DESC, h.onem DESC, " : '')) . "h.yayin_tarihi DESC, h.id DESC LIMIT :l" . ($gundem || $onemli ? ' OFFSET ' . $atla : '')
         );
         $ifade->bindValue('d', HABER_YAYINDA);
         $ifade->bindValue('once', $once, PDO::PARAM_INT);
@@ -717,26 +721,12 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
          * O gun az haber varsa (5'ten az) son uc gune bakilir. Tek sayfa;
          * kartta data-zaman yok (yeni haber sayaci bu siralamada anlamsiz).
          */
-        if ($gundem) {
+        if ($gundem || $onemli) {
             $ifade->execute();
             $satirlar = $ifade->fetchAll();
 
             return ['ogeler' => array_map(static fn (array $h): array => ['tur' => 'haber', 'zaman' => 0, 'veri' => $h], $satirlar),
                 'sonraki' => 0, 'atla' => count($satirlar) === $adet ? $atla + $adet : 0];
-        }
-
-        if ($onemli) {
-            foreach ([24, 72] as $saat) {
-                $ifade->bindValue('saat', $saat, PDO::PARAM_INT);
-                $ifade->execute();
-                $satirlar = $ifade->fetchAll();
-
-                if (count($satirlar) >= 5) {
-                    break;
-                }
-            }
-
-            return ['ogeler' => array_map(static fn (array $h): array => ['tur' => 'haber', 'zaman' => 0, 'veri' => $h], $satirlar), 'sonraki' => 0];
         }
 
         $ifade->execute();
@@ -993,14 +983,15 @@ function nw_gazete_mansetleri(int $baslikAdet = 4, int $saat = 24): array
 /** "Onemli haberler"in ustundeki bolum: her gazetenin manseti / one cikan basliklari. */
 function nw_gazete_mansetleri_html(): string
 {
-    $gruplar = nw_gazete_mansetleri();
+    $gruplar = nw_gazete_mansetleri(8);
 
     if ($gruplar === []) {
         return '';
     }
 
-    $html = '<section class="nw-mansetler" aria-label="Gazetelerin manşetleri"><h2>Gazetelerin manşetleri</h2>'
-        . '<p class="nw-mansetler-not">Bugün gazetelerin öne çıkardığı başlıklar. Başlığa tıklayınca haber gazetenin kendi sitesinde açılır.</p><div class="nw-mansetler-izgara">';
+    // Kapali acilir bolum (14.11.2026): asil icerik altindaki surekli akis; kutular isteyene.
+    $html = '<details class="nw-mansetler"><summary>Gazetelerin manşet başlıkları <small>gazete gazete, kendi sitelerinde</small></summary>'
+        . '<div class="nw-mansetler-izgara">';
 
     foreach ($gruplar as $g) {
         $html .= '<article class="nw-manset-kutu"><h3>' . nw_gazete_simge_html($g['slug'], $g['ad'], 22) . '<span>' . e($g['ad']) . '</span>'
@@ -1014,7 +1005,7 @@ function nw_gazete_mansetleri_html(): string
         $html .= '</ol></article>';
     }
 
-    return $html . '</div></section>';
+    return $html . '</div></details>';
 }
 
 /* --- Spor dallari (14.11.2026) ---------------------------------------------

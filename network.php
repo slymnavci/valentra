@@ -157,7 +157,7 @@ switch ($sayfa) {
             ? ['ogeler' => [], 'sonraki' => 0]
             // "Son haberler" (baslik ve gazete secili degilken): once Turkiye, onemli gundem (14.11.2026).
             // Genel "Son haberler" (14.11.2026): once en cok gazetenin yer verdigi haberler ('gundem' sirasi, ?atla ile sayfalanir).
-            : nw_akis($onemli ? 40 : NW_AKIS_ADEDI, $once, null, null, $konu, $gazete, true, $dal, $konu === '' && $gazete === '',
+            : nw_akis(NW_AKIS_ADEDI, $once, null, null, $konu, $gazete, true, $dal, $konu === '' && $gazete === '',
                 $onemli ? 'onemli' : ($konu === '' && $gazete === '' && $sekme === 'herkes' ? 'gundem' : ''), max(0, (int) ($_GET['atla'] ?? 0)));
         $baglam = nw_baglam($akis['ogeler']);
         $takipEdilenler = $uyeId !== null ? nw_takip_edilenler($uyeId) : [];
@@ -536,15 +536,15 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 <header class="nw-gazete-ust">
                     <h1><?= nw_bayrak_html('tr') ?><?= $onemli ? 'Önemli haberler' : 'Son haberler' ?></h1>
                     <p><?= $onemli
-                        ? 'Bugün Türkiye gündeminde öne çıkanlar: önce büyük gazetelerin ana sayfasına taşıdığı haberler.'
+                        ? 'Önce gazetelerin manşetindeki haberler, sonra en çok gazetenin yer verdikleri; aşağı indikçe daha az öne çıkanlar ve önceki günler.'
                         : 'Valentra Haber ana sayfasındaki sırayla: bugünün haberleri ve en çok gazetenin yer verdiği gelişmeler üstte, aşağı indikçe daha az öne çıkanlar.' ?></p>
                 </header>
             <?php endif; ?>
 
             <?php /* Onemli haberler: once her gazetenin manseti (14.11.2026), altinda Valentra'nin ozetledigi onemli haberler. */ ?>
-            <?php if ($akisGorunumu && $onemli): ?>
+            <?php if ($akisGorunumu && $onemli && (int) ($_GET['atla'] ?? 0) === 0): ?>
                 <?= nw_gazete_mansetleri_html() ?>
-                <?php if ($akis['ogeler'] !== []): ?><h2 class="nw-ulke-baslik">Günün önemli haberleri</h2><?php endif; ?>
+
             <?php endif; ?>
 
             <?php if ($gazete !== ''): ?>
@@ -598,7 +598,8 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <?php endforeach; ?>
 
             <?php if (($akis['atla'] ?? 0) > 0): ?>
-                <nav class="nw-sayfalar"><a href="<?= e(nw_yol('', ['gorunum' => 'akis', 'atla' => $akis['atla']])) ?>">Daha fazla haber →</a></nav>
+                <nav class="nw-sayfalar"><a href="<?= e(nw_yol('', ['konu' => $konu, 'dal' => $dal, 'gazete' => $gazete, 'gorunum' => $akisGorunumu ? 'akis' : '',
+                    'sec' => $onemli ? 'onemli' : '', 'atla' => $akis['atla']])) ?>">Daha fazla haber →</a></nav>
             <?php elseif ($akis['sonraki'] > 0): ?>
                 <nav class="nw-sayfalar"><a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'dal' => $dal, 'gazete' => $gazete, 'once' => $akis['sonraki']])) ?>">Daha eski haberler →</a></nav>
             <?php endif; ?>

@@ -299,6 +299,10 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
                         <strong class="nw-hesap">Val<span>Haber</span></strong>
                     <?php endif; ?>
                     <span class="nw-meta"><a href="<?= e($detayYol) ?>"><time datetime="<?= e(date('c', (int) strtotime($zaman))) ?>"><?= e(yorum_zaman($zaman)) ?></time></a><?php if (!empty($v['kategori_adi'])): ?> · <?= e((string) $v['kategori_adi']) ?><?php endif; ?></span>
+                    <?php /* Haberi mansetine / gundemine tasiyan gazeteler (14.11.2026; bkz. manset_sinyal.php). */ ?>
+                    <?php if (trim((string) ($v['manset_yayinlar'] ?? '')) !== ''): ?>
+                        <span class="nw-manset-rozet"><?= str_contains((string) $v['manset_yayinlar'], '(manşette)') ? 'Manşette' : 'Gündeminde' ?>: <?= e(trim(str_replace('(manşette)', '', (string) $v['manset_yayinlar']))) ?></span>
+                    <?php endif; ?>
                 </div>
             <?php else: ?>
                 <a href="<?= e(nw_profil_yolu((int) $v['uye_id'])) ?>" tabindex="-1" aria-hidden="true"><?= uye_simge_html($v, 40) ?></a>
