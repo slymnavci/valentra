@@ -600,6 +600,13 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
         document.addEventListener('click', function (o) {
             var a = o.target.closest ? o.target.closest('.nw-sag a[href^="/"]') : null;
             if (a && a.getAttribute('href').indexOf('/network') !== 0) {
+                // Ekonomi ve Spor kutulari (site sahibi, 14.11.2026): "farkli bir sayfadan versin,
+                // Network bir sekme olarak acik dursun" -> yeni sekme; Network oldugu yerde kalir.
+                if (a.closest('.nw-kutu-liste')) {
+                    a.target = '_blank';
+                    a.rel = 'noopener';
+                    return;
+                }
                 try { sessionStorage.setItem('nw-donus', location.pathname + location.search); } catch (e) {}
             }
         });
