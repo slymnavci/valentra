@@ -313,7 +313,8 @@ $seoAdres = site_adresi() . ($buYol ?? nw_yol($yol));
  * sayfasi aramadan duserdi) ve tek adresi kok adrestir.
  */
 if ($yol === '' && array_diff_key($_GET, ['yol' => 1]) === []) {
-    $seoRobots     = 'index, follow';
+    // Buyuk gorsel izni (Google Discover / Haberler): haber sitesinin on sayfasiyla ayni etiket.
+    $seoRobots     = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
     $seoAdres      = site_adresi() . '/';
     $sayfaBasligi  = 'Valentra — Günün önemli haberleri, gazete gazete';
     $sayfaAciklama = 'Türkiye ve dünyadan günün önemli haberleri: hangi gazete ne yazdı, manşetler, son haberler, ekonomi ve canlı skorlar. Her haberin özeti ve kaynağı.';
