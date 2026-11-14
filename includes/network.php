@@ -660,7 +660,7 @@ function mesaj_okunmamis(int $uyeId): int
  *
  * @return array{ogeler: list<array<string,mixed>>, sonraki: int}
  */
-function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUye = null, string $konu = '', string $gazete = '', bool $yalnizHaber = false, string $dal = '', bool $turkiyeGundemi = false): array
+function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUye = null, string $konu = '', string $gazete = '', bool $yalnizHaber = false, string $dal = '', bool $turkiyeGundemi = false, bool $onemli = false): array
 {
     $once  = $once > 0 ? $once : time() + 60;
     $ogeler = [];
@@ -685,13 +685,37 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
                     UNIX_TIMESTAMP(h.yayin_tarihi) AS zaman, k.ad AS kategori_adi, k.slug AS kategori_slug
                FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
                " . ($turkiyeGundemi ? 'LEFT JOIN kaynaklar ky ON ky.id = h.kaynak_id' : '') . "
-              WHERE h.durum = :d" . ($turkiyeGundemi ? nw_turkiye_gundemi_kosulu() : '') . " AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
+              WHERE h.durum = :d" . ($turkiyeGundemi ? nw_turkiye_gundemi_kosulu($onemli) : '') . ($onemli ? ' AND h.yayin_tarihi >= NOW() - INTERVAL :saat HOUR' : '') . " AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
                 AND h.yayin_tarihi < FROM_UNIXTIME(:once)" . $gazeteKosulu . ($konu === 'spor' ? nw_spor_dal_kosulu($dal) : '') . "
-              ORDER BY h.yayin_tarihi DESC, h.id DESC LIMIT :l"
+              ORDER BY " . ($onemli ? 'h.manset_sinyal DESC, h.onem DESC, ' : '') . "h.yayin_tarihi DESC, h.id DESC LIMIT :l"
         );
         $ifade->bindValue('d', HABER_YAYINDA);
         $ifade->bindValue('once', $once, PDO::PARAM_INT);
         $ifade->bindValue('l', $adet, PDO::PARAM_INT);
+
+        /*
+         * "Onemli haberler" (site sahibi, 14.11.2026: "onemli haberlere
+         * bastigimizda o gun ana sayfada gundemdeki haberleri versin; mesela
+         * Milliyet'in ana sayfasindaki en onemli haberler gorunsun"): son 24
+         * saatin haberleri, once buyuk yayinlarin ana sayfasinda / mansetinde
+         * olanlar (manset_sinyal, bkz. manset_sinyal.php), sonra onem puani.
+         * O gun az haber varsa (5'ten az) son uc gune bakilir. Tek sayfa;
+         * kartta data-zaman yok (yeni haber sayaci bu siralamada anlamsiz).
+         */
+        if ($onemli) {
+            foreach ([24, 72] as $saat) {
+                $ifade->bindValue('saat', $saat, PDO::PARAM_INT);
+                $ifade->execute();
+                $satirlar = $ifade->fetchAll();
+
+                if (count($satirlar) >= 5) {
+                    break;
+                }
+            }
+
+            return ['ogeler' => array_map(static fn (array $h): array => ['tur' => 'haber', 'zaman' => 0, 'veri' => $h], $satirlar), 'sonraki' => 0];
+        }
+
         $ifade->execute();
 
         foreach ($ifade->fetchAll() as $h) {
@@ -833,11 +857,12 @@ function nw_yabanci_kaynak_ifadesi(): string
 }
 
 /** "Son haberler" kosulu (SQL, basinda AND; h: haberler, k: kategoriler, ky: kaynaklar). */
-function nw_turkiye_gundemi_kosulu(): string
+function nw_turkiye_gundemi_kosulu(bool $onemli = false): string
 {
     $haric = implode(', ', array_map(static fn (string $s): string => db()->quote($s), NW_GUNDEM_HARIC_BASLIKLAR));
 
-    return ' AND h.onem >= ' . (int) ANA_SAYFA_ONEM_ESIGI
+    // Onem esigi yalnizca "Onemli haberler"de: "Son haberler" son yuklenenlerin tamami (14.11.2026).
+    return ($onemli ? ' AND h.onem >= ' . (int) ANA_SAYFA_ONEM_ESIGI : '')
         . ' AND (k.slug IS NULL OR k.slug NOT IN (' . $haric . '))'
         . ' AND (ky.site_url IS NULL OR LOWER(ky.site_url) NOT REGEXP ' . db()->quote(nw_yabanci_kaynak_ifadesi()) . ')';
 }

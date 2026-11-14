@@ -1073,13 +1073,26 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     db()->exec("INSERT INTO kaynaklar (ad, site_url, tur, kategori, aktif) VALUES ('Test Spiegel', 'https://www.spiegel.de/', 'rss', 'gundem', 1)");
     $sId = (int) db()->lastInsertId();
     db()->exec("UPDATE haberler SET onem = 70, kaynak_id = NULL, guncellendi = guncellendi");
-    db()->exec("UPDATE haberler SET onem = 30, guncellendi = guncellendi WHERE baslik LIKE '%Baraj doluluk%'");
+    db()->exec("UPDATE haberler SET onem = 30, guncellendi = guncellendi WHERE baslik LIKE '%Tapu harcı%'");
     db()->exec("UPDATE haberler SET kaynak_id = $sId, guncellendi = guncellendi WHERE baslik LIKE '%Turizm geliri%'");
     $sonBasliklar = array_map(static fn (array $o): string => (string) $o['veri']['baslik'], nw_akis(40, 0, null, null, '', '', true, '', true)['ogeler']);
     $var = static fn (string $parca): bool => array_filter($sonBasliklar, static fn (string $b): bool => str_contains($b, $parca)) !== [];
     bekle($var('otobüs hattı') && $var('Sanayi üretimi'), '"Son haberler": Türkiye gündeminin önemli haberleri geliyor', implode(' | ', $sonBasliklar));
     bekle(!$var('Turizm geliri'), '"Son haberler": yabancı gazetenin haberi yok (ülke gruplarında durur)');
-    bekle(!$var('Baraj doluluk'), '"Son haberler": önem puanı düşük haber yok');
+    bekle($var('Tapu harcı'), '"Son haberler": son yüklenenlerin tamamı (önem puanı düşük haber de var)');
+
+    // "Onemli haberler" (14.11.2026): o gunun gundemi; once buyuk yayinlarin ana sayfasindakiler, sonra onem puani.
+    db()->exec("UPDATE haberler SET manset_sinyal = 18, guncellendi = guncellendi WHERE baslik LIKE '%Sanayi üretimi%'");
+    db()->exec("UPDATE haberler SET onem = 90, guncellendi = guncellendi WHERE baslik LIKE '%otobüs hattı%'");
+    $onemliler = array_map(static fn (array $o): string => (string) $o['veri']['baslik'], nw_akis(40, 0, null, null, '', '', true, '', true, true)['ogeler']);
+    bekle(str_contains($onemliler[0] ?? '', 'Sanayi üretimi') && str_contains($onemliler[1] ?? '', 'otobüs hattı'),
+        '"Önemli haberler": önce gazetelerin ana sayfasındaki haber, sonra önem puanı yüksek olan', implode(' | ', $onemliler));
+    bekle(array_filter($onemliler, static fn (string $b): bool => str_contains($b, 'Tapu harcı') || str_contains($b, 'Turizm geliri')) === [],
+        '"Önemli haberler": önemsiz haber ve yabancı gazete haberi yok');
+    $gazeteOnemli = nw_akis(40, 0, null, null, '', 'hurriyet', true, '', false, true);
+    bekle($gazeteOnemli['ogeler'] !== [] && $gazeteOnemli['sonraki'] === 0 && str_contains((string) $gazeteOnemli['ogeler'][0]['veri']['baslik'], 'otobüs hattı'),
+        'gazete seçiliyken "Önemli haberler": o gazetenin en önemli haberi en üstte', (string) ($gazeteOnemli['ogeler'][0]['veri']['baslik'] ?? '-'));
+    db()->exec("UPDATE haberler SET manset_sinyal = 0, guncellendi = guncellendi");
     bekle(!$var('Süper Lig') && !$var('EuroLeague') && !$var('Köprü bakım'), '"Son haberler": spor ve dünya başlığındaki haber yok');
     bekle(count(nw_akis(40, 0, null, null, '', '', true)['ogeler']) > count($sonBasliklar), 'başlık ve gazete akışları değişmedi (süzgeç yalnızca "Son haberler"de)');
     db()->exec("DELETE FROM kaynaklar WHERE id = $sId");
