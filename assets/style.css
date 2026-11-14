@@ -4687,3 +4687,20 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 /* Uc analiz de kutuya sigsin: tarih satiri yok (hepsi bugunun yazisi). */
 .vitrin > .kose-kutu .yazar-tarih { display: none; }
 .vitrin > .kose-kutu .yazar-listesi .yazar-yazi { font-size: .98rem; line-height: 1.28; }
+
+/* --- Network'e donus seridi (14.11.2026; bkz. includes/sayfa_ust.php) ------
+   Network'un sag kutularindan haber sitesine gelende en ustte sabit durur. */
+.nw-donus[hidden] { display: none; }
+.nw-donus {
+    position: sticky; top: 0; z-index: 60;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    height: 40px; padding: 0 16px;
+    background: #0b1f44; color: #fff; font-size: 14px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, .25);
+}
+.nw-donus-git { color: #fff; text-decoration: none; display: flex; align-items: center; gap: 6px; height: 100%; }
+.nw-donus-git:hover { text-decoration: underline; }
+.nw-donus-kapat { background: none; border: 0; color: #fff; font-size: 22px; line-height: 1; cursor: pointer; padding: 4px 8px; opacity: .8; }
+.nw-donus-kapat:hover { opacity: 1; }
+/* Yapiskan menu seridin altinda kalsin. */
+body.nw-donuslu .menu-bant { top: 40px; }

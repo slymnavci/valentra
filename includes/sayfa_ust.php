@@ -178,6 +178,34 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
 <?php else: ?>
     <?php
     /*
+     * Network'e donus seridi (site sahibi, 14.11.2026: "sagdaki spor haberine
+     * basinca Network'e donus yeri olmuyor; en basta sabit Network alani
+     * kalsin"). Network'un sag kutularindan (canli skor, puan durumu,
+     * piyasalar...) gelen ziyaretcide sayfanin en ustunde sabit durur; site
+     * icinde gezerken de kalir, "Network'e don" ya da kapat ile kalkar.
+     * Sayfa onbellekte oldugu icin serit her sayfada gizli durur, tarayicidaki
+     * isaret (sessionStorage nw-donus; network.php yazar) varsa acilir.
+     */
+    ?>
+    <div class="nw-donus" id="nw-donus" hidden>
+        <a class="nw-donus-git" href="/network"><span aria-hidden="true">←</span><span><strong>V Network</strong>'e dön</span></a>
+        <button type="button" class="nw-donus-kapat" aria-label="Network şeridini kapat">×</button>
+    </div>
+    <script>
+    (function () {
+        var s = document.getElementById('nw-donus'), d;
+        try { d = sessionStorage.getItem('nw-donus'); } catch (e) {}
+        if (!s || !d) { return; }
+        if (d.charAt(0) === '/' && d.charAt(1) !== '/') { s.querySelector('a').setAttribute('href', d); }
+        s.hidden = false;
+        document.body.classList.add('nw-donuslu');
+        function kaldir() { try { sessionStorage.removeItem('nw-donus'); } catch (e) {} }
+        s.querySelector('a').addEventListener('click', kaldir);
+        s.querySelector('button').addEventListener('click', function () { kaldir(); s.hidden = true; document.body.classList.remove('nw-donuslu'); });
+    })();
+    </script>
+    <?php
+    /*
      * UST BOLUM (site sahibinin istegi, 24.10.2026: "menuleri daha kolay
      * ve akici yapalim; Milliyet'e benzesin ama tam benzemesin; beyaz ve
      * kirmizi tonlar, agirlikli beyaz; bir yere hava durumunu koyalim").

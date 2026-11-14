@@ -1051,6 +1051,67 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
         'başlık ikonu ve ülke bayrağı üretiliyor; bilinmeyen ülkeye bayrak yok');
     bekle(str_contains(nw_gazete_simge_html('hurriyet', 'Hürriyet'), '>H<') , 'gazete simgesi yüklenemezse adın baş harfi görünür');
 
+    // Spor dallari (14.11.2026): Futbol, Basketbol, Diger (ValSpor kosullariyla).
+    ekle([
+        haber('Sınavspor Süper Lig maçında rakibini iki golle geçti', $olagan + ['kategori' => 'spor', 'etiketler' => 'futbol, Süper Lig']),
+        haber('Sınavkent basketbol takımı EuroLeague maçını kazandı', $olagan + ['kategori' => 'spor', 'etiketler' => 'basketbol, EuroLeague']),
+        haber('Milli tenisçi Wimbledon tenis turnuvasında çeyrek finalde', $olagan + ['kategori' => 'spor', 'etiketler' => 'tenis, Wimbledon']),
+    ]);
+    db()->exec("UPDATE haberler SET durum = 'yayinda', yayin_tarihi = COALESCE(yayin_tarihi, NOW()), guncellendi = guncellendi");
+    // Baslik listesi (nw_konular) istek basina onbellekte: yeni surecte oku.
+    $dalBasliklari = static fn (string $dal): array => (array) json_decode((string) shell_exec(escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg(
+        'require "' . __DIR__ . '/../includes/bootstrap.php"; require "' . __DIR__ . '/../includes/topluluk.php";'
+        . 'echo json_encode(array_map(fn($o) => (string) $o["veri"]["baslik"], nw_akis(30, 0, null, null, "spor", "", true, ' . var_export($dal, true) . ')["ogeler"]));'
+    )), true);
+    bekle(count($dalBasliklari('')) === 3, 'spor başlığı: dal seçilmeden bütün spor haberleri', implode(' | ', $dalBasliklari('')));
+    bekle($dalBasliklari('futbol') === ['Sınavspor Süper Lig maçında rakibini iki golle geçti'], 'Futbol: yalnızca futbol haberi', implode(' | ', $dalBasliklari('futbol')));
+    bekle($dalBasliklari('basketbol') === ['Sınavkent basketbol takımı EuroLeague maçını kazandı'], 'Basketbol: yalnızca basketbol haberi', implode(' | ', $dalBasliklari('basketbol')));
+    bekle($dalBasliklari('diger') === ['Milli tenisçi Wimbledon tenis turnuvasında çeyrek finalde'], 'Diğer: diğer sporların haberi', implode(' | ', $dalBasliklari('diger')));
+    bekle(nw_spor_dal_kosulu('olmayan') === '' && count($dalBasliklari('olmayan')) === 3, 'bilinmeyen dal süzmez');
+
+    // "Son haberler" (14.11.2026): once Turkiye, onemli gundem; yabanci yayin, spor ve onemsiz haber yok.
+    db()->exec("INSERT INTO kaynaklar (ad, site_url, tur, kategori, aktif) VALUES ('Test Spiegel', 'https://www.spiegel.de/', 'rss', 'gundem', 1)");
+    $sId = (int) db()->lastInsertId();
+    db()->exec("UPDATE haberler SET onem = 70, kaynak_id = NULL, guncellendi = guncellendi");
+    db()->exec("UPDATE haberler SET onem = 30, guncellendi = guncellendi WHERE baslik LIKE '%Tapu harcı%'");
+    db()->exec("UPDATE haberler SET kaynak_id = $sId, guncellendi = guncellendi WHERE baslik LIKE '%Turizm geliri%'");
+    $sonBasliklar = array_map(static fn (array $o): string => (string) $o['veri']['baslik'], nw_akis(40, 0, null, null, '', '', true, '', true)['ogeler']);
+    $var = static fn (string $parca): bool => array_filter($sonBasliklar, static fn (string $b): bool => str_contains($b, $parca)) !== [];
+    bekle($var('otobüs hattı') && $var('Sanayi üretimi'), '"Son haberler": Türkiye gündeminin önemli haberleri geliyor', implode(' | ', $sonBasliklar));
+    bekle(!$var('Turizm geliri'), '"Son haberler": yabancı gazetenin haberi yok (ülke gruplarında durur)');
+    bekle($var('Tapu harcı'), '"Son haberler": son yüklenenlerin tamamı (önem puanı düşük haber de var)');
+
+    // "Onemli haberler" (14.11.2026): o gunun gundemi; once buyuk yayinlarin ana sayfasindakiler, sonra onem puani.
+    db()->exec("UPDATE haberler SET manset_sinyal = 18, guncellendi = guncellendi WHERE baslik LIKE '%Sanayi üretimi%'");
+    db()->exec("UPDATE haberler SET onem = 90, guncellendi = guncellendi WHERE baslik LIKE '%otobüs hattı%'");
+    $onemliler = array_map(static fn (array $o): string => (string) $o['veri']['baslik'], nw_akis(40, 0, null, null, '', '', true, '', true, true)['ogeler']);
+    bekle(str_contains($onemliler[0] ?? '', 'Sanayi üretimi') && str_contains($onemliler[1] ?? '', 'otobüs hattı'),
+        '"Önemli haberler": önce gazetelerin ana sayfasındaki haber, sonra önem puanı yüksek olan', implode(' | ', $onemliler));
+    bekle(array_filter($onemliler, static fn (string $b): bool => str_contains($b, 'Tapu harcı') || str_contains($b, 'Turizm geliri')) === [],
+        '"Önemli haberler": önemsiz haber ve yabancı gazete haberi yok');
+    $gazeteOnemli = nw_akis(40, 0, null, null, '', 'hurriyet', true, '', false, true);
+    bekle($gazeteOnemli['ogeler'] !== [] && $gazeteOnemli['sonraki'] === 0 && str_contains((string) $gazeteOnemli['ogeler'][0]['veri']['baslik'], 'otobüs hattı'),
+        'gazete seçiliyken "Önemli haberler": o gazetenin en önemli haberi en üstte', (string) ($gazeteOnemli['ogeler'][0]['veri']['baslik'] ?? '-'));
+    db()->exec("UPDATE haberler SET manset_sinyal = 0, guncellendi = guncellendi");
+    bekle(!$var('Süper Lig') && !$var('EuroLeague') && !$var('Köprü bakım'), '"Son haberler": spor ve dünya başlığındaki haber yok');
+    bekle(count(nw_akis(40, 0, null, null, '', '', true)['ogeler']) > count($sonBasliklar), 'başlık ve gazete akışları değişmedi (süzgeç yalnızca "Son haberler"de)');
+    db()->exec("DELETE FROM kaynaklar WHERE id = $sId");
+    bekle((int) db()->query("SELECT ('https://www.bbc.com/turkce' REGEXP " . db()->quote(nw_yabanci_kaynak_ifadesi()) . ") + ('https://feeds.bbci.co.uk/news' REGEXP " . db()->quote(nw_yabanci_kaynak_ifadesi())
+        . ") + 10 * ('https://www.hurriyet.com.tr/rss' REGEXP " . db()->quote(nw_yabanci_kaynak_ifadesi()) . ")")->fetchColumn() === 2,
+        'yabancı yayın adresi SQL\'de de tanınıyor; Türk yayını yabancı sayılmıyor');
+
+    // Akis kartinda 5-6 satirlik ozet (14.11.2026).
+    $uzunOzet = nw_haber_ozeti(['ozet' => 'Merkez Bankası faiz kararını açıkladı.', 'icerik_basi' => "## Karar\nMerkez Bankası faiz kararını açıkladı. Para Politikası Kurulu politika faizini sabit tuttu. "
+        . str_repeat('Kurul, enflasyon görünümündeki gelişmeleri yakından izleyeceğini bildirdi. Piyasalar kararı beklentilere paralel buldu. ', 6)]);
+    bekle(mb_strlen($uzunOzet) >= 400 && mb_strlen($uzunOzet) <= 660 && str_starts_with($uzunOzet, 'Merkez Bankası faiz kararını açıkladı. Para Politikası')
+        && str_ends_with($uzunOzet, '.') && !str_contains($uzunOzet, '##'), 'kart özeti 5-6 satır: kısa özet haber metninden cümle sınırında tamamlanıyor, özet yinelenmiyor', mb_strlen($uzunOzet) . ' karakter');
+    bekle(nw_haber_ozeti(['ozet' => 'Kısa özet.', 'icerik_basi' => '']) === 'Kısa özet.', 'metin yoksa özet olduğu gibi (uydurma tamamlama yok)');
+
+    // Gazete simgesi yayinin kendi sitesinden (14.11.2026): video beslemesinin adresi (YouTube) simge olmaz.
+    bekle(nw_simge_alani('https://www.youtube.com/channel/abc') === '' && nw_simge_alani('https://www.sozcu.com.tr/rss') === 'sozcu.com.tr'
+        && NW_GAZETE_ALANLARI['ntv'] === 'ntv.com.tr' && nw_gazete_simge_dosyasi('ntv', 'ntv.com.tr') !== nw_gazete_simge_dosyasi('ntv', 'youtube.com'),
+        'gazete simgesi yayının kendi sitesinden; YouTube adresi simge kaynağı değil, adres değişince eski simge geçersiz');
+
     // Sag kenar kutulari (14.11.2026): kaynaklari beklemez, veri yoksa da cizilir.
     $eko = nw_ekonomi_kutusu_html();
     bekle(str_contains($eko, 'Döviz') && str_contains($eko, 'Kripto paralar') && str_contains($eko, 'bolum=doviz') && !str_contains($eko, '—'),

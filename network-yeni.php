@@ -49,8 +49,12 @@ $sayi  = 0;
 try {
     $h = db()->prepare(
         "SELECT COUNT(*) FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
+          " . ($konu === '' && $gazete === '' ? 'LEFT JOIN kaynaklar ky ON ky.id = h.kaynak_id' : '') . "
           WHERE h.durum = :d AND h.yayin_tarihi > FROM_UNIXTIME(:o) AND h.yayin_tarihi <= NOW()
+            " . ($konu === '' && $gazete === '' ? nw_turkiye_gundemi_kosulu() : '') . "
             AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . $gazeteKosulu
+            // Spor dali secili akis (14.11.2026): yalnizca o dalin yeni haberleri.
+            . ($konu === 'spor' ? nw_spor_dal_kosulu((string) ($_GET['dal'] ?? '')) : '')
     );
     $h->execute(['d' => HABER_YAYINDA, 'o' => $once]);
     $sayi += (int) $h->fetchColumn();

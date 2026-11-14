@@ -43,7 +43,7 @@ require_once __DIR__ . '/includes/topluluk.php';
 // YZ begenileri (en fazla 5 dakikada bir, istegin sonunda).
 topluluk_begeni_zamanla();
 
-sayfa_onbellek(['yol', 'sekme', 'once', 'ara', 'sira', 'konu', 'gazete', 'gorunum']);
+sayfa_onbellek(['yol', 'sekme', 'once', 'ara', 'sira', 'konu', 'gazete', 'gorunum', 'dal', 'sec']);
 
 require_once __DIR__ . '/includes/seo.php';
 require_once __DIR__ . '/includes/network_gorunum.php';
@@ -144,13 +144,19 @@ switch ($sayfa) {
         $gazete = (string) ($_GET['gazete'] ?? '');
         $gazete = isset($gazeteler[$gazete]) ? $gazete : '';
         $konu   = $gazete !== '' ? '' : $konu;
+        // Spor dallari (14.11.2026, bkz. NW_SPOR_DALLARI): ?konu=spor&dal=futbol
+        $dal    = (string) ($_GET['dal'] ?? '');
+        $dal    = $konu === 'spor' && isset(NW_SPOR_DALLARI[$dal]) ? $dal : '';
         $gazeteGorunumu = $gazete === '' && $konu === '' && $sekme === 'herkes' && $once === 0
             && (string) ($_GET['gorunum'] ?? '') !== 'akis' && $gazeteler !== [];
         $gazeteOzetleri = $gazeteGorunumu ? nw_gazete_ozetleri() : [];
         $gazeteGorunumu = $gazeteOzetleri !== [];
+        // En ustteki "Son haberler / Onemli haberler" secimi (14.11.2026): ?sec=onemli
+        $onemli = !$gazeteGorunumu && $sekme === 'herkes' && (string) ($_GET['sec'] ?? '') === 'onemli';
         $akis   = $gazeteGorunumu
             ? ['ogeler' => [], 'sonraki' => 0]
-            : nw_akis(NW_AKIS_ADEDI, $once, null, null, $konu, $gazete, true);
+            // "Son haberler" (baslik ve gazete secili degilken): once Turkiye, onemli gundem (14.11.2026).
+            : nw_akis($onemli ? 40 : NW_AKIS_ADEDI, $once, null, null, $konu, $gazete, true, $dal, $konu === '' && $gazete === '', $onemli);
         $baglam = nw_baglam($akis['ogeler']);
         $takipEdilenler = $uyeId !== null ? nw_takip_edilenler($uyeId) : [];
         $oneriler = !$kisilerAcik ? [] : array_slice(array_values(array_filter(
@@ -161,10 +167,11 @@ switch ($sayfa) {
         $etkilesimHaberleri = nw_etkilesim_haberleri(6);
         $begenilenHaberler  = nw_begenilen_haberler(6);
         $akisGorunumu = !$gazeteGorunumu && $gazete === '' && $konu === '' && $sekme === 'herkes';
-        $buYol  = nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'gazete' => $gazete,
-            'gorunum' => $akisGorunumu ? 'akis' : '', 'once' => $once]);
+        $buYol  = nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'dal' => $dal, 'gazete' => $gazete,
+            'gorunum' => $akisGorunumu ? 'akis' : '', 'sec' => $onemli ? 'onemli' : '', 'once' => $once]);
         $sayfaBasligi = match (true) {
             $gazete !== '' => $gazeteler[$gazete]['ad'] . ' haberleri — V Network | Valentra',
+            $dal !== ''    => NW_SPOR_DALLARI[$dal][0] . ' haberleri — V Network | Valentra',
             $konu !== ''   => $konular[$konu] . ' — V Network | Valentra',
             default        => 'V Network — Valentra okurlarının buluşma yeri',
         };
@@ -501,6 +508,37 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 </nav>
             <?php endif; ?>
 
+            <?php if ($konu === 'spor'): ?>
+                <?php /* Spor dallari (14.11.2026): Futbol, Basketbol, Diger; her ekran genisliginde gorunur. */ ?>
+                <nav class="nw-dallar" aria-label="Spor dalı">
+                    <a href="<?= e(nw_yol('', ['konu' => 'spor', 'sec' => $onemli ? 'onemli' : ''])) ?>" class="<?= $dal === '' ? 'aktif' : '' ?>"<?= $dal === '' ? ' aria-current="page"' : '' ?>>Tümü</a>
+                    <?php foreach (NW_SPOR_DALLARI as $dalSlug => [$dalAd]): ?>
+                        <a href="<?= e(nw_yol('', ['konu' => 'spor', 'dal' => $dalSlug, 'sec' => $onemli ? 'onemli' : ''])) ?>" class="<?= $dal === $dalSlug ? 'aktif' : '' ?>"
+                           <?= $dal === $dalSlug ? 'aria-current="page"' : '' ?>><?= e($dalAd) ?></a>
+                    <?php endforeach; ?>
+                </nav>
+            <?php endif; ?>
+
+            <?php /* En ustte iki dugme (site sahibi, 14.11.2026): Son haberler = son yuklenenler;
+                     Onemli haberler = o gun ana sayfalarda / gundemde olanlar. Gazete ve baslik seciliyken de gecerli. */ ?>
+            <?php if (!$gazeteGorunumu && $sekme === 'herkes'): ?>
+                <?php $secYolu = static fn (string $sec): string => nw_yol('', ['konu' => $konu, 'dal' => $dal, 'gazete' => $gazete,
+                    'gorunum' => $akisGorunumu ? 'akis' : '', 'sec' => $sec]); ?>
+                <nav class="nw-dallar nw-secim" aria-label="Sıralama">
+                    <a href="<?= e($secYolu('')) ?>" class="<?= !$onemli ? 'aktif' : '' ?>"<?= !$onemli ? ' aria-current="page"' : '' ?>>Son haberler</a>
+                    <a href="<?= e($secYolu('onemli')) ?>" class="<?= $onemli ? 'aktif' : '' ?>"<?= $onemli ? ' aria-current="page"' : '' ?>>Önemli haberler</a>
+                </nav>
+            <?php endif; ?>
+
+            <?php if ($akisGorunumu): ?>
+                <header class="nw-gazete-ust">
+                    <h1><?= nw_bayrak_html('tr') ?><?= $onemli ? 'Önemli haberler' : 'Son haberler' ?></h1>
+                    <p><?= $onemli
+                        ? 'Bugün Türkiye gündeminde öne çıkanlar: önce büyük gazetelerin ana sayfasına taşıdığı haberler.'
+                        : 'Türkiye\'deki yayınlardan son yüklenen haberler, en yenisi üstte. Dünya haberleri "Dünya" başlığında ve ülke gruplarında.' ?></p>
+                </header>
+            <?php endif; ?>
+
             <?php if ($gazete !== ''): ?>
                 <header class="nw-gazete-ust">
                     <h1><?= nw_gazete_simge_html($gazete, $gazeteler[$gazete]['ad'], 28) ?><?= e($gazeteler[$gazete]['ad']) ?>
@@ -545,7 +583,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <?php endif; ?>
 
             <?php if ($akis['ogeler'] === [] && !$gazeteGorunumu): ?>
-                <div class="bos-durum"><strong><?= $konu !== '' ? e($konular[$konu]) . ' başlığında henüz haber yok.' : 'Henüz haber yok.' ?></strong> <?= $konu !== '' ? 'Başka bir konu seçin ya da “Tümü”ne dönün.' : ($sekme === 'takip' ? 'Paylaşım ve yorumlardaki isimlere tıklayıp insanları takip edin; paylaşımları burada görünür.' : 'Yeni haberler geldikçe burada akacak.') ?></div>
+                <div class="bos-durum"><strong><?= $dal !== '' ? e(NW_SPOR_DALLARI[$dal][0]) . ' dalında henüz haber yok.' : ($konu !== '' ? e($konular[$konu]) . ' başlığında henüz haber yok.' : 'Henüz haber yok.') ?></strong> <?= $konu !== '' ? 'Başka bir konu seçin ya da “Tümü”ne dönün.' : ($sekme === 'takip' ? 'Paylaşım ve yorumlardaki isimlere tıklayıp insanları takip edin; paylaşımları burada görünür.' : 'Yeni haberler geldikçe burada akacak.') ?></div>
             <?php endif; ?>
 
             <?php foreach ($akis['ogeler'] as $oge): ?>
@@ -553,9 +591,20 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <?php endforeach; ?>
 
             <?php if ($akis['sonraki'] > 0): ?>
-                <nav class="nw-sayfalar"><a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'gazete' => $gazete, 'once' => $akis['sonraki']])) ?>">Daha eski haberler →</a></nav>
+                <nav class="nw-sayfalar"><a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'dal' => $dal, 'gazete' => $gazete, 'once' => $akis['sonraki']])) ?>">Daha eski haberler →</a></nav>
             <?php endif; ?>
         </div>
+        <?php /* Sag kutulardan haber sitesine gidene "Network'e don" seridi (14.11.2026; bkz. sayfa_ust.php):
+                 donulecek adres tarayicida saklanir. */ ?>
+        <script>
+        document.addEventListener('click', function (o) {
+            var a = o.target.closest ? o.target.closest('.nw-sag a[href^="/"]') : null;
+            if (a && a.getAttribute('href').indexOf('/network') !== 0) {
+                try { sessionStorage.setItem('nw-donus', location.pathname + location.search); } catch (e) {}
+            }
+        });
+        try { sessionStorage.removeItem('nw-donus'); } catch (e) {}
+        </script>
         <aside class="nw-sag">
             <?php if ($uye === null): ?>
                 <?php // Uye olmayan ziyaretci sagdan uye olur (13.11.2026); ust banttaki "Uye ol" menusu de ayni secenekleri verir. ?>

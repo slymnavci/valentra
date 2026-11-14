@@ -135,10 +135,11 @@
     var konu = new URL(location.href).searchParams.get('konu') || '';
     // Gazete akisinda yalnizca o gazetenin yeni haberleri sayilir (13.11.2026).
     var gazete = new URL(location.href).searchParams.get('gazete') || '';
+    var dal = new URL(location.href).searchParams.get('dal') || '';
     function sor() {
         if (document.hidden) { return; }
         fetch('/network-yeni.php?once=' + encodeURIComponent(ilk.getAttribute('data-zaman')) + (sekme ? '&sekme=' + encodeURIComponent(sekme) : '')
-              + (konu ? '&konu=' + encodeURIComponent(konu) : '') + (gazete ? '&gazete=' + encodeURIComponent(gazete) : ''),
+              + (konu ? '&konu=' + encodeURIComponent(konu) : '') + (gazete ? '&gazete=' + encodeURIComponent(gazete) : '') + (dal ? '&dal=' + encodeURIComponent(dal) : ''),
               { credentials: 'same-origin', cache: 'no-store' })
             .then(function (y) { return y.ok ? y.json() : { sayi: 0 }; })
             .then(function (v) {

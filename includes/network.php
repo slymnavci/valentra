@@ -660,7 +660,7 @@ function mesaj_okunmamis(int $uyeId): int
  *
  * @return array{ogeler: list<array<string,mixed>>, sonraki: int}
  */
-function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUye = null, string $konu = '', string $gazete = '', bool $yalnizHaber = false): array
+function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUye = null, string $konu = '', string $gazete = '', bool $yalnizHaber = false, string $dal = '', bool $turkiyeGundemi = false, bool $onemli = false): array
 {
     $once  = $once > 0 ? $once : time() + 60;
     $ogeler = [];
@@ -680,17 +680,42 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
     // Profil akisinda haber yok, yalnizca o uyenin paylasimlari.
     if ($yalnizUye === null) {
         $ifade = db()->prepare(
-            "SELECT h.id, h.baslik, h.slug, h.ozet, h.gorsel_url, h.iframe_url, h.yayin_tarihi,
+            "SELECT h.id, h.baslik, h.slug, h.ozet, LEFT(h.icerik, 1600) AS icerik_basi, h.gorsel_url, h.iframe_url, h.yayin_tarihi,
                     h.kaynak_adi, h.kaynak_url,
                     UNIX_TIMESTAMP(h.yayin_tarihi) AS zaman, k.ad AS kategori_adi, k.slug AS kategori_slug
                FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
-              WHERE h.durum = :d AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
-                AND h.yayin_tarihi < FROM_UNIXTIME(:once)" . $gazeteKosulu . "
-              ORDER BY h.yayin_tarihi DESC, h.id DESC LIMIT :l"
+               " . ($turkiyeGundemi ? 'LEFT JOIN kaynaklar ky ON ky.id = h.kaynak_id' : '') . "
+              WHERE h.durum = :d" . ($turkiyeGundemi ? nw_turkiye_gundemi_kosulu($onemli) : '') . ($onemli ? ' AND h.yayin_tarihi >= NOW() - INTERVAL :saat HOUR' : '') . " AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
+                AND h.yayin_tarihi < FROM_UNIXTIME(:once)" . $gazeteKosulu . ($konu === 'spor' ? nw_spor_dal_kosulu($dal) : '') . "
+              ORDER BY " . ($onemli ? 'h.manset_sinyal DESC, h.onem DESC, ' : '') . "h.yayin_tarihi DESC, h.id DESC LIMIT :l"
         );
         $ifade->bindValue('d', HABER_YAYINDA);
         $ifade->bindValue('once', $once, PDO::PARAM_INT);
         $ifade->bindValue('l', $adet, PDO::PARAM_INT);
+
+        /*
+         * "Onemli haberler" (site sahibi, 14.11.2026: "onemli haberlere
+         * bastigimizda o gun ana sayfada gundemdeki haberleri versin; mesela
+         * Milliyet'in ana sayfasindaki en onemli haberler gorunsun"): son 24
+         * saatin haberleri, once buyuk yayinlarin ana sayfasinda / mansetinde
+         * olanlar (manset_sinyal, bkz. manset_sinyal.php), sonra onem puani.
+         * O gun az haber varsa (5'ten az) son uc gune bakilir. Tek sayfa;
+         * kartta data-zaman yok (yeni haber sayaci bu siralamada anlamsiz).
+         */
+        if ($onemli) {
+            foreach ([24, 72] as $saat) {
+                $ifade->bindValue('saat', $saat, PDO::PARAM_INT);
+                $ifade->execute();
+                $satirlar = $ifade->fetchAll();
+
+                if (count($satirlar) >= 5) {
+                    break;
+                }
+            }
+
+            return ['ogeler' => array_map(static fn (array $h): array => ['tur' => 'haber', 'zaman' => 0, 'veri' => $h], $satirlar), 'sonraki' => 0];
+        }
+
         $ifade->execute();
 
         foreach ($ifade->fetchAll() as $h) {
@@ -799,6 +824,120 @@ function nw_konular(): array
     }
 
     return $konular;
+}
+
+/* --- Son haberler: once Turkiye, onemli gundem (14.11.2026) -----------------
+ *
+ * Site sahibinin istegi: "Son haberlere bastigimizda dunyadan en son haberler
+ * geliyor ama son haberler once Turkiye'deki haberleri versin. Gundemdeki en
+ * onemli haberler burada olsun."
+ *
+ * Yabanci gazeteler eklenince (13.11.2026) kronolojik akisi onlarin haberleri
+ * dolduruyordu. "Son haberler" artik TURKIYE GUNDEMI: Turkiye'deki yayinlarin
+ * haberleri, onem puani ana sayfa esiginin (ANA_SAYFA_ONEM_ESIGI) ustunde
+ * olanlar; spor, magazin, yemek tarifi ve dunya basliklari haric (onlarin
+ * kendi basliklari var). Yabanci gazetelerin haberleri ulke gruplarinda ve
+ * "Dunya" basliginda durur.
+ * ---------------------------------------------------------------------- */
+
+/** "Son haberler"de olmayan basliklar. */
+const NW_GUNDEM_HARIC_BASLIKLAR = ['spor', 'magazin', 'yemek-tarifleri', 'dunya'];
+
+/**
+ * Yabanci yayinin site adresini taniyan duzenli ifade (MySQL REGEXP):
+ * NW_ALAN_ULKELERI'ndeki alan adlari ve NW_UZANTI_ULKELERI'ndeki uzantilar
+ * (tr haric). nw_kaynak_ulkesi ile ayni kural, SQL'de.
+ */
+function nw_yabanci_kaynak_ifadesi(): string
+{
+    $alanlar   = implode('|', array_map(static fn (string $a): string => str_replace('.', '[.]', $a), array_keys(NW_ALAN_ULKELERI)));
+    $uzantilar = implode('|', array_diff(array_keys(NW_UZANTI_ULKELERI), ['tr']));
+
+    return '^https?://(([^/]*[.])?(' . $alanlar . ')|[^/]+[.](' . $uzantilar . '))(/|$)';
+}
+
+/** "Son haberler" kosulu (SQL, basinda AND; h: haberler, k: kategoriler, ky: kaynaklar). */
+function nw_turkiye_gundemi_kosulu(bool $onemli = false): string
+{
+    $haric = implode(', ', array_map(static fn (string $s): string => db()->quote($s), NW_GUNDEM_HARIC_BASLIKLAR));
+
+    // Onem esigi yalnizca "Onemli haberler"de: "Son haberler" son yuklenenlerin tamami (14.11.2026).
+    return ($onemli ? ' AND h.onem >= ' . (int) ANA_SAYFA_ONEM_ESIGI : '')
+        . ' AND (k.slug IS NULL OR k.slug NOT IN (' . $haric . '))'
+        . ' AND (ky.site_url IS NULL OR LOWER(ky.site_url) NOT REGEXP ' . db()->quote(nw_yabanci_kaynak_ifadesi()) . ')';
+}
+
+/**
+ * Akis kartindaki ozet: 5-6 satir (site sahibi, 14.11.2026: "ozet verirken
+ * haber 5-6 satir olarak ozetlensin"). Haberin kisa ozeti (spot) cogu zaman
+ * bir iki cumle; yetmiyorsa haber metninin basindan, cumle sinirinda
+ * kesilerek tamamlanir. Metinde ozetle ayni olan cumle yinelenmez.
+ *
+ * @param array<string,mixed> $v ozet, icerik_basi
+ */
+function nw_haber_ozeti(array $v, int $hedef = 480): string
+{
+    $duz   = static fn (string $m): string => trim((string) preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($m), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+    $ozet  = $duz((string) ($v['ozet'] ?? ''));
+    $metin = $duz((string) preg_replace('/^\s*#{1,6}\s.*$/mu', ' ', (string) ($v['icerik_basi'] ?? '')));
+
+    if (mb_strlen($ozet, 'UTF-8') >= $hedef * 0.8 || $metin === '') {
+        return kisalt($ozet, $hedef + 60);
+    }
+
+    $sonuc = $ozet;
+
+    foreach (preg_split('/(?<=[.!?…])\s+(?=[\p{Lu}\d"“‘(])/u', $metin) ?: [] as $cumle) {
+        $cumle = trim($cumle);
+
+        // Ozetin kendisi ya da ozette gecen cumle yinelenmesin.
+        if ($cumle === '' || ($ozet !== '' && (str_contains($ozet, $cumle) || str_contains($cumle, $ozet)))) {
+            continue;
+        }
+
+        if (mb_strlen($sonuc . ' ' . $cumle, 'UTF-8') > $hedef + 50) {
+            break;
+        }
+
+        $sonuc = trim($sonuc . ' ' . $cumle);
+
+        if (mb_strlen($sonuc, 'UTF-8') >= $hedef) {
+            break;
+        }
+    }
+
+    return $sonuc !== '' ? $sonuc : kisalt($metin, $hedef);
+}
+
+/* --- Spor dallari (14.11.2026) ---------------------------------------------
+ *
+ * Site sahibinin istegi: "Spora bastigimizda en ustte futbol, basketbol ve
+ * diger diye baslik ciksin; butona bastigimizda futbol haberleri, basketbol
+ * haberleri ve diger gruplanmis sporlarin haberleri gelsin."
+ * Dallar ValSpor'un bolum kosullarini kullanir (includes/gazeteler.php):
+ * ayni haber iki yerde farkli dala dusmesin. "Diger": voleybol ve diger
+ * sporlar (tenis, Formula 1, atletizm, gures...).
+ * ---------------------------------------------------------------------- */
+
+/** Dal => [ad, ValSpor bolumleri]. */
+const NW_SPOR_DALLARI = [
+    'futbol'    => ['Futbol', ['futbol']],
+    'basketbol' => ['Basketbol', ['basketbol']],
+    'diger'     => ['Diğer', ['voleybol', 'diger-sporlar']],
+];
+
+/** Spor akisinin dal kosulu (SQL, basinda AND); dal yoksa ya da bilinmiyorsa bos. */
+function nw_spor_dal_kosulu(string $dal): string
+{
+    if (!isset(NW_SPOR_DALLARI[$dal])) {
+        return '';
+    }
+
+    require_once __DIR__ . '/gazeteler.php';
+
+    $parcalar = array_map(static fn (string $b): string => gazete_kosulu('valspor', $b), NW_SPOR_DALLARI[$dal][1]);
+
+    return ' AND (' . implode(' OR ', $parcalar) . ')';
 }
 
 /* --- Gazeteler (13.11.2026) ---------------------------------------------
@@ -962,6 +1101,59 @@ function nw_gazete_simge_klasoru(): string
     return dirname(__DIR__) . '/gorseller/gazete';
 }
 
+/*
+ * Yayinlarin KENDI site adresleri (14.11.2026). Canli sitede tarama: Hurriyet,
+ * NTV, TRT Haber, CNN Turk, Haberturk, A Haber, AA, TGRT, Haber Global,
+ * Bloomberg HT ve BBC Turkce'nin simgesi YouTube simgesiydi; cunku bu
+ * yayinlarin video beslemesinin adresi youtube.com ve simge "ilk beslemenin
+ * alan adindan" aliniyordu. Bilinen yayinlarin adresi buradan; digerlerinde
+ * video / toplayici adresleri (NW_SIMGE_OLMAYAN_ALANLAR) atlanir.
+ */
+const NW_GAZETE_ALANLARI = [
+    'hurriyet' => 'hurriyet.com.tr', 'hurriyet-kelebek' => 'hurriyet.com.tr', 'milliyet' => 'milliyet.com.tr',
+    'sabah' => 'sabah.com.tr', 'sozcu' => 'sozcu.com.tr', 'sozcu-gazetesi' => 'sozcu.com.tr',
+    'cumhuriyet' => 'cumhuriyet.com.tr', 'haberturk' => 'haberturk.com', 'ntv' => 'ntv.com.tr',
+    'cnn-turk' => 'cnnturk.com', 'trt-haber' => 'trthaber.com', 'trt-spor' => 'trtspor.com.tr',
+    'a-haber' => 'ahaber.com.tr', 'a-spor' => 'aspor.com.tr', 'anadolu-ajansi' => 'aa.com.tr',
+    'anadolu-ajansi-basketbol' => 'aa.com.tr', 'dha' => 'dha.com.tr', 'iha' => 'iha.com.tr',
+    'tgrt-haber' => 'tgrthaber.com', 'haber-global' => 'haberglobal.com.tr', 'bloomberg-ht' => 'bloomberght.com',
+    'bbc-news-turkce' => 'bbc.com', 'bbc' => 'bbc.com', 'euronews-turkce' => 'euronews.com',
+    'dw-turkce' => 'dw.com', 'yeni-safak' => 'yenisafak.com', 'aksam' => 'aksam.com.tr',
+    'turkiye-gazetesi' => 'turkiyegazetesi.com.tr', 'star' => 'star.com.tr', 'posta' => 'posta.com.tr',
+    'takvim' => 'takvim.com.tr', 'karar' => 'karar.com', 'ensonhaber' => 'ensonhaber.com',
+    'mynet-haber' => 'mynet.com', 'haber7' => 'haber7.com', 'internet-haber' => 'internethaber.com',
+    'gazete-oksijen' => 'gazeteoksijen.com', 'ekonomim' => 'ekonomim.com', 'dunya-gazetesi' => 'dunya.com',
+    'fanatik' => 'fanatik.com.tr', 'fotomac' => 'fotomac.com.tr', 'ntv-spor' => 'ntvspor.net',
+    'webtekno' => 'webtekno.com', 'shiftdelete' => 'shiftdelete.net', 'donanimhaber' => 'donanimhaber.com',
+    'techcrunch' => 'techcrunch.com', 'coindesk' => 'coindesk.com',
+];
+
+/** Yayinin kendi sitesi olmayan adresler: video, toplayici, besleme servisleri. */
+const NW_SIMGE_OLMAYAN_ALANLAR = ['youtube.com', 'youtu.be', 'google.com', 'news.google.com', 'feedburner.com', 'feeds.feedburner.com', 'dailymotion.com', 'x.com', 'twitter.com', 'facebook.com', 'instagram.com', 't.me'];
+
+/** Besleme adresinden yayinin alan adi; video / toplayici adresiyse bos. */
+function nw_simge_alani(string $adres): string
+{
+    $alan = (string) preg_replace('/^(www|m|rss|feeds?)\./', '', strtolower((string) parse_url($adres, PHP_URL_HOST)));
+
+    foreach (NW_SIMGE_OLMAYAN_ALANLAR as $y) {
+        if ($alan === $y || str_ends_with($alan, '.' . $y)) {
+            return '';
+        }
+    }
+
+    return $alan;
+}
+
+/**
+ * Simge dosyasinin adi. Alan adi dosya adinda: adres duzelince (ya da
+ * degisince) eski, yanlis simge kendiliginden gecersiz kalir.
+ */
+function nw_gazete_simge_dosyasi(string $slug, string $alan): string
+{
+    return $slug . '-' . substr(md5($alan), 0, 6);
+}
+
 /**
  * Gazetenin kucuk simgesi: yayinin kendi site simgesi (favicon), altinda
  * adin bas harfi. Simge sunucuda bir kez indirilip saklanir
@@ -973,12 +1165,20 @@ function nw_gazete_simge_klasoru(): string
 function nw_gazete_simge_html(string $slug, string $ad, int $boyut = 20): string
 {
     $harf = mb_strtoupper(mb_substr($ad, 0, 1, 'UTF-8'), 'UTF-8');
-    $yerel = '/gorseller/gazete/' . $slug . '.png';
-    $src  = is_file(nw_gazete_simge_klasoru() . '/' . $slug . '.png') ? $yerel : '/gazete-simge.php?g=' . rawurlencode($slug);
+    $alan = (string) (nw_gazeteler()[$slug]['alan'] ?? (NW_GAZETE_ALANLARI[$slug] ?? ''));
+
+    // Adresi bilinmeyen yayin (yalnizca video beslemesi vb.): bas harf.
+    if ($alan === '') {
+        return '<span class="nw-gz-simge" style="--b:' . $boyut . 'px" aria-hidden="true">' . e($harf) . '</span>';
+    }
+
+    $dosya = nw_gazete_simge_dosyasi($slug, $alan);
+    $yerel = '/gorseller/gazete/' . $dosya . '.png';
+    $src  = is_file(nw_gazete_simge_klasoru() . '/' . $dosya . '.png') ? $yerel : '/gazete-simge.php?g=' . rawurlencode($slug);
 
     return '<span class="nw-gz-simge" style="--b:' . $boyut . 'px" aria-hidden="true">' . e($harf)
         // Indirilemedi isareti bir gun gecerli (gazete-simge.php ile ayni sure): sonra yeniden denenir.
-        . (is_file($yok = nw_gazete_simge_klasoru() . '/' . $slug . '.yok') && filemtime($yok) > time() - 86400 ? ''
+        . (is_file($yok = nw_gazete_simge_klasoru() . '/' . $dosya . '.yok') && filemtime($yok) > time() - 86400 ? ''
             : '<img src="' . e($src) . '" alt="" width="' . $boyut . '" height="' . $boyut . '" loading="lazy" onerror="this.remove()">')
         . '</span>';
 }
@@ -1042,8 +1242,9 @@ function nw_gazeteler(int $gun = 3): array
 
         $liste[$slug] ??= ['ad' => $ad, 'adet' => 0, 'kaynaklar' => [], 'ulke' => 'tr', 'yerel' => true, 'ulkeHaber' => [], 'alan' => ''];
 
+        // Simge icin yayinin KENDI sitesi (14.11.2026): bilinen adres, yoksa video / toplayici olmayan ilk besleme adresi.
         if ($liste[$slug]['alan'] === '') {
-            $liste[$slug]['alan'] = (string) preg_replace('/^www\./', '', strtolower((string) parse_url((string) ($s['site_url'] ?? ''), PHP_URL_HOST)));
+            $liste[$slug]['alan'] = NW_GAZETE_ALANLARI[$slug] ?? nw_simge_alani((string) ($s['site_url'] ?? ''));
         }
         $liste[$slug]['adet'] += (int) $s['adet'];
         $liste[$slug]['kaynaklar'][] = (string) $s['kaynak_adi'];
