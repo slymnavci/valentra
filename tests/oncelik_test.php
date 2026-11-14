@@ -161,6 +161,9 @@ function eskit(int $dakika, ?string $baslik = null): void
 function temizle(): void
 {
     db()->exec('DELETE FROM haberler');
+    // Numara bastan baslasin: bazi senaryolar haber tarihini numaradan turetiyor
+    // ("NOW() - INTERVAL id MINUTE"); numaralar buyudukce haberler gunler oncesine dusuyordu.
+    db()->exec('ALTER TABLE haberler AUTO_INCREMENT = 1');
     db()->exec('DELETE FROM haber_olay_gecmisi');
     @unlink(ONCELIK_ONBELLEK_DAMGA);
 }
