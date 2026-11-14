@@ -43,3 +43,6 @@ onbellek/sayfa/*
 gorseller/uye/*
 !gorseller/uye/.htaccess
 !gorseller/uye/index.html
+
+# Gazete simgeleri (gazete-simge.php); sunucuda duruyor.
+gorseller/gazete/*

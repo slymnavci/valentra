@@ -55,10 +55,9 @@ try {
     $h->execute(['d' => HABER_YAYINDA, 'o' => $once]);
     $sayi += (int) $h->fetchColumn();
 
-    if ($gazete !== '') {
-        echo json_encode(['sayi' => min($sayi, 99)]);
-        exit;
-    }
+    // Akista yalnizca haber var (13.11.2026): paylasim ve yorum sayilmaz.
+    echo json_encode(['sayi' => min($sayi, 99)]);
+    exit;
 
     $kosul = $takip ? ' AND (g.uye_id = :u1 OR g.uye_id IN (SELECT takip_edilen FROM takipler WHERE takip_eden = :u2))' : '';
 

@@ -2809,3 +2809,53 @@ CREATE TABLE IF NOT EXISTS gundem_basliklari (
     UNIQUE KEY uq_gundem_adres (adres_parmak),
     KEY ix_gundem_zaman (zaman)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Ulke ulke gazeteler (13.11.2026, site sahibi: "her ulkenin en onemli
+-- gazetelerinin haberlerini yayimlayalim, hepsi Turkceye cevrilmis olsun;
+-- Turkiye'de de en cok okunan gazetelerin haberlerini alalim").
+--
+-- Her adres eklenmeden once ajanin kostugu yerde (GitHub, "kaynak-testi",
+-- aday modu) SINANDI: 13.11.2026, calismalar 43493286623 ve 43524903919.
+-- Yalnizca son 36 saatte girdisi olan beslemeler eklendi. EKLENMEYENLER:
+-- FAZ (302), France 24 (zaman asimi), Corriere della Sera ve Xinhua (girdi
+-- okunamadi), China Daily (404), NHK (97 gundur guncellenmiyor), Turkiye
+-- Gazetesi (404), T24 (besleme degil HTML), Ensonhaber (403). Cin icin
+-- calisan ikinci besleme bulunamadi; South China Morning Post zaten kayitli.
+--
+-- Ajan yabanci dildeki haberi cevirmez, anlayip Turkce ozetler (bkz. Yazar).
+-- Hakaret iceren ve guvenilmez haber kaynagi ne olursa olsun yayimlanmaz
+-- (Yazar, YAYIMLANMAZ maddeleri). Yeni kaynaklar saatte bir (Turkiye) ya da
+-- iki saatte bir (yabanci) taranir: nobet taramasi (15 dk) sismesin.
+-- Ulke, site adresinden bulunur (includes/network.php, nw_kaynak_ulkesi).
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif, aralik_dk) VALUES
+    ('The New York Times Dünya', 'https://www.nytimes.com',        'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',          'rss', 'dunya', 1, 120),
+    ('The Washington Post',      'https://www.washingtonpost.com', 'https://feeds.washingtonpost.com/rss/world',                      'rss', 'dunya', 1, 120),
+    ('BBC News Dünya',           'https://www.bbc.com/news/world', 'https://feeds.bbci.co.uk/news/world/rss.xml',                     'rss', 'dunya', 1, 120),
+    ('The Guardian Dünya',       'https://www.theguardian.com/world', 'https://www.theguardian.com/world/rss',                        'rss', 'dunya', 1, 120),
+    ('Der Spiegel Manşet',       'https://www.spiegel.de',         'https://www.spiegel.de/schlagzeilen/index.rss',                   'rss', 'dunya', 1, 120),
+    ('Tagesschau',               'https://www.tagesschau.de',      'https://www.tagesschau.de/index~rss2.xml',                        'rss', 'dunya', 1, 120),
+    ('Le Monde Manşet',          'https://www.lemonde.fr',         'https://www.lemonde.fr/rss/une.xml',                              'rss', 'dunya', 1, 120),
+    ('Le Figaro',                'https://www.lefigaro.fr',        'https://www.lefigaro.fr/rss/figaro_actualites.xml',               'rss', 'dunya', 1, 120),
+    ('la Repubblica',            'https://www.repubblica.it',      'https://www.repubblica.it/rss/homepage/rss2.0.xml',               'rss', 'dunya', 1, 120),
+    ('ANSA',                     'https://www.ansa.it',            'https://www.ansa.it/sito/ansait_rss.xml',                         'rss', 'dunya', 1, 120),
+    ('El País Manşet',           'https://elpais.com',             'https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada', 'rss', 'dunya', 1, 120),
+    ('El Mundo',                 'https://www.elmundo.es',         'https://e00-elmundo.uecdn.es/elmundo/rss/portada.xml',            'rss', 'dunya', 1, 120),
+    ('TASS',                     'https://tass.com',               'https://tass.com/rss/v2.xml',                                     'rss', 'dunya', 1, 120),
+    ('Kommersant',               'https://www.kommersant.ru',      'https://www.kommersant.ru/RSS/news.xml',                          'rss', 'dunya', 1, 120),
+    ('The Japan Times Manşet',   'https://www.japantimes.co.jp',   'https://www.japantimes.co.jp/feed/',                              'rss', 'dunya', 1, 120),
+    ('Asahi Shimbun',            'https://www.asahi.com',          'https://www.asahi.com/rss/asahi/newsheadlines.rdf',               'rss', 'dunya', 1, 120),
+    ('Times of India',           'https://timesofindia.indiatimes.com', 'https://timesofindia.indiatimes.com/rssfeedstopstories.cms', 'rss', 'dunya', 1, 120),
+    ('The Hindu',                'https://www.thehindu.com',       'https://www.thehindu.com/news/national/feeder/default.rss',       'rss', 'dunya', 1, 120),
+    ('Cumhuriyet',               'https://www.cumhuriyet.com.tr',  'https://www.cumhuriyet.com.tr/rss/son_dakika.xml',                'rss', 'gundem', 1, 60),
+    ('Yeni Şafak Gündem',        'https://www.yenisafak.com',      'https://www.yenisafak.com/rss?xml=gundem',                        'rss', 'gundem', 1, 60),
+    ('Akşam',                    'https://www.aksam.com.tr',       'https://www.aksam.com.tr/rss/rss.asp',                            'rss', 'gundem', 1, 60),
+    ('Posta',                    'https://www.posta.com.tr',       'https://www.posta.com.tr/rss/anasayfa.xml',                       'rss', 'gundem', 1, 60),
+    ('Star',                     'https://www.star.com.tr',        'https://www.star.com.tr/rss/rss.asp',                             'rss', 'gundem', 1, 60),
+    ('Karar',                    'https://www.karar.com',          'https://www.karar.com/service/rss.php',                           'rss', 'gundem', 1, 60),
+    ('BirGün',                   'https://www.birgun.net',         'https://www.birgun.net/rss/home',                                 'rss', 'gundem', 1, 60),
+    ('Haber7',                   'https://www.haber7.com',         'https://i12.haber7.net/sondakika/newsstand/latest.xml',           'rss', 'gundem', 1, 60),
+    ('Takvim',                   'https://www.takvim.com.tr',      'https://www.takvim.com.tr/rss/anasayfa.xml',                      'rss', 'gundem', 1, 60),
+    ('Evrensel',                 'https://www.evrensel.net',       'https://www.evrensel.net/rss/haber.xml',                          'rss', 'gundem', 1, 60),
+    ('A Haber Gündem',           'https://www.ahaber.com.tr',      'https://www.ahaber.com.tr/rss/gundem.xml',                        'rss', 'gundem', 1, 60);

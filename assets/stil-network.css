@@ -70,12 +70,13 @@
 :where(:root[data-tema="koyu"]) .nw-govde { background: #18191a; }
 @media (prefers-color-scheme: dark) { :where(:root:not([data-tema="acik"])) .nw-govde { background: #18191a; }
 }
-.nw-govde main.sinirli { max-width: 1320px; }
+/* 1320 -> 1560 (13.11.2026, site sahibi: "sayfayi sagdan ve soldan biraz daha genisletelim"). */
+.nw-govde main.sinirli { max-width: 1560px; }
 
 .nw-sayfa { padding: 18px 0 40px; }
 .nw-bildirim { max-width: 680px; margin: 0 auto 14px; }
 
-.nw-uc { display: grid; grid-template-columns: 260px minmax(0, 640px) 300px; justify-content: space-between; gap: 24px; align-items: start; }
+.nw-uc { display: grid; grid-template-columns: 290px minmax(0, 800px) 330px; justify-content: space-between; gap: 28px; align-items: start; }
 .nw-sol, .nw-sag { position: sticky; top: 78px; display: grid; gap: 4px; }
 .nw-sag { gap: 16px; }
 .nw-sol-oge {
@@ -427,3 +428,45 @@ a.nw-hesap:hover { color: var(--altin); }
 .nw-gazete-resim { flex: none; width: 112px; height: 76px; object-fit: cover; border-radius: 8px; background: var(--cizgi); }
 .nw-gazete-yazi { min-width: 0; }
 @media (max-width: 520px) { .nw-gazete-resim { width: 88px; height: 62px; } }
+
+/* Gazeteler ulke ulke (13.11.2026): Turkiye (ana gazeteler, yerel), sonra ulkeler. */
+.nw-ulke { margin: 0; }
+.nw-ulke > summary {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px; list-style: none; cursor: pointer; user-select: none;
+    padding: 8px 10px; border-radius: 8px; font-weight: 800; font-size: .92rem; color: var(--metin);
+}
+.nw-ulke > summary::-webkit-details-marker { display: none; }
+.nw-ulke > summary:hover { background: color-mix(in srgb, var(--metin) 7%, transparent); }
+.nw-ulke > summary::after { content: "▸"; color: var(--metin-soluk); font-size: .8rem; transition: transform .15s; }
+.nw-ulke[open] > summary::after { transform: rotate(90deg); }
+.nw-ulke > summary small { margin-left: auto; color: var(--metin-soluk); font-weight: 600; font-size: .74rem; }
+.nw-ulke-ic { display: grid; gap: 1px; padding: 0 0 6px 10px; border-left: 2px solid var(--cizgi); margin-left: 12px; }
+.nw-ulke-alt { padding: 6px 10px 2px; font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--metin-soluk); }
+.nw-ulke .nw-ulke > summary { font-weight: 700; font-size: .86rem; }
+.nw-ulke-baslik { margin: 22px 0 10px; font-size: 1.05rem; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+.nw-ulke-baslik::after { content: ""; flex: 1; height: 1px; background: var(--cizgi); }
+.nw-ulke-baslik:first-of-type { margin-top: 4px; }
+
+/* Simgeler (13.11.2026): baslik ikonu, bayrak, gazete simgesi. */
+.nw-sol-ad { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.nw-sol-ad > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nw-ikon { flex: none; color: var(--altin); }
+.nw-bayrak { flex: none; width: 20px; height: 15px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .12); object-fit: cover; }
+.nw-ulke > summary { justify-content: flex-start; }
+.nw-gz-simge {
+    position: relative; flex: none; display: inline-grid; place-items: center; overflow: hidden;
+    width: var(--b, 20px); height: var(--b, 20px); border-radius: 5px;
+    background: var(--altin); color: var(--vurgu-ustu, #fff); font-weight: 800; font-size: calc(var(--b, 20px) * .55); line-height: 1;
+}
+.nw-gz-simge img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.nw-gazete-simge { background: none; padding: 0; }
+.nw-gazete-simge .nw-gz-simge { border-radius: 50%; }
+.nw-gazete-bas h3 { margin: 0; font-size: .92rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.nw-gazete-bas h3 a { display: flex; align-items: center; gap: 9px; color: var(--metin); text-decoration: none; }
+.nw-gazete-bas h3 a:hover { color: var(--altin); }
+.nw-gazete-ust h1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.nw-gazete-ust h1 small { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 600; color: var(--metin-soluk); }
+.nw-ulke-baslik .nw-bayrak { width: 24px; height: 18px; }
+/* Baslik ve gazete seritleri yalnizca dar ekranda (genis ekranda sol kenar var). */
+.nw-yalniz-dar { display: none; }
+@media (max-width: 860px) { .nw-yalniz-dar { display: flex; } }
