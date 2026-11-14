@@ -117,9 +117,34 @@ function zr_kosul(string $bas, string $bit, bool $ham, string $t = 'z'): string
 {
     $sonraki = (new DateTimeImmutable($bit))->modify('+1 day')->format('Y-m-d');
 
-    return $t . '.zaman >= ' . db()->quote($bas . ' 00:00:00')
-         . ' AND ' . $t . '.zaman < ' . db()->quote($sonraki . ' 00:00:00')
-         . ' AND ' . ziyaret_insan_kosulu($t, $ham);
+    $aralik = static fn (string $x): string => $x . '.zaman >= ' . db()->quote($bas . ' 00:00:00')
+        . ' AND ' . $x . '.zaman < ' . db()->quote($sonraki . ' 00:00:00');
+
+    return $aralik($t) . ' AND ' . ziyaret_insan_kosulu($t, $ham) . ($ham ? '' : ' AND ' . zr_okur_kosulu($t, $aralik('okr')));
+}
+
+/**
+ * ZIYARETCI = HABER OKUYAN IP (14.11.2026, site sahibi: "ziyaretci
+ * sayilarini haber okuma sayilarina gore yapmak daha mantikli; haber okuyan
+ * IP'leri say, digerlerini bot kabul edelim").
+ *
+ * Raporlar yalnizca, ayni aralikta EN AZ BIR HABER okudugu (haber sayfasi ya
+ * da V Network'te haber karti; tarayicida dogrulanmis) IP adreslerinin
+ * satirlarini sayar. Hic haber okumayan adres, actigi sayfalar dahil,
+ * raporlara girmez; "Bot supheliler" tablosunda "hic haber okumadi" diye
+ * gorunur. Panelde "ham sayim" bu kosulu da kaldirir.
+ *
+ * @param string $okrAralik okr takma adli satirlar icin aralik kosulu
+ */
+function zr_okur_kosulu(string $t, string $okrAralik): string
+{
+    if (!ziyaret_yeni_sema()) {
+        return '1=1';
+    }
+
+    return $t . ".ip IN (SELECT okr.ip FROM ziyaretler okr
+                         WHERE okr.haber_id IS NOT NULL AND okr.ip <> '' AND " . $okrAralik . '
+                           AND ' . ziyaret_insan_kosulu('okr') . ')';
 }
 
 /** Ziyaretçi kimliği (yeni şema yoksa takma imza). */
@@ -202,7 +227,8 @@ function zr_simdi(): int
     $satir = zr_sorgu(
         'SELECT COUNT(DISTINCT ' . zr_kimlik() . ') AS n FROM ziyaretler z
           WHERE z.zaman >= (NOW() - INTERVAL ' . (int) ZIYARET_ONLINE_DAKIKA . ' MINUTE)
-            AND ' . ziyaret_insan_kosulu('z')
+            AND ' . ziyaret_insan_kosulu('z') . '
+            AND ' . zr_okur_kosulu('z', 'okr.zaman >= (NOW() - INTERVAL 1 DAY)')
     );
 
     return (int) ($satir[0]['n'] ?? 0);
@@ -708,6 +734,8 @@ const ZR_BOT_HIZ_SANIYE          = 5;   // sayfa basina bundan kisa ortalama ara
  *
  *   - dogrulanmadi: actigi hicbir sayfa tarayicida goruntulenmedi (sayfadaki
  *     betik calismadi) ve en az ZR_BOT_DOGRULANMAMIS_SAYFA sayfa acti,
+ *   - hic haber okumadi (14.11.2026): aralikta dogrulanmis haber okumasi yok;
+ *     bu adresler ziyaretci sayilmaz (bkz. zr_okur_kosulu),
  *   - bulut: adres bir bulut / veri merkezi araliginda (ziyaret_bulut.php),
  *   - cok sayfa: aralikta ZR_BOT_COK_SAYFA ve uzeri sayfa,
  *   - cok hizli: en az ZR_BOT_HIZ_SAYFA sayfa, sayfa basina ortalama
@@ -732,11 +760,12 @@ function zr_bot_suphelileri(array $a, int $adet = 100): array
         "SELECT z.ip, COUNT(*) AS sayfa, SUM(z.insan = 1) AS dogru, MIN(z.zaman) AS ilk, MAX(z.zaman) AS son,
                 TIMESTAMPDIFF(SECOND, MIN(z.zaman), MAX(z.zaman)) AS saniye,
                 MAX(z.cihaz) AS cihaz, MAX(z.tarayici) AS tarayici, MAX(z.isletim) AS isletim,
-                MAX($bulut) AS bulut
+                MAX($bulut) AS bulut, SUM(z.haber_id IS NOT NULL AND z.insan = 1) AS okunan
            FROM ziyaretler z
           WHERE " . zr_kosul($a['bas'], $a['bit'], true) . " AND z.ip <> ''
           GROUP BY z.ip
-         HAVING (dogru = 0 AND sayfa >= " . ZR_BOT_DOGRULANMAMIS_SAYFA . ")
+         HAVING okunan = 0
+             OR (dogru = 0 AND sayfa >= " . ZR_BOT_DOGRULANMAMIS_SAYFA . ")
              OR bulut = 1
              OR sayfa >= " . ZR_BOT_COK_SAYFA . "
              OR (sayfa >= " . ZR_BOT_HIZ_SAYFA . " AND saniye < sayfa * " . ZR_BOT_HIZ_SANIYE . ")
@@ -748,6 +777,9 @@ function zr_bot_suphelileri(array $a, int $adet = 100): array
         $sayfa = (int) $s['sayfa'];
         $n     = [];
 
+        if ((int) $s['okunan'] === 0) {
+            $n[] = 'hiç haber okumadı (ziyaretçi sayılmıyor)';
+        }
         if ((int) $s['bulut'] === 1) {
             $n[] = 'bulut / veri merkezi adresi';
         }
