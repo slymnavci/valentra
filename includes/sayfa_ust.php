@@ -268,7 +268,7 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
             <?php /* Logo (30.10.2026, site sahibinin yeni logosu): lacivert-kirmizi V ve
                      "Λ" harfli VALENTRA yazisi SVG olarak sayfada; koyu temada renkleri
                      CSS'ten degisiyor. */ ?>
-            <a class="logo" href="/" aria-label="Valentra — Ana sayfa">
+            <a class="logo" href="<?= e(haber_ana_yolu()) ?>" aria-label="Valentra Haber — Ön sayfa">
                 <svg class="marka" viewBox="0 0 340 262" aria-hidden="true" focusable="false">
                     <defs>
                         <linearGradient id="ust-vl" x1="0" y1="0" x2="1" y2="1"><stop class="vl1" offset="0" stop-color="#121a2c"/><stop class="vl2" offset=".55" stop-color="#26324d"/><stop class="vl3" offset="1" stop-color="#2e3b58"/></linearGradient>
@@ -339,7 +339,7 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
                 <button type="button" class="cekmece-kapat" data-kapat aria-label="Menüyü kapat">&times;</button>
             </div>
 
-            <a class="cekmece-oge <?= $aktifKategori === '' && $anaSayfa ? 'aktif' : '' ?>" href="/">Ana Sayfa</a>
+            <a class="cekmece-oge <?= $aktifKategori === '' && $anaSayfa ? 'aktif' : '' ?>" href="<?= e(haber_ana_yolu()) ?>">Ana Sayfa</a>
 
             <?php foreach ($menu as $oge): ?>
                 <?php if ($oge['href'] !== null): ?>
@@ -402,7 +402,7 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
     <?php if ($menu !== []): ?>
         <nav class="menu-bant" aria-label="Ana menü">
             <div class="sinirli menu-satir">
-                <a class="menu-oge <?= $aktifKategori === '' && $anaSayfa ? 'aktif' : '' ?>" href="/">Ana Sayfa</a>
+                <a class="menu-oge <?= $aktifKategori === '' && $anaSayfa ? 'aktif' : '' ?>" href="<?= e(haber_ana_yolu()) ?>">Ana Sayfa</a>
 
                 <?php foreach ($menu as $oge): ?>
                     <?php if ($oge['href'] !== null): ?>

@@ -42,6 +42,17 @@ function temiz_adres_acik(): bool
     return $acik;
 }
 
+/**
+ * Valentra Haber'in ana sayfasi (14.11.2026, site sahibi: "ana sayfa Valentra
+ * Network olacak; Valentra Haber'i valentra.com.tr/haber'e tasiyalim").
+ * Sitenin koku (/) artik V Network'u aciyor (.htaccess); haber sitesinin on
+ * sayfasi /haber. Haber adresleri (/haber/<baslik>) degismedi.
+ */
+function haber_ana_yolu(int $sayfa = 1): string
+{
+    return (temiz_adres_acik() ? '/haber' : '/index.php') . ($sayfa > 1 ? '?sayfa=' . $sayfa : '');
+}
+
 /** RSS beslemesinin adresi (bkz. rss.php); $kategori boşsa bütün haberler. */
 function rss_yolu(string $kategori = ''): string
 {

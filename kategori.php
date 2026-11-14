@@ -19,7 +19,7 @@ if ($kategori === null) {
     ?>
     <div class="bos-durum">
         <strong>Konu grubu bulunamadı.</strong>
-        <p><a href="/" style="color:var(--vurgu);text-decoration:underline;">Ana sayfaya dön</a></p>
+        <p><a href="<?= e(haber_ana_yolu()) ?>" style="color:var(--vurgu);text-decoration:underline;">Ana sayfaya dön</a></p>
     </div>
     <?php
     require __DIR__ . '/includes/sayfa_alt.php';

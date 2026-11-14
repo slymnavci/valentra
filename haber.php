@@ -6,6 +6,17 @@ declare(strict_types=1);
  * taslak veya reddedilmis kayitlar 404 doner.
  */
 
+/*
+ * /haber (basliksiz) haber sitesinin on sayfasi (14.11.2026; .htaccess onu
+ * index.php'ye verir). Sunucu icerik uzlasmasiyla (MultiViews) /haber'i bu
+ * dosyaya dusururse on sayfa yine acilsin diye emniyet.
+ */
+if (trim((string) ($_GET['h'] ?? '')) === '' && preg_match('#^/haber/?$#', (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH)) === 1) {
+    require __DIR__ . '/index.php';
+
+    return;
+}
+
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/sayfa_onbellek.php';
 
@@ -80,7 +91,7 @@ if ($haber === null) {
     <div class="bos-durum">
         <strong>Haber bulunamadı.</strong>
         Aradığınız haber yayından kaldırılmış veya adres hatalı olabilir.
-        <p><a href="/" style="color:var(--vurgu);text-decoration:underline;">Ana sayfaya dön</a></p>
+        <p><a href="<?= e(haber_ana_yolu()) ?>" style="color:var(--vurgu);text-decoration:underline;">Ana sayfaya dön</a></p>
     </div>
     <?php
     require __DIR__ . '/includes/sayfa_alt.php';

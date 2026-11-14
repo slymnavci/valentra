@@ -38,7 +38,7 @@ if (!uye_yonetici_mi($nwUye)) {
 <header class="nw-bant">
     <div class="nw-bant-ic">
         <a class="nw-bant-logo" href="<?= e(nw_yol()) ?>" aria-label="V Network akışı"><?= network_logo_html(40) ?></a>
-        <a class="nw-bant-donus" href="/" title="Valentra haber sitesine dön">← Valentra Haber</a>
+        <a class="nw-bant-donus" href="<?= e(haber_ana_yolu()) ?>" title="Valentra haber sitesine dön">← Valentra Haber</a>
 
         <nav class="nw-bant-menu" aria-label="V Network">
             <?php /* Telefonda haber sitesine donus (06.11.2026; site sahibi:
@@ -46,7 +46,7 @@ if (!uye_yonetici_mi($nwUye)) {
                      olmuyor"). Ustteki "← Valentra Haber" dar ekranda
                      gizli; alttaki sekme cubugunun ilk sekmesi bu.
                      Genis ekranda gizli (bkz. .nw-menu-haber). */ ?>
-            <a href="/" class="nw-menu-haber" title="Valentra haber sitesine dön">
+            <a href="<?= e(haber_ana_yolu()) ?>" class="nw-menu-haber" title="Valentra haber sitesine dön">
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v8a2 2 0 0 1-2 2h-1"/><path d="M7 9h7M7 12.5h7M7 16h4"/></svg>
                 <span>Haberler</span>
             </a>
@@ -89,7 +89,7 @@ if (!uye_yonetici_mi($nwUye)) {
                         <a role="menuitem" href="<?= e(nw_yol('ayarlar')) ?>">Profili düzenle</a>
                         <hr>
                         <a role="menuitem" href="<?= e(nw_yol('kurallar')) ?>">Topluluk Kuralları</a>
-                        <a role="menuitem" href="/">Valentra Haber</a>
+                        <a role="menuitem" href="<?= e(haber_ana_yolu()) ?>">Valentra Haber</a>
                         <form method="post" action="<?= e(uye_yolu('cikis')) ?>">
                             <input type="hidden" name="jeton" value="<?= e(uye_form_jetonu()) ?>">
                             <input type="hidden" name="donus" value="<?= e(nw_yol()) ?>">
