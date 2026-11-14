@@ -516,3 +516,17 @@ a.nw-hesap:hover { color: var(--altin); }
 /* Surekli akis (14.11.2026): yuklenirken baglantinin yerinde "yukleniyor". */
 .nw-sayfalar.nw-yukleniyor a { visibility: hidden; }
 .nw-sayfalar.nw-yukleniyor::before { content: "Haberler yükleniyor…"; color: var(--metin-soluk); margin: 0 auto; }
+
+/* Gazetelerin mansetleri (14.11.2026; bkz. nw_gazete_mansetleri_html). */
+.nw-mansetler { background: var(--kart); border: 1px solid var(--cizgi); border-radius: var(--yuvarlak); box-shadow: var(--golge); padding: 16px 18px 18px; margin: 0 0 16px; }
+.nw-mansetler > h2 { margin: 0; font-size: 1.15rem; }
+.nw-mansetler-not { margin: 4px 0 14px; color: var(--metin-soluk); font-size: .88rem; }
+.nw-mansetler-izgara { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+.nw-manset-kutu { border: 1px solid var(--cizgi); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.nw-manset-kutu h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 1rem; }
+.nw-manset-kutu h3 small { margin-left: auto; font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--altin); }
+.nw-manset-kutu ol { list-style: none; margin: 0; padding: 0; }
+.nw-manset-kutu li { display: flex; gap: 10px; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--cizgi); }
+.nw-manset-kutu li a { flex: 1; min-width: 0; color: var(--metin); text-decoration: none; font-weight: 600; font-size: .93rem; line-height: 1.35; }
+.nw-manset-kutu li a:hover { color: var(--altin); text-decoration: underline; }
+.nw-manset-kutu li time { color: var(--metin-soluk); font-size: .76rem; white-space: nowrap; }

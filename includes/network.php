@@ -660,8 +660,22 @@ function mesaj_okunmamis(int $uyeId): int
  *
  * @return array{ogeler: list<array<string,mixed>>, sonraki: int}
  */
-function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUye = null, string $konu = '', string $gazete = '', bool $yalnizHaber = false, string $dal = '', bool $turkiyeGundemi = false, bool $onemli = false): array
+function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUye = null, string $konu = '', string $gazete = '', bool $yalnizHaber = false, string $dal = '', bool $turkiyeGundemi = false, string $sira = '', int $atla = 0): array
 {
+    /*
+     * $sira (14.11.2026):
+     *   ''       en yeni ustte (zamana gore sayfalanir: $once),
+     *   'onemli' gunun onemli haberleri: tek sayfa, onem esigiyle,
+     *   'gundem' "Son haberler" (site sahibi: "her gazetede en cok gosterilen
+     *            haberler en onde olsun, yavas yavas onemsize dogru inelim;
+     *            burada Valentra Haber'deki kural gecerli olabilir"): Valentra
+     *            Haber ana sayfasinin sirasi (haber_sirasi(true): oncelik sinifi,
+     *            bugunun haberleri once, gazetelerin gundem puani dahil onem,
+     *            okunma, tazelik); $atla ile sayfalanir.
+     */
+    $onemli = $sira === 'onemli';
+    $gundem = $sira === 'gundem';
+    $atla   = $gundem ? max(0, min(2000, $atla)) : 0;
     $once  = $once > 0 ? $once : time() + 60;
     $ogeler = [];
 
@@ -685,9 +699,10 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
                     UNIX_TIMESTAMP(h.yayin_tarihi) AS zaman, k.ad AS kategori_adi, k.slug AS kategori_slug
                FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
                " . ($turkiyeGundemi ? 'LEFT JOIN kaynaklar ky ON ky.id = h.kaynak_id' : '') . "
+               " . ($gundem ? haber_okunma_birlesimi() : '') . "
               WHERE h.durum = :d" . ($turkiyeGundemi ? nw_turkiye_gundemi_kosulu($onemli) : '') . ($onemli ? ' AND h.yayin_tarihi >= NOW() - INTERVAL :saat HOUR' : '') . " AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
                 AND h.yayin_tarihi < FROM_UNIXTIME(:once)" . $gazeteKosulu . ($konu === 'spor' ? nw_spor_dal_kosulu($dal) : '') . "
-              ORDER BY " . ($onemli ? 'h.manset_sinyal DESC, h.onem DESC, ' : '') . "h.yayin_tarihi DESC, h.id DESC LIMIT :l"
+              ORDER BY " . ($gundem ? haber_sirasi(true) . ', ' : ($onemli ? 'h.manset_sinyal DESC, h.onem DESC, ' : '')) . "h.yayin_tarihi DESC, h.id DESC LIMIT :l" . ($gundem ? ' OFFSET ' . $atla : '')
         );
         $ifade->bindValue('d', HABER_YAYINDA);
         $ifade->bindValue('once', $once, PDO::PARAM_INT);
@@ -702,6 +717,14 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
          * O gun az haber varsa (5'ten az) son uc gune bakilir. Tek sayfa;
          * kartta data-zaman yok (yeni haber sayaci bu siralamada anlamsiz).
          */
+        if ($gundem) {
+            $ifade->execute();
+            $satirlar = $ifade->fetchAll();
+
+            return ['ogeler' => array_map(static fn (array $h): array => ['tur' => 'haber', 'zaman' => 0, 'veri' => $h], $satirlar),
+                'sonraki' => 0, 'atla' => count($satirlar) === $adet ? $atla + $adet : 0];
+        }
+
         if ($onemli) {
             foreach ([24, 72] as $saat) {
                 $ifade->bindValue('saat', $saat, PDO::PARAM_INT);
@@ -909,6 +932,91 @@ function nw_haber_ozeti(array $v, int $hedef = 480): string
     return $sonuc !== '' ? $sonuc : kisalt($metin, $hedef);
 }
 
+/* --- Gazetelerin mansetleri (14.11.2026) -----------------------------------
+ *
+ * Site sahibinin istegi: "Onemli haberlerde o gunun onemli haberlerini
+ * versin. Gazetelerin mansetlerindeki haberlerden secelim. Her gazetenin
+ * mansetlerini burada gorelim."
+ *
+ * Veri: ajanin her taramada bildirdigi yayin basliklari (gundem_basliklari;
+ * bkz. kim_ne_yazdi.php). Yayinin MANSET / ANA SAYFA beslemesinden gelen
+ * basliklar (manset = 1) once; o beslemesi olmayan yayinda gundem
+ * beslemesinin son basliklari. Baslik yayinin kendi sozu ve kendi sayfasina
+ * baglanir; metin kopyalanmaz.
+ * ---------------------------------------------------------------------- */
+
+/**
+ * @return list<array{yayin:string,ad:string,slug:string,manset:bool,basliklar:list<array{baslik:string,adres:string,zaman:int,manset:bool}>}>
+ */
+function nw_gazete_mansetleri(int $baslikAdet = 4, int $saat = 24): array
+{
+    require_once __DIR__ . '/kim_ne_yazdi.php';
+
+    if (!kny_hazir()) {
+        return [];
+    }
+
+    try {
+        $satirlar = db()->query(
+            'SELECT yayin, baslik, adres, manset, UNIX_TIMESTAMP(zaman) AS z FROM gundem_basliklari
+              WHERE zaman >= NOW() - INTERVAL ' . max(1, min(96, $saat)) . ' HOUR
+              ORDER BY manset DESC, zaman DESC, id DESC'
+        )->fetchAll();
+    } catch (PDOException $e) {
+        return [];
+    }
+
+    $gruplar = [];
+
+    foreach ($satirlar as $s) {
+        $y = (string) $s['yayin'];
+
+        if (!isset(KNY_YAYINLARI[$y])) {
+            continue;
+        }
+
+        $gruplar[$y] ??= ['yayin' => $y, 'ad' => KNY_YAYINLARI[$y][0], 'slug' => nw_gazete_slug(KNY_YAYINLARI[$y][0]), 'manset' => false, 'basliklar' => []];
+
+        if (count($gruplar[$y]['basliklar']) < $baslikAdet) {
+            $gruplar[$y]['basliklar'][] = ['baslik' => (string) $s['baslik'], 'adres' => (string) $s['adres'], 'zaman' => (int) $s['z'], 'manset' => (int) $s['manset'] === 1];
+            $gruplar[$y]['manset'] = $gruplar[$y]['manset'] || (int) $s['manset'] === 1;
+        }
+    }
+
+    // KNY_YAYINLARI sirasiyla (buyuk yayinlar once); manset listesi olan yayin kendi grubunda one gecer.
+    $sira = array_flip(array_keys(KNY_YAYINLARI));
+    usort($gruplar, static fn (array $a, array $b): int => [$b['manset'], $sira[$a['yayin']]] <=> [$a['manset'], $sira[$b['yayin']]]);
+
+    return array_values($gruplar);
+}
+
+/** "Onemli haberler"in ustundeki bolum: her gazetenin manseti / one cikan basliklari. */
+function nw_gazete_mansetleri_html(): string
+{
+    $gruplar = nw_gazete_mansetleri();
+
+    if ($gruplar === []) {
+        return '';
+    }
+
+    $html = '<section class="nw-mansetler" aria-label="Gazetelerin manşetleri"><h2>Gazetelerin manşetleri</h2>'
+        . '<p class="nw-mansetler-not">Bugün gazetelerin öne çıkardığı başlıklar. Başlığa tıklayınca haber gazetenin kendi sitesinde açılır.</p><div class="nw-mansetler-izgara">';
+
+    foreach ($gruplar as $g) {
+        $html .= '<article class="nw-manset-kutu"><h3>' . nw_gazete_simge_html($g['slug'], $g['ad'], 22) . '<span>' . e($g['ad']) . '</span>'
+            . '<small>' . ($g['manset'] ? 'Manşet' : 'Öne çıkanlar') . '</small></h3><ol>';
+
+        foreach ($g['basliklar'] as $b) {
+            $html .= '<li><a href="' . e($b['adres']) . '" target="_blank" rel="noopener nofollow">' . e($b['baslik']) . '</a>'
+                . '<time datetime="' . e(date('c', $b['zaman'])) . '">' . e(date('H:i', $b['zaman'])) . '</time></li>';
+        }
+
+        $html .= '</ol></article>';
+    }
+
+    return $html . '</div></section>';
+}
+
 /* --- Spor dallari (14.11.2026) ---------------------------------------------
  *
  * Site sahibinin istegi: "Spora bastigimizda en ustte futbol, basketbol ve
@@ -966,7 +1074,7 @@ const NW_GAZETE_EN_FAZLA = 120;
 function nw_gazete_adi(string $kaynakAdi): string
 {
     $ad = trim((string) preg_replace('/\s*\((video|YouTube)\)\s*$/iu', '', trim($kaynakAdi)));
-    $ad = trim((string) preg_replace('/\s+(Son Dakika|Manşet|Yerel|Genel)$/u', '', $ad));
+    $ad = trim((string) preg_replace('/\s+(Son Dakika|Ana Sayfa|Manşet|Yerel|Genel)$/u', '', $ad));
     // Yabanci yayinlar: "The Guardian Health" -> "The Guardian", "Le Monde (Fransa)" -> "Le Monde".
     $ad = trim((string) preg_replace('/\s*\([^)]*\)\s*$/u', '', $ad));
     $ad = trim((string) preg_replace('/\s+(Health|Technology|Business|Markets|World|Science|News|İş|Finans|Vergi|Kripto|Borsa|Magazin|Yemek Tarifleri)$/u', '', $ad)) ?: $ad;

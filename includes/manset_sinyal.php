@@ -244,7 +244,7 @@ function manset_sinyal_uygula(int $id, array $sonuc): bool
     $ek   = manset_sinyal_eki($sonuc['puan']) - manset_sinyal_eki((int) $h['manset_sinyal']);
     $eski = (int) $h['onem'];
     $yeni = max($eski, min(MANSET_SINYAL_TAVAN, $eski + $ek));
-    $ad   = implode(', ', $sonuc['yayinlar']) . ($sonuc['manset'] ? ' (TRT manşetinde)' : '');
+    $ad   = implode(', ', $sonuc['yayinlar']) . ($sonuc['manset'] ? ' (manşette)' : '');
 
     db()->prepare('UPDATE haberler SET onem = :o, manset_sinyal = :p, manset_yayinlar = :y, guncellendi = guncellendi WHERE id = :id')
         ->execute(['o' => $yeni, 'p' => min(20, $sonuc['puan']), 'y' => mb_substr($ad, 0, 200, 'UTF-8'), 'id' => $id]);

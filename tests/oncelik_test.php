@@ -831,7 +831,7 @@ senaryo('U', 'Manşet sistematiği: aynı olayı kaç büyük yayın gündemine 
     $y = satir($yasa);
     $k = satir($kopru);
     bekle((int) $f['manset_sinyal'] === 6 && (int) $f['onem'] === 80, 'beş büyük yayın + TRT manşeti: gündem puanı 6, önem 60 → 80', $f['manset_sinyal'] . ' / ' . $f['onem']);
-    bekle(str_contains((string) $f['manset_yayinlar'], 'Hürriyet') && str_contains((string) $f['manset_yayinlar'], 'TRT manşetinde'), 'hangi yayınların verdiği kayıtlı: ' . $f['manset_yayinlar']);
+    bekle(str_contains((string) $f['manset_yayinlar'], 'Hürriyet') && str_contains((string) $f['manset_yayinlar'], 'manşette'), 'hangi yayınların verdiği kayıtlı: ' . $f['manset_yayinlar']);
     bekle((int) $y['manset_sinyal'] === 2 && (int) $y['onem'] === 66, 'iki yayın: önem 60 → 66', $y['manset_sinyal'] . ' / ' . $y['onem']);
     bekle((int) $k['manset_sinyal'] === 1 && (int) $k['onem'] === 60, 'tek yayının verdiği haber yükselmedi (puan 1, önem 60)', $k['manset_sinyal'] . ' / ' . $k['onem']);
     bekle((int) satir($mac)['onem'] === 60, 'spor haberi bu sistematiğin dışında');
@@ -1087,12 +1087,22 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     // "Onemli haberler" (14.11.2026): o gunun gundemi; once buyuk yayinlarin ana sayfasindakiler, sonra onem puani.
     db()->exec("UPDATE haberler SET manset_sinyal = 18, guncellendi = guncellendi WHERE baslik LIKE '%Sanayi üretimi%'");
     db()->exec("UPDATE haberler SET onem = 90, guncellendi = guncellendi WHERE baslik LIKE '%otobüs hattı%'");
-    $onemliler = array_map(static fn (array $o): string => (string) $o['veri']['baslik'], nw_akis(40, 0, null, null, '', '', true, '', true, true)['ogeler']);
+    $onemliler = array_map(static fn (array $o): string => (string) $o['veri']['baslik'], nw_akis(40, 0, null, null, '', '', true, '', true, 'onemli')['ogeler']);
     bekle(str_contains($onemliler[0] ?? '', 'Sanayi üretimi') && str_contains($onemliler[1] ?? '', 'otobüs hattı'),
         '"Önemli haberler": önce gazetelerin ana sayfasındaki haber, sonra önem puanı yüksek olan', implode(' | ', $onemliler));
     bekle(array_filter($onemliler, static fn (string $b): bool => str_contains($b, 'Tapu harcı') || str_contains($b, 'Turizm geliri')) === [],
         '"Önemli haberler": önemsiz haber ve yabancı gazete haberi yok');
-    $gazeteOnemli = nw_akis(40, 0, null, null, '', 'hurriyet', true, '', false, true);
+    // Genel "Son haberler" sirasi (14.11.2026): Valentra Haber ana sayfasinin kurali; ?atla ile sayfalanir.
+    $gundemTum    = array_map(static fn (array $o): string => (string) $o['veri']['baslik'], nw_akis(40, 0, null, null, '', '', true, '', true, 'gundem')['ogeler']);
+    $yer          = static fn (string $parca): int => (int) array_key_first(array_filter($gundemTum, static fn (string $b): bool => str_contains($b, $parca)) ?: [999 => '']);
+    $gundemSirasi = nw_akis(2, 0, null, null, '', '', true, '', true, 'gundem');
+    $gundemDevam  = nw_akis(2, 0, null, null, '', '', true, '', true, 'gundem', 2);
+    bekle($yer('Sanayi üretimi') < $yer('Tapu harcı') && $yer('otobüs hattı') < $yer('Tapu harcı') && $yer('Tapu harcı') < 999,
+        '"Son haberler" sırası: gazetelerin yer verdiği ve önemli haberler üstte, önemsiz haber aşağıda (ama listede)', implode(' | ', $gundemTum));
+    bekle($gundemSirasi['atla'] === 2 && $gundemDevam['ogeler'] !== []
+        && array_intersect(array_column(array_column($gundemSirasi['ogeler'], 'veri'), 'id'), array_column(array_column($gundemDevam['ogeler'], 'veri'), 'id')) === [],
+        '"Son haberler" sayfalanıyor: sonraki sayfa aynı haberi yinelemiyor');
+    $gazeteOnemli = nw_akis(40, 0, null, null, '', 'hurriyet', true, '', false, 'onemli');
     bekle($gazeteOnemli['ogeler'] !== [] && $gazeteOnemli['sonraki'] === 0 && str_contains((string) $gazeteOnemli['ogeler'][0]['veri']['baslik'], 'otobüs hattı'),
         'gazete seçiliyken "Önemli haberler": o gazetenin en önemli haberi en üstte', (string) ($gazeteOnemli['ogeler'][0]['veri']['baslik'] ?? '-'));
     db()->exec("UPDATE haberler SET manset_sinyal = 0, guncellendi = guncellendi");
@@ -1114,6 +1124,23 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     bekle(nw_simge_alani('https://www.youtube.com/channel/abc') === '' && nw_simge_alani('https://www.sozcu.com.tr/rss') === 'sozcu.com.tr'
         && NW_GAZETE_ALANLARI['ntv'] === 'ntv.com.tr' && nw_gazete_simge_dosyasi('ntv', 'ntv.com.tr') !== nw_gazete_simge_dosyasi('ntv', 'youtube.com'),
         'gazete simgesi yayının kendi sitesinden; YouTube adresi simge kaynağı değil, adres değişince eski simge geçersiz');
+
+    // Gazetelerin mansetleri (14.11.2026): her yayinin manset listesindeki basliklar once.
+    require_once __DIR__ . '/../includes/kim_ne_yazdi.php';
+    db()->exec('DELETE FROM gundem_basliklari');
+    kny_kaydet([
+        ['yayin' => 'hurriyet.com.tr', 'baslik' => 'Hürriyet gündem haberi', 'adres' => 'https://www.hurriyet.com.tr/g1', 'manset' => false, 'zaman' => time() - 60],
+        ['yayin' => 'hurriyet.com.tr', 'baslik' => 'Hürriyet manşet haberi', 'adres' => 'https://www.hurriyet.com.tr/m1', 'manset' => true, 'zaman' => time() - 3600],
+        ['yayin' => 'ntv.com.tr', 'baslik' => 'NTV gündem haberi', 'adres' => 'https://www.ntv.com.tr/g1', 'manset' => false, 'zaman' => time() - 120],
+    ]);
+    $mansetler = nw_gazete_mansetleri();
+    bekle(count($mansetler) === 2 && $mansetler[0]['ad'] === 'Hürriyet' && $mansetler[0]['manset'] && $mansetler[0]['basliklar'][0]['baslik'] === 'Hürriyet manşet haberi'
+        && !$mansetler[1]['manset'], 'gazetelerin manşetleri: manşet listesi olan yayın ve manşet başlığı önce; olmayan yayında gündem başlıkları');
+    $mansetHtml = nw_gazete_mansetleri_html();
+    bekle(str_contains($mansetHtml, 'https://www.hurriyet.com.tr/m1') && str_contains($mansetHtml, 'rel="noopener nofollow"') && str_contains($mansetHtml, 'Öne çıkanlar'),
+        'manşet başlığı gazetenin kendi sayfasına bağlanıyor; manşet beslemesi olmayan yayın "öne çıkanlar" diye ayrılıyor');
+    bekle(nw_gazete_adi('Hürriyet Ana Sayfa') === 'Hürriyet' && nw_gazete_adi('Habertürk Manşet') === 'Habertürk', 'ana sayfa / manşet beslemeleri yayının adında toplanıyor');
+    db()->exec('DELETE FROM gundem_basliklari');
 
     // Sag kenar kutulari (14.11.2026): kaynaklari beklemez, veri yoksa da cizilir.
     $eko = nw_ekonomi_kutusu_html();
