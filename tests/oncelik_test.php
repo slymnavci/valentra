@@ -1049,7 +1049,8 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     bekle(array_unique(array_column($yalniz['ogeler'], 'tur')) === ['haber'], 'akışta yalnızca haber var (üye paylaşımı ve yorum kartı yok)');
     bekle(str_contains(nw_konu_ikonu('ekonomi'), '<svg') && str_contains(nw_bayrak_html('de'), '/assets/bayrak/de.svg') && nw_bayrak_html('xx') === '',
         'başlık ikonu ve ülke bayrağı üretiliyor; bilinmeyen ülkeye bayrak yok');
-    bekle(str_contains(nw_gazete_simge_html('hurriyet', 'Hürriyet'), '>H<') , 'gazete simgesi yüklenemezse adın baş harfi görünür');
+    bekle(str_contains(nw_gazete_simge_html('olmayan-yayin', 'Hürriyet'), '>H<') , 'gazete simgesi yüklenemezse adın baş harfi görünür');
+    bekle(str_contains(nw_gazete_simge_html('hurriyet', 'Hürriyet'), '/assets/gazete/hurriyet.png'), 'site sahibinin gönderdiği logo varsa o kullanılır');
 
     // Spor dallari (14.11.2026): Futbol, Basketbol, Diger (ValSpor kosullariyla).
     ekle([

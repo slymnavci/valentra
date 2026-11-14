@@ -1165,6 +1165,13 @@ function nw_gazete_simge_dosyasi(string $slug, string $alan): string
 function nw_gazete_simge_html(string $slug, string $ad, int $boyut = 20): string
 {
     $harf = mb_strtoupper(mb_substr($ad, 0, 1, 'UTF-8'), 'UTF-8');
+
+    // Site sahibinin gonderdigi logo (14.11.2026): assets/gazete/<yayin>.png varsa o kullanilir, indirilen simgeye bakilmaz.
+    if (preg_match('/^[a-z0-9-]+$/', $slug) === 1 && is_file(__DIR__ . '/../assets/gazete/' . $slug . '.png')) {
+        return '<span class="nw-gz-simge" style="--b:' . $boyut . 'px" aria-hidden="true">' . e($harf)
+            . '<img src="' . e(varlik('/assets/gazete/' . $slug . '.png')) . '" alt="" width="' . $boyut . '" height="' . $boyut . '" loading="lazy"></span>';
+    }
+
     $alan = (string) (nw_gazeteler()[$slug]['alan'] ?? (NW_GAZETE_ALANLARI[$slug] ?? ''));
 
     // Adresi bilinmeyen yayin (yalnizca video beslemesi vb.): bas harf.
