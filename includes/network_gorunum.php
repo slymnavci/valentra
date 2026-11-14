@@ -337,8 +337,11 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
                 <?php $konuGorseli = '/assets/kategori/' . haber_gorsel_konu_adi((string) ($v['kategori_slug'] ?? '')) . '.jpg'; ?>
                 <a class="nw-gorsel" href="<?= e($detayYol) ?>">
                     <?php $set = haber_gorsel_srcset($v); ?>
+                    <?php /* Sayfadaki ILK haber gorseli hemen ve oncelikli yuklenir (14.11.2026, hiz): ekranin en buyuk
+                             ogesi o; digerleri ekrana yaklasinca. */ ?>
+                    <?php static $ilkGorsel = true; $oncelikli = $ilkGorsel; $ilkGorsel = false; ?>
                     <?php /* Gorsel yuklenemezse kart resimsiz kalmasin: konu gorseline dus (13.11.2026). */ ?>
-                    <img src="<?= e(haber_gorsel_kucuk($v, 960)) ?>" alt="<?= e((string) $v['baslik']) ?>" loading="lazy" referrerpolicy="no-referrer"
+                    <img src="<?= e(haber_gorsel_kucuk($v, 960)) ?>" alt="<?= e((string) $v['baslik']) ?>" <?= $oncelikli ? 'fetchpriority="high"' : 'loading="lazy"' ?> decoding="async" referrerpolicy="no-referrer"
                          <?php if ($set !== ''): ?>srcset="<?= e($set) ?>" sizes="(max-width: 680px) 100vw, 640px"<?php endif; ?>
                          onerror="this.onerror=null;this.removeAttribute('srcset');this.src='<?= e($konuGorseli) ?>'">
                 </a>

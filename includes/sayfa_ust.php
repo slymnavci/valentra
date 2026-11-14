@@ -157,6 +157,21 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
     ?>
     <script type="application/ld+json"><?= str_replace(['<', '>', '&'], ['\u003c', '\u003e', '\u0026'], (string) $seoSema) ?></script>
 
+    <?php
+    /*
+     * BAGLANTIYI ONCEDEN INDIR (14.11.2026, site sahibi: "bir habere
+     * basildiginda ya da sayfa acildiginda cok hizli acilmasi gerekiyor").
+     * Okur bir baglantinin uzerine gelince / dokunmaya baslayinca tarayici o
+     * sayfayi arka planda indirir; tiklandiginda sayfa hazirdir. Tarayicinin
+     * kendi ozelligi (Speculation Rules; Chrome, Edge, Android): desteklemeyen
+     * tarayici bu etiketi yok sayar. Yalnizca site ici OKUMA sayfalari: cikis,
+     * uyelik, panel, api ve islem baglantilari haric (onceden indirme bir
+     * islemi tetiklemesin). Onceden indirilen sayfa ziyaret sayilmaz; sayim
+     * sayfa gercekten goruntulenince yapilir (bkz. ziyaret_betigi).
+     */
+    ?>
+    <script type="speculationrules">{"prefetch":[{"where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":["/admin/*","/uye/*","/api/*","/*.php","/*.php?*","/*?*islem=*","/*?*cikis*","/network/mesajlar*","/network/bildirimler*","/network/profil*","/rss*","/sitemap.xml"]}},{"not":{"selector_matches":"[target=_blank], [download], [rel~=nofollow]"}}]},"eagerness":"moderate"}]}</script>
+
     <?php /* Google Analytics ve AdSense (panelden; bos ise hicbir sey yok). */ ?>
     <?php require_once __DIR__ . '/olcum_reklam.php'; ?>
     <?= olcum_head_html() ?>
