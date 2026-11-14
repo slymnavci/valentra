@@ -159,9 +159,11 @@ switch ($sayfa) {
         $akis   = $gazeteGorunumu
             ? ['ogeler' => [], 'sonraki' => 0]
             // "Son haberler" (baslik ve gazete secili degilken): once Turkiye, onemli gundem (14.11.2026).
-            // Genel "Son haberler" (14.11.2026): once en cok gazetenin yer verdigi haberler ('gundem' sirasi, ?atla ile sayfalanir).
+            // Genel "Son haberler": saate gore (en yeni ustte), $once ile sayfalanir; "Onemli haberler" ?atla ile.
             : nw_akis(NW_AKIS_ADEDI, $once, null, null, $konu, $gazete, true, $dal, $konu === '' && $gazete === '',
-                $onemli ? 'onemli' : ($konu === '' && $gazete === '' && $sekme === 'herkes' ? 'gundem' : ''), max(0, (int) ($_GET['atla'] ?? 0)));
+                // Son haberler: SAATE GORE, en son yayimlanan en ustte (site sahibi, 14.11.2026: "son haberlerde hangisi
+                // en son yayinlandiysa o basta olacak"); gazete secilmemisse butun gazetelerin haberleri karisik.
+                $onemli ? 'onemli' : '', max(0, (int) ($_GET['atla'] ?? 0)));
         $baglam = nw_baglam($akis['ogeler']);
         $takipEdilenler = $uyeId !== null ? nw_takip_edilenler($uyeId) : [];
         $oneriler = !$kisilerAcik ? [] : array_slice(array_values(array_filter(
@@ -559,7 +561,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                     <h1><?= nw_bayrak_html('tr') ?><?= $onemli ? 'Önemli haberler' : 'Son haberler' ?></h1>
                     <p><?= $onemli
                         ? 'Önce gazetelerin manşetindeki haberler, sonra en çok gazetenin yer verdikleri; aşağı indikçe daha az öne çıkanlar ve önceki günler.'
-                        : 'Valentra Haber ana sayfasındaki sırayla: bugünün haberleri ve en çok gazetenin yer verdiği gelişmeler üstte, aşağı indikçe daha az öne çıkanlar.' ?></p>
+                        : 'Türkiye\'deki bütün gazetelerden en son yayımlanan haberler, en yenisi en üstte. Dünya haberleri "Dünya" başlığında ve ülke gruplarında.' ?></p>
                 </header>
             <?php endif; ?>
 
