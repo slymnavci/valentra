@@ -2859,3 +2859,27 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif, a
     ('Takvim',                   'https://www.takvim.com.tr',      'https://www.takvim.com.tr/rss/anasayfa.xml',                      'rss', 'gundem', 1, 60),
     ('Evrensel',                 'https://www.evrensel.net',       'https://www.evrensel.net/rss/haber.xml',                          'rss', 'gundem', 1, 60),
     ('A Haber Gündem',           'https://www.ahaber.com.tr',      'https://www.ahaber.com.tr/rss/gundem.xml',                        'rss', 'gundem', 1, 60);
+
+-- ---------------------------------------------------------------------------
+-- Gazetelerin manset / ana sayfa beslemeleri (14.11.2026, site sahibi: "onemli
+-- haberlerde gazetelerin mansetlerindeki haberlerden secelim; her gazetenin
+-- mansetlerini burada gorelim").
+--
+-- Yirmi aday adres ajanin kostugu yerde SINANDI (GitHub, "kaynak-testi", aday
+-- modu; 14.11.2026, calisma 43592906326). Asagidaki besi HTTP 200 ve son iki
+-- saatte girdili: Hurriyet 59 girdi, Sabah 10, Haberturk 30, Sozcu 50, Star 10.
+-- EKLENMEYENLER: Milliyet manset (404) ve son dakika (200 ama girdi okunamadi),
+-- Yeni Safak manset (bos), Turkiye (404); Cumhuriyet rss/1 ve Sozcu son dakika
+-- (son iki saatte girdi yok); Haberturk /rss, CNN Turk "all" ve Haber7 (butun
+-- haberler, manset listesi degil). A Haber, Aksam, Takvim, Posta calisiyor ama
+-- gundem yayinlari listesinde degiller; istenirse ayrica eklenir.
+--
+-- Adin sonu "Ana Sayfa" / "Manşet": ajan bu beslemelerin basliklarini manset
+-- olarak bildirir (ajan/topla.php). Saatte bir taranir.
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif, aralik_dk) VALUES
+    ('Hürriyet Ana Sayfa', 'https://www.hurriyet.com.tr', 'https://www.hurriyet.com.tr/rss/anasayfa',          'rss', 'gundem', 1, 60),
+    ('Sabah Ana Sayfa',    'https://www.sabah.com.tr',    'https://www.sabah.com.tr/rss/anasayfa.xml',         'rss', 'gundem', 1, 60),
+    ('Habertürk Manşet',   'https://www.haberturk.com',   'https://www.haberturk.com/rss/manset.xml',          'rss', 'gundem', 1, 60),
+    ('Sözcü Ana Sayfa',    'https://www.sozcu.com.tr',    'https://www.sozcu.com.tr/feeds-rss-category-sozcu', 'rss', 'gundem', 1, 60),
+    ('Star Ana Sayfa',     'https://www.star.com.tr',     'https://www.star.com.tr/rss/rss.asp',               'rss', 'gundem', 1, 60);

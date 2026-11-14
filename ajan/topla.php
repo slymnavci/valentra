@@ -1329,7 +1329,9 @@ foreach ($kaynaklar as $kaynak) {
     if (in_array($yayin, GUNDEM_YAYINLARI, true)
         && in_array(HaberAkisi::kova($kaynak), ['gundem', 'politika', 'ekonomi', 'dunya'], true)
         && !str_contains((string) ($kaynak['besleme_url'] ?? ''), 'youtube.com')) {
-        $mansetListesi = (string) $kaynak['ad'] === 'TRT Haber Manşet';
+        // Yayinin manset / ana sayfa beslemesi (14.11.2026: Hurriyet, Sabah, Haberturk, Sozcu, Star eklendi):
+        // adinin sonu "Manşet" ya da "Ana Sayfa". Bu basliklar "Gazetelerin manşetleri"nde one gecer.
+        $mansetListesi = preg_match('/ (Manşet|Ana Sayfa)$/u', (string) $kaynak['ad']) === 1;
 
         foreach ($girdiler as $g) {
             $z = ($g['tarih'] ?? null) !== null ? (int) strtotime((string) $g['tarih']) : 0;
