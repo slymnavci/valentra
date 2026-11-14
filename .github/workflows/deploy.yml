@@ -91,6 +91,15 @@ jobs:
           )
           PY
 
+      # V Network'un ince stil dosyasi (14.11.2026; bkz. .github/stil/temel.py):
+      # style.css degistiyse yuklemeden once yeniden uretilir. Basarisiz olursa
+      # depodaki kopya gider (sayfa yine dogru calisir; yalnizca guncel olmayabilir).
+      - name: Network stil kopyasini uret
+        continue-on-error: true
+        run: |
+          php .github/stil/yorumsuz.php "$PWD" "$RUNNER_TEMP/yorumsuz.json"
+          python3 .github/stil/temel.py "$PWD" "$RUNNER_TEMP"
+
       - name: IHS sunucusuna yukle
         env:
           FTP_SERVER: ${{ secrets.FTP_SERVER }}

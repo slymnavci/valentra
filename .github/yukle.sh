@@ -121,6 +121,11 @@ if [ "${#ONCEKI}" -eq 40 ] && git cat-file -e "$ONCEKI^{commit}" 2>/dev/null \
   done > /tmp/yukle_liste.txt
   # Depoda olmayan, deploy'da uretilen ayar dosyasi her seferinde.
   [ -f includes/database.php ] && echo "includes/database.php" >> /tmp/yukle_liste.txt
+  # Deploy'da yeniden uretilen Network stil kopyasi (bkz. .github/stil/temel.py):
+  # depodakinden farkliysa (style.css degisti) o da gider.
+  if ! git diff --quiet -- assets/stil-temel-network.css 2>/dev/null && ! grep -qxF assets/stil-temel-network.css /tmp/yukle_liste.txt; then
+    echo "assets/stil-temel-network.css" >> /tmp/yukle_liste.txt
+  fi
 
   ADET=$(wc -l < /tmp/yukle_liste.txt)
   if [ "$ADET" -le "$TAM_ESIK" ]; then
