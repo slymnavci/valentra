@@ -1009,6 +1009,7 @@ const NW_ULKELER = [
     'qa' => 'Katar',
     'ca' => 'Kanada',
     'au' => 'Avustralya',
+    'kr' => 'Güney Kore',
     'br' => 'Brezilya',
     'ar' => 'Arjantin',
     'eu' => 'Avrupa',
@@ -1040,7 +1041,7 @@ const NW_ALAN_ULKELERI = [
 /** Ulke uzantisi => ulke. */
 const NW_UZANTI_ULKELERI = [
     'uk' => 'gb', 'de' => 'de', 'fr' => 'fr', 'it' => 'it', 'es' => 'es', 'ru' => 'ru', 'cn' => 'cn', 'jp' => 'jp', 'in' => 'in',
-    'gr' => 'gr', 'ua' => 'ua', 'qa' => 'qa', 'ca' => 'ca', 'au' => 'au', 'br' => 'br', 'ar' => 'ar', 'tr' => 'tr',
+    'gr' => 'gr', 'ua' => 'ua', 'qa' => 'qa', 'ca' => 'ca', 'au' => 'au', 'br' => 'br', 'ar' => 'ar', 'kr' => 'kr', 'tr' => 'tr',
 ];
 
 /** Kaynagin site adresinden ulke kodu; bilinmiyorsa 'tr'. */
