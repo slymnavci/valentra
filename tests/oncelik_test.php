@@ -1133,6 +1133,11 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
         ['yayin' => 'hurriyet.com.tr', 'baslik' => 'Hürriyet manşet haberi', 'adres' => 'https://www.hurriyet.com.tr/m1', 'manset' => true, 'zaman' => time() - 3600],
         ['yayin' => 'ntv.com.tr', 'baslik' => 'NTV gündem haberi', 'adres' => 'https://www.ntv.com.tr/g1', 'manset' => false, 'zaman' => time() - 120],
     ]);
+    // Ayni haber sonradan manset beslemesinden de gelirse manset isareti yukselir.
+    kny_kaydet([['yayin' => 'ntv.com.tr', 'baslik' => 'NTV gündem haberi', 'adres' => 'https://www.ntv.com.tr/g1', 'manset' => true, 'zaman' => time() - 120]]);
+    bekle((int) db()->query("SELECT manset FROM gundem_basliklari WHERE adres = 'https://www.ntv.com.tr/g1'")->fetchColumn() === 1
+        && (int) db()->query('SELECT COUNT(*) FROM gundem_basliklari')->fetchColumn() === 3, 'aynı haber manşet beslemesinden de gelince manşet işareti yükseliyor, satır çoğalmıyor');
+    db()->exec("UPDATE gundem_basliklari SET manset = 0 WHERE adres = 'https://www.ntv.com.tr/g1'");
     $mansetler = nw_gazete_mansetleri();
     bekle(count($mansetler) === 2 && $mansetler[0]['ad'] === 'Hürriyet' && $mansetler[0]['manset'] && $mansetler[0]['basliklar'][0]['baslik'] === 'Hürriyet manşet haberi'
         && !$mansetler[1]['manset'], 'gazetelerin manşetleri: manşet listesi olan yayın ve manşet başlığı önce; olmayan yayında gündem başlıkları');

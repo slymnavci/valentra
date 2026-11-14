@@ -118,8 +118,11 @@ function kny_kaydet(array $girdiler): int
 
     $simdi = time();
     $ekle  = db()->prepare(
-        'INSERT IGNORE INTO gundem_basliklari (yayin, baslik, adres, adres_parmak, ozet, manset, zaman)
-         VALUES (:yayin, :baslik, :adres, :parmak, :ozet, :manset, FROM_UNIXTIME(:zaman))'
+        // Ayni haber once gundem, sonra manset beslemesinden gelirse manset isareti yukselir (14.11.2026:
+        // INSERT IGNORE ikinci gelisi atiyordu; TRT'nin manset basliklari "manset" gorunmuyordu).
+        'INSERT INTO gundem_basliklari (yayin, baslik, adres, adres_parmak, ozet, manset, zaman)
+         VALUES (:yayin, :baslik, :adres, :parmak, :ozet, :manset, FROM_UNIXTIME(:zaman))
+         ON DUPLICATE KEY UPDATE manset = GREATEST(manset, VALUES(manset))'
     );
     $yeni = 0;
 
@@ -148,7 +151,8 @@ function kny_kaydet(array $girdiler): int
             'manset' => !empty($g['manset']) ? 1 : 0,
             'zaman'  => $zaman,
         ]);
-        $yeni += $ekle->rowCount();
+        // rowCount: yeni satir 1, guncellenen 2, degismeyen 0. Yalnizca yeni satir sayilir.
+        $yeni += $ekle->rowCount() === 1 ? 1 : 0;
     }
 
     db()->exec('DELETE FROM gundem_basliklari WHERE zaman < NOW() - INTERVAL ' . KNY_SAKLAMA_GUN . ' DAY');
