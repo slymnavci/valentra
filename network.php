@@ -543,8 +543,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 <header class="nw-gazete-ust">
                     <h1><?= nw_gazete_simge_html($gazete, $gazeteler[$gazete]['ad'], 28) ?><?= e($gazeteler[$gazete]['ad']) ?>
                         <small><?= nw_bayrak_html($gazeteler[$gazete]['ulke']) ?><?= e(NW_ULKELER[$gazeteler[$gazete]['ulke']] ?? '') ?></small></h1>
-                    <p>Son üç günde bu yayından özetlenen <?= (int) $gazeteler[$gazete]['adet'] ?> haber. Özetleri Valentra yazdı;
-                        her haberde kaynağın bağlantısı var.</p>
+                    <p>Bu yayından özetlenen haberler. Özetleri Valentra yazdı; her haberde kaynağın bağlantısı var.</p>
                 </header>
             <?php endif; ?>
 
@@ -557,7 +556,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                     <section class="nw-gazete">
                         <header class="nw-gazete-bas">
                             <h3><a href="<?= e(nw_yol('', ['gazete' => $g['slug']])) ?>"><?= nw_gazete_simge_html($g['slug'], $g['ad'], 22) ?><?= e($g['ad']) ?></a></h3>
-                            <a class="nw-gazete-tumu" href="<?= e(nw_yol('', ['gazete' => $g['slug']])) ?>"><?= (int) $g['adet'] ?> haberin tümü →</a>
+                            <a class="nw-gazete-tumu" href="<?= e(nw_yol('', ['gazete' => $g['slug']])) ?>">Haberlerin tümü →</a>
                         </header>
                         <ul class="nw-gazete-liste">
                             <?php foreach ($g['haberler'] as $h): ?>
