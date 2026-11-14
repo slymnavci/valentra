@@ -1087,11 +1087,17 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     // "Onemli haberler" (14.11.2026): o gunun gundemi; once buyuk yayinlarin ana sayfasindakiler, sonra onem puani.
     db()->exec("UPDATE haberler SET manset_sinyal = 18, guncellendi = guncellendi WHERE baslik LIKE '%Sanayi üretimi%'");
     db()->exec("UPDATE haberler SET onem = 90, guncellendi = guncellendi WHERE baslik LIKE '%otobüs hattı%'");
-    $onemliler = array_map(static fn (array $o): string => (string) $o['veri']['baslik'], nw_akis(40, 0, null, null, '', '', true, '', true, 'onemli')['ogeler']);
-    bekle(str_contains($onemliler[0] ?? '', 'Sanayi üretimi') && str_contains($onemliler[1] ?? '', 'otobüs hattı'),
-        '"Önemli haberler": önce gazetelerin ana sayfasındaki haber, sonra önem puanı yüksek olan', implode(' | ', $onemliler));
-    bekle(array_filter($onemliler, static fn (string $b): bool => str_contains($b, 'Tapu harcı') || str_contains($b, 'Turizm geliri')) === [],
-        '"Önemli haberler": önemsiz haber ve yabancı gazete haberi yok');
+    db()->exec("UPDATE haberler SET manset_yayinlar = 'Hürriyet, Sabah (manşette)', guncellendi = guncellendi WHERE baslik LIKE '%Tapu harcı%'");
+    $onemliAkis = nw_akis(40, 0, null, null, '', '', true, '', true, 'onemli');
+    $onemliler  = array_map(static fn (array $o): string => (string) $o['veri']['baslik'], $onemliAkis['ogeler']);
+    bekle(str_contains($onemliler[0] ?? '', 'Tapu harcı') && str_contains($onemliler[1] ?? '', 'Sanayi üretimi') && str_contains($onemliler[2] ?? '', 'otobüs hattı'),
+        '"Önemli haberler": önce gazetelerin manşetindeki haber, sonra en çok gazetenin yer verdiği, sonra önem puanı', implode(' | ', $onemliler));
+    bekle(array_filter($onemliler, static fn (string $b): bool => str_contains($b, 'Turizm geliri')) === [], '"Önemli haberler": yabancı gazete haberi yok');
+    $onemli1 = nw_akis(2, 0, null, null, '', '', true, '', true, 'onemli');
+    $onemli2 = nw_akis(2, 0, null, null, '', '', true, '', true, 'onemli', 2);
+    bekle($onemli1['atla'] === 2 && $onemli2['ogeler'] !== [] && array_intersect(array_column(array_column($onemli1['ogeler'], 'veri'), 'id'), array_column(array_column($onemli2['ogeler'], 'veri'), 'id')) === [],
+        '"Önemli haberler" sürekli akış: sayfalanıyor, sonraki sayfa aynı haberi yinelemiyor');
+    db()->exec("UPDATE haberler SET manset_yayinlar = '', guncellendi = guncellendi");
     // Genel "Son haberler" sirasi (14.11.2026): Valentra Haber ana sayfasinin kurali; ?atla ile sayfalanir.
     $gundemTum    = array_map(static fn (array $o): string => (string) $o['veri']['baslik'], nw_akis(40, 0, null, null, '', '', true, '', true, 'gundem')['ogeler']);
     $yer          = static fn (string $parca): int => (int) array_key_first(array_filter($gundemTum, static fn (string $b): bool => str_contains($b, $parca)) ?: [999 => '']);
@@ -1103,7 +1109,7 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
         && array_intersect(array_column(array_column($gundemSirasi['ogeler'], 'veri'), 'id'), array_column(array_column($gundemDevam['ogeler'], 'veri'), 'id')) === [],
         '"Son haberler" sayfalanıyor: sonraki sayfa aynı haberi yinelemiyor');
     $gazeteOnemli = nw_akis(40, 0, null, null, '', 'hurriyet', true, '', false, 'onemli');
-    bekle($gazeteOnemli['ogeler'] !== [] && $gazeteOnemli['sonraki'] === 0 && str_contains((string) $gazeteOnemli['ogeler'][0]['veri']['baslik'], 'otobüs hattı'),
+    bekle($gazeteOnemli['ogeler'] !== [] && str_contains((string) $gazeteOnemli['ogeler'][0]['veri']['baslik'], 'otobüs hattı'),
         'gazete seçiliyken "Önemli haberler": o gazetenin en önemli haberi en üstte', (string) ($gazeteOnemli['ogeler'][0]['veri']['baslik'] ?? '-'));
     db()->exec("UPDATE haberler SET manset_sinyal = 0, guncellendi = guncellendi");
     bekle(!$var('Süper Lig') && !$var('EuroLeague') && !$var('Köprü bakım'), '"Son haberler": spor ve dünya başlığındaki haber yok');

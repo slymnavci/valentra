@@ -519,8 +519,15 @@ a.nw-hesap:hover { color: var(--altin); }
 
 /* Gazetelerin mansetleri (14.11.2026; bkz. nw_gazete_mansetleri_html). */
 .nw-mansetler { background: var(--kart); border: 1px solid var(--cizgi); border-radius: var(--yuvarlak); box-shadow: var(--golge); padding: 16px 18px 18px; margin: 0 0 16px; }
-.nw-mansetler > h2 { margin: 0; font-size: 1.15rem; }
-.nw-mansetler-not { margin: 4px 0 14px; color: var(--metin-soluk); font-size: .88rem; }
+.nw-mansetler > summary { cursor: pointer; font-weight: 800; font-size: 1.05rem; list-style: none; display: flex; align-items: baseline; gap: 10px; }
+.nw-mansetler > summary::-webkit-details-marker { display: none; }
+.nw-mansetler > summary::after { content: "▸"; margin-left: auto; color: var(--metin-soluk); transition: transform .15s; }
+.nw-mansetler[open] > summary::after { transform: rotate(90deg); }
+.nw-mansetler > summary small { font-weight: 600; font-size: .8rem; color: var(--metin-soluk); }
+.nw-mansetler[open] > summary { margin-bottom: 14px; }
+.nw-mansetler { padding-bottom: 16px; }
+/* Kartta: haberi mansetine / gundemine tasiyan gazeteler. */
+.nw-manset-rozet { display: block; margin-top: 3px; font-size: .78rem; font-weight: 700; color: var(--altin); }
 .nw-mansetler-izgara { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
 .nw-manset-kutu { border: 1px solid var(--cizgi); border-radius: 10px; padding: 12px 14px; min-width: 0; }
 .nw-manset-kutu h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 1rem; }
