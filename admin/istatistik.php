@@ -132,6 +132,8 @@ $saymaAcik = ($_COOKIE[ZIYARET_SAYMA_CEREZI] ?? '') === '1';
 $kisi     = trim((string) ($_GET['kisi'] ?? ''));
 $gezinti  = $kisi !== '' ? zr_gezinti($kisi) : [];
 $kisiler  = zr_ziyaretciler($a, $ham, 100);
+// Bot olma ihtimali olan adresler ayri tabloda (14.11.2026; bkz. zr_bot_suphelileri).
+$botlar   = zr_bot_suphelileri($a, 100);
 
 $bildirimler = [
     'one_cikti'    => 'Haber öne çıkarıldı: ana sayfada ve listelerde önce gelir.',
@@ -208,7 +210,7 @@ require __DIR__ . '/ust.php';
 <!-- Gosterge paneli (29.10.2026): ozet kutulari ve grafikler; ayrintilar asagida -->
 <?php
 $gsKutular = [
-    ['ad' => 'Ziyaretçi', 'alt' => 'tekil kişi', 'deger' => $sayi($olcu['ziyaretci']),
+    ['ad' => 'Ziyaretçi', 'alt' => 'tekil IP adresi', 'deger' => $sayi($olcu['ziyaretci']),
      'degisim' => $degisim($olcu['ziyaretci'], $onceki['ziyaretci']), 'seri' => array_column($gsSeri, 'ziyaretci')],
     ['ad' => 'Google’dan gelen', 'alt' => 'tekil okuyucu', 'deger' => $sayi($gsOzet['google']),
      'degisim' => $degisim($gsOzet['google'], $gsOnceki['google']), 'seri' => array_column($gsSeri, 'google')],
@@ -447,7 +449,7 @@ $gsHaberEnCok = max(1, (int) ($gsHaberler[0]['okuyucu'] ?? 1));
     </div>
     <div class="olcum">
         <span class="olcum-sayi"><?= $sayi($olcu['ziyaretci']) ?></span>
-        <span class="olcum-ad">ziyaretçi (tekil kişi)</span>
+        <span class="olcum-ad">ziyaretçi (tekil IP adresi)</span>
         <?= $degisim($olcu['ziyaretci'], $onceki['ziyaretci']) ?>
     </div>
     <div class="olcum">
@@ -858,6 +860,39 @@ $gsHaberEnCok = max(1, (int) ($gsHaberler[0]['okuyucu'] ?? 1));
 </div>
 </details>
 
+<details class="detay" id="botlar">
+    <summary>Bot şüphelileri (<?= count($botlar) ?> adres)</summary>
+<div class="kutu" style="margin-top:18px;">
+    <h2 style="margin-top:0;">Bot olma ihtimali olan adresler <span class="ipucu" style="font-weight:400;">(<?= e($a['ad']) ?>, en çok sayfa açan önce)</span></h2>
+    <p class="ipucu">Kendini bot diye tanıtanlar (Google, yapay zekâ botları, WhatsApp önizlemesi) hiç kaydedilmez. Buradakiler kendini
+        tarayıcı gibi gösteren ama aşağıdaki işaretlerden en az birini taşıyan adreslerdir. Şüpheli olmak kesin bot demek değildir.
+        "Doğrulanan" sütunu 0 olan adresler ziyaretçi sayılarına <?= $ham ? '<strong>şu an dahil</strong> (ham sayım açık)' : 'zaten girmiyor' ?>.</p>
+    <?php if ($botlar === []): ?>
+        <p class="ipucu">Bu aralıkta şüpheli adres yok.</p>
+    <?php else: ?>
+        <div class="tablo-kaydir">
+            <table class="liste-tablo">
+                <thead><tr><th>IP</th><th class="sag">Sayfa</th><th class="sag">Doğrulanan</th><th>İlk</th><th>Son</th><th>Cihaz</th><th>Neden şüpheli</th><th></th></tr></thead>
+                <tbody>
+                <?php foreach ($botlar as $b): ?>
+                    <tr>
+                        <td><code><?= e((string) $b['ip']) ?></code></td>
+                        <td class="sag"><strong><?= (int) $b['sayfa'] ?></strong></td>
+                        <td class="sag"><?= (int) $b['dogru'] ?></td>
+                        <td style="white-space:nowrap;"><?= e(tarih_bicimle((string) $b['ilk'])) ?></td>
+                        <td style="white-space:nowrap;"><?= e(tarih_bicimle((string) $b['son'])) ?></td>
+                        <td><?= e(trim((['mobil' => 'Telefon', 'masaustu' => 'Bilgisayar', 'tablet' => 'Tablet'][(string) $b['cihaz']] ?? '') . ' ' . (string) $b['tarayici'] . ' ' . (string) $b['isletim'])) ?></td>
+                        <td><?= e(implode('; ', $b['nedenler'])) ?></td>
+                        <td><a href="<?= e($adres(['kisi' => (string) $b['ip']])) ?>#ziyaretciler">gezinti</a></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif; ?>
+</div>
+</details>
+
 <details class="detay" id="dogruluk"<?= isset($_GET['bildirim']) && str_starts_with((string) $_GET['bildirim'], 'sayma_') ? ' open' : '' ?>>
     <summary>Sayım nasıl yapılıyor — sayılar doğru mu? / Bu cihazı sayma</summary>
 <div class="kutu" style="margin-top:18px;">
@@ -881,8 +916,9 @@ $gsHaberEnCok = max(1, (int) ($gsHaberler[0]['okuyucu'] ?? 1));
         </li>
         <li><strong>Elenenler:</strong> arama motoru ve yapay zekâ botları, WhatsApp/Telegram önizlemeleri,
             izleme servisleri, panel oturumunuz açıkken yaptığınız ziyaretler ve “bu cihazı sayma” işaretli tarayıcılar.</li>
-        <li><strong>Tekil ziyaretçi:</strong> tarayıcıya bırakılan rastgele bir kimlikle sayılıyor; telefon ağ
-            değiştirse de aynı kişi tek sayılır. Kimlik bırakılamayan tarayıcılarda adres + tarayıcı imzası kullanılır.</li>
+        <li><strong>Tekil ziyaretçi:</strong> her IP adresi bir kişi sayılıyor (14.11.2026). Aynı adresi paylaşanlar
+            (ev, iş yeri, mobil operatörün ortak adresi) tek kişi; adresi değişen kişi (Wi-Fi'den mobil veriye geçen telefon) iki kişi
+            sayılır. Bot olma ihtimali olan adresler <a href="#botlar">ayrı tabloda</a>.</li>
         <li><strong>Saat:</strong>
             sunucu <?= e($dogruluk['db_saat'] !== '' ? date('H:i', strtotime($dogruluk['db_saat'])) : '—') ?>,
             Türkiye <?= e(date('H:i')) ?>
