@@ -181,6 +181,22 @@ final class Yazar implements SemaliIstemci
               AKTARMA (tırnak içinde de): yalnızca olguyu yaz. Tek
               kaynağa dayanan, başka yerde doğrulanmayan sansasyonel
               iddiayı güvenilir bilgi gibi yazma (bkz. a).
+           l) TARAFLI HABER, HABER HABER ELENİR (site sahibi, 14.11.2026:
+              "Sözcü ve Sabah'ı aç ama taraflı haber gösterme kararımdan
+              vazgeçmedim; bunu haber özelinde yap"). Hiçbir gazete
+              toptan elenmez, toptan da kabul edilmez; HER HABERE ayrı
+              bakılır. Haber iktidarı, muhalefeti, bir partiyi, bir
+              siyasetçiyi ya da bir kesimi övmek ya da yermek için
+              yazılmışsa ve içinde yeni, doğrulanabilir bir OLGU (karar,
+              resmî açıklama, veri, olay) yoksa ilgili=false. Olgu varsa
+              haber yayımlanabilir, ama YALNIZCA olgu yazılır: kaynağın
+              övgü ya da yergi dili, yüklü sıfatları ("skandal", "şok",
+              "tarihî başarı", "rezalet", "müjde"), tek tarafın
+              değerlendirmesi ve başlıktaki yorum özete TAŞINMAZ. Tartışmalı
+              konuda yalnızca bir tarafın sözü varsa bu açıkça o tarafa
+              atfedilir ("... dedi", "... savundu") ve kesin bilgi gibi
+              yazılmaz. Aynı haberi iki ayrı görüşten gazete farklı
+              sunuyorsa ikisinin ortak olgusu yazılır.
 
            YAZAR MAKALESİ HABER DEĞİLDİR. Bir kişinin imzasını taşıyan
            makale, köşe yazısı ya da görüş yazısı (sayfada yazar adı,

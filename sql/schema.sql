@@ -2883,3 +2883,28 @@ INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif, a
     ('Habertürk Manşet',   'https://www.haberturk.com',   'https://www.haberturk.com/rss/manset.xml',          'rss', 'gundem', 1, 60),
     ('Sözcü Ana Sayfa',    'https://www.sozcu.com.tr',    'https://www.sozcu.com.tr/feeds-rss-category-sozcu', 'rss', 'gundem', 1, 60),
     ('Star Ana Sayfa',     'https://www.star.com.tr',     'https://www.star.com.tr/rss/rss.asp',               'rss', 'gundem', 1, 60);
+
+-- ---------------------------------------------------------------------------
+-- Sozcu ve Sabah bolum beslemeleri yeniden acildi (14.11.2026, site sahibi:
+-- "Sozcu'ye basinca sadece 3 haber geliyor" -> "evet ac").
+--
+-- Sekiz besleme 22.10.2026'da "tarafli gazeteler olmasin" karariyla
+-- kapatilmisti (yukarida, 'gecis_tarafsiz_kaynaklar_2026_10'). Site sahibi
+-- 13.11.2026'da gazete gazete gorunumu ve "en cok okunan gazetelerin
+-- haberleri"ni istedi; bu iki yayin icin o karar geri alindi. O gun kapatilan
+-- diger beslemelere (Cumhuriyet, A Haber, Star, Yeni Safak ekonomi)
+-- DOKUNULMADI. Site sahibi tarafli haber kararindan VAZGECMEDI ("ac ama
+-- tarafli haber gosterme; bunu haber ozelinde yap"): eleme artik gazete
+-- bazinda degil haber bazinda (ajan/src/Yazar.php, YAYIMLANMAZ l maddesi).
+-- Hakaret ve guvenilmez haber kurali da aynen gecerli. Sekiz adres acilmadan
+-- once ajanin kostugu yerde sinandi (kaynak-testi, calisma 43598554743):
+-- sekizi de HTTP 200; Sozcu 50'ser, Sabah 10'ar girdi.
+--
+-- Tek seferlik ('gecis_sozcu_sabah_2026_11'): sonradan panelden kapatilan
+-- kaynak bu satirlarla yeniden acilmaz.
+-- ---------------------------------------------------------------------------
+UPDATE kaynaklar SET aktif = 1
+ WHERE ad IN ('Sözcü Gündem', 'Sözcü Dünya', 'Sözcü Spor', 'Sözcü Ekonomi', 'Sabah Gündem', 'Sabah Dünya', 'Sabah Spor', 'Sabah Ekonomi')
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_sozcu_sabah_2026_11');
+
+INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_sozcu_sabah_2026_11', '14.11.2026');

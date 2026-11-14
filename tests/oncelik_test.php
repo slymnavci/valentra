@@ -1170,6 +1170,8 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     $mansetHtml = nw_gazete_mansetleri_html();
     bekle(str_contains($mansetHtml, 'https://www.hurriyet.com.tr/m1') && str_contains($mansetHtml, 'rel="noopener nofollow"') && str_contains($mansetHtml, 'Öne çıkanlar'),
         'manşet başlığı gazetenin kendi sayfasına bağlanıyor; manşet beslemesi olmayan yayın "öne çıkanlar" diye ayrılıyor');
+    bekle(nw_gazete_adi('Sözcü Gazetesi') === 'Sözcü' && nw_gazete_adi('Sözcü Gündem') === 'Sözcü' && nw_gazete_adi('Dünya Gazetesi') === 'Dünya Gazetesi',
+        'Sözcü\'nün iki adı tek gazetede; "Gazetesi" eki başka yayınlarda korunuyor');
     bekle(nw_gazete_adi('Hürriyet Ana Sayfa') === 'Hürriyet' && nw_gazete_adi('Habertürk Manşet') === 'Habertürk', 'ana sayfa / manşet beslemeleri yayının adında toplanıyor');
     db()->exec('DELETE FROM gundem_basliklari');
 
