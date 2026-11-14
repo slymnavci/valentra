@@ -307,7 +307,9 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
         <?php if ($haber): ?>
             <a class="nw-icerik" href="<?= e($detayYol) ?>">
                 <h2><?= e((string) $v['baslik']) ?></h2>
-                <?php if ((string) $v['ozet'] !== ''): ?><p><?= e($detay ? (string) $v['ozet'] : kisalt((string) $v['ozet'], 240)) ?></p><?php endif; ?>
+                <?php /* Akista 5-6 satirlik ozet (14.11.2026; bkz. nw_haber_ozeti); haber sayfasinda ozetin tamami. */ ?>
+                <?php $kartOzeti = $detay ? (string) $v['ozet'] : nw_haber_ozeti($v); ?>
+                <?php if ($kartOzeti !== ''): ?><p><?= e($kartOzeti) ?></p><?php endif; ?>
             </a>
             <?php if (haber_video_adresi((string) ($v['iframe_url'] ?? '')) !== ''): ?>
                 <?= nw_video_html((string) $v['iframe_url'], (string) $v['baslik']) ?>

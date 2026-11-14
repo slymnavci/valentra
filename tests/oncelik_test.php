@@ -1069,6 +1069,36 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     bekle($dalBasliklari('diger') === ['Milli tenisçi Wimbledon tenis turnuvasında çeyrek finalde'], 'Diğer: diğer sporların haberi', implode(' | ', $dalBasliklari('diger')));
     bekle(nw_spor_dal_kosulu('olmayan') === '' && count($dalBasliklari('olmayan')) === 3, 'bilinmeyen dal süzmez');
 
+    // "Son haberler" (14.11.2026): once Turkiye, onemli gundem; yabanci yayin, spor ve onemsiz haber yok.
+    db()->exec("INSERT INTO kaynaklar (ad, site_url, tur, kategori, aktif) VALUES ('Test Spiegel', 'https://www.spiegel.de/', 'rss', 'gundem', 1)");
+    $sId = (int) db()->lastInsertId();
+    db()->exec("UPDATE haberler SET onem = 70, kaynak_id = NULL, guncellendi = guncellendi");
+    db()->exec("UPDATE haberler SET onem = 30, guncellendi = guncellendi WHERE baslik LIKE '%Baraj doluluk%'");
+    db()->exec("UPDATE haberler SET kaynak_id = $sId, guncellendi = guncellendi WHERE baslik LIKE '%Turizm geliri%'");
+    $sonBasliklar = array_map(static fn (array $o): string => (string) $o['veri']['baslik'], nw_akis(40, 0, null, null, '', '', true, '', true)['ogeler']);
+    $var = static fn (string $parca): bool => array_filter($sonBasliklar, static fn (string $b): bool => str_contains($b, $parca)) !== [];
+    bekle($var('otobüs hattı') && $var('Sanayi üretimi'), '"Son haberler": Türkiye gündeminin önemli haberleri geliyor', implode(' | ', $sonBasliklar));
+    bekle(!$var('Turizm geliri'), '"Son haberler": yabancı gazetenin haberi yok (ülke gruplarında durur)');
+    bekle(!$var('Baraj doluluk'), '"Son haberler": önem puanı düşük haber yok');
+    bekle(!$var('Süper Lig') && !$var('EuroLeague') && !$var('Köprü bakım'), '"Son haberler": spor ve dünya başlığındaki haber yok');
+    bekle(count(nw_akis(40, 0, null, null, '', '', true)['ogeler']) > count($sonBasliklar), 'başlık ve gazete akışları değişmedi (süzgeç yalnızca "Son haberler"de)');
+    db()->exec("DELETE FROM kaynaklar WHERE id = $sId");
+    bekle((int) db()->query("SELECT ('https://www.bbc.com/turkce' REGEXP " . db()->quote(nw_yabanci_kaynak_ifadesi()) . ") + ('https://feeds.bbci.co.uk/news' REGEXP " . db()->quote(nw_yabanci_kaynak_ifadesi())
+        . ") + 10 * ('https://www.hurriyet.com.tr/rss' REGEXP " . db()->quote(nw_yabanci_kaynak_ifadesi()) . ")")->fetchColumn() === 2,
+        'yabancı yayın adresi SQL\'de de tanınıyor; Türk yayını yabancı sayılmıyor');
+
+    // Akis kartinda 5-6 satirlik ozet (14.11.2026).
+    $uzunOzet = nw_haber_ozeti(['ozet' => 'Merkez Bankası faiz kararını açıkladı.', 'icerik_basi' => "## Karar\nMerkez Bankası faiz kararını açıkladı. Para Politikası Kurulu politika faizini sabit tuttu. "
+        . str_repeat('Kurul, enflasyon görünümündeki gelişmeleri yakından izleyeceğini bildirdi. Piyasalar kararı beklentilere paralel buldu. ', 6)]);
+    bekle(mb_strlen($uzunOzet) >= 400 && mb_strlen($uzunOzet) <= 660 && str_starts_with($uzunOzet, 'Merkez Bankası faiz kararını açıkladı. Para Politikası')
+        && str_ends_with($uzunOzet, '.') && !str_contains($uzunOzet, '##'), 'kart özeti 5-6 satır: kısa özet haber metninden cümle sınırında tamamlanıyor, özet yinelenmiyor', mb_strlen($uzunOzet) . ' karakter');
+    bekle(nw_haber_ozeti(['ozet' => 'Kısa özet.', 'icerik_basi' => '']) === 'Kısa özet.', 'metin yoksa özet olduğu gibi (uydurma tamamlama yok)');
+
+    // Gazete simgesi yayinin kendi sitesinden (14.11.2026): video beslemesinin adresi (YouTube) simge olmaz.
+    bekle(nw_simge_alani('https://www.youtube.com/channel/abc') === '' && nw_simge_alani('https://www.sozcu.com.tr/rss') === 'sozcu.com.tr'
+        && NW_GAZETE_ALANLARI['ntv'] === 'ntv.com.tr' && nw_gazete_simge_dosyasi('ntv', 'ntv.com.tr') !== nw_gazete_simge_dosyasi('ntv', 'youtube.com'),
+        'gazete simgesi yayının kendi sitesinden; YouTube adresi simge kaynağı değil, adres değişince eski simge geçersiz');
+
     // Sag kenar kutulari (14.11.2026): kaynaklari beklemez, veri yoksa da cizilir.
     $eko = nw_ekonomi_kutusu_html();
     bekle(str_contains($eko, 'Döviz') && str_contains($eko, 'Kripto paralar') && str_contains($eko, 'bolum=doviz') && !str_contains($eko, '—'),

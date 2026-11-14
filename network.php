@@ -153,7 +153,8 @@ switch ($sayfa) {
         $gazeteGorunumu = $gazeteOzetleri !== [];
         $akis   = $gazeteGorunumu
             ? ['ogeler' => [], 'sonraki' => 0]
-            : nw_akis(NW_AKIS_ADEDI, $once, null, null, $konu, $gazete, true, $dal);
+            // "Son haberler" (baslik ve gazete secili degilken): once Turkiye, onemli gundem (14.11.2026).
+            : nw_akis(NW_AKIS_ADEDI, $once, null, null, $konu, $gazete, true, $dal, $konu === '' && $gazete === '');
         $baglam = nw_baglam($akis['ogeler']);
         $takipEdilenler = $uyeId !== null ? nw_takip_edilenler($uyeId) : [];
         $oneriler = !$kisilerAcik ? [] : array_slice(array_values(array_filter(
@@ -516,6 +517,13 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 </nav>
             <?php endif; ?>
 
+            <?php if ($akisGorunumu): ?>
+                <header class="nw-gazete-ust">
+                    <h1><?= nw_bayrak_html('tr') ?>Son haberler</h1>
+                    <p>Türkiye gündeminin öne çıkan haberleri, en yenisi üstte. Dünya haberleri "Dünya" başlığında ve ülke gruplarında.</p>
+                </header>
+            <?php endif; ?>
+
             <?php if ($gazete !== ''): ?>
                 <header class="nw-gazete-ust">
                     <h1><?= nw_gazete_simge_html($gazete, $gazeteler[$gazete]['ad'], 28) ?><?= e($gazeteler[$gazete]['ad']) ?>
@@ -571,6 +579,17 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 <nav class="nw-sayfalar"><a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'dal' => $dal, 'gazete' => $gazete, 'once' => $akis['sonraki']])) ?>">Daha eski haberler →</a></nav>
             <?php endif; ?>
         </div>
+        <?php /* Sag kutulardan haber sitesine gidene "Network'e don" seridi (14.11.2026; bkz. sayfa_ust.php):
+                 donulecek adres tarayicida saklanir. */ ?>
+        <script>
+        document.addEventListener('click', function (o) {
+            var a = o.target.closest ? o.target.closest('.nw-sag a[href^="/"]') : null;
+            if (a && a.getAttribute('href').indexOf('/network') !== 0) {
+                try { sessionStorage.setItem('nw-donus', location.pathname + location.search); } catch (e) {}
+            }
+        });
+        try { sessionStorage.removeItem('nw-donus'); } catch (e) {}
+        </script>
         <aside class="nw-sag">
             <?php if ($uye === null): ?>
                 <?php // Uye olmayan ziyaretci sagdan uye olur (13.11.2026); ust banttaki "Uye ol" menusu de ayni secenekleri verir. ?>
