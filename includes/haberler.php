@@ -2159,6 +2159,14 @@ function haber_bugunku_taslaklari_yayinla_arada(): void
         error_log('[valentra] otomatik yayin: ' . $e->getMessage());
     }
 
+    // Kucuk onizleme olarak inmis gorseller buyuk boyuyla yenilenir (tek seferlik).
+    try {
+        require_once __DIR__ . '/gorsel_onbellek.php';
+        haber_gorsel_onizlemeleri_yenile();
+    } catch (Throwable $e) {
+        error_log('[valentra] gorsel yenileme: ' . $e->getMessage());
+    }
+
     // Google'a sunulan haberlerde %70 ozgun (bkz. haber_ozgun_kotasini_dagit).
     try {
         haber_ozgun_kotasini_dagit();
