@@ -892,7 +892,20 @@ function haber_ana_akis_kosulu(bool $yerelDahil = false, bool $konuSiniri = true
     return 'NOT (' . HABER_RG_KOSULU . ')'
         . ' AND (h.kategori_id IS NULL OR h.kategori_id NOT IN'
         . ' (SELECT id FROM kategoriler WHERE slug IN (' . $disarida . ')))'
-        . ' AND h.kaynak_tarihi IS NOT NULL'
+        /*
+         * DERLEMELER TARIHSIZ SAYILMAZ (12.11.2026). Derlemenin kaynak
+         * tarihi yok (kaynak_url bos, tarih denetimi de ona bakmiyor), yani
+         * yukaridaki kural yuzunden HICBIR derleme ana sayfa akisina
+         * giremiyordu; kaynak haberleri ise derlemesi yayinda diye akistan
+         * cikiyor (derleme_yayindaki_kaynak_idler). Sonuc: derlenen olay ana
+         * sayfadan tamamen kayboluyordu. 12.11.2026 aksami canlida manset ve
+         * izgaradaki 36 haberin hicbiri derleme degildi; Gundem sayfasindaki
+         * 16 haberin 3'u derlemeydi (95 puanli HABAS patlamasi dahil) ve
+         * 74 puanli Turkiye-Belcika mac sonucu ana sayfada hic gorunmedi.
+         * Derleme Valentra'nin o an yazdigi haber: yasi toplanma anindan
+         * sayiliyor (haber_yas_dakika_ifadesi zaten boyle).
+         */
+        . ' AND (h.kaynak_tarihi IS NOT NULL' . (haber_sutun_var('derleme') ? ' OR h.derleme = 1' : '') . ')'
         . ' AND h.olusturuldu >= NOW() - INTERVAL ' . HABER_ANA_SAYFA_EN_FAZLA_GUN . ' DAY'
         // Dusuk onemli yerel haber ana akista yok ($yerelDahil: "Senin Icin" sehir bolumu).
         . ($yerelDahil ? '' : ' AND ' . haber_yerel_kosulu())
