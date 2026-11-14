@@ -4688,19 +4688,32 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
 .vitrin > .kose-kutu .yazar-tarih { display: none; }
 .vitrin > .kose-kutu .yazar-listesi .yazar-yazi { font-size: .98rem; line-height: 1.28; }
 
-/* --- Network'e donus seridi (14.11.2026; bkz. includes/sayfa_ust.php) ------
-   Network'un sag kutularindan haber sitesine gelende en ustte sabit durur. */
-.nw-donus[hidden] { display: none; }
-.nw-donus {
-    position: sticky; top: 0; z-index: 60;
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    height: 40px; padding: 0 16px;
-    background: #0b1f44; color: #fff; font-size: 14px;
-    box-shadow: 0 1px 6px rgba(0, 0, 0, .25);
+/* --- Network'ten gelene Network basligi (14.11.2026; bkz. includes/sayfa_ust.php) ---
+   Network'un sag kutularindan gelen ziyaretcide (html.nw-konuk) haber sitesinin
+   logo satiri, ana menusu ve son haberler seridi gizlenir; yerine Network bandi. */
+.nw-konuk-bant { display: none; }
+.nw-konuk .nw-konuk-bant { display: block; }
+.nw-konuk .ust-bant,
+.nw-konuk .menu-bant,
+.nw-konuk .sd-serit { display: none; }
+/* Network bandi dar ekranda iki sutuna iniyor; bu bant her genislikte tek satir. */
+.nw-konuk-bant .nw-bant-ic { grid-template-columns: auto auto 1fr auto; }
+.nw-konuk-don {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 999px;
+    background: var(--vurgu); color: var(--vurgu-ustu, #fff);
+    font-size: .9rem; font-weight: 700; text-decoration: none; white-space: nowrap;
 }
-.nw-donus-git { color: #fff; text-decoration: none; display: flex; align-items: center; gap: 6px; height: 100%; }
-.nw-donus-git:hover { text-decoration: underline; }
-.nw-donus-kapat { background: none; border: 0; color: #fff; font-size: 22px; line-height: 1; cursor: pointer; padding: 4px 8px; opacity: .8; }
-.nw-donus-kapat:hover { opacity: 1; }
-/* Yapiskan menu seridin altinda kalsin. */
-body.nw-donuslu .menu-bant { top: 40px; }
+.nw-konuk-don:hover { filter: brightness(1.08); }
+.nw-konuk-haber {
+    border: 1px solid var(--cizgi); background: none; color: var(--metin-soluk);
+    padding: 7px 12px; border-radius: 999px; cursor: pointer;
+    font: inherit; font-size: .84rem; font-weight: 600; white-space: nowrap;
+}
+.nw-konuk-haber:hover { color: var(--metin); border-color: var(--metin-soluk); }
+@media (max-width: 520px) {
+    .nw-konuk-bant .nw-bant-ic { gap: 8px; padding: 0 10px; min-height: 52px; }
+    .nw-konuk-bant .nw-bant-logo, .nw-konuk-bant .nw-bant-logo .nw-logo { height: 30px; }
+    .nw-konuk-don { padding: 7px 11px; font-size: .84rem; }
+    .nw-konuk-haber { padding: 6px 9px; font-size: .78rem; }
+}

@@ -618,12 +618,21 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             if (a && a.getAttribute('href').indexOf('/network') !== 0) {
                 // Ekonomi ve Spor kutulari (site sahibi, 14.11.2026): "farkli bir sayfadan versin,
                 // Network bir sekme olarak acik dursun" -> yeni sekme; Network oldugu yerde kalir.
+                //
+                // Acilan sayfada Network basligi ve "Akisa don" (ayni gun: "buraya Network'ten
+                // girdiysek en basta Valentra Haber olmasin"; bkz. sayfa_ust.php): isaret yeni
+                // sekmeye sessionStorage kopyasiyla gecer; bunun icin sekme rel="opener" ile
+                // acilir (ayni site, guvenli). Bu sekmedeki isaret hemen silinir: okur buradan
+                // "Valentra Haber"e kendi gecerse haber sitesinin basligini gorsun.
+                var donus = location.pathname + location.search;
                 if (a.closest('.nw-kutu-liste')) {
                     a.target = '_blank';
-                    a.rel = 'noopener';
+                    a.rel = 'opener';
+                    try { sessionStorage.setItem('nw-donus', donus); } catch (e) {}
+                    setTimeout(function () { try { sessionStorage.removeItem('nw-donus'); } catch (e) {} }, 1500);
                     return;
                 }
-                try { sessionStorage.setItem('nw-donus', location.pathname + location.search); } catch (e) {}
+                try { sessionStorage.setItem('nw-donus', donus); } catch (e) {}
             }
         });
         try { sessionStorage.removeItem('nw-donus'); } catch (e) {}

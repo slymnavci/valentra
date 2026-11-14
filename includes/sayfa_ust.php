@@ -72,6 +72,9 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
              ONCE uygulaniyor, yoksa sayfa bir an yanlis renkte gorunup
              sonra degisirdi. Secim yoksa sistem ayari gecerli. */ ?>
     <?php require_once __DIR__ . '/temalar.php'; echo tema_bas_betigi(); ?>
+    <?php /* Network'ten gelen ziyaretci (14.11.2026; bkz. asagida NETWORK'TEN GELENE
+             NETWORK BASLIGI): sinif stil dosyasindan ONCE konuyor. */ ?>
+    <?php if (empty($networkSayfasi)): ?><script>try{if(sessionStorage.getItem("nw-donus")){document.documentElement.classList.add("nw-konuk");}}catch(e){}</script><?php endif; ?>
     <?php
     /* En buyuk icerik gorseli (LCP) erken istensin (08.11.2026, Lighthouse
        mobil LCP 6,5 sn): tarayici gorseli ancak 230 KB'lik stil dosyasi ve
@@ -178,30 +181,67 @@ $govdeSinifi = trim((string) ($govdeSinifi ?? ''));
 <?php else: ?>
     <?php
     /*
-     * Network'e donus seridi (site sahibi, 14.11.2026: "sagdaki spor haberine
-     * basinca Network'e donus yeri olmuyor; en basta sabit Network alani
-     * kalsin"). Network'un sag kutularindan (canli skor, puan durumu,
-     * piyasalar...) gelen ziyaretcide sayfanin en ustunde sabit durur; site
-     * icinde gezerken de kalir, "Network'e don" ya da kapat ile kalkar.
-     * Sayfa onbellekte oldugu icin serit her sayfada gizli durur, tarayicidaki
-     * isaret (sessionStorage nw-donus; network.php yazar) varsa acilir.
+     * NETWORK'TEN GELENE NETWORK BASLIGI (site sahibi, 14.11.2026: "sagdaki
+     * seride basip dovize girdik diyelim; buraya Network'ten girdiysek en
+     * basta Valentra Haber olmasin, Valentra Network'u baslikta gosterelim,
+     * istedigimizde akisa geri donebilelim; ayni sey spor icin de gecerli").
+     *
+     * Network'un sag kutularindan (piyasalar, doviz, kripto, canli skor, puan
+     * durumu ...) gelen ziyaretcide haber sitesinin logo satiri, ana menusu
+     * ve son haberler seridi GIZLENIR; yerine Network logolu bu bant gelir:
+     * "Akisa don" ve haber sitesinin kendi basligina gecis ("Valentra Haber").
+     * Sayfanin kendi basligi (ValPapel, ValSpor ve alt menuleri) yerinde.
+     * Site icinde gezerken de kalir; "Akisa don" ya da "Valentra Haber" ile
+     * kalkar. Ayni gun daha once ince bir "Network'e don" seridiydi; haber
+     * sitesinin basligi ustte kaldigi icin yetmedi.
+     *
+     * Sayfa onbellekte oldugu icin bant her sayfada gizli basilir; tarayicidaki
+     * isaret (sessionStorage nw-donus; network.php yazar) varsa <head>'deki
+     * kucuk betik <html>'e "nw-konuk" sinifini koyar, gerisi CSS (sayfa bir an
+     * yanlis baslikla gorunmesin). Yeni sekmede acilan kutu baglantilarinda
+     * isaret yeni sekmeye rel="opener" ile tasinir (bkz. network.php).
      */
     ?>
-    <div class="nw-donus" id="nw-donus" hidden>
-        <a class="nw-donus-git" href="/network"><span aria-hidden="true">←</span><span><strong>V Network</strong>'e dön</span></a>
-        <button type="button" class="nw-donus-kapat" aria-label="Network şeridini kapat">×</button>
-    </div>
+    <header class="nw-bant nw-konuk-bant" id="nw-donus">
+        <div class="nw-bant-ic">
+            <a class="nw-bant-logo" href="/network" data-nw-don aria-label="V Network akışına dön">
+                <span class="nw-logo">
+                    <img class="nw-logo-acik" src="<?= e(varlik('/assets/network-logo.webp')) ?>" width="138" height="40" alt="" decoding="async">
+                    <img class="nw-logo-koyu" src="<?= e(varlik('/assets/network-logo-koyu.webp')) ?>" width="138" height="40" alt="" decoding="async">
+                    <span class="gizli-etiket">VALENTRA Network</span>
+                </span>
+            </a>
+            <a class="nw-konuk-don" href="/network" data-nw-don><span aria-hidden="true">←</span> Akışa dön</a>
+            <span></span>
+            <button type="button" class="nw-konuk-haber" title="Valentra Haber başlığını göster">Valentra Haber</button>
+        </div>
+    </header>
     <script>
     (function () {
-        var s = document.getElementById('nw-donus'), d;
+        var s = document.getElementById('nw-donus'), k = document.documentElement, d;
         try { d = sessionStorage.getItem('nw-donus'); } catch (e) {}
-        if (!s || !d) { return; }
-        if (d.charAt(0) === '/' && d.charAt(1) !== '/') { s.querySelector('a').setAttribute('href', d); }
-        s.hidden = false;
-        document.body.classList.add('nw-donuslu');
+        if (!s || !d) { k.classList.remove('nw-konuk'); return; }
+        k.classList.add('nw-konuk');
         function kaldir() { try { sessionStorage.removeItem('nw-donus'); } catch (e) {} }
-        s.querySelector('a').addEventListener('click', kaldir);
-        s.querySelector('button').addEventListener('click', function () { kaldir(); s.hidden = true; document.body.classList.remove('nw-donuslu'); });
+        var hedef = d.charAt(0) === '/' && d.charAt(1) !== '/' ? d : '/network';
+        s.querySelectorAll('[data-nw-don]').forEach(function (a) {
+            a.setAttribute('href', hedef);
+            a.addEventListener('click', function (o) {
+                kaldir();
+                // Kutu baglantisi bu sayfayi yeni sekmede actiysa Network oteki
+                // sekmede oldugu yerde duruyor: bu sekme kapanir, okur akisa,
+                // kaldigi yere doner. Kapanamazsa (tarayici izin vermezse)
+                // baglanti olagan yoluyla akisa gider.
+                var acan = null;
+                try { acan = window.opener && !window.opener.closed ? window.opener : null; } catch (e) {}
+                if (acan && history.length <= 1) {
+                    o.preventDefault();
+                    window.close();
+                    setTimeout(function () { location.href = hedef; }, 250);
+                }
+            });
+        });
+        s.querySelector('.nw-konuk-haber').addEventListener('click', function () { kaldir(); k.classList.remove('nw-konuk'); });
     })();
     </script>
     <?php
