@@ -1025,7 +1025,7 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     // Ulke ulke (13.11.2026): ulke kaynagin site adresinden; Turkiye'de ana / yerel ayrimi.
     bekle(nw_kaynak_ulkesi('https://www.theguardian.com/world') === 'gb' && nw_kaynak_ulkesi('https://www.spiegel.de') === 'de'
         && nw_kaynak_ulkesi('https://www.bbc.com/turkce') === 'gb' && nw_kaynak_ulkesi('https://www.haberturk.com') === 'tr'
-        && nw_kaynak_ulkesi('https://www.who.int/news') === 'un' && nw_kaynak_ulkesi('') === 'tr', 'ülke site adresinden bulunuyor; bilinmeyen adres Türkiye');
+        && nw_kaynak_ulkesi('https://en.yna.co.kr') === 'kr' && nw_kaynak_ulkesi('https://www.who.int/news') === 'un' && nw_kaynak_ulkesi('') === 'tr', 'ülke site adresinden bulunuyor; bilinmeyen adres Türkiye');
     bekle(nw_gazete_adi('Le Monde (Fransa)') === 'Le Monde' && nw_gazete_adi('The Guardian Health') === 'The Guardian', 'yabancı yayınların bölüm ve ülke ekleri ada katılmıyor');
 
     db()->exec("DELETE FROM kaynaklar WHERE ad IN ('Test Guardian', 'Test Yerel Gazete')");
