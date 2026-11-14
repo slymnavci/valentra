@@ -293,12 +293,27 @@ function spor_canli_ligler(): array
 {
     require_once __DIR__ . '/buyuk_mac.php';
 
-    $gun    = (new DateTimeImmutable('now', new DateTimeZone('Europe/Istanbul')))->format('Ymd');
-    $ligler = [];
+    $istanbul = new DateTimeZone('Europe/Istanbul');
+    $simdi    = new DateTimeImmutable('now', $istanbul);
+    $gun      = $simdi->format('Ymd');
+    // Gece yarisini gecen mac dunun fiksturunde (bkz. buyuk_maclar): sabaha
+    // karsi 03:00'e kadar dunun HALA OYNANAN maclari da listede kalir.
+    $dun      = (int) $simdi->format('G') < 3 ? $simdi->modify('-1 day')->format('Ymd') : '';
+    $ligler   = [];
 
     foreach (array_merge(SPOR_CANLI_LIGLER, BUYUK_MAC_MILLI_LIGLER) as $kod) {
         try {
-            $maclar = futbol_gun_maclari($kod, $gun)['veri']['maclar'] ?? [];
+            $maclar = (array) (futbol_gun_maclari($kod, $gun)['veri']['maclar'] ?? []);
+
+            if ($dun !== '') {
+                $bilinen = array_column($maclar, 'id');
+
+                foreach ((array) (futbol_gun_maclari($kod, $dun)['veri']['maclar'] ?? []) as $m) {
+                    if (in_array($m['durum'], FUTBOL_CANLI, true) && !in_array($m['id'], $bilinen, true)) {
+                        $maclar[] = $m;
+                    }
+                }
+            }
         } catch (Throwable $e) {
             $maclar = [];
         }

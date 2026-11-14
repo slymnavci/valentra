@@ -1275,7 +1275,9 @@ function nw_spor_kutusu_betigi(): string
         if (document.hidden) { setTimeout(sor, 15000); return; }
         fetch(k.getAttribute('data-canli-skor'), { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (d) {
             yaz(d);
-            if (d.yenile > 0) { setTimeout(sor, Math.max(15, d.yenile) * 1000); }
+            // Mac yokken uc "sorma" (0) der; kutu hep gorundugu icin bes dakikada bir yine sorulur:
+            // sayfa acikken baslayan mac kutuya dusmeli.
+            setTimeout(sor, (d.yenile > 0 ? Math.max(15, d.yenile) : 300) * 1000);
         }).catch(function () { setTimeout(sor, 120000); });
     }
     sor();
