@@ -1174,7 +1174,9 @@ function nw_gazete_simge_html(string $slug, string $ad, int $boyut = 20): string
 
     $dosya = nw_gazete_simge_dosyasi($slug, $alan);
     $yerel = '/gorseller/gazete/' . $dosya . '.png';
-    $src  = is_file(nw_gazete_simge_klasoru() . '/' . $dosya . '.png') ? $yerel : '/gazete-simge.php?g=' . rawurlencode($slug);
+    $src  = is_file(nw_gazete_simge_klasoru() . '/' . $dosya . '.png') ? $yerel
+        // Adreste surum (14.11.2026): tarayici eski, yanlis simgeyi 30 gun onbellekte tutuyordu.
+        : '/gazete-simge.php?g=' . rawurlencode($slug) . '&a=' . substr($dosya, -6);
 
     return '<span class="nw-gz-simge" style="--b:' . $boyut . 'px" aria-hidden="true">' . e($harf)
         // Indirilemedi isareti bir gun gecerli (gazete-simge.php ile ayni sure): sonra yeniden denenir.
