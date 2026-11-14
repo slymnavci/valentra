@@ -706,7 +706,7 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
                " . ($gundem ? haber_okunma_birlesimi() : '') . "
               WHERE h.durum = :d" . ($turkiyeGundemi ? nw_turkiye_gundemi_kosulu() : '') . " AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
                 AND h.yayin_tarihi < FROM_UNIXTIME(:once)" . $gazeteKosulu . ($konu === 'spor' ? nw_spor_dal_kosulu($dal) : '') . "
-              ORDER BY " . ($gundem ? haber_sirasi(true) . ', ' : ($onemli ? "DATE(h.yayin_tarihi) DESC, (h.manset_yayinlar LIKE '%manşet%') DESC, h.manset_sinyal DESC, h.onem DESC, " : '')) . "h.yayin_tarihi DESC, h.id DESC LIMIT :l" . ($gundem || $onemli ? ' OFFSET ' . $atla : '')
+              ORDER BY " . ($gundem ? haber_sirasi(true) . ', ' : ($onemli ? nw_onemli_sirasi() . ', ' : '')) . "h.yayin_tarihi DESC, h.id DESC LIMIT :l" . ($gundem || $onemli ? ' OFFSET ' . $atla : '')
         );
         $ifade->bindValue('d', HABER_YAYINDA);
         $ifade->bindValue('once', $once, PDO::PARAM_INT);
@@ -920,6 +920,24 @@ function nw_haber_ozeti(array $v, int $hedef = 480): string
     }
 
     return $sonuc !== '' ? $sonuc : kisalt($metin, $hedef);
+}
+
+/**
+ * "Onemli haberler" sirasi (SQL). Site sahibi, 14.11.2026: "bu haber 14
+ * saatlik, neden hala mansette; bugunku en onemli haberler gelsin."
+ *
+ * Once son 24 saat, sonra onceki 24 saatlik dilimler (takvim gunu degil: gece
+ * yarisindan hemen sonra dunun haberi "bugun" sayilmasin diye). Dilimin icinde
+ * puan: onem + gazetelerin gundem puani + mansetteyse 15, eksi haberin YASI
+ * (saat basina 4 puan). Yani dort gazetenin yer verdigi ama 14 saatlik haber,
+ * iki gazetenin yer verdigi bir saatlik haberin arkasinda kalir.
+ */
+function nw_onemli_sirasi(): string
+{
+    $yas = 'GREATEST(0, TIMESTAMPDIFF(MINUTE, h.yayin_tarihi, NOW()))';
+
+    return "FLOOR($yas / 1440) ASC, "
+        . "(h.onem + h.manset_sinyal + IF(h.manset_yayinlar LIKE '%manşet%', 15, 0) - 4 * $yas / 60) DESC";
 }
 
 /* --- Gazetelerin mansetleri (14.11.2026) -----------------------------------
@@ -1167,6 +1185,7 @@ function nw_kaynak_ulkesi(string $siteUrl): string
 
 /** Basliklarin kucuk ikonlari (24x24, cizgi). Bilinmeyen baslik: genel ikon. */
 const NW_KONU_IKONLARI = [
+    'one-cikan' => '<path d="M13 3 5 13.500h6L10 21l9-10.500h-6z"/>',
     'gundem'          => '<path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v8a2 2 0 0 1-2 2"/><path d="M7.5 9h6M7.5 12.5h6M7.5 16h4"/>',
     'politika'        => '<path d="M3 20h18M5 20V10M9.5 20V10M14.5 20V10M19 20V10M3 10h18L12 4z"/>',
     'ekonomi'         => '<path d="M4 19h16M6 15l4-4 3 3 5-6"/><path d="M15 8h3v3"/>',

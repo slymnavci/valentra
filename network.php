@@ -148,11 +148,12 @@ switch ($sayfa) {
         $dal    = (string) ($_GET['dal'] ?? '');
         $dal    = $konu === 'spor' && isset(NW_SPOR_DALLARI[$dal]) ? $dal : '';
         $gazeteGorunumu = $gazete === '' && $konu === '' && $sekme === 'herkes' && $once === 0
-            && (string) ($_GET['gorunum'] ?? '') !== 'akis' && $gazeteler !== [];
+            && (string) ($_GET['gorunum'] ?? '') === 'gazeteler' && $gazeteler !== [];
         $gazeteOzetleri = $gazeteGorunumu ? nw_gazete_ozetleri() : [];
         $gazeteGorunumu = $gazeteOzetleri !== [];
-        // En ustteki "Son haberler / Onemli haberler" secimi (14.11.2026): ?sec=onemli
-        $onemli = !$gazeteGorunumu && $sekme === 'herkes' && (string) ($_GET['sec'] ?? '') === 'onemli';
+        // En ustteki "Onemli haberler / Son haberler" secimi. Varsayilan ONEMLI (site sahibi, 14.11.2026:
+        // "sayfa acildiginda once onemli haberleri gostersin, istedigimizde son haberlere gecelim"): ?sec=son
+        $onemli = !$gazeteGorunumu && $sekme === 'herkes' && (string) ($_GET['sec'] ?? '') !== 'son';
         $akis   = $gazeteGorunumu
             ? ['ogeler' => [], 'sonraki' => 0]
             // "Son haberler" (baslik ve gazete secili degilken): once Turkiye, onemli gundem (14.11.2026).
@@ -170,7 +171,7 @@ switch ($sayfa) {
         $begenilenHaberler  = nw_begenilen_haberler(6);
         $akisGorunumu = !$gazeteGorunumu && $gazete === '' && $konu === '' && $sekme === 'herkes';
         $buYol  = nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'dal' => $dal, 'gazete' => $gazete,
-            'gorunum' => $akisGorunumu ? 'akis' : '', 'sec' => $onemli ? 'onemli' : '', 'once' => $once]);
+            'gorunum' => $akisGorunumu ? 'akis' : '', 'sec' => $onemli || $sekme !== 'herkes' ? '' : 'son', 'once' => $once]);
         $sayfaBasligi = match (true) {
             $gazete !== '' => $gazeteler[$gazete]['ad'] . ' haberleri — V Network | Valentra',
             $dal !== ''    => NW_SPOR_DALLARI[$dal][0] . ' haberleri — V Network | Valentra',
@@ -327,8 +328,11 @@ $solKenar = static function () use ($sayfa): void {
         <?php if ($nwKonular !== []): ?>
             <nav class="nw-sol-grup" aria-label="Başlıklar">
                 <strong class="nw-sol-baslik">Başlıklar</strong>
-                <a class="nw-sol-satir<?= $nwAkis ? ' aktif' : '' ?>" href="<?= e(nw_yol('', ['gorunum' => 'akis'])) ?>" data-konu=""
-                   <?= $nwAkis ? 'aria-current="page"' : '' ?>><span class="nw-sol-ad"><?= nw_konu_ikonu('') ?>Son haberler</span></a>
+                <?php $nwOnemli = $nwAkis && !empty($GLOBALS['onemli']); ?>
+                <a class="nw-sol-satir<?= $nwOnemli ? ' aktif' : '' ?>" href="<?= e(nw_yol()) ?>" data-konu=""
+                   <?= $nwOnemli ? 'aria-current="page"' : '' ?>><span class="nw-sol-ad"><?= nw_konu_ikonu('one-cikan') ?>Önemli haberler</span></a>
+                <a class="nw-sol-satir<?= $nwAkis && !$nwOnemli ? ' aktif' : '' ?>" href="<?= e(nw_yol('', ['gorunum' => 'akis', 'sec' => 'son'])) ?>" data-konu=""
+                   <?= $nwAkis && !$nwOnemli ? 'aria-current="page"' : '' ?>><span class="nw-sol-ad"><?= nw_konu_ikonu('') ?>Son haberler</span></a>
                 <?php foreach ($nwKonular as $slug => $ad): ?>
                     <a class="nw-sol-satir<?= $nwKonu === $slug ? ' aktif' : '' ?>" href="<?= e(nw_yol('', ['konu' => $slug])) ?>" data-konu="<?= e($slug) ?>"
                        <?= $nwKonu === $slug ? 'aria-current="page"' : '' ?>><span class="nw-sol-ad"><?= nw_konu_ikonu((string) $slug) ?><?= e($ad) ?></span></a>
@@ -491,8 +495,10 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                              "Tum gazeteler" ve "Son haberler" ile ayni adresler). */ ?>
                     <a href="<?= e(nw_yol('', ['gorunum' => 'gazeteler'])) ?>" data-konu=""
                        class="<?= $gazeteGorunumu ? 'aktif' : '' ?>"<?= $gazeteGorunumu ? ' aria-current="page"' : '' ?>>Gazeteler</a>
-                    <a href="<?= e(nw_yol('', ['gorunum' => 'akis'])) ?>" data-konu=""
-                       class="<?= $akisGorunumu ? 'aktif' : '' ?>"<?= $akisGorunumu ? ' aria-current="page"' : '' ?>>Son haberler</a>
+                    <a href="<?= e(nw_yol()) ?>" data-konu=""
+                       class="<?= $akisGorunumu && $onemli ? 'aktif' : '' ?>"<?= $akisGorunumu && $onemli ? ' aria-current="page"' : '' ?>>Önemli haberler</a>
+                    <a href="<?= e(nw_yol('', ['gorunum' => 'akis', 'sec' => 'son'])) ?>" data-konu=""
+                       class="<?= $akisGorunumu && !$onemli ? 'aktif' : '' ?>"<?= $akisGorunumu && !$onemli ? ' aria-current="page"' : '' ?>>Son haberler</a>
                     <?php foreach ($konular as $slug => $ad): ?>
                         <a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $slug])) ?>" data-konu="<?= e($slug) ?>"
                            class="<?= $konu === $slug ? 'aktif' : '' ?>"<?= $konu === $slug ? ' aria-current="page"' : '' ?>><?= e($ad) ?></a>
@@ -513,9 +519,9 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <?php if ($konu === 'spor'): ?>
                 <?php /* Spor dallari (14.11.2026): Futbol, Basketbol, Diger; her ekran genisliginde gorunur. */ ?>
                 <nav class="nw-dallar" aria-label="Spor dalı">
-                    <a href="<?= e(nw_yol('', ['konu' => 'spor', 'sec' => $onemli ? 'onemli' : ''])) ?>" class="<?= $dal === '' ? 'aktif' : '' ?>"<?= $dal === '' ? ' aria-current="page"' : '' ?>>Tümü</a>
+                    <a href="<?= e(nw_yol('', ['konu' => 'spor', 'sec' => $onemli || $sekme !== 'herkes' ? '' : 'son'])) ?>" class="<?= $dal === '' ? 'aktif' : '' ?>"<?= $dal === '' ? ' aria-current="page"' : '' ?>>Tümü</a>
                     <?php foreach (NW_SPOR_DALLARI as $dalSlug => [$dalAd]): ?>
-                        <a href="<?= e(nw_yol('', ['konu' => 'spor', 'dal' => $dalSlug, 'sec' => $onemli ? 'onemli' : ''])) ?>" class="<?= $dal === $dalSlug ? 'aktif' : '' ?>"
+                        <a href="<?= e(nw_yol('', ['konu' => 'spor', 'dal' => $dalSlug, 'sec' => $onemli || $sekme !== 'herkes' ? '' : 'son'])) ?>" class="<?= $dal === $dalSlug ? 'aktif' : '' ?>"
                            <?= $dal === $dalSlug ? 'aria-current="page"' : '' ?>><?= e($dalAd) ?></a>
                     <?php endforeach; ?>
                 </nav>
@@ -527,8 +533,8 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 <?php $secYolu = static fn (string $sec): string => nw_yol('', ['konu' => $konu, 'dal' => $dal, 'gazete' => $gazete,
                     'gorunum' => $akisGorunumu ? 'akis' : '', 'sec' => $sec]); ?>
                 <nav class="nw-dallar nw-secim" aria-label="Sıralama">
-                    <a href="<?= e($secYolu('onemli')) ?>" class="<?= $onemli ? 'aktif' : '' ?>"<?= $onemli ? ' aria-current="page"' : '' ?>>Önemli haberler</a>
-                    <a href="<?= e($secYolu('')) ?>" class="<?= !$onemli ? 'aktif' : '' ?>"<?= !$onemli ? ' aria-current="page"' : '' ?>>Son haberler</a>
+                    <a href="<?= e($secYolu('')) ?>" class="<?= $onemli ? 'aktif' : '' ?>"<?= $onemli ? ' aria-current="page"' : '' ?>>Önemli haberler</a>
+                    <a href="<?= e($secYolu('son')) ?>" class="<?= !$onemli ? 'aktif' : '' ?>"<?= !$onemli ? ' aria-current="page"' : '' ?>>Son haberler</a>
                 </nav>
             <?php endif; ?>
 
@@ -599,7 +605,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
 
             <?php if (($akis['atla'] ?? 0) > 0): ?>
                 <nav class="nw-sayfalar"><a href="<?= e(nw_yol('', ['konu' => $konu, 'dal' => $dal, 'gazete' => $gazete, 'gorunum' => $akisGorunumu ? 'akis' : '',
-                    'sec' => $onemli ? 'onemli' : '', 'atla' => $akis['atla']])) ?>">Daha fazla haber →</a></nav>
+                    'sec' => $onemli || $sekme !== 'herkes' ? '' : 'son', 'atla' => $akis['atla']])) ?>">Daha fazla haber →</a></nav>
             <?php elseif ($akis['sonraki'] > 0): ?>
                 <nav class="nw-sayfalar"><a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'dal' => $dal, 'gazete' => $gazete, 'once' => $akis['sonraki']])) ?>">Daha eski haberler →</a></nav>
             <?php endif; ?>
