@@ -71,12 +71,13 @@
 @media (prefers-color-scheme: dark) { :where(:root:not([data-tema="acik"])) .nw-govde { background: #18191a; }
 }
 /* 1320 -> 1560 (13.11.2026, site sahibi: "sayfayi sagdan ve soldan biraz daha genisletelim"). */
-.nw-govde main.sinirli { max-width: 1560px; }
+/* 1560 -> 1720, kenar boslugu 24 -> 16 (14.11.2026, site sahibi: "sag ve sol boslugu biraz daha daraltalim"). */
+.nw-govde main.sinirli { max-width: 1720px; padding-left: 16px; padding-right: 16px; }
 
 .nw-sayfa { padding: 18px 0 40px; }
 .nw-bildirim { max-width: 680px; margin: 0 auto 14px; }
 
-.nw-uc { display: grid; grid-template-columns: 290px minmax(0, 800px) 330px; justify-content: space-between; gap: 28px; align-items: start; }
+.nw-uc { display: grid; grid-template-columns: 300px minmax(0, 980px) 340px; justify-content: space-between; gap: 24px; align-items: start; }
 .nw-sol, .nw-sag { position: sticky; top: 78px; display: grid; gap: 4px; }
 .nw-sag { gap: 16px; }
 .nw-sol-oge {
