@@ -154,3 +154,72 @@
     setInterval(sor, 90 * 1000);
     document.addEventListener('visibilitychange', function () { if (!document.hidden) { sor(); } });
 })();
+
+/*
+ * 4. Surekli akis (site sahibi, 14.11.2026: "alttaki daha eski haberler
+ *    yerine asagiya indikce surekli haber yuklensin").
+ *
+ * Sayfanin altindaki "Daha eski haberler" baglantisi ekrana yaklasinca
+ * (800 piksel kala) o sayfa arka planda getirilir, kartlari akisin sonuna
+ * eklenir, baglanti bir sonraki sayfayi gosterecek sekilde guncellenir.
+ * Baglanti yerinde durur: betik calismazsa ya da yukleme basarisiz olursa
+ * tiklanarak eskisi gibi gidilir. Eklenen kartlar da "okundu" sayilir
+ * (window.nwOkumaGozle). Ayni kart iki kez eklenmez.
+ */
+(function () {
+    'use strict';
+
+    var gezinti = document.querySelector('.nw-orta .nw-sayfalar, .nw-profil .nw-sayfalar');
+    if (!gezinti || !('IntersectionObserver' in window) || !window.DOMParser || !window.fetch) { return; }
+
+    var yukleniyor = false, hata = 0;
+
+    function yukle() {
+        var bag = gezinti.querySelector('a');
+        if (yukleniyor || !bag) { return; }
+        yukleniyor = true;
+        gezinti.classList.add('nw-yukleniyor');
+
+        fetch(bag.href, { credentials: 'same-origin' })
+            .then(function (y) { if (!y.ok) { throw new Error('yanit ' + y.status); } return y.text(); })
+            .then(function (html) {
+                var belge = new DOMParser().parseFromString(html, 'text/html');
+                var kap = gezinti.closest('.nw-orta') ? '.nw-orta' : '.nw-profil';
+                var eklendi = 0;
+
+                belge.querySelectorAll(kap + ' .nw-gonderi').forEach(function (k) {
+                    if (k.id && document.getElementById(k.id)) { return; }
+                    var kart = document.importNode(k, true);
+                    gezinti.parentNode.insertBefore(kart, gezinti);
+                    if (window.nwOkumaGozle) { window.nwOkumaGozle(kart); }
+                    eklendi++;
+                });
+
+                var sonraki = belge.querySelector(kap + ' .nw-sayfalar a');
+                if (sonraki && eklendi > 0) {
+                    bag.setAttribute('href', sonraki.getAttribute('href'));
+                } else {
+                    // Son sayfa: baglanti kalkar, gozcu durur.
+                    gozcu.disconnect();
+                    gezinti.remove();
+                }
+                hata = 0;
+            })
+            .catch(function () {
+                // Uc kez olmazsa kendiliginden yukleme birakilir; baglanti tiklanabilir kalir.
+                if (++hata >= 3) { gozcu.disconnect(); }
+            })
+            .then(function () {
+                yukleniyor = false;
+                gezinti.classList.remove('nw-yukleniyor');
+                // Eklenen kartlar kisa kaldiysa baglanti hala ekranin yakininda: siradakini de getir.
+                if (hata === 0 && gezinti.isConnected && gezinti.getBoundingClientRect().top < window.innerHeight + 800) { yukle(); }
+            });
+    }
+
+    var gozcu = new IntersectionObserver(function (olaylar) {
+        if (olaylar.some(function (o) { return o.isIntersecting; })) { yukle(); }
+    }, { rootMargin: '0px 0px 800px 0px' });
+
+    gozcu.observe(gezinti);
+})();

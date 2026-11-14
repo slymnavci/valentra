@@ -140,6 +140,8 @@ function nw_okuma_betigi(): string
         });
     }, { threshold: [0, 0.5] });
     document.querySelectorAll('.nw-orta .nw-gonderi, .nw-profil .nw-gonderi').forEach(function (k) { gozcu.observe(k); });
+    // Asagi indikce yuklenen kartlar da sayilsin (assets/network-akis.js, surekli akis).
+    window.nwOkumaGozle = function (k) { gozcu.observe(k); };
 })();
 </script>
 HTML;
