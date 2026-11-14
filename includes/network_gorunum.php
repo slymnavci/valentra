@@ -112,6 +112,20 @@ function nw_okuma_betigi(): string
         d.append('k', anahtar);
         if (navigator.sendBeacon) { navigator.sendBeacon('/network-okundu.php', d); }
         else { fetch('/network-okundu.php', { method: 'POST', body: d, keepalive: true, credentials: 'same-origin' }).catch(function () {}); }
+        // Google Analytics'e de bir sayfa goruntulenmesi (site sahibi, 14.11.2026: "asagiya kaydirilip her
+        // yeni haber okundugunda bir sayfa okumasi sayalim; Google'a da sayfa sayisi bu sekilde gitsin").
+        // Adres kartin kendi sayfasi (/network/h/12); cerez izni yoksa gtag zaten gondermez.
+        if (typeof window.gtag === 'function') {
+            var kart = document.getElementById(id), bas = kart ? kart.querySelector('h2, h3') : null;
+            var yol = '/network/' + id.charAt(0) + '/' + id.slice(1);
+            try {
+                window.gtag('event', 'page_view', {
+                    page_location: location.origin + yol, page_path: yol,
+                    page_title: bas ? bas.textContent.trim().slice(0, 150) : document.title,
+                    page_referrer: location.href
+                });
+            } catch (e) {}
+        }
     }
     var gozcu = new IntersectionObserver(function (olaylar) {
         olaylar.forEach(function (o) {
