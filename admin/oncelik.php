@@ -208,7 +208,7 @@ Editör kararı, bitiş süresi dolana kadar otomasyonun önündedir.</p>
 
     <h2>Acil inceleme <?= $bekleyen !== [] ? '(' . count($bekleyen) . ')' : '' ?></h2>
     <?php if ($bekleyen === []): ?>
-        <p class="ozet">İnceleme bekleyen haber yok. Kritik ama doğrulanmamış haberler ve doğrulanmamış iddialar burada bekler; otomatik yayımlanmaz.</p>
+        <p class="ozet">Bekleyen haber yok. Haberler onay beklemeden yayımlanır; doğrulanmamış olan yalnızca manşet adayı olmaz. Burada yalnızca sizin elle durdurduğunuz olayların haberleri bekler.</p>
     <?php endif; ?>
 
     <?php foreach ($bekleyen as $h): ?>

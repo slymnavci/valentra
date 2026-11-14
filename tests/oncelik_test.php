@@ -257,7 +257,8 @@ senaryo('B', 'Can kaybı doğrulanmamış askerî uçak kazası', static functio
 
     ekle([haber($iddia, kritik('askeri_hava_araci_kazasi', ['olay_yeri' => 'Denemeköy', 'can_kaybi' => 'dogrulanmadi']))]);
     $i = satir($iddia);
-    bekle($i['durum'] === HABER_TASLAK && $i['inceleme'] === 'acil', 'can kaybı doğrulanmadan "şehit oldu" yazan haber yayımlanmadı, acil incelemede', $i['durum'] . '/' . $i['inceleme']);
+    // 14.11.2026: onay bekleme yok; dogrulanmamis haber yayimlanir ama kritik (manset adayi) olmaz.
+    bekle($i['durum'] === HABER_YAYINDA && $i['inceleme'] === '' && (int) $i['oncelik'] === ONCELIK_YUKSEK, 'can kaybı doğrulanmadan "şehit oldu" yazan haber onay beklemeden yayımlandı ama kritik değil (yüksek)', $i['durum'] . '/' . $i['oncelik']);
 });
 
 senaryo('C', 'Küçük ve hasarsız deprem, çok ölümlü büyük kazanın önüne geçmez', static function (): void {
@@ -403,7 +404,7 @@ senaryo('H', 'Kritik haber olağan haberlerden sonra manşette kalır; güncelli
     bekle($eski === null || $eski['etkin'] === ONCELIK_NORMAL, '24 saatten sonra olağan sırada (koşulsuz kilit yok)');
 });
 
-senaryo('I', 'Doğrulanmamış sosyal medya iddiası otomatik yayımlanmaz, acil doğrulama kuyruğuna düşer', static function (): void {
+senaryo('I', 'Doğrulanmamış haber onay beklemez ama manşet adayı olmaz; doğrulama gelince olay kritik olur', static function (): void {
     $iddia = 'Sosyal medyada iddia: Denemeköy\'de askerî araç konvoyuna saldırı';
 
     ekle(olaganlar(3));
@@ -411,22 +412,32 @@ senaryo('I', 'Doğrulanmamış sosyal medya iddiası otomatik yayımlanmaz, acil
     ic('yayinla');   // ana sayfa acilisindaki "taslaklari yayinla" turu da yayimlamamali
     $h = satir($iddia);
 
-    bekle($h['durum'] === HABER_TASLAK, 'yayımlanmadı (toplu otomatik yayın turundan sonra da)', $h['durum']);
-    bekle($h['inceleme'] === 'acil' && ($y['acil_inceleme'] ?? []) === [$iddia], 'acil inceleme kuyruğunda; ajana da bildirildi');
-    bekle(array_column(oncelik_inceleme_bekleyenler(), 'baslik') === [$iddia], 'paneldeki inceleme listesinde');
-    bekle(!in_array($iddia, array_column(sira(), 'baslik'), true), 'ana sayfada yok');
+    // 14.11.2026 (site sahibi: "bana sormadan haberleri kabul et"): iddia onay beklemez,
+    // ama normal sinifta yayimlanir; kritik ya da yuksek sirada yer almaz.
+    bekle($h['durum'] === HABER_YAYINDA && $h['inceleme'] === '' && ($y['acil_inceleme'] ?? []) === [], 'iddia onay beklemeden yayımlandı', $h['durum']);
+    bekle((int) $h['oncelik'] === ONCELIK_NORMAL && $h['dogrulama'] === 'iddia', 'normal sınıfta; doğrulama durumu "iddia" olarak kayıtlı', (string) $h['oncelik']);
+    bekle(oncelik_inceleme_bekleyenler() === [], 'inceleme kuyruğu boş');
+    bekle(array_filter(sira(), static fn (array $x): bool => $x['baslik'] === $iddia && $x['etkin'] >= 2) === [], 'ana sayfada kritik ya da yüksek sırada değil');
 
     // Tek kaynakli kritik haber de (resmi aciklama ya da bagimsiz ikinci kaynak yok) bekler.
     $tek = 'Örnekova\'da büyük patlama: çok sayıda ölü olduğu öne sürüldü';
     ekle([haber($tek, kritik('buyuk_can_kaybi', ['olay_yeri' => 'Örnekova', 'dogrulama' => 'tek_kaynak', 'resmi_kurum' => '']))]);
-    bekle(satir($tek)['inceleme'] === 'acil', 'tek kaynaklı kritik haber de acil incelemede');
+    $t = satir($tek);
+    bekle($t['durum'] === HABER_YAYINDA && (int) $t['oncelik'] === ONCELIK_YUKSEK, 'tek kaynaklı kritik haber onay beklemeden yüksek sınıfta yayımlandı (manşet adayı değil)', $t['durum'] . '/' . $t['oncelik']);
+
+    // Dogrulama gelince: ayni olayin resmi aciklamali haberi kritik olur ve one gecer.
+    $resmi = 'Örnekova Valiliği: Patlamada 12 kişi hayatını kaybetti';
+    ekle([haber($resmi, kritik('buyuk_can_kaybi', ['olay_yeri' => 'Örnekova', 'resmi_kurum' => 'Örnekova Valiliği', 'can_kaybi' => 'dogrulandi', 'gelisme' => 'yeni_gelisme']))]);
+    $r = satir($resmi);
+    bekle($r['durum'] === HABER_YAYINDA && (int) $r['oncelik'] === ONCELIK_KRITIK && $r['olay_kimlik'] === $t['olay_kimlik'] && (sira()[0]['baslik'] ?? '') === $resmi,
+        'resmî açıklama gelince aynı olayın haberi kritik oldu ve 1. sıraya çıktı', $r['oncelik'] . ' / ' . (sira()[0]['baslik'] ?? ''));
 
     // Ayni ajansin iki kopyasi bagimsiz sayilmaz.
     $kopya = 'Sınavkent\'te köprü çöktü: ölü ve yaralılar var';
     ekle([haber($kopya, kritik('buyuk_can_kaybi', ['olay_yeri' => 'Sınavkent', 'dogrulama' => 'bagimsiz', 'resmi_kurum' => '', 'bagimsiz_kaynak_sayisi' => 1,
         'kaynak_adi' => 'Haber Sitesi A', 'ek_kaynaklar' => [['ad' => 'Haber Sitesi B', 'url' => 'https://ornek.test/b']]]))]);
     $k = satir($kopya);
-    bekle($k['dogrulama'] === 'tek_kaynak' && $k['inceleme'] === 'acil', 'aynı ajansın kopyaları bağımsız kaynak sayılmadı');
+    bekle($k['dogrulama'] === 'tek_kaynak' && (int) $k['oncelik'] === ONCELIK_YUKSEK, 'aynı ajansın kopyaları bağımsız kaynak sayılmadı (haber kritik olmadı)');
 });
 
 senaryo('K', 'Editör müdahalesi: gerekçe ve bitiş zamanı zorunlu, otomasyon ezmez, süresi dolunca kalkar', static function (): void {
@@ -619,7 +630,7 @@ senaryo('M', 'Askerî helikopter kazası: kaza doğrulandı, can kaybı doğrula
     $iddia = 'Sınavkent\'teki helikopter kazasında 4 asker şehit oldu';
     ekle([haber($iddia, kritik('askeri_hava_araci_kazasi', ['olay_yeri' => 'Sınavkent', 'dogrulama' => 'tek_kaynak', 'resmi_kurum' => '']))]);
     $i = satir($iddia);
-    bekle($i['durum'] !== HABER_YAYINDA && $i['inceleme'] === 'acil', 'can kaybını kesin veren doğrulanmamış haber yayımlanmadı, acil incelemede', $i['durum'] . '/' . $i['inceleme']);
+    bekle($i['durum'] === HABER_YAYINDA && (int) $i['oncelik'] === ONCELIK_YUKSEK, 'can kaybını kesin veren doğrulanmamış haber onay beklemeden yayımlandı ama kritik değil', $i['durum'] . '/' . $i['oncelik']);
     bekle(!in_array($iddia, bant(), true), 'doğrulanmamış haber bantta değil');
 });
 
@@ -672,8 +683,8 @@ senaryo('P', 'Aynı haber üç kaynaktan: tek olay; aynı ajansın iki sitedeki 
         'ek_kaynaklar' => [['ad' => 'Örnek Gazete', 'url' => 'https://ornek.test/aa-kopya', 'ajans' => 'Anadolu Ajansı']],
     ]))]);
     $a = satir($ajans);
-    bekle($a['dogrulama'] === 'tek_kaynak' && $a['durum'] !== HABER_YAYINDA && $a['inceleme'] === 'acil',
-        'AA haberini veren iki site tek kaynak sayıldı; kritik haber yayımlanmadı, acil incelemede', $a['dogrulama'] . '/' . $a['durum']);
+    bekle($a['dogrulama'] === 'tek_kaynak' && $a['durum'] === HABER_YAYINDA && (int) $a['oncelik'] === ONCELIK_YUKSEK,
+        'AA haberini veren iki site tek kaynak sayıldı; haber yayımlandı ama kritik olmadı', $a['dogrulama'] . '/' . $a['oncelik']);
     bekle($a['kaynak_ajans'] === 'AA', 'haberi ilk veren ajans kaydedildi');
     bekle(bant() === [], 'bant boş');
 
