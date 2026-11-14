@@ -697,7 +697,7 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
 
     // Profil akisinda haber yok, yalnizca o uyenin paylasimlari.
     if ($yalnizUye === null) {
-        $sutunlar = "h.id, h.baslik, h.slug, h.ozet, LEFT(h.icerik, 1600) AS icerik_basi, h.gorsel_url, h.iframe_url, h.yayin_tarihi,
+        $sutunlar = "h.id, h.baslik, h.slug, h.ozet, LEFT(h.icerik, 1600) AS icerik_basi, h.gorsel_url, h.gorsel_denetim, h.iframe_url, h.yayin_tarihi,
                     h.kaynak_adi, h.kaynak_url, h.manset_yayinlar,
                     UNIX_TIMESTAMP(h.yayin_tarihi) AS zaman, k.ad AS kategori_adi, k.slug AS kategori_slug";
         $govde    = "
@@ -1360,7 +1360,7 @@ function nw_gazete_simge_dosyasi(string $slug, string $alan): string
 function nw_gazete_simge_html(string $slug, string $ad, int $boyut = 20): string
 {
     $harf = mb_strtoupper(mb_substr($ad, 0, 1, 'UTF-8'), 'UTF-8');
-    $alan = (string) (nw_gazeteler()[$slug]['alan'] ?? (NW_GAZETE_ALANLARI[$slug] ?? ''));
+    $alan = nw_gazete_alani($slug);
 
     // Adresi bilinmeyen yayin (yalnizca video beslemesi vb.): bas harf.
     if ($alan === '') {
@@ -1404,12 +1404,41 @@ function nw_gazete_gruplari(): array
  *
  * @return array<string,array{ad:string,adet:int,kaynaklar:list<string>,ulke:string,yerel:bool}> slug => yayin
  */
-function nw_gazeteler(int $gun = 3): array
+function nw_gazeteler(int $gun = NW_GAZETE_GUN): array
 {
-    return nw_kisa_onbellek('gazeteler-' . $gun, 300, static fn (): array => nw_gazeteler_ham($gun));
+    return nw_kisa_onbellek('gazeteler-' . $gun . '-' . nw_gazete_ayri_en_az(), 300, static fn (): array => nw_gazeteler_ham($gun));
 }
 
-function nw_gazeteler_ham(int $gun = 3): array
+/** "Diger gazeteler" satirinin adresteki adi. */
+const NW_GAZETE_DIGER = 'diger';
+
+/** Gazete listesinin baktigi sure (gun). */
+const NW_GAZETE_GUN = 7;
+
+/**
+ * Bir Turk yayininin listede AYRI gorunmesi icin son NW_GAZETE_GUN gunde en az
+ * kac haberi olmali (site sahibi, 14.11.2026: "bazi gazetelerden toplamda 3
+ * haber var; bunlari topla ve Diger yap; bir gazeteden en az 40-50 sayfa
+ * olunca ayri gostersin"). Azi "Diger gazeteler" satirinda toplanir.
+ * Yabanci yayinlar ulke gruplarinda oldugu gibi kalir. Testler ortam
+ * degiskeniyle dusurur.
+ */
+function nw_gazete_ayri_en_az(): int
+{
+    $ortam = getenv('NW_GAZETE_AYRI_EN_AZ');
+
+    return $ortam !== false && (int) $ortam > 0 ? (int) $ortam : 40;
+}
+
+/** Yayinin site alan adi (simge icin): listede ayri duran, "Diger"de toplanan ya da bilinen yayin. */
+function nw_gazete_alani(string $slug): string
+{
+    $g = nw_gazeteler();
+
+    return (string) ($g[$slug]['alan'] ?? $g[NW_GAZETE_DIGER]['uyeler'][$slug] ?? NW_GAZETE_ALANLARI[$slug] ?? '');
+}
+
+function nw_gazeteler_ham(int $gun = NW_GAZETE_GUN): array
 {
     static $onbellek = [];
 
@@ -1462,10 +1491,31 @@ function nw_gazeteler_ham(int $gun = 3): array
         unset($liste[$slug]['ulkeHaber']);
     }
 
-    $liste = array_filter($liste, static fn (array $g): bool => $g['adet'] >= NW_GAZETE_EN_AZ_HABER);
+    // Yabanci yayinda en az NW_GAZETE_EN_AZ_HABER haber; Turk yayininda az haberliler "Diger"de toplanir (asagida).
+    $liste = array_filter($liste, static fn (array $g): bool => $g['ulke'] === 'tr' || $g['adet'] >= NW_GAZETE_EN_AZ_HABER);
     uasort($liste, static fn (array $a, array $b): int => [$b['adet'], $a['ad']] <=> [$a['adet'], $b['ad']]);
+    $liste = array_slice($liste, 0, NW_GAZETE_EN_FAZLA, true);
 
-    return $onbellek[$gun] = array_slice($liste, 0, NW_GAZETE_EN_FAZLA, true);
+    $esik  = nw_gazete_ayri_en_az();
+    $diger = null;
+
+    foreach ($liste as $slug => $g) {
+        if ($g['ulke'] !== 'tr' || $g['adet'] >= $esik) {
+            continue;
+        }
+
+        $diger ??= ['ad' => 'Diğer gazeteler', 'adet' => 0, 'kaynaklar' => [], 'ulke' => 'tr', 'yerel' => false, 'alan' => '', 'uyeler' => []];
+        $diger['adet']         += $g['adet'];
+        $diger['kaynaklar']     = array_merge($diger['kaynaklar'], $g['kaynaklar']);
+        $diger['uyeler'][$slug] = $g['alan'];
+        unset($liste[$slug]);
+    }
+
+    if ($diger !== null) {
+        $liste[NW_GAZETE_DIGER] = $diger;   // sona: liste en cok haberi olandan aza
+    }
+
+    return $onbellek[$gun] = $liste;
 }
 
 /**

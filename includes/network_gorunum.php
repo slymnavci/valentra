@@ -333,10 +333,21 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
             </a>
             <?php if (haber_video_adresi((string) ($v['iframe_url'] ?? '')) !== ''): ?>
                 <?= nw_video_html((string) $v['iframe_url'], (string) $v['baslik']) ?>
-            <?php elseif (haber_gorsel($v) !== ''): ?>
+            <?php /* Yalnizca DENETLENMIS gorsel (14.11.2026; ana sayfadaki kural, bkz. haber_gorsel_denetimli_mi): kaynaktan gelen
+                     gorselde kanal logosu, mac yayini karesi, ilgisiz ekran goruntusu olabiliyor (site sahibi: "bu haberin altinda mac
+                     yayini var"). Denetimden gecmemis gorsel yerine konu gorseli. */ ?>
+            <?php elseif (haber_gorsel($v) !== '' && haber_gorsel_denetimli_mi($v)): ?>
                 <?php $konuGorseli = '/assets/kategori/' . haber_gorsel_konu_adi((string) ($v['kategori_slug'] ?? '')) . '.jpg'; ?>
-                <a class="nw-gorsel" href="<?= e($detayYol) ?>">
-                    <?php $set = haber_gorsel_srcset($v); ?>
+                <?php
+                /* Kucuk gorsel BUYUTULMEZ (14.11.2026; site sahibi: "Medical Xpress yayinlarindaki fotograf hatasi"): o
+                   yayinin gorselleri 533 piksel; 980 piksellik sutuna gerilince bulanik ve kirpik cikiyordu. 800 pikselden
+                   dar gorsel kendi boyutunda, ortada durur. */
+                require_once __DIR__ . '/manset_sinyal.php';
+                $gorselEni = manset_gorsel_genisligi((string) ($v['gorsel_url'] ?? ''));
+                $kucukGorsel = $gorselEni > 0 && $gorselEni < 800;
+                ?>
+                <a class="nw-gorsel<?= $kucukGorsel ? ' nw-gorsel-kucuk' : '' ?>" href="<?= e($detayYol) ?>">
+                    <?php $set = $kucukGorsel ? '' : haber_gorsel_srcset($v); ?>
                     <?php /* Sayfadaki ILK haber gorseli hemen ve oncelikli yuklenir (14.11.2026, hiz): ekranin en buyuk
                              ogesi o; digerleri ekrana yaklasinca. */ ?>
                     <?php static $ilkGorsel = true; $oncelikli = $ilkGorsel; $ilkGorsel = false; ?>

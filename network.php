@@ -184,7 +184,7 @@ switch ($sayfa) {
 
     case 'haber':
         $h = db()->prepare(
-            "SELECT h.id, h.baslik, h.slug, h.ozet, h.gorsel_url, h.iframe_url, h.yayin_tarihi, h.kaynak_adi, h.kaynak_url,
+            "SELECT h.id, h.baslik, h.slug, h.ozet, h.gorsel_url, h.gorsel_denetim, h.iframe_url, h.yayin_tarihi, h.kaynak_adi, h.kaynak_url,
                     k.ad AS kategori_adi, k.slug AS kategori_slug
                FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
               WHERE h.id = :id AND h.durum = :d"
