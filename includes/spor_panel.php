@@ -29,6 +29,9 @@ require_once __DIR__ . '/futbol.php';
 
 /** Menüde ve sekmelerde görünen bölümler: anahtar => başlık. */
 const SPOR_BOLUMLERI = [
+    // Canli skorlar (14.11.2026, site sahibi: "en basta canli skorlar; tikladigimizda
+    // canli sporda ne oluyorsa onu gostersin"; bkz. spor_canli_skor_html).
+    'canli-skor'   => 'Canlı Skorlar',
     'puan-durumu'  => 'Puan Durumu',
     'fikstur'      => 'Fikstür',
     'gol-kralligi' => 'Gol Krallığı',
@@ -228,6 +231,10 @@ function spor_paneli_html(string $bolum, array $p): string
         return spor_kulup_html($p['takim'], $p['lig']);
     }
 
+    if ($bolum === 'canli-skor') {
+        return spor_canli_skor_html();
+    }
+
     $lig = futbol_lig($p['lig']);
 
     if ($lig === null) {
@@ -260,6 +267,106 @@ function spor_paneli_html(string $bolum, array $p): string
         </div>
 
         <?= $govde ?>
+    </section>
+    <?php
+
+    return (string) ob_get_clean();
+}
+
+// --- Canlı skorlar -----------------------------------------------------------
+
+/**
+ * Canli skor sayfasinda bakilan kulup ligleri (ESPN kodu); milli takim
+ * yarismalari BUYUK_MAC_MILLI_LIGLER'den eklenir.
+ */
+const SPOR_CANLI_LIGLER = ['tur.1', 'uefa.champions', 'uefa.europa', 'uefa.europa.conf', 'eng.1', 'esp.1', 'ita.1', 'ger.1', 'fra.1'];
+
+/**
+ * Bugunun maclari, lig lig: oynananlar ustte, sonra baslayacaklar, sonra
+ * bitenler. Veri futbol_gun_maclari onbelleginden (2 dk); sayfa kendini
+ * yeniliyor (data-canli-bolum). Maca tiklayinca macin sayfasi (goller,
+ * kartlar, istatistik) acilir.
+ *
+ * @return list<array{lig:string,ad:string,maclar:list<array<string,mixed>>,canli:int}>
+ */
+function spor_canli_ligler(): array
+{
+    require_once __DIR__ . '/buyuk_mac.php';
+
+    $gun    = (new DateTimeImmutable('now', new DateTimeZone('Europe/Istanbul')))->format('Ymd');
+    $ligler = [];
+
+    foreach (array_merge(SPOR_CANLI_LIGLER, BUYUK_MAC_MILLI_LIGLER) as $kod) {
+        try {
+            $maclar = futbol_gun_maclari($kod, $gun)['veri']['maclar'] ?? [];
+        } catch (Throwable $e) {
+            $maclar = [];
+        }
+
+        if (in_array($kod, BUYUK_MAC_MILLI_LIGLER, true)) {
+            // Resmi milli takim yarismalarinda butun maclar (milli arada kulup maci
+            // yok; sayfa bos kalmasin); hazirlik maclarinda yalnizca Turkiye'ninki.
+            if ($kod === 'fifa.friendly') {
+                $maclar = array_values(array_filter((array) $maclar, 'buyuk_mac_milli_mi'));
+            }
+
+            // ESPN ulke adlarini Ingilizce veriyor.
+            $maclar = array_map(static function (array $m): array {
+                $m['ev']  = FUTBOL_ULKE_ADLARI[(string) $m['ev']] ?? $m['ev'];
+                $m['dep'] = FUTBOL_ULKE_ADLARI[(string) $m['dep']] ?? $m['dep'];
+
+                return $m;
+            }, (array) $maclar);
+        }
+
+        if ($maclar === []) {
+            continue;
+        }
+
+        // Oynanan, baslayacak, biten; her grupta saate gore.
+        $sira = static fn (array $m): int => in_array($m['durum'], FUTBOL_CANLI, true) ? 0 : (in_array($m['durum'], FUTBOL_BITTI, true) ? 2 : 1);
+        usort($maclar, static fn (array $a, array $b): int => [$sira($a), (int) $a['zaman']] <=> [$sira($b), (int) $b['zaman']]);
+
+        $ligler[] = [
+            'lig'    => $kod,
+            'ad'     => BUYUK_MAC_MILLI_LIG_ADLARI[$kod] ?? (FUTBOL_ONE_CIKAN_LIGLER[$kod] ?? (string) ($maclar[0]['lig'] ?? $kod)),
+            'maclar' => $maclar,
+            'canli'  => count(array_filter($maclar, static fn (array $m): bool => in_array($m['durum'], FUTBOL_CANLI, true))),
+        ];
+    }
+
+    // Canli maci olan lig ustte; sonra tanim sirasi.
+    usort($ligler, static fn (array $a, array $b): int => ($b['canli'] > 0) <=> ($a['canli'] > 0));
+
+    return $ligler;
+}
+
+function spor_canli_skor_html(): string
+{
+    $ligler = spor_canli_ligler();
+    $canli  = array_sum(array_column($ligler, 'canli'));
+    $saat   = static fn (array $m): string => (new DateTimeImmutable('@' . (int) $m['zaman']))->setTimezone(new DateTimeZone('Europe/Istanbul'))->format('H:i');
+
+    ob_start();
+    ?>
+    <section class="spor-panel spor-canli" data-canli-bolum="/api/spor.php?bolum=canli-skor" data-canli-aralik="<?= $canli > 0 ? 60 : 120 ?>" aria-label="Canlı skorlar">
+        <div class="canli-panel-ust">
+            <h2>Canlı Skorlar<?= $canli > 0 ? ' <b class="canli-rozet">' . $canli . ' maç oynanıyor</b>' : '' ?></h2>
+            <span class="canli-not"><?= e((new DateTimeImmutable('now', new DateTimeZone('Europe/Istanbul')))->format('d.m.Y')) ?> &middot; kaynak ESPN &middot; iki dakikada bir yenilenir</span>
+        </div>
+
+        <?php if ($ligler === []): ?>
+            <p class="canli-not">Bugün izlenen liglerde maç yok. <a href="<?= e(spor_bolum_yolu('fikstur')) ?>">Fikstüre bakın →</a></p>
+        <?php endif; ?>
+
+        <?php foreach ($ligler as $l): ?>
+            <h3 class="spor-canli-lig"><?= e($l['ad']) ?><?= $l['canli'] > 0 ? ' <b class="canli-rozet">canlı</b>' : '' ?></h3>
+            <ul class="mac-listesi">
+                <?php foreach ($l['maclar'] as $m): ?>
+                    <?= spor_mac_satiri_html($m, $l['lig'], in_array($m['durum'], FUTBOL_BITTI, true) ? 'Bitti' : $saat($m)) ?>
+                <?php endforeach; ?>
+            </ul>
+        <?php endforeach; ?>
     </section>
     <?php
 

@@ -249,6 +249,8 @@ function gazeteler(): array
                     'aciklama' => 'Tenis, Formula 1, atletizm, güreş ve diğer branşlar.',
                     'kosullar' => [['kategoriler' => ['spor'], 'kelimeler' => GAZETE_DIGER_SPOR_KELIMELERI]],
                 ],
+                // Canli skorlar (14.11.2026; bkz. spor_canli_skor_html).
+                'canli-skor'   => ['ad' => 'Canlı Skorlar', 'ust' => 'futbol', 'yol' => ['spor_bolum_yolu', 'canli-skor'],  'anahtar' => 'spor-canli'],
                 'puan-durumu'  => ['ad' => 'Puan Durumu',  'ust' => 'futbol', 'yol' => ['spor_bolum_yolu', 'puan-durumu'],  'anahtar' => 'spor-puan'],
                 'fikstur'      => ['ad' => 'Fikstür',      'ust' => 'futbol', 'yol' => ['spor_bolum_yolu', 'fikstur'],      'anahtar' => 'spor-fikstur'],
                 'gol-kralligi' => ['ad' => 'Gol Krallığı', 'ust' => 'futbol', 'yol' => ['spor_bolum_yolu', 'gol-kralligi'], 'anahtar' => 'spor-gol'],

@@ -618,3 +618,7 @@
     .kelime-kutu { font-size: 1.5rem; }
 }
 .kelime-klavye[hidden], .kelime-sonuc[hidden], .kelime-haber[hidden] { display: none; }
+
+/* Canli skorlar (14.11.2026; includes/spor_panel.php, spor_canli_skor_html). */
+.spor-canli-lig { display: flex; align-items: center; gap: 10px; margin: 18px 0 6px; font-size: .86rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--metin-soluk); }
+.spor-canli-lig:first-of-type { margin-top: 6px; }

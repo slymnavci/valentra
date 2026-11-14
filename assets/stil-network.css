@@ -470,3 +470,38 @@ a.nw-hesap:hover { color: var(--altin); }
 /* Baslik ve gazete seritleri yalnizca dar ekranda (genis ekranda sol kenar var). */
 .nw-yalniz-dar { display: none; }
 @media (max-width: 860px) { .nw-yalniz-dar { display: flex; } }
+
+/* Sag kenar: ekonomi ve spor kutulari (14.11.2026). */
+.nw-kutu-liste { display: grid; gap: 0; padding-bottom: 10px; }
+.nw-kutu-bas { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 1rem; }
+.nw-sag .nw-yan-kutu a.nw-kutu-satir {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 9px 0; border-top: 1px solid var(--cizgi); color: var(--metin); text-decoration: none;
+}
+.nw-kutu-satir span { display: grid; gap: 1px; min-width: 0; }
+.nw-kutu-satir strong { display: flex; align-items: center; gap: 7px; font-size: .93rem; font-weight: 700; }
+.nw-kutu-satir em { font-style: normal; font-size: .8rem; color: var(--metin-soluk); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nw-sag .nw-yan-kutu a.nw-kutu-satir:hover strong { color: var(--altin); }
+.nw-degisim { flex: none; font-size: .76rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--metin-soluk); }
+.nw-degisim.artti { color: #1a8a4a; }
+.nw-degisim.dustu { color: #c62828; }
+.nw-sag .nw-yan-kutu a.nw-kutu-tumu { display: block; padding-top: 10px; border-top: 1px solid var(--cizgi); font-size: .84rem; font-weight: 700; color: var(--vurgu); text-decoration: none; }
+.nw-sag .nw-yan-kutu a.nw-kutu-tumu:hover { text-decoration: underline; }
+.nw-canli-nokta { width: 9px; height: 9px; border-radius: 50%; background: var(--metin-soluk); }
+.nw-canli-nokta.yaniyor { background: #d7141a; animation: nw-yanip 1.4s ease-in-out infinite; }
+@keyframes nw-yanip { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .nw-canli-nokta.yaniyor { animation: none; } }
+.nw-skorlar:empty { display: none; }
+.nw-skorlar { display: grid; gap: 2px; padding: 0 0 8px; }
+.nw-sag .nw-yan-kutu a.nw-skor {
+    display: grid; grid-template-columns: 52px minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px;
+    padding: 6px 8px; border-radius: 8px; background: var(--zemin); color: var(--metin); text-decoration: none; font-size: .84rem;
+}
+.nw-sag .nw-yan-kutu a.nw-skor:hover { outline: 1px solid var(--altin); }
+.nw-skor-durum { font-size: .72rem; font-weight: 700; color: var(--metin-soluk); }
+.nw-skor.canli .nw-skor-durum { color: #d7141a; }
+.nw-skor-takim { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.nw-skor-takim:last-child { text-align: right; }
+.nw-skor-sonuc { font-variant-numeric: tabular-nums; font-weight: 800; }
+/* Sag kenar ekrandan uzunsa kendi icinde kayar (kutular artti). */
+.nw-sag { max-height: calc(100vh - 92px); overflow-y: auto; scrollbar-width: thin; padding-right: 4px; align-content: start; }
