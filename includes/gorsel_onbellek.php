@@ -295,43 +295,42 @@ function haber_gorsel_genel_adres_mi(string $host): bool
     return true;
 }
 
-/**
- * Gorseli kaynaktan indirip onbellege yazar; yerel yolu dondurur.
+/*
+ * KUCUK ONIZLEME ADRESINDEN BUYUK BOY (14.11.2026).
  *
- * Basarisizlikta bos doner ve bir ".yok" isareti birakir: ayni bozuk
- * adres her sayfa gosteriminde yeniden indirilmeye calisilmasin.
+ * Science X yayinlari (Medical Xpress, Phys.org, Tech Xplore) beslemede
+ * gorseli kucuk onizleme olarak veriyor: .../csz/news/tmb/2026/ad.jpg.
+ * Ajan once haber sayfasinin og:image'ini deniyor, ama sayfa okunamazsa
+ * (bu siteler veri merkezi adreslerini sik engelliyor) besleme gorseli
+ * kaliyor ve kartta buyutulunce bulaniklasiyor. Ayni dosyanin buyuk boylari
+ * ayni sunucuda: 800 piksel (csz/news/800a) ve asil dosya (gfx/news/hires,
+ * gfx/news). Sirayla deneniyor; hicbiri inmezse kayitli adres.
+ *
+ * @return list<string>
  */
-function haber_gorsel_indir(string $url): string
+function haber_gorsel_buyuk_adaylari(string $url): array
 {
-    $url = guvenli_url($url);
+    $host = strtolower((string) parse_url($url, PHP_URL_HOST));
 
-    if ($url === '') {
-        return '';
+    if (preg_match('~^scx\d*\.b-cdn\.net$~', $host) !== 1 || !str_contains($url, '/csz/news/tmb/')) {
+        return [];
     }
 
-    $yerel = haber_gorsel_yerel($url);
+    return [
+        str_replace('/csz/news/tmb/', '/csz/news/800a/', $url),
+        str_replace('/csz/news/tmb/', '/gfx/news/hires/', $url),
+        str_replace('/csz/news/tmb/', '/gfx/news/', $url),
+    ];
+}
 
-    if ($yerel !== '') {
-        return $yerel;
-    }
-
-    $klasor = haber_gorsel_klasoru();
-    $ad     = sha1($url);
-    $isaret = $klasor . '/' . $ad . '.yok';
-
-    if (is_file($isaret) && time() - (int) filemtime($isaret) < HABER_GORSEL_BEKLEME) {
-        return '';
-    }
-
-    if (!is_dir($klasor) && !@mkdir($klasor, 0755, true) && !is_dir($klasor)) {
-        return '';
-    }
-
-    $basarisiz = static function () use ($isaret): string {
-        @touch($isaret);
-
-        return '';
-    };
+/**
+ * Gorseli indirir; gecerli bir resimse [govde, uzanti], degilse null.
+ *
+ * @return array{0:string,1:string}|null
+ */
+function haber_gorsel_getir(string $url): ?array
+{
+    $basarisiz = static fn (): ?array => null;
 
     $host = (string) parse_url($url, PHP_URL_HOST);
 
@@ -381,6 +380,141 @@ function haber_gorsel_indir(string $url): string
     if ($uzanti === '' || (int) $bilgi[0] < 50 || (int) $bilgi[1] < 50) {
         return $basarisiz();
     }
+
+    return [$govde, $uzanti];
+}
+
+/**
+ * Onceden KUCUK ONIZLEME olarak inmis gorselleri buyuk boyuyla yeniler
+ * (14.11.2026; bkz. haber_gorsel_buyuk_adaylari). Ana sayfa acilisindaki
+ * bes dakikalik turda cagriliyor; her turda en fazla $adet gorsel, hepsi
+ * bitince ayar isaretlenir ve bir daha calismaz. Buyuk boy inmezse eldeki
+ * dosyaya dokunulmaz.
+ */
+function haber_gorsel_onizlemeleri_yenile(int $adet = 8): void
+{
+    require_once __DIR__ . '/ayarlar.php';
+
+    if (ayar_oku('gorsel_onizleme_yenilendi', '0') === '1') {
+        return;
+    }
+
+    $satirlar = db()->query(
+        "SELECT DISTINCT gorsel_url FROM haberler
+          WHERE gorsel_url LIKE '%.b-cdn.net/csz/news/tmb/%'
+            AND olusturuldu >= NOW() - INTERVAL 30 DAY
+          ORDER BY id DESC LIMIT 400"
+    )->fetchAll(PDO::FETCH_COLUMN);
+
+    $klasor  = haber_gorsel_klasoru();
+    $islenen = 0;
+
+    foreach ($satirlar as $url) {
+        $url = guvenli_url((string) $url);
+        $ad  = sha1($url);
+
+        // Henuz hic inmemis gorsel ilk gosteriminde zaten buyuk boyuyla iner.
+        if ($url === '' || is_file($klasor . '/' . $ad . '.buyuk') || haber_gorsel_yerel($url) === '') {
+            continue;
+        }
+
+        if ($islenen >= $adet) {
+            return;   // kalanlar sonraki turda
+        }
+
+        $islenen++;
+        @touch($klasor . '/' . $ad . '.buyuk');
+
+        foreach (haber_gorsel_buyuk_adaylari($url) as $aday) {
+            $inen = haber_gorsel_getir($aday);
+
+            if ($inen === null) {
+                continue;
+            }
+
+            [$govde, $uzanti] = $inen;
+            $gecici = $klasor . '/' . $ad . '.' . bin2hex(random_bytes(4)) . '.tmp';
+
+            if (@file_put_contents($gecici, $govde) === false) {
+                @unlink($gecici);
+                break;
+            }
+
+            // Eski kucuk dosya ve ondan uretilmis kopyalar gider.
+            foreach (glob($klasor . '/' . $ad . '{.,-}*', GLOB_BRACE) ?: [] as $eski) {
+                if (!str_ends_with($eski, '.tmp') && !str_ends_with($eski, '.buyuk')) {
+                    @unlink($eski);
+                }
+            }
+
+            @rename($gecici, $klasor . '/' . $ad . '.' . $uzanti);
+            break;
+        }
+    }
+
+    ayar_yaz('gorsel_onizleme_yenilendi', '1');
+}
+
+/**
+ * Gorseli kaynaktan indirip onbellege yazar; yerel yolu dondurur.
+ *
+ * Basarisizlikta bos doner ve bir ".yok" isareti birakir: ayni bozuk
+ * adres her sayfa gosteriminde yeniden indirilmeye calisilmasin.
+ */
+function haber_gorsel_indir(string $url): string
+{
+    $url = guvenli_url($url);
+
+    if ($url === '') {
+        return '';
+    }
+
+    $yerel = haber_gorsel_yerel($url);
+
+    if ($yerel !== '') {
+        return $yerel;
+    }
+
+    $klasor = haber_gorsel_klasoru();
+    $ad     = sha1($url);
+    $isaret = $klasor . '/' . $ad . '.yok';
+
+    if (is_file($isaret) && time() - (int) filemtime($isaret) < HABER_GORSEL_BEKLEME) {
+        return '';
+    }
+
+    if (!is_dir($klasor) && !@mkdir($klasor, 0755, true) && !is_dir($klasor)) {
+        return '';
+    }
+
+    $basarisiz = static function () use ($isaret): string {
+        @touch($isaret);
+
+        return '';
+    };
+
+    /*
+     * Kaynagin KUCUK ONIZLEMESI yerine buyuk boyu (14.11.2026, site sahibi:
+     * "Medical Xpress resimleri Network'te dusuk cozunurlukte geliyor";
+     * bkz. haber_gorsel_buyuk_adaylari). Buyuk boy inmezse eskisi gibi
+     * kayitli adres. Dosya her durumda kayitli adresin adiyla saklaniyor:
+     * sablonlar, kucuk kopyalar ve veritabani degismiyor.
+     */
+    $inen = null;
+
+    foreach (array_merge(haber_gorsel_buyuk_adaylari($url), [$url]) as $aday) {
+        $inen = haber_gorsel_getir($aday);
+
+        if ($inen !== null) {
+            break;
+        }
+    }
+
+    if ($inen === null) {
+        return $basarisiz();
+    }
+
+    [$govde, $uzanti] = $inen;
 
     $hedef  = $klasor . '/' . $ad . '.' . $uzanti;
     $gecici = $hedef . '.' . bin2hex(random_bytes(4)) . '.tmp';

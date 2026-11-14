@@ -536,6 +536,48 @@ function ajan_video_calismalari(int $adet = 8): array
 const AJAN_OTO_ARALIK_DAKIKA  = 120;
 const AJAN_OTO_KONTROL_SANIYE = 600;
 
+const AJAN_NOBET_WORKFLOW       = 'nobet.yml';
+const AJAN_NOBET_ARALIK_DAKIKA  = 20;
+
+/**
+ * Nobet taramasini (kritik haberler icin sik tarama) baslatir.
+ *
+ * @return array{tamam:bool,mesaj:string}
+ */
+function ajan_nobet_tetikle(): array
+{
+    $anahtar = trim(ayar_oku(AJAN_GITHUB_ANAHTAR));
+
+    if ($anahtar === '') {
+        return ['tamam' => false, 'mesaj' => 'GitHub erişim anahtarı tanımlı değil.'];
+    }
+
+    $ch = curl_init('https://api.github.com/repos/' . ajan_depo()
+        . '/actions/workflows/' . AJAN_NOBET_WORKFLOW . '/dispatches');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => json_encode(['ref' => 'main']),
+        CURLOPT_HTTPHEADER     => [
+            'Accept: application/vnd.github+json',
+            'Authorization: Bearer ' . $anahtar,
+            'X-GitHub-Api-Version: 2022-11-28',
+            'Content-Type: application/json',
+            'User-Agent: Valentra-Panel',
+        ],
+        CURLOPT_TIMEOUT        => 20,
+        CURLOPT_CONNECTTIMEOUT => 10,
+    ]);
+
+    curl_exec($ch);
+    $kod = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    curl_close($ch);
+
+    return $kod === 204
+        ? ['tamam' => true, 'mesaj' => 'Nöbet taraması başladı.']
+        : ['tamam' => false, 'mesaj' => 'GitHub HTTP ' . $kod];
+}
+
 function ajan_otomatik_tetikle_arada(): void
 {
     try {
@@ -561,6 +603,20 @@ function ajan_otomatik_tetikle_arada(): void
             }
         }
 
+        /*
+         * NOBET TARAMASI da siteden tetiklenir (14.11.2026). GitHub 15
+         * dakikalik zamanlamayi calistirmiyor: iki gunde 190 yerine 6 kez
+         * calisti (4-8 saatte bir), kritik haber yine saatlerce beklerdi.
+         * Son nobet AJAN_NOBET_ARALIK_DAKIKA'dan eskiyse site baslatir.
+         */
+        if (ajan_oto_zamani_geldi(AJAN_NOBET_WORKFLOW, AJAN_NOBET_ARALIK_DAKIKA)) {
+            $sonuc = ajan_nobet_tetikle();
+
+            if (!$sonuc['tamam']) {
+                error_log('[valentra] nobet taramasi tetiklenemedi: ' . $sonuc['mesaj']);
+            }
+        }
+
         if (ajan_oto_zamani_geldi(AJAN_VIDEO_WORKFLOW)) {
             $sonuc = ajan_video_tetikle(false, 2);
 
@@ -574,7 +630,7 @@ function ajan_otomatik_tetikle_arada(): void
 }
 
 /** İş akışının son çalışması bitmiş ve 2 saatten eski mi (GitHub'a ulaşılamazsa hayır)? */
-function ajan_oto_zamani_geldi(string $isAkisi): bool
+function ajan_oto_zamani_geldi(string $isAkisi, int $aralikDakika = AJAN_OTO_ARALIK_DAKIKA): bool
 {
     $veri = ajan_github_json('https://api.github.com/repos/' . ajan_depo()
         . '/actions/workflows/' . $isAkisi . '/runs?per_page=1');
@@ -597,7 +653,7 @@ function ajan_oto_zamani_geldi(string $isAkisi): bool
 
     $basla = strtotime((string) ($son['run_started_at'] ?? $son['created_at'] ?? ''));
 
-    return $basla === false || time() - $basla >= (AJAN_OTO_ARALIK_DAKIKA - 5) * 60;
+    return $basla === false || time() - $basla >= ($aralikDakika - 5) * 60;
 }
 
 /**
