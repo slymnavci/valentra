@@ -4,7 +4,7 @@
     <footer class="nw-alt">
         <span>&copy; <?= date('Y') ?> V Network · Valentra</span>
         <a href="/network/kurallar">Topluluk Kuralları</a>
-        <a href="/">Valentra Haber</a>
+        <a href="<?= e(haber_ana_yolu()) ?>">Valentra Haber</a>
     </footer>
     <?php else: ?>
     <footer class="alt-bant">

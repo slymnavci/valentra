@@ -63,6 +63,11 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
     <url>
         <loc><?= e($taban) ?>/</loc>
         <changefreq>hourly</changefreq>
+    </url>
+    <?php /* Haber sitesinin on sayfasi (14.11.2026: kok adres artik V Network). */ ?>
+    <url>
+        <loc><?= e($taban . haber_ana_yolu()) ?></loc>
+        <changefreq>hourly</changefreq>
         <priority>1.0</priority>
     </url>
 

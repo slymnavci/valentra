@@ -202,7 +202,7 @@ function seo_haber_semasi(array $haber): string
         $ekler[] = [
             '@type'           => 'BreadcrumbList',
             'itemListElement' => [
-                ['@type' => 'ListItem', 'position' => 1, 'name' => 'Ana Sayfa', 'item' => site_adresi() . '/'],
+                ['@type' => 'ListItem', 'position' => 1, 'name' => 'Ana Sayfa', 'item' => site_adresi() . haber_ana_yolu()],
                 ['@type' => 'ListItem', 'position' => 2, 'name' => (string) $haber['kategori_adi'],
                  'item' => site_adresi() . kategori_yolu((string) $haber['kategori_slug'])],
                 ['@type' => 'ListItem', 'position' => 3, 'name' => (string) $haber['baslik']],
@@ -345,7 +345,7 @@ function seo_rehber_semasi(array $rehber): string
             [
                 '@type'           => 'BreadcrumbList',
                 'itemListElement' => [
-                    ['@type' => 'ListItem', 'position' => 1, 'name' => 'Ana Sayfa', 'item' => site_adresi() . '/'],
+                    ['@type' => 'ListItem', 'position' => 1, 'name' => 'Ana Sayfa', 'item' => site_adresi() . haber_ana_yolu()],
                     ['@type' => 'ListItem', 'position' => 2, 'name' => 'Rehberler', 'item' => site_adresi() . rehberler_yolu()],
                     ['@type' => 'ListItem', 'position' => 3, 'name' => (string) $rehber['baslik'], 'item' => $adres],
                 ],

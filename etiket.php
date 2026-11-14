@@ -18,7 +18,7 @@ if ($sonuc['toplam'] === 0) {
     ?>
     <div class="bos-durum">
         <strong>Bu etikette yayında haber yok.</strong>
-        <p><a href="/" style="color:var(--vurgu);text-decoration:underline;">Ana sayfaya dön</a></p>
+        <p><a href="<?= e(haber_ana_yolu()) ?>" style="color:var(--vurgu);text-decoration:underline;">Ana sayfaya dön</a></p>
     </div>
     <?php
     require __DIR__ . '/includes/sayfa_alt.php';

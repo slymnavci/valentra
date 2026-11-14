@@ -149,8 +149,13 @@
     RewriteCond %{THE_REQUEST} \s/kurumsal\.php\?s=(hakkimizda|yayin-ilkeleri|kunye|iletisim|gizlilik)[\s&] [NC]
     RewriteRule ^ /%1? [R=301,L]
 
+    # Haber sitesinin on sayfasi /haber (14.11.2026): kok adres V Network.
     RewriteCond %{THE_REQUEST} \s/index\.php[\s?] [NC]
-    RewriteRule ^ /? [R=301,L]
+    RewriteRule ^ /haber? [R=301,L]
+
+    # Eski on sayfa sayfalamasi (/?sayfa=3) yeni adresine.
+    RewriteCond %{QUERY_STRING} ^sayfa=([0-9]+)$
+    RewriteRule ^$ /haber?sayfa=%1 [R=301,L]
 
     # --- Temiz adres -> gercek dosya (ic yonlendirme) ----------------
     #
@@ -200,6 +205,13 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^video/?$ video.php [L,QSA]
+
+    # ANA SAYFA V NETWORK (14.11.2026, site sahibi: "sayfa ilk acildiginda
+    # Network'e girsin kullanici; Valentra Haber'i /haber'e tasiyalim").
+    # Kok adres Network'un akisini acar; haber sitesinin on sayfasi /haber.
+    # /haber/<baslik> haber adresleri yukaridaki kuralla, degismedi.
+    RewriteRule ^$ network.php [L,QSA]
+    RewriteRule ^haber/?$ index.php [L,QSA]
 
     # Valentra Network ve uyelik (31.10.2026): /network, /uye/giris, /uye/kayit, /uye/cikis
     RewriteRule ^network/?$ network.php [L,QSA]

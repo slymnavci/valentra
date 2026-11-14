@@ -66,14 +66,14 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <h1>E-postanızı kontrol edin</h1>
             <p>Abonelik onayı için bir e-posta gönderdik. İçindeki <strong>“Aboneliği onayla”</strong> düğmesine basınca bülten
                her sabah gelmeye başlar. Birkaç dakika içinde gelmezse istenmeyen (spam) klasörüne bakın.</p>
-            <p><a href="/">Ana sayfaya dön</a></p>
+            <p><a href="<?= e(haber_ana_yolu()) ?>">Ana sayfaya dön</a></p>
         </div>
     <?php elseif ($durum === 'onaylandi'): ?>
         <div class="bulten-sonuc">
             <h1>Aboneliğiniz onaylandı 🎉</h1>
             <p>Günün özeti her sabah saat <?= str_pad((string) BULTEN_SAAT, 2, '0', STR_PAD_LEFT) ?>:00 sularında e-postanızda olacak.
                Her e-postanın altında tek tıkla abonelikten çıkabilirsiniz.</p>
-            <p><a href="/">Haberlere göz atın</a></p>
+            <p><a href="<?= e(haber_ana_yolu()) ?>">Haberlere göz atın</a></p>
         </div>
     <?php elseif ($durum === 'iptal_sor'): ?>
         <div class="bulten-sonuc">

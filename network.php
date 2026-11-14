@@ -304,6 +304,19 @@ switch ($sayfa) {
 
 $seoAdres = site_adresi() . ($buYol ?? nw_yol($yol));
 
+/*
+ * Sitenin ana sayfasi (14.11.2026, site sahibi: "ana sayfa Valentra Network
+ * olacak"): kok adres (/) ve /network ayni akisi acar. Network'un diger
+ * sayfalari eskisi gibi dizin disi; ANA SAYFA dizine girer (yoksa sitenin ana
+ * sayfasi aramadan duserdi) ve tek adresi kok adrestir.
+ */
+if ($yol === '' && array_diff_key($_GET, ['yol' => 1]) === []) {
+    $seoRobots     = 'index, follow';
+    $seoAdres      = site_adresi() . '/';
+    $sayfaBasligi  = 'Valentra — Günün önemli haberleri, gazete gazete';
+    $sayfaAciklama = 'Türkiye ve dünyadan günün önemli haberleri: hangi gazete ne yazdı, manşetler, son haberler, ekonomi ve canlı skorlar. Her haberin özeti ve kaynağı.';
+}
+
 require __DIR__ . '/includes/sayfa_ust.php';
 
 /* --- Sol ve sag kenar, paylasim kutusu ------------------------------------ */
