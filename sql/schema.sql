@@ -2804,10 +2804,16 @@ CREATE TABLE IF NOT EXISTS gundem_basliklari (
     ozet         VARCHAR(400)  NOT NULL DEFAULT '',
     manset       TINYINT(1)    NOT NULL DEFAULT 0,
     zaman        DATETIME      NOT NULL,
+    -- Basligin yayinda EN SON goruldugu an ve manset beslemesinde en son
+    -- goruldugu an (15.11.2026): "zaman" ilk yayim ani; manseten inen
+    -- haberle hala mansette olani ayirmak icin (bkz. nw_guncel_manset_puanlari).
+    son_gorulme    DATETIME    NULL,
+    manset_gorulme DATETIME    NULL,
     olusturuldu  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_gundem_adres (adres_parmak),
-    KEY ix_gundem_zaman (zaman)
+    KEY ix_gundem_zaman (zaman),
+    KEY ix_gundem_gorulme (son_gorulme)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
