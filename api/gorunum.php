@@ -40,6 +40,27 @@ push_bekleyen_varsa_devam();
 require_once __DIR__ . '/../includes/bulten.php';
 bulten_zamani_geldiyse();
 
+/*
+ * HABER TOPLAMA ZAMANI GELDIYSE GITHUB'I SITE TETIKLER (15.11.2026).
+ * GitHub zamanlamasi calismiyor: iki saatlik ajan 4-6 saatte bir, 15
+ * dakikalik nobet gunde birkac kez kostu. Yedek tetikleme yalnizca
+ * index.php'deydi; ana sayfa V Network olunca (#363) ve sayfalar
+ * onbellekten verilince neredeyse hic calismaz oldu. Burasi her gercek
+ * sayfa goruntulenmesinde (onbellekli sayfada da, sayfanin betigi cagirir)
+ * calisiyor; denetim 10 dakikada bir (AJAN_OTO_KONTROL_SANIYE), yanit
+ * gittikten sonra.
+ */
+require_once __DIR__ . '/../includes/ajan_tetikle.php';
+ajan_otomatik_tetikle_sayfa_sonunda();
+
+// Ana sayfa (index.php) ile ayni arka plan isleri; o sayfa artik /haber ve cogu
+// zaman onbellekten veriliyor (15.11.2026). Hepsi kendi araliklariyla kisitli.
+require_once __DIR__ . '/../includes/ajan_teslim.php';
+ajan_teslim_sayfa_sonunda();
+require_once __DIR__ . '/../includes/deprem.php';
+deprem_denetle_sayfa_sonunda();
+haber_bugunku_taslaklari_yayinla_arada();
+
 $id      = (int) ($_POST['id'] ?? 0);
 $imza    = (string) ($_POST['t'] ?? '');
 $anahtar = strtolower((string) ($_POST['k'] ?? ''));
