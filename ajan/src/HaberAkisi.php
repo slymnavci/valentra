@@ -34,27 +34,34 @@ final class HaberAkisi
      *
      * @var array<string,int>
      */
+    /*
+     * Calisma basina baslik paylari. 15.11.2026 (site sahibi: "gunluk haber
+     * sayisini artiralim; kose yazisi yazmayi birakalim, enerjiyi haber
+     * toplamaya verelim; her gun gazetelerden mumkun oldugunca cok haber
+     * ceksin"): toplam 96'dan 150'ye. Yemek tarifleri ayni kaldi (haber
+     * degil). Onceki degerler ve gerekceleri asagidaki yorumlarda.
+     */
     public const PAYLAR = [
         // Sira kontenjan dagitiminin sirasi (bkz. SIRA): sinir dar
         // olursa kalan yer once bu sirayla dagiliyor.
-        'gundem'       => 8,
-        'spor'         => 8,
-        'politika'     => 10,
-        'ekonomi'      => 8,
+        'gundem'       => 18,   // 8
+        'spor'         => 14,   // 8
+        'politika'     => 18,   // 10
+        'ekonomi'      => 14,   // 8
         // 5'ten 12'ye (12.11.2026, site sahibi: "yabanci gazetelerden
         // saglik ve teknoloji haberleri bolca alsin; Turkiye'de daha az").
         // Yabanci kaynaklar sql/schema.sql'in sonunda.
-        'saglik'       => 12,
-        'kultur-sanat' => 5,
+        'saglik'       => 14,   // 12
+        'kultur-sanat' => 8,    // 5
         // Magazin (29.10.2026, ValMagazin): olculu; sanatcilarin
         // aciklamalari, roportajlari, yeni isleri.
-        'magazin'      => 5,
+        'magazin'      => 8,    // 5
         // Tarifler haber degil; surekli. 4'ten 12'ye (22.10.2026, site
         // sahibinin istegi: "yemek tarifi sayisini artiralim"; 7 kaynak).
         'yemek-tarifleri' => 12,
-        'dunya'        => 10,
+        'dunya'        => 18,   // 10
         // 6'dan 12'ye (12.11.2026; bkz. saglik).
-        'teknoloji'    => 12,
+        'teknoloji'    => 14,   // 12
         /*
          * Yerel gazeteler (04.11.2026, site sahibi: "Trabzon, Kayseri,
          * Kocaeli gazetelerine de bakalim; gunluk bunlardan da haber
@@ -62,9 +69,8 @@ final class HaberAkisi
          * model haberin asil basligini (gundem, spor...) ve onemini
          * seciyor. Site dusuk onemli yerel haberi ana sayfaya ve kategori
          * sayfalarina cikarmiyor (includes/haberler.php, haber_yerel_kosulu).
-         * Calisma basina 6 aday, gunde ~12 calisma.
          */
-        'yerel'        => 6,
+        'yerel'        => 12,   // 6
     ];
 
     /**
