@@ -103,7 +103,8 @@ env:
 jobs:
   topla:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # 45'ten 55'e (15.11.2026): kose yazisi adimi kalkti, haber sayisi artti.
+    timeout-minutes: 55
 
     steps:
       # Isin baslangici: kose adimi 45 dakikalik sinirdan kalan sureyi
@@ -311,7 +312,11 @@ jobs:
           # aramada bir iki saat once yayinlanan haberleri alsin; eski
           # haberleri toplamiyoruz"). Ajan iki saatte bir calisiyor. Tarif
           # beslemeleri ajanda en az 36 saat (TARIF_SAATI).
-          BAYRAKLAR="--saat=${{ inputs.saat || '2' }}"
+          # 15.11.2026: 2 saatten 3 saate. GitHub zamanli calismalari sik sik
+          # geciktiriyor (gecikme 1 saati bulabiliyor); 2 saatlik pencereyle iki
+          # calisma arasinda yayimlanan haberler kaciyordu. Ust uste binen kisim
+          # kopya denetiminden gecemez, eski haber toplanmaz.
+          BAYRAKLAR="--saat=${{ inputs.saat || '3' }}"
 
           if [ -n "${{ inputs.enfazla }}" ]; then
             BAYRAKLAR="$BAYRAKLAR --enfazla=${{ inputs.enfazla }}"
@@ -449,8 +454,12 @@ jobs:
       # calisiyor (--sure) ve yazilari yazdikca gonderiyor; buradaki sinir
       # yalnizca son emniyet. Asilirsa adim kirmizi biter, sonraki adimlar
       # (canli veri, ajan deposu) yine calisir.
+      # KOSE YAZILARI DURDURULDU (15.11.2026, site sahibi: "kose yazisi yazmayi
+      # birakabiliriz; buradaki enerjiyi haber toplamaya verelim"). Zamanli
+      # calismada ve 'gunluk' modunda yazilmiyor; yalnizca panelden
+      # 'kose-yazisi' moduyla elle. Kalan sure haber toplamaya kaliyor.
       - name: Kose yazilarini yaz
-        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.mod == 'kose-yazisi' || inputs.mod == 'gunluk') }}
+        if: ${{ !cancelled() && inputs.mod == 'kose-yazisi' }}
         timeout-minutes: 22
         working-directory: ajan
         env:
@@ -479,7 +488,7 @@ jobs:
           # isin 45 dakikalik sinirina takilip yazilar kesiliyordu. Butce
           # isin kalan suresinden (5 dk pay birakilarak, en fazla 18 dk);
           # bir calismada en fazla 4 yazar, kalanlar sonraki calismalarda.
-          KALAN=$(( (45 * 60 - ($(date +%s) - ${IS_BASLANGIC:-$(date +%s)})) / 60 - 5 ))
+          KALAN=$(( (55 * 60 - ($(date +%s) - ${IS_BASLANGIC:-$(date +%s)})) / 60 - 5 ))
 
           if [ "$KALAN" -lt 6 ]; then
             echo "::notice title=Valentra köşe yazıları::İşin süresi azaldı (${KALAN} dk); köşe yazıları sonraki çalışmada."
@@ -523,7 +532,7 @@ jobs:
             BAYRAKLAR="$BAYRAKLAR --kuru"
           fi
 
-          KALAN=$(( (45 * 60 - ($(date +%s) - ${IS_BASLANGIC:-$(date +%s)})) / 60 - 5 ))
+          KALAN=$(( (55 * 60 - ($(date +%s) - ${IS_BASLANGIC:-$(date +%s)})) / 60 - 5 ))
 
           if [ "$KALAN" -lt 6 ]; then
             echo "::notice title=Valentra derleme haberler::İşin süresi azaldı (${KALAN} dk); derlemeler sonraki çalışmada."
@@ -555,7 +564,7 @@ jobs:
           VALENTRA_SITE_URL:   ${{ secrets.VALENTRA_SITE_URL }}
           VALENTRA_AGENT_KEY:  ${{ secrets.VALENTRA_AGENT_KEY }}
         run: |
-          KALAN=$(( (45 * 60 - ($(date +%s) - ${IS_BASLANGIC:-$(date +%s)})) / 60 - 4 ))
+          KALAN=$(( (55 * 60 - ($(date +%s) - ${IS_BASLANGIC:-$(date +%s)})) / 60 - 4 ))
 
           if [ "$KALAN" -lt 4 ]; then
             echo "::notice title=Valentra açıklayıcı yazı::İşin süresi azaldı (${KALAN} dk); sonraki çalışmada."

@@ -1739,7 +1739,8 @@ $kaynakBasinaTavan = max(1, (int) ($secenekler['kaynakbasina'] ?? ($videoModu
     ? 3
     : ($konular !== []
         ? max(10, 2 * (int) ceil($enFazlaAday / max(1, count($kaynaklar))))
-        : 6))));
+        // 6'dan 8'e (15.11.2026, daha cok haber): kaynak basina tavan buyuk gazetelerin haberini kesmesin.
+        : 8))));
 $kaynakSayaci      = [];
 $secilen           = [];
 $tarifDegil        = 0;
