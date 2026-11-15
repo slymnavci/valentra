@@ -110,6 +110,21 @@ function kny_ozet(string $ham): string
  * @param list<array<string,mixed>> $girdiler baslik, yayin, adres, ozet, manset, zaman
  * @return int yeni yazilan baslik sayisi
  */
+function kny_gorulme_sutunlari_var(): bool
+{
+    static $var = null;
+
+    if ($var === null) {
+        try {
+            $var = (bool) db()->query("SHOW COLUMNS FROM gundem_basliklari LIKE 'manset_gorulme'")->fetch();
+        } catch (Throwable $e) {
+            $var = false;
+        }
+    }
+
+    return $var;
+}
+
 function kny_kaydet(array $girdiler): int
 {
     if (!kny_hazir()) {
@@ -117,12 +132,25 @@ function kny_kaydet(array $girdiler): int
     }
 
     $simdi = time();
-    $ekle  = db()->prepare(
+    /*
+     * Her taramada basligin GORULDUGU an yaziliyor (15.11.2026, site sahibi:
+     * "networkte onemli haberler degismiyor, 12 saat onceki haberler var;
+     * gazetelerin mansetlerine gore degissin"). manset isareti kalici
+     * (bir kez mansette goruldu mu); manset_gorulme ise manset beslemesinde
+     * en son ne zaman goruldugu: manseten inen haber bir sonraki taramadan
+     * sonra "su an mansette" sayilmiyor.
+     */
+    $gorulmeVar = kny_gorulme_sutunlari_var();
+    $ekle  = db()->prepare($gorulmeVar
+        ? 'INSERT INTO gundem_basliklari (yayin, baslik, adres, adres_parmak, ozet, manset, zaman, son_gorulme, manset_gorulme)
+           VALUES (:yayin, :baslik, :adres, :parmak, :ozet, :manset, FROM_UNIXTIME(:zaman), NOW(), IF(:manset2 = 1, NOW(), NULL))
+           ON DUPLICATE KEY UPDATE manset = GREATEST(manset, VALUES(manset)), son_gorulme = NOW(),
+                                   manset_gorulme = IF(VALUES(manset) = 1, NOW(), manset_gorulme)'
         // Ayni haber once gundem, sonra manset beslemesinden gelirse manset isareti yukselir (14.11.2026:
         // INSERT IGNORE ikinci gelisi atiyordu; TRT'nin manset basliklari "manset" gorunmuyordu).
-        'INSERT INTO gundem_basliklari (yayin, baslik, adres, adres_parmak, ozet, manset, zaman)
-         VALUES (:yayin, :baslik, :adres, :parmak, :ozet, :manset, FROM_UNIXTIME(:zaman))
-         ON DUPLICATE KEY UPDATE manset = GREATEST(manset, VALUES(manset))'
+        : 'INSERT INTO gundem_basliklari (yayin, baslik, adres, adres_parmak, ozet, manset, zaman)
+           VALUES (:yayin, :baslik, :adres, :parmak, :ozet, :manset, FROM_UNIXTIME(:zaman))
+           ON DUPLICATE KEY UPDATE manset = GREATEST(manset, VALUES(manset))'
     );
     $yeni = 0;
 
@@ -142,7 +170,7 @@ function kny_kaydet(array $girdiler): int
             continue;
         }
 
-        $ekle->execute([
+        $degerler = [
             'yayin'  => $yayin,
             'baslik' => mb_substr($baslik, 0, 300, 'UTF-8'),
             'adres'  => mb_substr($adres, 0, 700, 'UTF-8'),
@@ -150,7 +178,13 @@ function kny_kaydet(array $girdiler): int
             'ozet'   => kny_ozet((string) ($g['ozet'] ?? '')),
             'manset' => !empty($g['manset']) ? 1 : 0,
             'zaman'  => $zaman,
-        ]);
+        ];
+
+        if ($gorulmeVar) {
+            $degerler['manset2'] = $degerler['manset'];
+        }
+
+        $ekle->execute($degerler);
         // rowCount: yeni satir 1, guncellenen 2, degismeyen 0. Yalnizca yeni satir sayilir.
         $yeni += $ekle->rowCount() === 1 ? 1 : 0;
     }

@@ -1009,8 +1009,131 @@ function nw_onemli_sirasi(): string
 {
     $yas = 'GREATEST(0, TIMESTAMPDIFF(MINUTE, h.yayin_tarihi, NOW()))';
 
-    return "FLOOR($yas / 1440) ASC, "
-        . "(h.onem + h.manset_sinyal + IF(h.manset_yayinlar LIKE '%manşet%', 15, 0) - 4 * $yas / 60) DESC";
+    /*
+     * SU AN GAZETELERIN MANSETINDE OLANLAR EN USTTE (15.11.2026, site sahibi:
+     * "onemli haberler degismiyor; halen 12 saat onceki haberler var;
+     * gazetelerin mansetlerine gore burasi degissin"). Onceden h.manset_sinyal
+     * ve h.manset_yayinlar kullaniliyordu: haber bir kez mansette gorulunce
+     * puani kalici oluyordu, gazete haberi mansetten indirse de dusmuyordu.
+     * Artik son taramada hangi gazetenin mansetinde oldugu sayiliyor
+     * (nw_guncel_manset_puanlari); manseten inen haber bir sonraki taramada
+     * asagi iner. Kalanlar eskisi gibi gun gun, onem eksi yas.
+     */
+    $puanlar = nw_guncel_manset_puanlari();
+    $durum   = static function (array $harita): string {
+        if ($harita === []) {
+            return '0';
+        }
+
+        $case = '(CASE h.id';
+
+        foreach ($harita as $id => $deger) {
+            $case .= ' WHEN ' . (int) $id . ' THEN ' . (int) $deger;
+        }
+
+        return $case . ' ELSE 0 END)';
+    };
+
+    // 1) Su an kac gazetenin mansetinde; 2) gun dilimi; 3) onem + gundem eki - yas.
+    // Bos haritada siralama ogesi hic yazilmiyor: "ORDER BY 0" MySQL'de sutun numarasi sayilir.
+    return (($puanlar['m'] ?? []) !== [] ? $durum($puanlar['m']) . ' DESC, ' : '')
+        . "FLOOR($yas / 1440) ASC, (h.onem + " . $durum($puanlar['g'] ?? []) . " - 4 * $yas / 60) DESC";
+}
+
+/** "Su an mansette": manset beslemesinde en son bu kadar saat icinde gorulmus (ajan iki saatte bir tarar). */
+const NW_MANSET_GUNCEL_SAAT = 3;
+
+/**
+ * Son taramada gazetelerin mansetinde / gundeminde olan haberlerin puani.
+ *
+ * Her haber, gazetelerin SU AN yayindaki basliklariyla karsilastirilir
+ * (ayni olay mi: manset_sinyal_ayni_olay).
+ *   'm': haberi su an mansetinde tutan gazete sayisi (siralamanin ilk olcusu),
+ *   'g': en az iki gazetenin gundemindeyse gazete basina 5 puan (onem eki;
+ *        tek gazetenin gundeminde olmak puan getirmez).
+ * 5 dakika onbellek.
+ *
+ * @return array{m:array<int,int>,g:array<int,int>}
+ */
+function nw_guncel_manset_puanlari(): array
+{
+    // Sonuc {'p': ...} icinde: bos liste de onbellege girsin (nw_kisa_onbellek bosu saklamaz).
+    return nw_kisa_onbellek('guncel-manset', 300, static function (): array {
+        return ['p' => nw_guncel_manset_hesapla()];
+    })['p'] ?? ['m' => [], 'g' => []];
+}
+
+/** @return array{m:array<int,int>,g:array<int,int>} bkz. nw_guncel_manset_puanlari */
+function nw_guncel_manset_hesapla(): array
+{
+    return (static function (): array {
+        require_once __DIR__ . '/kim_ne_yazdi.php';
+        require_once __DIR__ . '/manset_sinyal.php';
+
+        if (!kny_hazir()) {
+            return ['m' => [], 'g' => []];
+        }
+
+        $saat = (int) NW_MANSET_GUNCEL_SAAT;
+
+        try {
+            $basliklar = db()->query(kny_gorulme_sutunlari_var()
+                ? "SELECT yayin, baslik, (COALESCE(manset_gorulme, IF(manset = 1, zaman, NULL)) >= NOW() - INTERVAL $saat HOUR) AS guncel_manset
+                     FROM gundem_basliklari WHERE COALESCE(son_gorulme, zaman) >= NOW() - INTERVAL $saat HOUR
+                    ORDER BY id DESC LIMIT 1500"
+                : "SELECT yayin, baslik, manset AS guncel_manset
+                     FROM gundem_basliklari WHERE zaman >= NOW() - INTERVAL $saat HOUR
+                    ORDER BY id DESC LIMIT 1500"
+            )->fetchAll();
+            $haberler = db()->query(
+                "SELECT id, baslik, kaynak_baslik FROM haberler
+                  WHERE durum = 'yayinda' AND yayin_tarihi >= NOW() - INTERVAL 2 DAY
+                  ORDER BY id DESC LIMIT 400"
+            )->fetchAll();
+        } catch (Throwable $e) {
+            error_log('[valentra] guncel manset: ' . $e->getMessage());
+
+            return ['m' => [], 'g' => []];
+        }
+
+        foreach ($basliklar as $i => $b) {
+            $basliklar[$i]['k'] = manset_sinyal_kokleri((string) $b['baslik']);
+        }
+
+        $puanlar = ['m' => [], 'g' => []];
+
+        foreach ($haberler as $h) {
+            $kokler = array_filter([
+                manset_sinyal_kokleri((string) $h['baslik']),
+                trim((string) ($h['kaynak_baslik'] ?? '')) !== '' ? manset_sinyal_kokleri((string) $h['kaynak_baslik']) : [],
+            ]);
+            $manset = $gundem = [];
+
+            foreach ($basliklar as $b) {
+                foreach ($kokler as $hk) {
+                    if (manset_sinyal_ayni_olay($hk, $b['k'])) {
+                        $gundem[(string) $b['yayin']] = true;
+
+                        if ((int) $b['guncel_manset'] === 1) {
+                            $manset[(string) $b['yayin']] = true;
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+            if ($manset !== []) {
+                $puanlar['m'][(int) $h['id']] = count($manset);
+            }
+
+            if (count($gundem) >= 2) {
+                $puanlar['g'][(int) $h['id']] = 5 * count($gundem);
+            }
+        }
+
+        return $puanlar;
+    })();
 }
 
 /* --- Gazetelerin mansetleri (14.11.2026) -----------------------------------
@@ -1038,10 +1161,17 @@ function nw_gazete_mansetleri(int $baslikAdet = 4, int $saat = 24): array
     }
 
     try {
-        $satirlar = db()->query(
-            'SELECT yayin, baslik, adres, manset, UNIX_TIMESTAMP(zaman) AS z FROM gundem_basliklari
-              WHERE zaman >= NOW() - INTERVAL ' . max(1, min(96, $saat)) . ' HOUR
-              ORDER BY manset DESC, zaman DESC, id DESC'
+        // Su an mansette olanlar once (15.11.2026; bkz. nw_guncel_manset_puanlari):
+        // bir kez mansette gorulmus ama inmis baslik "manset" sayilmiyor.
+        $guncel = (int) NW_MANSET_GUNCEL_SAAT;
+        $satirlar = db()->query(kny_gorulme_sutunlari_var()
+            ? "SELECT yayin, baslik, adres, (COALESCE(manset_gorulme, IF(manset = 1, zaman, NULL)) >= NOW() - INTERVAL $guncel HOUR) AS manset,
+                      UNIX_TIMESTAMP(zaman) AS z FROM gundem_basliklari
+                WHERE COALESCE(son_gorulme, zaman) >= NOW() - INTERVAL " . max(1, min(96, $saat)) . " HOUR
+                ORDER BY manset DESC, COALESCE(son_gorulme, zaman) DESC, zaman DESC, id DESC"
+            : 'SELECT yayin, baslik, adres, manset, UNIX_TIMESTAMP(zaman) AS z FROM gundem_basliklari
+                WHERE zaman >= NOW() - INTERVAL ' . max(1, min(96, $saat)) . ' HOUR
+                ORDER BY manset DESC, zaman DESC, id DESC'
         )->fetchAll();
     } catch (PDOException $e) {
         return [];

@@ -216,6 +216,9 @@ function sema_yukselt(array &$hatalar = []): array
     };
 
     $sutunEkle('haberler', 'kategori_id', 'INT UNSIGNED NULL AFTER one_cikan');
+    // Gazete basliginin en son goruldugu an (15.11.2026; bkz. nw_guncel_manset_puanlari).
+    $sutunEkle('gundem_basliklari', 'son_gorulme', 'DATETIME NULL AFTER zaman');
+    $sutunEkle('gundem_basliklari', 'manset_gorulme', 'DATETIME NULL AFTER son_gorulme');
     $sutunEkle('haberler', 'iframe_url', 'VARCHAR(1000) NULL AFTER gorsel_url');
     // Kose yazisinin yazari (23.10.2026; bkz. includes/yazarlar.php).
     $sutunEkle('kose_yazilari', 'yazar', "VARCHAR(60) NOT NULL DEFAULT 'valentra' AFTER gundem");

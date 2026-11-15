@@ -1095,18 +1095,34 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     bekle(!$var('Turizm geliri'), '"Son haberler": yabancı gazetenin haberi yok (ülke gruplarında durur)');
     bekle($var('Tapu harcı'), '"Son haberler": son yüklenenlerin tamamı (önem puanı düşük haber de var)');
 
-    // "Onemli haberler" (14.11.2026): o gunun gundemi; once buyuk yayinlarin ana sayfasindakiler, sonra onem puani.
-    db()->exec("UPDATE haberler SET manset_sinyal = 18, guncellendi = guncellendi WHERE baslik LIKE '%Sanayi üretimi%'");
+    // "Onemli haberler" (15.11.2026): SU AN gazetelerin mansetinde olanlar en ustte; gundem kucuk ek; sonra onem.
+    // Kalici isaretler (manset_sinyal, manset_yayinlar) siralamayi artik etkilemiyor.
+    require_once __DIR__ . '/../includes/kim_ne_yazdi.php';
+    $gundemSatiri = static fn (string $yayin, string $baslik, string $adres, bool $manset): array =>
+        ['yayin' => $yayin, 'baslik' => $baslik, 'adres' => $adres, 'manset' => $manset, 'zaman' => time() - 600];
+    kny_kaydet([
+        $gundemSatiri('hurriyet.com.tr', 'Sanayi üretimi verisi yayımlandı', 'https://www.hurriyet.com.tr/test-sanayi', false),
+        $gundemSatiri('sabah.com.tr', 'Sanayi üretimi verisi yayımlandı', 'https://www.sabah.com.tr/test-sanayi', false),
+        $gundemSatiri('ntv.com.tr', 'Sanayi üretimi verisi yayımlandı', 'https://www.ntv.com.tr/test-sanayi', false),
+    ]);
+    db()->exec("UPDATE haberler SET manset_sinyal = 18, manset_yayinlar = 'Hürriyet, Sabah (manşette)', guncellendi = guncellendi WHERE baslik LIKE '%Üniversite kontenjan%'");
     db()->exec("UPDATE haberler SET onem = 90, guncellendi = guncellendi WHERE baslik LIKE '%otobüs hattı%'");
     $onemliBasliklar = static fn (): array => array_map(static fn (array $o): string => (string) $o['veri']['baslik'], nw_akis(40, 0, null, null, '', '', true, '', true, 'onemli')['ogeler']);
     $onemliler = $onemliBasliklar();
     bekle(str_contains($onemliler[0] ?? '', 'otobüs hattı') && str_contains($onemliler[1] ?? '', 'Sanayi üretimi'),
-        '"Önemli haberler": önem puanı ve gazetelerin yer vermesi puanı yükseltiyor (90, sonra 70 + 18)', implode(' | ', $onemliler));
-    // Manset eki: ayni onemdeki iki haberden mansette olan once.
-    db()->exec("UPDATE haberler SET manset_yayinlar = 'Hürriyet, Sabah (manşette)', guncellendi = guncellendi WHERE baslik LIKE '%Tapu harcı%'");
-    db()->exec("UPDATE haberler SET onem = 70, guncellendi = guncellendi WHERE baslik LIKE '%Tapu harcı%'");
-    bekle(str_contains($onemliBasliklar()[2] ?? '', 'Tapu harcı'), '"Önemli haberler": gazetelerin manşetindeki haber aynı önemdeki diğerlerinin önünde', implode(' | ', $onemliBasliklar()));
-    db()->exec("UPDATE haberler SET onem = 30, manset_yayinlar = '', guncellendi = guncellendi WHERE baslik LIKE '%Tapu harcı%'");
+        '"Önemli haberler": üç gazetenin gündemindeki haber +15 (70 + 15), önemi 90 olanın arkasında; eski kalıcı manşet işareti sıra vermiyor', implode(' | ', $onemliler));
+    // Su an mansette: onemi dusuk olsa da en ustte.
+    db()->exec("UPDATE haberler SET onem = 50, guncellendi = guncellendi WHERE baslik LIKE '%Tapu harcı%'");
+    kny_kaydet([
+        $gundemSatiri('hurriyet.com.tr', 'Tapu harcı düzenlemesi Meclis\'te', 'https://www.hurriyet.com.tr/test-tapu', true),
+        $gundemSatiri('sabah.com.tr', 'Tapu harcı düzenlemesi Meclis\'te', 'https://www.sabah.com.tr/test-tapu', true),
+    ]);
+    bekle(str_contains($onemliBasliklar()[0] ?? '', 'Tapu harcı'), '"Önemli haberler": şu an iki gazetenin manşetindeki haber en üstte', implode(' | ', $onemliBasliklar()));
+    // Mansetten inen haber (son 3 saatte manset beslemesinde gorulmemis): ustte kalmiyor.
+    db()->exec("UPDATE gundem_basliklari SET manset_gorulme = NOW() - INTERVAL 6 HOUR, son_gorulme = NOW() - INTERVAL 6 HOUR WHERE adres LIKE '%test-tapu'");
+    bekle(!str_contains($onemliBasliklar()[0] ?? '', 'Tapu harcı'), '"Önemli haberler": 6 saat önce manşetten inen haber artık en üstte değil', implode(' | ', $onemliBasliklar()));
+    db()->exec("UPDATE haberler SET onem = 30, guncellendi = guncellendi WHERE baslik LIKE '%Tapu harcı%'");
+    db()->exec("UPDATE haberler SET manset_sinyal = 0, manset_yayinlar = '', guncellendi = guncellendi WHERE baslik LIKE '%Üniversite kontenjan%'");
     // Tazelik (14.11.2026): 14 saatlik haber, onemi yuksek olsa da bugunun taze haberlerinin arkasinda.
     db()->exec("UPDATE haberler SET yayin_tarihi = NOW() - INTERVAL 14 HOUR, guncellendi = guncellendi WHERE baslik LIKE '%otobüs hattı%'");
     $eskili = $onemliBasliklar();
@@ -1132,6 +1148,7 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     bekle($gazeteOnemli['ogeler'] !== [] && str_contains((string) $gazeteOnemli['ogeler'][0]['veri']['baslik'], 'otobüs hattı'),
         'gazete seçiliyken "Önemli haberler": o gazetenin en önemli haberi en üstte', (string) ($gazeteOnemli['ogeler'][0]['veri']['baslik'] ?? '-'));
     db()->exec("UPDATE haberler SET manset_sinyal = 0, guncellendi = guncellendi");
+    db()->exec("DELETE FROM gundem_basliklari WHERE adres LIKE '%/test-sanayi' OR adres LIKE '%/test-tapu'");
     bekle(!$var('Süper Lig') && !$var('EuroLeague') && !$var('Köprü bakım'), '"Son haberler": spor ve dünya başlığındaki haber yok');
     bekle(count(nw_akis(40, 0, null, null, '', '', true)['ogeler']) > count($sonBasliklar), 'başlık ve gazete akışları değişmedi (süzgeç yalnızca "Son haberler"de)');
     db()->exec("DELETE FROM kaynaklar WHERE id = $sId");
@@ -1163,7 +1180,7 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     kny_kaydet([['yayin' => 'ntv.com.tr', 'baslik' => 'NTV gündem haberi', 'adres' => 'https://www.ntv.com.tr/g1', 'manset' => true, 'zaman' => time() - 120]]);
     bekle((int) db()->query("SELECT manset FROM gundem_basliklari WHERE adres = 'https://www.ntv.com.tr/g1'")->fetchColumn() === 1
         && (int) db()->query('SELECT COUNT(*) FROM gundem_basliklari')->fetchColumn() === 3, 'aynı haber manşet beslemesinden de gelince manşet işareti yükseliyor, satır çoğalmıyor');
-    db()->exec("UPDATE gundem_basliklari SET manset = 0 WHERE adres = 'https://www.ntv.com.tr/g1'");
+    db()->exec("UPDATE gundem_basliklari SET manset = 0" . (kny_gorulme_sutunlari_var() ? ', manset_gorulme = NULL' : '') . " WHERE adres = 'https://www.ntv.com.tr/g1'");
     $mansetler = nw_gazete_mansetleri();
     bekle(count($mansetler) === 2 && $mansetler[0]['ad'] === 'Hürriyet' && $mansetler[0]['manset'] && $mansetler[0]['basliklar'][0]['baslik'] === 'Hürriyet manşet haberi'
         && !$mansetler[1]['manset'], 'gazetelerin manşetleri: manşet listesi olan yayın ve manşet başlığı önce; olmayan yayında gündem başlıkları');
