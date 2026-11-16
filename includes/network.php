@@ -1690,6 +1690,18 @@ function nw_degisim_html(?float $yuzde): string
         . ($yuzde > 0 ? '▲' : ($yuzde < 0 ? '▼' : '')) . ' %' . number_format(abs($yuzde), 2, ',', '.') . '</small>';
 }
 
+/**
+ * Piyasa kalemi: deger artiyorsa yesil, dusuyorsa kirmizi; altinda gunluk
+ * yuzde degisim (▲ %0,32). Degisim bilinmiyorsa renksiz, altinda bir sey yok.
+ */
+function nw_piyasa_kalemi_html(string $etiket, string $deger, ?float $yuzde): string
+{
+    $yon = $yuzde === null ? '' : ($yuzde > 0 ? ' artti' : ($yuzde < 0 ? ' dustu' : ''));
+    $alt = $yuzde === null ? '' : '<small>' . ($yuzde > 0 ? '▲' : ($yuzde < 0 ? '▼' : '•')) . ' %' . number_format(abs($yuzde), 2, ',', '.') . '</small>';
+
+    return '<span class="nw-kalem' . $yon . '"><b><i>' . e($etiket) . '</i> ' . e($deger) . '</b>' . $alt . '</span>';
+}
+
 function nw_ekonomi_kutusu_html(): string
 {
     try {
@@ -1698,26 +1710,44 @@ function nw_ekonomi_kutusu_html(): string
         require_once __DIR__ . '/piyasa_tablolari.php';
 
         $p   = piyasa_onbellekten(true) ?? [];
-        $btc = canli_onbellek_oku('tablo_kripto')['veri']['BTC-USD']['fiyat'] ?? null;
+        $btc = canli_onbellek_oku('tablo_kripto')['veri']['BTC-USD'] ?? [];
     } catch (Throwable $e) {
         return '';
     }
 
-    // Deger onbellekte yoksa cizgi yerine bolumun icerigi yazilir.
+    $sayi = static fn (string $a): ?float => isset($p[$a]) && is_numeric($p[$a]) ? (float) $p[$a] : null;
+
+    /*
+     * Her kalem kendi rengiyle (16.11.2026, site sahibi: "USD artiyorsa
+     * yesil, azaliyorsa kirmizi, EUR da oyle; altina kucuk bir artis azalis
+     * gostergesi, % kac artti veya azaldi; ayni sey borsa, altin ve bitcoin
+     * icin"). Deger onbellekte yoksa kalem yerine bolumun icerigi yazilir.
+     */
     $satirlar = [
-        ['Döviz', 'doviz', isset($p['usd'], $p['eur']) ? 'Dolar ' . nw_sayi((float) $p['usd']) . ' · Euro ' . nw_sayi((float) $p['eur']) : 'Dolar, euro, sterlin ve pariteler', $p['usd_degisim'] ?? null],
-        ['Borsa', 'bist', isset($p['bist']) ? 'BIST 100 ' . nw_sayi((float) $p['bist'], 0) : 'BIST 100, endeksler ve hisseler', $p['bist_degisim'] ?? null],
-        ['Altın', 'altin', isset($p['altin']) ? 'Gram ' . nw_sayi((float) $p['altin'], 0) . ' TL' : 'Gram, çeyrek ve ons altın', $p['altin_degisim'] ?? null],
-        ['Kripto paralar', 'kripto', $btc !== null ? 'Bitcoin ' . nw_sayi((float) $btc, 0) . ' $' : 'Bitcoin, Ethereum ve diğerleri', null],
-        ['Emtia', 'petrol', 'Petrol, gümüş, doğal gaz', null],
-        ['Dünya borsaları', 'dunya', 'S&P 500, DAX, Nikkei', null],
+        ['Döviz', 'doviz', [['USD', $sayi('usd'), 2, '', $sayi('usd_degisim')], ['EUR', $sayi('eur'), 2, '', $sayi('eur_degisim')]], 'Dolar, euro, sterlin ve pariteler'],
+        ['Borsa', 'bist', [['BIST 100', $sayi('bist'), 0, '', $sayi('bist_degisim')]], 'BIST 100, endeksler ve hisseler'],
+        ['Altın', 'altin', [['Gram', $sayi('altin'), 0, ' TL', $sayi('altin_degisim')]], 'Gram, çeyrek ve ons altın'],
+        ['Kripto paralar', 'kripto', [['Bitcoin', is_numeric($btc['fiyat'] ?? null) ? (float) $btc['fiyat'] : null, 0, ' $', is_numeric($btc['degisim'] ?? null) ? (float) $btc['degisim'] : null]], 'Bitcoin, Ethereum ve diğerleri'],
+        ['Emtia', 'petrol', [], 'Petrol, gümüş, doğal gaz'],
+        ['Dünya borsaları', 'dunya', [], 'S&P 500, DAX, Nikkei'],
     ];
 
     $html = '';
 
-    foreach ($satirlar as [$ad, $bolum, $deger, $degisim]) {
-        $html .= '<a class="nw-kutu-satir" href="' . e(piyasa_bolum_yolu($bolum)) . '"><span><strong>' . e($ad) . '</strong><em>' . e($deger) . '</em></span>'
-            . nw_degisim_html(is_numeric($degisim) ? (float) $degisim : null) . '</a>';
+    foreach ($satirlar as [$ad, $bolum, $kalemler, $aciklama]) {
+        $kalemHtml = '';
+
+        foreach ($kalemler as [$etiket, $deger, $hane, $birim, $degisim]) {
+            if ($deger !== null) {
+                $kalemHtml .= nw_piyasa_kalemi_html($etiket, nw_sayi($deger, $hane) . $birim, $degisim);
+            }
+        }
+
+        $html .= '<a class="nw-kutu-satir' . ($kalemHtml !== '' ? ' nw-piyasa-satir' : '') . '" href="' . e(piyasa_bolum_yolu($bolum)) . '">'
+            . ($kalemHtml !== ''
+                ? '<strong>' . e($ad) . '</strong><span class="nw-kalemler">' . $kalemHtml . '</span>'
+                : '<span><strong>' . e($ad) . '</strong><em>' . e($aciklama) . '</em></span>')
+            . '</a>';
     }
 
     return '<div class="nw-yan-kutu nw-kutu-liste"><strong class="nw-kutu-bas">' . nw_konu_ikonu('ekonomi') . 'Ekonomi</strong>' . $html
@@ -1729,8 +1759,10 @@ function nw_spor_skor_satirlari_html(array $maclar, int $adet = 4): string
 {
     $html = '';
 
-    foreach (array_slice($maclar, 0, $adet) as $m) {
-        $oynandi = $m['canli'] || in_array($m['durum'], FUTBOL_BITTI, true);
+    // Yalnizca SU AN oynanan maclar (16.11.2026, site sahibi: "canli mac alaninda o an mac varsa
+    // gostersin ve yesil gorunsun; bittiginde kapatabiliriz").
+    foreach (array_slice(array_values(array_filter($maclar, static fn (array $m): bool => !empty($m['canli']))), 0, $adet) as $m) {
+        $oynandi = true;
 
         $html .= '<a class="nw-skor' . ($m['canli'] ? ' canli' : '') . '" href="' . e((string) $m['adres']) . '">'
             . '<span class="nw-skor-durum">' . e($m['canli'] || $oynandi ? (string) $m['durum_yazi'] : (string) $m['saat']) . '</span>'
@@ -1759,10 +1791,12 @@ function nw_spor_kutusu_html(): string
 
     return '<div class="nw-yan-kutu nw-kutu-liste nw-spor-kutu" data-canli-skor="/api/canli-skor.php">'
         . '<strong class="nw-kutu-bas">' . nw_konu_ikonu('spor') . 'Spor</strong>'
+        // Canli alan yalnizca mac oynanirken gorunur; betik mac baslayinca acar, bitince kapatir.
+        . '<div class="nw-canli-alan"' . ($canli > 0 ? '' : ' hidden') . '>'
         . '<a class="nw-kutu-satir nw-canli-bas" href="' . e(spor_bolum_yolu('canli-skor')) . '"><span><strong>'
-        . '<i class="nw-canli-nokta' . ($canli > 0 ? ' yaniyor' : '') . '" aria-hidden="true"></i>Canlı skorlar</strong>'
-        . '<em class="nw-canli-ozet">' . ($canli > 0 ? $canli . ' maç oynanıyor' : ($maclar !== [] ? 'Bugünün maçları' : 'Bugünün maçları ve sonuçları')) . '</em></span><small>→</small></a>'
-        . '<div class="nw-skorlar">' . nw_spor_skor_satirlari_html($maclar) . '</div>'
+        . '<i class="nw-canli-nokta yaniyor" aria-hidden="true"></i>Canlı maçlar</strong>'
+        . '<em class="nw-canli-ozet">' . $canli . ' maç oynanıyor</em></span><small>→</small></a>'
+        . '<div class="nw-skorlar">' . nw_spor_skor_satirlari_html($maclar) . '</div></div>'
         . '<a class="nw-kutu-satir" href="' . e(spor_bolum_yolu('puan-durumu')) . '"><span><strong>Puan durumları</strong><em>Süper Lig ve Avrupa ligleri</em></span></a>'
         . '<a class="nw-kutu-satir" href="' . e(spor_bolum_yolu('fikstur')) . '"><span><strong>Fikstür</strong><em>Haftanın maçları ve sonuçlar</em></span></a>'
         . '<a class="nw-kutu-satir" href="' . e(spor_bolum_yolu('gol-kralligi')) . '"><span><strong>Gol krallığı</strong><em>Gol ve asist sıralaması</em></span></a>'
@@ -1783,26 +1817,24 @@ function nw_spor_kutusu_betigi(): string
 (function () {
     var k = document.querySelector('.nw-spor-kutu[data-canli-skor]');
     if (!k || !window.fetch) { return; }
-    var liste = k.querySelector('.nw-skorlar'), nokta = k.querySelector('.nw-canli-nokta'), ozet = k.querySelector('.nw-canli-ozet');
+    var alan = k.querySelector('.nw-canli-alan'), liste = k.querySelector('.nw-skorlar'), ozet = k.querySelector('.nw-canli-ozet');
     function yaz(d) {
-        var m = (d.maclar || []).slice(0, 4), canli = 0;
+        // Yalnizca oynanan maclar; hic yoksa canli alan kapanir (16.11.2026).
+        var canlilar = (d.maclar || []).filter(function (x) { return x.canli; });
         liste.textContent = '';
-        m.forEach(function (x) {
-            var bitti = ['FT', 'AET', 'PEN'].indexOf(x.durum) !== -1, oynandi = x.canli || bitti;
-            if (x.canli) { canli++; }
+        canlilar.slice(0, 4).forEach(function (x) {
             var a = document.createElement('a');
-            a.className = 'nw-skor' + (x.canli ? ' canli' : '');
+            a.className = 'nw-skor canli';
             a.href = x.adres;
-            [['nw-skor-durum', oynandi ? x.durum_yazi : x.saat], ['nw-skor-takim', x.ev],
-             ['nw-skor-sonuc', oynandi ? (x.ev_gol || 0) + ' - ' + (x.dep_gol || 0) : 'vs'], ['nw-skor-takim', x.dep]].forEach(function (p, i) {
+            [['nw-skor-durum', x.durum_yazi], ['nw-skor-takim', x.ev],
+             ['nw-skor-sonuc', (x.ev_gol || 0) + ' - ' + (x.dep_gol || 0)], ['nw-skor-takim', x.dep]].forEach(function (p, i) {
                 var e = document.createElement(i === 2 ? 'b' : 'span');
                 e.className = p[0]; e.textContent = p[1]; a.appendChild(e);
             });
             liste.appendChild(a);
         });
-        (d.maclar || []).forEach(function (x, i) { if (i >= 4 && x.canli) { canli++; } });
-        nokta.classList.toggle('yaniyor', canli > 0);
-        ozet.textContent = canli > 0 ? canli + ' maç oynanıyor' : 'Bugünün maçları ve sonuçları';
+        alan.hidden = canlilar.length === 0;
+        ozet.textContent = canlilar.length + ' maç oynanıyor';
     }
     function sor() {
         if (document.hidden) { setTimeout(sor, 15000); return; }

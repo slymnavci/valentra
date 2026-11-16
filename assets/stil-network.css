@@ -488,8 +488,26 @@ a.nw-hesap:hover { color: var(--altin); }
 .nw-degisim.dustu { color: #c62828; }
 .nw-sag .nw-yan-kutu a.nw-kutu-tumu { display: block; padding-top: 10px; border-top: 1px solid var(--cizgi); font-size: .84rem; font-weight: 700; color: var(--vurgu); text-decoration: none; }
 .nw-sag .nw-yan-kutu a.nw-kutu-tumu:hover { text-decoration: underline; }
+/* Piyasa kalemleri (16.11.2026): artis yesil, dusus kirmizi; altinda % degisim. */
+.nw-sag .nw-yan-kutu a.nw-piyasa-satir { align-items: flex-start; }
+.nw-piyasa-satir > strong { padding-top: 1px; }
+.nw-kalemler { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 14px; }
+.nw-kalem { display: grid; justify-items: end; gap: 1px; color: var(--metin); font-variant-numeric: tabular-nums; }
+.nw-kalem b { font-size: .88rem; font-weight: 800; white-space: nowrap; }
+.nw-kalem b i { font-style: normal; font-weight: 600; font-size: .74rem; color: var(--metin-soluk); }
+.nw-kalem small { font-size: .72rem; font-weight: 700; color: var(--metin-soluk); }
+.nw-kalem.artti b, .nw-kalem.artti small { color: #1a8a4a; }
+.nw-kalem.dustu b, .nw-kalem.dustu small { color: #c62828; }
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) .nw-kalem.artti :is(b, small) { color: #3ecf7a; }
+    :where(:root:not([data-tema="acik"])) .nw-kalem.dustu :is(b, small) { color: #ff6b6b; }
+}
+:root[data-tema="koyu"] .nw-kalem.artti :is(b, small) { color: #3ecf7a; }
+:root[data-tema="koyu"] .nw-kalem.dustu :is(b, small) { color: #ff6b6b; }
+.nw-canli-alan[hidden] { display: none; }
 .nw-canli-nokta { width: 9px; height: 9px; border-radius: 50%; background: var(--metin-soluk); }
-.nw-canli-nokta.yaniyor { background: #d7141a; animation: nw-yanip 1.4s ease-in-out infinite; }
+/* Canli mac yesil (16.11.2026, site sahibi: "o an mac varsa gostersin ve yesil gorunsun"). */
+.nw-canli-nokta.yaniyor { background: #1a8a4a; animation: nw-yanip 1.4s ease-in-out infinite; }
 @keyframes nw-yanip { 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) { .nw-canli-nokta.yaniyor { animation: none; } }
 .nw-skorlar:empty { display: none; }
@@ -500,7 +518,14 @@ a.nw-hesap:hover { color: var(--altin); }
 }
 .nw-sag .nw-yan-kutu a.nw-skor:hover { outline: 1px solid var(--altin); }
 .nw-skor-durum { font-size: .72rem; font-weight: 700; color: var(--metin-soluk); }
-.nw-skor.canli .nw-skor-durum { color: #d7141a; }
+.nw-skor.canli .nw-skor-durum { color: #1a8a4a; }
+.nw-sag .nw-yan-kutu a.nw-skor.canli { background: color-mix(in srgb, #1a8a4a 12%, var(--kart)); box-shadow: inset 3px 0 0 #1a8a4a; }
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) :is(.nw-skor.canli .nw-skor-durum) { color: #3ecf7a; }
+    :where(:root:not([data-tema="acik"])) .nw-canli-nokta.yaniyor { background: #3ecf7a; }
+}
+:root[data-tema="koyu"] .nw-skor.canli .nw-skor-durum { color: #3ecf7a; }
+:root[data-tema="koyu"] .nw-canli-nokta.yaniyor { background: #3ecf7a; }
 .nw-skor-takim { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .nw-skor-takim:last-child { text-align: right; }
 .nw-skor-sonuc { font-variant-numeric: tabular-nums; font-weight: 800; }
