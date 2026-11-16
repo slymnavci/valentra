@@ -371,8 +371,18 @@ function ziyaret_adresi(): string
         FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
     ) !== false;
 
-    if ($uzak !== '' && $dis($uzak)) {
-        return mb_substr($uzak, 0, 45, 'UTF-8');
+    /*
+     * 16.11.2026: once ara sunucunun bildirdigi GERCEK adres. Hosting'in
+     * onunde herkese acik adresli bir ara katman varsa REMOTE_ADDR onun
+     * adresi oluyordu ve butun okurlar birkac adreste toplaniyordu. Baslik
+     * sahte gonderilebilir; adres yalnizca istatistik ve panelde kullanilir.
+     */
+    foreach (['HTTP_CF_CONNECTING_IP', 'HTTP_X_REAL_IP', 'HTTP_TRUE_CLIENT_IP'] as $baslik) {
+        $aday = trim((string) ($_SERVER[$baslik] ?? ''));
+
+        if ($aday !== '' && $dis($aday)) {
+            return mb_substr($aday, 0, 45, 'UTF-8');
+        }
     }
 
     foreach (explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '')) as $aday) {
@@ -381,6 +391,10 @@ function ziyaret_adresi(): string
         if ($aday !== '' && $dis($aday)) {
             return mb_substr($aday, 0, 45, 'UTF-8');
         }
+    }
+
+    if ($uzak !== '' && $dis($uzak)) {
+        return mb_substr($uzak, 0, 45, 'UTF-8');
     }
 
     return mb_substr($uzak, 0, 45, 'UTF-8');
@@ -592,7 +606,14 @@ function ziyaret_kimlik_ifadesi(string $takma = ''): string
 {
     $p = $takma !== '' ? $takma . '.' : '';
 
-    return 'COALESCE(NULLIF(' . $p . "ip, ''), NULLIF(" . $p . "tarayici_id, ''), " . $p . 'ziyaretci)';
+    /*
+     * 16.11.2026: IP'den TARAYICI KIMLIGINE geri donuldu. IP ile sayim panelde
+     * gunde binlerce ziyaretciyi 17 kisi gosterdi: kaydedilen adres cogu
+     * istekte okurun degil hosting'in onundeki ara sunucunun adresi (ayni
+     * birkac adres binlerce kisiyi tek kisi yapiyor). Tarayici kimligi her
+     * cihazda ayri ve sayfadaki betikten geliyor; yoksa IP, o da yoksa takma imza.
+     */
+    return 'COALESCE(NULLIF(' . $p . "tarayici_id, ''), NULLIF(" . $p . "ip, ''), " . $p . 'ziyaretci)';
 }
 
 /** Doğrulamanın başladığı an ('' = henüz hiç doğrulama gelmedi). */
