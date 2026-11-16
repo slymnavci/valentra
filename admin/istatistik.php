@@ -210,7 +210,7 @@ require __DIR__ . '/ust.php';
 <!-- Gosterge paneli (29.10.2026): ozet kutulari ve grafikler; ayrintilar asagida -->
 <?php
 $gsKutular = [
-    ['ad' => 'Ziyaretçi', 'alt' => 'tekil IP (tarayıcıda doğrulanan)', 'deger' => $sayi($olcu['ziyaretci']),
+    ['ad' => 'Ziyaretçi', 'alt' => 'tekil kişi (cihaz)', 'deger' => $sayi($olcu['ziyaretci']),
      'degisim' => $degisim($olcu['ziyaretci'], $onceki['ziyaretci']), 'seri' => array_column($gsSeri, 'ziyaretci')],
     ['ad' => 'Google’dan gelen', 'alt' => 'tekil okuyucu', 'deger' => $sayi($gsOzet['google']),
      'degisim' => $degisim($gsOzet['google'], $gsOnceki['google']), 'seri' => array_column($gsSeri, 'google')],
@@ -449,7 +449,7 @@ $gsHaberEnCok = max(1, (int) ($gsHaberler[0]['okuyucu'] ?? 1));
     </div>
     <div class="olcum">
         <span class="olcum-sayi"><?= $sayi($olcu['ziyaretci']) ?></span>
-        <span class="olcum-ad">ziyaretçi (tekil IP)</span>
+        <span class="olcum-ad">ziyaretçi (tekil kişi)</span>
         <?= $degisim($olcu['ziyaretci'], $onceki['ziyaretci']) ?>
     </div>
     <div class="olcum">
@@ -927,11 +927,11 @@ $gsHaberEnCok = max(1, (int) ($gsHaberler[0]['okuyucu'] ?? 1));
         <?php endif; ?>
         <li><strong>Elenenler:</strong> arama motoru ve yapay zekâ botları, WhatsApp/Telegram önizlemeleri,
             izleme servisleri, panel oturumunuz açıkken yaptığınız ziyaretler ve “bu cihazı sayma” işaretli tarayıcılar.</li>
-        <li><strong>Ziyaretçi:</strong> sayfası tarayıcıda gerçekten görüntülenen her IP adresi bir kişi (16.11.2026).
+        <li><strong>Ziyaretçi:</strong> sayfası tarayıcıda gerçekten görüntülenen her cihaz bir kişi (16.11.2026). IP ile sayım
+            bırakıldı: kaydedilen adres çoğu zaman hosting'in önündeki ara sunucunun adresi olduğu için binlerce okur birkaç kişi görünüyordu.
             Yurt dışı ya da veri merkezi görünen adresler (Türkiye'deki okurun yurt dışı çıkışlı interneti, VPN) bot sayılmıyor.
-            "Haber okuyan ziyaretçi" ayrı ölçü. Aynı adresi paylaşanlar
-            (ev, iş yeri, mobil operatörün ortak adresi) tek kişi; adresi değişen kişi (Wi-Fi'den mobil veriye geçen telefon) iki kişi
-            sayılır. Bot olma ihtimali olan adresler <a href="#botlar">ayrı tabloda</a>.</li>
+            Yurt dışı ya da veri merkezi görünen adresler bot sayılmıyor. "Haber okuyan ziyaretçi" ayrı ölçü.
+            Bot olma ihtimali olan adresler <a href="#botlar">ayrı tabloda</a>.</li>
         <li><strong>Saat:</strong>
             sunucu <?= e($dogruluk['db_saat'] !== '' ? date('H:i', strtotime($dogruluk['db_saat'])) : '—') ?>,
             Türkiye <?= e(date('H:i')) ?>

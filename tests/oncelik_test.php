@@ -1343,15 +1343,19 @@ senaryo('Z', 'Ziyaret sayımı: her IP bir kişi; bot şüphelileri ayrı listed
     }
     $e->execute([20, 'eeeeeeeeeeeeeeee', '47.74.1.1', '/sinama-b', 1, '5555555555555555', 'masaustu']);
 
-    bekle((int) db()->query("SELECT COUNT(DISTINCT " . zr_kimlik('z') . ") FROM ziyaretler z WHERE z.yol IN ('/sinama1', '/sinama2', '/sinama3')")->fetchColumn() === 2,
-        'aynı IP\'den iki ayrı tarayıcı tek kişi; iki IP iki kişi');
+    // 16.11.2026: kimlik tarayici (cihaz); IP paylasan iki cihaz iki kisi.
+    bekle((int) db()->query("SELECT COUNT(DISTINCT " . zr_kimlik('z') . ") FROM ziyaretler z WHERE z.yol IN ('/sinama1', '/sinama2', '/sinama3')")->fetchColumn() === 3,
+        'aynı IP\'yi paylaşan iki cihaz iki kişi (ara sunucu adresi herkesi tek kişi yapmasın)');
+    $_SERVER['REMOTE_ADDR'] = '203.0.113.9'; $_SERVER['HTTP_X_FORWARDED_FOR'] = '85.100.7.7, 10.0.0.1';
+    bekle(ziyaret_adresi() === '85.100.7.7', 'gerçek adres ara sunucunun bildirdiği başlıktan');
+    unset($_SERVER['HTTP_X_FORWARDED_FOR']);
 
     // Ziyaretci = haber okuyan IP (14.11.2026): yalnizca 85.100.1.1 haber okudu.
     db()->exec("UPDATE ziyaretler SET haber_id = 1 WHERE yol = '/sinama1'");
     $okurlu = zr_olculer(date('Y-m-d'), date('Y-m-d'), false);
     $hamOlcu = zr_olculer(date('Y-m-d'), date('Y-m-d'), true);
     // 16.11.2026: dogrulanan her IP ziyaretci (haber okumayan da); haber okuyan ayri olcu.
-    bekle($okurlu['ziyaretci'] === 3 && $okurlu['okur'] === 1 && $hamOlcu['ziyaretci'] === 4,
+    bekle($okurlu['ziyaretci'] === 4 && $okurlu['okur'] === 1 && $hamOlcu['ziyaretci'] === 5,
         'doğrulanan her IP ziyaretçi; haber okuyan ayrı ölçü; ham sayımda doğrulanmayan da var', json_encode([$okurlu['ziyaretci'], $okurlu['okur'], $hamOlcu['ziyaretci']]));
 
     $bot = array_column(zr_bot_suphelileri(zr_aralik(['aralik' => 'bugun'])), null, 'ip');
