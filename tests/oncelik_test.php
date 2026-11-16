@@ -1196,9 +1196,28 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     $eko = nw_ekonomi_kutusu_html();
     bekle(str_contains($eko, 'Döviz') && str_contains($eko, 'Kripto paralar') && str_contains($eko, 'bolum=doviz') && !str_contains($eko, '—'),
         'ekonomi kutusu: döviz, borsa, altın, kripto bağlantıları; değer yokken çizgi yerine açıklama');
+    // Renkli kalemler (16.11.2026): artis yesil, dusus kirmizi, altinda % degisim.
+    require_once __DIR__ . '/../includes/ayarlar.php';
+    $piyasaEski = ayar_oku('piyasa_onbellek');
+    ayar_yaz('piyasa_onbellek', (string) json_encode(['zaman' => date('Y-m-d H:i:s'), 'usd' => 42.18, 'eur' => 48.95, 'usd_degisim' => 0.32, 'eur_degisim' => -0.41,
+        'bist' => 10425.6, 'bist_degisim' => 1.27, 'altin' => 5712, 'altin_degisim' => -0.85]));
+    $ekoRenk = nw_ekonomi_kutusu_html();
+    ayar_yaz('piyasa_onbellek', $piyasaEski);
+    bekle(str_contains($ekoRenk, '<span class="nw-kalem artti"><b><i>USD</i> 42,18</b><small>▲ %0,32</small></span>')
+        && str_contains($ekoRenk, '<span class="nw-kalem dustu"><b><i>EUR</i> 48,95</b><small>▼ %0,41</small></span>')
+        && str_contains($ekoRenk, '<i>BIST 100</i> 10.426</b><small>▲ %1,27')
+        && str_contains($ekoRenk, 'nw-kalem dustu"><b><i>Gram</i> 5.712 TL</b><small>▼ %0,85'),
+        'ekonomi kutusu: USD ve EUR ayrı ayrı; artan yeşil, düşen kırmızı; altında yüzde değişim (borsa ve altın da)');
+    bekle(nw_piyasa_kalemi_html('Bitcoin', '97.350 $', null) === '<span class="nw-kalem"><b><i>Bitcoin</i> 97.350 $</b></span>',
+        'değişimi bilinmeyen kalem renksiz, altında gösterge yok');
     $spor = nw_spor_kutusu_html();
-    bekle(strpos($spor, 'Canlı skorlar') < strpos($spor, 'Puan durumları') && str_contains($spor, 'bolum=canli-skor') && str_contains($spor, 'bolum=fikstur'),
-        'spor kutusu: en başta canlı skorlar, sonra puan durumları ve fikstür');
+    bekle(str_contains($spor, '<div class="nw-canli-alan" hidden>') && strpos($spor, 'Canlı maçlar') < strpos($spor, 'Puan durumları')
+        && str_contains($spor, 'bolum=canli-skor') && str_contains($spor, 'bolum=fikstur'),
+        'spor kutusu: canlı maç yokken canlı alan kapalı; puan durumları ve fikstür yerinde');
+    bekle(nw_spor_skor_satirlari_html([
+            ['canli' => false, 'durum' => 'FT', 'durum_yazi' => 'MS', 'saat' => '17:00', 'ev' => 'Biten', 'dep' => 'Maç', 'ev_gol' => 0, 'dep_gol' => 0, 'adres' => '/b'],
+            ['canli' => false, 'durum' => 'NS', 'durum_yazi' => '', 'saat' => '21:00', 'ev' => 'Başlamayan', 'dep' => 'Maç', 'ev_gol' => 0, 'dep_gol' => 0, 'adres' => '/c'],
+        ]) === '', 'skor satırları: biten ve başlamayan maç gösterilmiyor (yalnızca oynananlar)');
     bekle(nw_spor_skor_satirlari_html([['canli' => true, 'durum' => 'LIVE', 'durum_yazi' => "34'", 'saat' => '20:00', 'ev' => 'A <b>', 'dep' => 'B', 'ev_gol' => 1, 'dep_gol' => 0, 'adres' => '/x']])
         === '<a class="nw-skor canli" href="/x"><span class="nw-skor-durum">34&#039;</span><span class="nw-skor-takim">A &lt;b&gt;</span><b class="nw-skor-sonuc">1 - 0</b><span class="nw-skor-takim">B</span></a>',
         'canlı skor satırı: dakika, takımlar, skor; takım adı güvenli yazılıyor');
