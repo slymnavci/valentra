@@ -62,7 +62,8 @@ on:
         default: false
       saat:
         description: 'Kac saat geriye bakilsin'
-        default: '2'
+        # 15.11.2026'dan beri zamanli calisma 3 saat; elle / siteden tetiklemede de ayni (17.11.2026).
+        default: '3'
       enfazla:
         description: 'En fazla kac aday islensin (bos: basliklarin paylarinin toplami, 96)'
         default: ''

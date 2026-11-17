@@ -1632,10 +1632,33 @@ if ($gundem !== []) {
     gunluk('  ' . count($karsilanan) . ' çok aranan konu adaylarda var' . ($yeniGundem > 0 ? ' (' . $yeniGundem . ' tanesi Google Trends haberinden eklendi)' : '') . '; bunlar öne alındı.');
 }
 
+/*
+ * DUNYANIN SAYGIN YAYINLARI ONDE (17.11.2026, site sahibi: "yabancida CNN,
+ * BBC, Fox gibi yurtdisinin en unlulerini koyalim"). Dunya basliginda 60'i
+ * askin kaynaktan 20 aday seciliyordu; CNN 39, Fox 12 aday verdigi halde en
+ * yeniler arasinda siraya giremiyordu. Bu yayinlarin her birinin en yeni
+ * SAYGIN_ONDE_ADET adayi, ayni kapsamdaki digerlerinin onune alinir (tek
+ * yayin listeyi doldurmasin diye yalnizca birkac aday).
+ */
+const SAYGIN_YAYIN_ALANLARI = ['cnn.com', 'foxnews.com', 'bbc.com', 'bbc.co.uk', 'nytimes.com', 'washingtonpost.com', 'reuters.com',
+    'apnews.com', 'theguardian.com', 'ft.com', 'economist.com', 'aljazeera.com', 'lemonde.fr', 'lefigaro.fr', 'spiegel.de',
+    'elpais.com', 'independent.co.uk', 'wsj.com'];
+const SAYGIN_ONDE_ADET = 3;
+
+$sayginSayac = [];
+$sayginSira  = array_keys($adaylar);
+usort($sayginSira, static fn (int $x, int $y): int => $adaylar[$y]['puan'] <=> $adaylar[$x]['puan']);
+
+foreach ($sayginSira as $i) {
+    $alan = (string) preg_replace('/^(www|edition|feeds|rss|moxie)\./', '', strtolower((string) parse_url((string) ($adaylar[$i]['kaynak']['site_url'] ?? ''), PHP_URL_HOST)));
+    $saygin = array_filter(SAYGIN_YAYIN_ALANLARI, static fn (string $s): bool => $alan === $s || str_ends_with($alan, '.' . $s)) !== [];
+    $adaylar[$i]['saygin'] = $saygin && ($sayginSayac[$alan] = ($sayginSayac[$alan] ?? 0) + 1) <= SAYGIN_ONDE_ADET ? 1 : 0;
+}
+
 // Önce Google'da çok arananlar, sonra çok kaynakta geçenler (kapsam), sonra
-// en yeniler; bütçe sınırına takılırsa gündemdeki ve güncel olanlar işlensin.
+// saygın yayınlar, sonra en yeniler; bütçe sınırına takılırsa gündemdeki ve güncel olanlar işlensin.
 usort($adaylar, static fn (array $a, array $b): int =>
-    [(int) ($b['gundem']['trafik'] ?? -1), $b['kapsam'], $b['puan']] <=> [(int) ($a['gundem']['trafik'] ?? -1), $a['kapsam'], $a['puan']]);
+    [(int) ($b['gundem']['trafik'] ?? -1), $b['kapsam'], $b['saygin'] ?? 0, $b['puan']] <=> [(int) ($a['gundem']['trafik'] ?? -1), $a['kapsam'], $a['saygin'] ?? 0, $a['puan']]);
 
 /*
  * ON TARAMA VE HIZLI YOL (12.11.2026; bkz. Yazar::onTarama). Basliklar tek
