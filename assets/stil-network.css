@@ -658,3 +658,7 @@ a.nw-hesap:hover { color: var(--altin); }
     .nw-uc.mobil-acik .nw-sol-satir { padding-top: 11px; padding-bottom: 11px; }
     html.nw-kaydirma-kilit, html.nw-kaydirma-kilit body { overflow: hidden; }
 }
+
+/* Kutu gorselleri daha kucuk (17.11.2026, site sahibi: "spor ve ekonomi logolarini biraz daha kucultelim, cok buyuk
+   gorunuyor"): tam genislik (yaklasik 300 x 100) yerine ortada, en fazla 64 piksel yukseklik. */
+.nw-kutu-gorsel { width: auto; max-width: 70%; height: 64px; aspect-ratio: 3 / 1; object-fit: contain; margin: 0 auto 6px; }
