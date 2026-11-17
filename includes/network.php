@@ -1518,16 +1518,26 @@ function nw_gazete_simge_html(string $slug, string $ad, int $boyut = 20): string
  * nw_gazete_slug(nw_gazete_adi(kaynak adi)).
  */
 const NW_SAYGIN_YAYINLAR = [
-    'bbc', 'cnn', 'the-new-york-times', 'fox-news', 'the-washington-post', 'the-wall-street-journal', 'reuters',
+    'cnn', 'bbc', 'the-new-york-times', 'fox-news', 'the-washington-post', 'the-wall-street-journal', 'reuters',
     'associated-press', 'the-guardian', 'financial-times', 'the-economist', 'al-jazeera', 'le-monde', 'le-figaro',
     'der-spiegel', 'frankfurter-allgemeine', 'el-pais', 'corriere-della-sera', 'the-independent', 'sky-news', 'nhk',
     'the-japan-times', 'the-times-of-india', 'south-china-morning-post', 'euronews', 'npr', 'cnbc', 'abc',
 ];
 
+/*
+ * YERLI GAZETELER (17.11.2026, site sahibi: "Buyuk gazeteler yerine yerli
+ * gazeteler: Hurriyet, Milliyet, Sozcu, NTV, CNN Turk, Haberturk gibi en cok
+ * okunanlar olsun"). Sol menude bu sirayla; haberi olmayan gorunmez. Turkiye'nin
+ * diger yayinlari "Ulkelere gore > Turkiye" altinda.
+ */
+const NW_YERLI_YAYINLAR = [
+    'hurriyet', 'milliyet', 'sozcu', 'sabah', 'haberturk', 'ntv', 'cnn-turk', 'trt-haber', 'cumhuriyet',
+    'a-haber', 'tgrt-haber', 'haber-global', 'anadolu-ajansi', 'dha', 'iha', 'bbc-news-turkce', 'dunya-gazetesi', 'ekonomim',
+];
+
 /**
- * Sol menunun gazete bolumleri (17.11.2026): Buyuk gazeteler (Turkiye'nin
- * ana gazeteleri, sonda "Diger"), Yabanci medya (NW_SAYGIN_YAYINLAR), Yerel
- * medya (Turkiye'nin yerel gazeteleri).
+ * Sol menunun gazete bolumleri (17.11.2026): Yerli gazeteler (NW_YERLI_YAYINLAR),
+ * Yabanci medya (NW_SAYGIN_YAYINLAR), Yerel medya (Turkiye'nin yerel gazeteleri).
  *
  * @return array{buyuk:array<string,array<string,mixed>>,yabanci:array<string,array<string,mixed>>,yerel:array<string,array<string,mixed>>}
  */
@@ -1536,9 +1546,15 @@ function nw_gazete_bolumleri(): array
     $g      = nw_gazeteler();
     $bolum  = ['buyuk' => [], 'yabanci' => [], 'yerel' => []];
 
+    foreach (NW_YERLI_YAYINLAR as $slug) {
+        if (isset($g[$slug])) {
+            $bolum['buyuk'][$slug] = $g[$slug];
+        }
+    }
+
     foreach ($g as $slug => $v) {
-        if ($v['ulke'] === 'tr') {
-            $bolum[$v['yerel'] ? 'yerel' : 'buyuk'][$slug] = $v;
+        if ($v['ulke'] === 'tr' && $v['yerel']) {
+            $bolum['yerel'][$slug] = $v;
         }
     }
 
@@ -1546,13 +1562,6 @@ function nw_gazete_bolumleri(): array
         if (isset($g[$slug]) && $g[$slug]['ulke'] !== 'tr') {
             $bolum['yabanci'][$slug] = $g[$slug];
         }
-    }
-
-    // "Diger gazeteler" Buyuk gazetelerin sonunda.
-    if (isset($bolum['buyuk']['diger'])) {
-        $diger = $bolum['buyuk']['diger'];
-        unset($bolum['buyuk']['diger']);
-        $bolum['buyuk']['diger'] = $diger;
     }
 
     return $bolum;
@@ -1851,8 +1860,15 @@ function nw_piyasa_grafigi_html(string $arac): string
     $yukari = end($degerler) >= $degerler[0];
     $yuzde  = $degerler[0] != 0.0 ? (end($degerler) / $degerler[0] - 1) * 100 : 0.0;
 
+    // Golgeli cizgi (17.11.2026, site sahibi: "sayfadaki gibi golgeli cizgi"): cizginin alti renkten saydama gecen dolgu.
+    static $sira = 0;
+    $kimlik = 'nwg' . (++$sira);
+
     return '<span class="nw-mini-grafik ' . ($yukari ? 'artis' : 'dusus') . '" title="Son 3 ay: ' . e(($yuzde >= 0 ? '+' : '') . number_format($yuzde, 1, ',', '.')) . '%">'
         . '<svg viewBox="0 0 ' . $en . ' ' . $boy . '" width="100%" height="' . $boy . '" preserveAspectRatio="none" aria-hidden="true">'
+        . '<defs><linearGradient id="' . $kimlik . '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".32"/>'
+        . '<stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>'
+        . '<polygon points="0,' . $boy . ' ' . implode(' ', $nokta) . ' ' . $en . ',' . $boy . '" fill="url(#' . $kimlik . ')"/>'
         . '<polyline points="' . implode(' ', $nokta) . '" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>'
         . '<small>3 ay ' . e(($yuzde >= 0 ? '▲ %' : '▼ %') . number_format(abs($yuzde), 1, ',', '.')) . '</small></span>';
 }

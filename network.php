@@ -383,7 +383,7 @@ $solKenar = static function () use ($sayfa): void {
                  * Buyuk gazeteler ve yabanci medya acik gelir; yerel medya ve ulkeler kapali.
                  */
                 $nwBolum = nw_gazete_bolumleri();
-                foreach ([['buyuk', 'Büyük gazeteler', 'tr', true], ['yabanci', 'Yabancı medya', '', true], ['yerel', 'Yerel medya', 'tr', false]] as [$bk, $bAd, $bBayrak, $bAcik]):
+                foreach ([['buyuk', 'Yerli gazeteler', 'tr', true], ['yabanci', 'Yabancı medya', '', true], ['yerel', 'Yerel medya', 'tr', false]] as [$bk, $bAd, $bBayrak, $bAcik]):
                     if ($nwBolum[$bk] === []) { continue; }
                     $bSecili = isset($nwBolum[$bk][$nwGazete]); ?>
                     <details class="nw-ulke nw-bolum" data-ulke="bolum-<?= e($bk) ?>"<?= $bAcik || $bSecili ? ' open' : '' ?>>
