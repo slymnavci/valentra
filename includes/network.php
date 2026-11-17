@@ -1899,6 +1899,152 @@ function nw_spor_skor_satirlari_html(array $maclar, int $adet = 4): string
     return $html;
 }
 
+/*
+ * SPOR KUTUSUNDA PUAN DURUMU VE FIKSTUR (17.11.2026, site sahibi: "puan
+ * durumunda Turkiye'den ilk 5 takim gosterilsin; fiksturde ilk 4 takimin bu
+ * haftaki maclarini gostersin"). Veri ESPN (includes/futbol.php), YALNIZCA
+ * onbellekten: sayfa ESPN'i beklemez. Onbellek yoksa ya da eskiyse yanit
+ * gittikten sonra tazelenir (nw_spor_onbellegi_tazele); o ana kadar satir
+ * eskisi gibi baglanti olarak kalir.
+ */
+const NW_FIKSTUR_LIGLERI = ['tur.1', 'tur.cup', 'uefa.champions', 'uefa.europa', 'uefa.europa.conf'];
+
+/** @return list<array<string,mixed>> Super Lig puan tablosu (onbellekten; yoksa bos). */
+function nw_super_lig_tablosu(): array
+{
+    require_once __DIR__ . '/futbol.php';
+    require_once __DIR__ . '/canli_onbellek.php';
+
+    $kayit = canli_onbellek_oku(futbol_onbellek_anahtari('/v2/sports/soccer/tur.1/standings', []));
+    $grup  = $kayit['veri'][0] ?? null;
+
+    if ($kayit === null || time() - (int) $kayit['zaman'] > 600) {
+        nw_spor_onbellegi_tazele();
+    }
+
+    return is_array($grup) ? $grup : [];
+}
+
+/** Bu haftanin (Istanbul, pazartesi-pazar) gunleri, Ymd. @return list<string> */
+function nw_bu_hafta_gunleri(): array
+{
+    $bugun = new DateTimeImmutable('today', new DateTimeZone('Europe/Istanbul'));
+    $pzt   = $bugun->modify('-' . ((int) $bugun->format('N') - 1) . ' days');
+
+    return array_map(static fn (int $i): string => $pzt->modify('+' . $i . ' days')->format('Ymd'), range(0, 6));
+}
+
+/** Yanit gittikten sonra puan tablosu ve bu haftanin maclari ESPN'den tazelenir (en fazla 10 dakikada bir). */
+function nw_spor_onbellegi_tazele(): void
+{
+    static $kuruldu = false;
+
+    if ($kuruldu || PHP_SAPI === 'cli') {
+        return;
+    }
+
+    $kuruldu = true;
+
+    register_shutdown_function(static function (): void {
+        try {
+            if (time() - (int) ayar_oku('nw_spor_tazele', '0') < 600) {
+                return;
+            }
+
+            ayar_yaz('nw_spor_tazele', (string) time());
+
+            if (function_exists('fastcgi_finish_request')) {
+                fastcgi_finish_request();
+            } elseif (function_exists('litespeed_finish_request')) {
+                litespeed_finish_request();
+            }
+
+            @set_time_limit(60);
+            require_once __DIR__ . '/futbol.php';
+            futbol_puan_durumu('tur.1');
+
+            foreach (NW_FIKSTUR_LIGLERI as $lig) {
+                foreach (nw_bu_hafta_gunleri() as $gun) {
+                    futbol_gun_maclari($lig, $gun);
+                }
+            }
+        } catch (Throwable $e) {
+            error_log('[valentra] spor kutusu tazeleme: ' . $e->getMessage());
+        }
+    });
+}
+
+/** Puan durumu: Super Lig'in ilk 5 takimi. */
+function nw_puan_ilk5_html(array $tablo): string
+{
+    if (count($tablo) < 5) {
+        return '';
+    }
+
+    $html = '';
+
+    foreach (array_slice($tablo, 0, 5) as $s) {
+        $html .= '<li><b>' . (int) $s['sira'] . '</b><span>' . e((string) $s['takim']) . '</span><small>' . (int) $s['o'] . ' m</small><strong>' . (int) $s['p'] . '</strong></li>';
+    }
+
+    return '<ol class="nw-mini-tablo">' . $html . '</ol>';
+}
+
+/** Fikstur: ilk 4 takimin bu haftaki maclari (Super Lig, kupa ve Avrupa). */
+function nw_fikstur_ilk4_html(array $tablo): string
+{
+    $ilk4 = array_flip(array_map(static fn (array $s): int => (int) $s['id'], array_slice($tablo, 0, 4)));
+
+    if (count($ilk4) < 4) {
+        return '';
+    }
+
+    require_once __DIR__ . '/futbol.php';
+    require_once __DIR__ . '/canli_onbellek.php';
+
+    $maclar = [];
+    $eksik  = false;
+
+    foreach (NW_FIKSTUR_LIGLERI as $lig) {
+        foreach (nw_bu_hafta_gunleri() as $gun) {
+            $kayit = canli_onbellek_oku(futbol_onbellek_anahtari('/site/v2/sports/soccer/' . $lig . '/scoreboard', ['dates' => $gun, 'limit' => 200]));
+
+            if ($kayit === null) {
+                $eksik = true;
+                continue;
+            }
+
+            foreach ($kayit['veri']['maclar'] ?? [] as $m) {
+                if (isset($ilk4[(int) ($m['ev_id'] ?? 0)]) || isset($ilk4[(int) ($m['dep_id'] ?? 0)])) {
+                    $maclar[(int) $m['id']] = $m;
+                }
+            }
+        }
+    }
+
+    if ($eksik) {
+        nw_spor_onbellegi_tazele();
+    }
+
+    if ($maclar === []) {
+        return '';
+    }
+
+    usort($maclar, static fn (array $a, array $b): int => $a['zaman'] <=> $b['zaman']);
+    $gunAdi = ['', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+    $tz     = new DateTimeZone('Europe/Istanbul');
+    $html   = '';
+
+    foreach ($maclar as $m) {
+        $t      = (new DateTimeImmutable('@' . (int) $m['zaman']))->setTimezone($tz);
+        $oynandi = ($m['ev_gol'] ?? null) !== null && ($m['durum'] ?? '') !== 'NS';
+        $html  .= '<li' . ($oynandi ? ' class="oynandi"' : '') . '><small>' . e($gunAdi[(int) $t->format('N')] . ' ' . $t->format('H:i')) . '</small>'
+            . '<span>' . e((string) $m['ev']) . '</span><b>' . ($oynandi ? (int) $m['ev_gol'] . '-' . (int) $m['dep_gol'] : '–') . '</b><span>' . e((string) $m['dep']) . '</span></li>';
+    }
+
+    return '<ul class="nw-mini-fikstur">' . $html . '</ul>';
+}
+
 function nw_spor_kutusu_html(): string
 {
     try {
@@ -1914,6 +2060,14 @@ function nw_spor_kutusu_html(): string
 
     $canli = count(array_filter($maclar, static fn (array $m): bool => !empty($m['canli'])));
 
+    try {
+        $tablo       = nw_super_lig_tablosu();
+        $puanHtml    = nw_puan_ilk5_html($tablo);
+        $fiksturHtml = nw_fikstur_ilk4_html($tablo);
+    } catch (Throwable $e) {
+        $puanHtml = $fiksturHtml = '';
+    }
+
     return '<div class="nw-yan-kutu nw-kutu-liste nw-spor-kutu" data-katla="spor" data-canli-skor="/api/canli-skor.php">'
         . '<strong class="nw-kutu-bas">' . nw_konu_ikonu('spor') . 'Spor</strong>'
         . '<img class="nw-kutu-gorsel" src="/assets/network/spor-960.webp" srcset="/assets/network/spor-480.webp 480w, /assets/network/spor-960.webp 960w" sizes="340px" width="960" height="320" loading="lazy" decoding="async" alt="">'
@@ -1923,8 +2077,12 @@ function nw_spor_kutusu_html(): string
         . '<i class="nw-canli-nokta yaniyor" aria-hidden="true"></i>Canlı maçlar</strong>'
         . '<em class="nw-canli-ozet">' . $canli . ' maç oynanıyor</em></span><small>→</small></a>'
         . '<div class="nw-skorlar">' . nw_spor_skor_satirlari_html($maclar) . '</div></div>'
-        . '<a class="nw-kutu-satir" href="' . e(spor_bolum_yolu('puan-durumu')) . '"><span><strong>Puan durumları</strong><em>Süper Lig ve Avrupa ligleri</em></span></a>'
-        . '<a class="nw-kutu-satir" href="' . e(spor_bolum_yolu('fikstur')) . '"><span><strong>Fikstür</strong><em>Haftanın maçları ve sonuçlar</em></span></a>'
+        . ($puanHtml !== ''
+            ? '<a class="nw-kutu-satir nw-spor-blok" href="' . e(spor_bolum_yolu('puan-durumu')) . '"><span><strong>Puan durumu</strong><em>Süper Lig, ilk 5</em></span>' . $puanHtml . '</a>'
+            : '<a class="nw-kutu-satir" href="' . e(spor_bolum_yolu('puan-durumu')) . '"><span><strong>Puan durumları</strong><em>Süper Lig ve Avrupa ligleri</em></span></a>')
+        . ($fiksturHtml !== ''
+            ? '<a class="nw-kutu-satir nw-spor-blok" href="' . e(spor_bolum_yolu('fikstur')) . '"><span><strong>Fikstür</strong><em>İlk 4 takımın bu haftaki maçları</em></span>' . $fiksturHtml . '</a>'
+            : '<a class="nw-kutu-satir" href="' . e(spor_bolum_yolu('fikstur')) . '"><span><strong>Fikstür</strong><em>Haftanın maçları ve sonuçlar</em></span></a>')
         . '<a class="nw-kutu-satir" href="' . e(spor_bolum_yolu('gol-kralligi')) . '"><span><strong>Gol krallığı</strong><em>Gol ve asist sıralaması</em></span></a>'
         . '<a class="nw-kutu-satir" href="' . e(mac_ozetleri_yolu()) . '"><span><strong>Maç özetleri</strong><em>Videolu özetler</em></span></a>'
         . '<a class="nw-kutu-tumu" href="' . e(nw_yol('', ['konu' => 'spor'])) . '">Spor haberleri →</a></div>'
