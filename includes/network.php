@@ -706,7 +706,7 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
                " . ($gundem ? haber_okunma_birlesimi() : '') . "
               WHERE h.durum = :d" . ($turkiyeGundemi ? nw_turkiye_gundemi_kosulu() : '')
                   // Hiz (14.11.2026): onem siralari butun arsivi siralamasin; son NW_SIRA_PENCERE_GUN gun (durum, yayin_tarihi dizini).
-                  . ($onemli || $gundem ? ' AND h.yayin_tarihi >= NOW() - INTERVAL ' . ($gundem ? NW_GUNDEM_PENCERE_GUN : NW_SIRA_PENCERE_GUN) . ' DAY' : '') . " AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
+                  . ($onemli || $gundem ? ' AND h.yayin_tarihi >= NOW() - INTERVAL ' . ($gundem ? NW_GUNDEM_PENCERE_GUN : NW_SIRA_PENCERE_GUN) . ' DAY' : '') . " AND " . ($konu !== '' ? nw_konu_kosulu($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
                 AND h.yayin_tarihi < FROM_UNIXTIME(:once)" . $gazeteKosulu . ($konu === 'spor' ? nw_spor_dal_kosulu($dal) : '') . "";
         $siraSql  = "
               ORDER BY " . ($gundem ? haber_sirasi(true) . ', ' : ($onemli ? nw_onemli_sirasi() . ', ' : '')) . "h.yayin_tarihi DESC, h.id DESC LIMIT :l" . ($gundem || $onemli ? ' OFFSET ' . $atla : '');
@@ -808,7 +808,7 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
                LEFT JOIN kategoriler k ON k.id = h.kategori_id
               WHERE y.haber_id IS NOT NULL AND y.durum = 'yayinda' AND u.durum = 'aktif' AND u.tur <> 'yz'
                 AND h.durum = :d AND y.olusturuldu < FROM_UNIXTIME(:once) $kosul"
-              . ($konu !== '' ? ' AND k.slug = ' . db()->quote($konu) : '') . "
+              . ($konu !== '' ? ' AND ' . nw_konu_kosulu($konu, 'h') : '') . "
               ORDER BY y.olusturuldu DESC, y.id DESC LIMIT " . (int) $adet
         );
         $ifade->execute($deger + ['d' => HABER_YAYINDA]);
@@ -842,6 +842,61 @@ function nw_konular(): array
     return $bellek ??= nw_kisa_onbellek('konular', 300, static fn (): array => nw_konular_ham());
 }
 
+/*
+ * YAPAY ZEKA (17.11.2026, site sahibi: "yapay zeka haber gibi aramalarda
+ * Google'da one cikmak"). Ayri bir kategori degil: basliginda ya da
+ * etiketlerinde yapay zeka gecen haberler (her kategoriden). Sol menude
+ * Teknoloji'nin hemen altinda.
+ */
+const NW_YAPAY_ZEKA = 'yapay-zeka';
+const NW_YAPAY_ZEKA_IFADESI = 'yapay zek|ChatGPT|OpenAI|Anthropic|Claude|Gemini|DeepSeek|Copilot|yapay sinir|üretken yapay|makine öğren|büyük dil model';
+
+/*
+ * ARAMA SAYFALARI (17.11.2026, site sahibi: "yapay zeka haber, haber
+ * ozetleri, guncel haberler, dunyadan haber, dunya haber ozetleri gibi
+ * aramalarda Google'da one cikmak icin ne yapabiliriz -> hepsini yap").
+ * Baslik sayfalari (?konu=...) yalnizca konu parametresiyle acildiginda
+ * Google'a ACIK (index), aranan sozcukleri tasiyan baslik, aciklama ve
+ * sayfa ustunde kisa tanitim. Ayni sayfanin diger halleri (son haberler,
+ * spor dali, sayfalama) dizin disi kalir; canonical konu adresi.
+ *
+ * slug => [sayfa basligi (title), H1, tanitim / meta aciklama]
+ */
+const NW_KONU_SEO = [
+    'gundem'       => ['Güncel Haberler ve Haber Özetleri — Gündem | Valentra', 'Gündem: güncel haber özetleri',
+        'Türkiye gündeminden en güncel haberlerin kısa özetleri: Hürriyet, Milliyet, Sözcü, NTV, CNN Türk, Habertürk ve diğer gazetelerin haberleri tek akışta, her haberin kaynağıyla.'],
+    'politika'     => ['Politika Haberleri ve Özetleri | Valentra', 'Politika haberleri',
+        'Türkiye siyasetinden güncel haberlerin özetleri: Meclis, hükümet, partiler ve seçimler. Her haberin özeti ve kaynak gazetesi.'],
+    'ekonomi'      => ['Ekonomi Haberleri ve Özetleri — Döviz, Borsa, Altın | Valentra', 'Ekonomi haberleri',
+        'Ekonomiden güncel haber özetleri; döviz, borsa ve altın grafikleriyle. Türk ve dünya basınından ekonomi haberleri tek yerde.'],
+    'dunya'        => ['Dünya Haberleri ve Dünya Haber Özetleri — Dünyadan Haberler | Valentra', 'Dünyadan haberler: dünya haber özetleri',
+        'Dünyadan güncel haberlerin Türkçe özetleri: BBC, CNN, The New York Times, Fox News, The Guardian, Al Jazeera, Le Monde ve dünyanın önde gelen gazetelerinden.'],
+    'spor'         => ['Spor Haberleri ve Özetleri — Canlı Skor, Puan Durumu | Valentra', 'Spor haberleri',
+        'Futbol, basketbol ve diğer sporlardan güncel haber özetleri; canlı maçlar, Süper Lig puan durumu ve haftanın fikstürü.'],
+    'teknoloji'    => ['Teknoloji Haberleri ve Özetleri | Valentra', 'Teknoloji haberleri',
+        'Teknoloji dünyasından güncel haberlerin Türkçe özetleri: yeni ürünler, yazılım, internet ve bilim.'],
+    'yapay-zeka'   => ['Yapay Zekâ Haberleri — Yapay Zeka Haber Özetleri | Valentra', 'Yapay zekâ haberleri',
+        'Yapay zekâ ile ilgili en güncel haberlerin Türkçe özetleri: ChatGPT, OpenAI, Google Gemini, Claude ve dünyadan yapay zekâ gelişmeleri, Türk ve yabancı basından.'],
+    'saglik'       => ['Sağlık Haberleri ve Özetleri | Valentra', 'Sağlık haberleri',
+        'Sağlık ve tıp dünyasından güncel araştırma ve haberlerin Türkçe özetleri.'],
+    'kultur-sanat' => ['Kültür Sanat Haberleri | Valentra', 'Kültür ve sanat haberleri',
+        'Kültür, sanat, sinema, müzik ve edebiyattan güncel haber özetleri.'],
+    'magazin'      => ['Magazin Haberleri | Valentra', 'Magazin haberleri',
+        'Sanatçıların açıklamaları, yeni dizi, film ve albümler: ölçülü magazin haberlerinin özetleri.'],
+];
+
+/** Konu kosulu (SQL; k: kategoriler, $h: haberler takma adi). Yapay zeka sanal konusu baslik/etiketten. */
+function nw_konu_kosulu(string $konu, string $h = 'h'): string
+{
+    if ($konu === NW_YAPAY_ZEKA) {
+        $ifade = db()->quote(NW_YAPAY_ZEKA_IFADESI);
+
+        return "($h.baslik REGEXP $ifade OR $h.etiketler REGEXP $ifade)";
+    }
+
+    return 'k.slug = ' . db()->quote($konu);
+}
+
 function nw_konular_ham(): array
 {
     static $konular = null;
@@ -853,8 +908,15 @@ function nw_konular_ham(): array
             foreach (haber_akis_kategorileri() as $k) {
                 if ($k['adet'] > 0) {
                     $konular[$k['slug']] = $k['ad'];
+
+                    if ($k['slug'] === 'teknoloji') {
+                        $konular[NW_YAPAY_ZEKA] = 'Yapay Zekâ';
+                    }
                 }
             }
+
+            // Teknoloji basligi yoksa da (o gun haber gelmediyse) Yapay Zeka sonda.
+            $konular[NW_YAPAY_ZEKA] ??= 'Yapay Zekâ';
         } catch (PDOException $e) {
             $konular = [];
         }
@@ -1395,6 +1457,7 @@ function nw_kaynak_ulkesi(string $siteUrl): string
 
 /** Basliklarin kucuk ikonlari (24x24, cizgi). Bilinmeyen baslik: genel ikon. */
 const NW_KONU_IKONLARI = [
+    'yapay-zeka' => '<rect x="6" y="6" width="12" height="12" rx="2.5"/><path d="M9 2.5v3.5M15 2.5v3.5M9 18v3.5M15 18v3.5M2.5 9h3.5M2.5 15h3.5M18 9h3.5M18 15h3.5M10 10h4v4h-4z"/>',
     'one-cikan' => '<path d="M13 3 5 13.500h6L10 21l9-10.500h-6z"/>',
     'gundem'          => '<path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v8a2 2 0 0 1-2 2"/><path d="M7.5 9h6M7.5 12.5h6M7.5 16h4"/>',
     'politika'        => '<path d="M3 20h18M5 20V10M9.5 20V10M14.5 20V10M19 20V10M3 10h18L12 4z"/>',
