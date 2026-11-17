@@ -594,8 +594,10 @@ a.nw-hesap:hover { color: var(--altin); }
 .nw-uc.sol-kapali { grid-template-columns: 36px minmax(0, 980px) 340px; }
 .nw-uc.sag-kapali { grid-template-columns: 300px minmax(0, 980px) 36px; }
 .nw-uc.sol-kapali.sag-kapali { grid-template-columns: 36px minmax(0, 980px) 36px; }
-.nw-uc.sol-kapali .nw-sol > :not(.nw-yan-dugme),
-.nw-uc.sag-kapali .nw-sag > :not(.nw-yan-dugme) { display: none; }
+@media (min-width: 861px) {
+    .nw-uc.sol-kapali .nw-sol > :not(.nw-yan-dugme),
+    .nw-uc.sag-kapali .nw-sag > :not(.nw-yan-dugme) { display: none; }
+}
 .nw-uc.sol-kapali .nw-sol { overflow: visible; padding-right: 0; }
 @media (max-width: 1180px) {
     .nw-uc.sol-kapali, .nw-uc.sol-kapali.sag-kapali { grid-template-columns: 36px minmax(0, 1fr); }
@@ -624,3 +626,35 @@ a.nw-hesap:hover { color: var(--altin); }
 .nw-uc[data-katli~="kisiler"] [data-katla="kisiler"] > :not(:first-child),
 .nw-uc[data-katli~="kurallar"] [data-katla="kurallar"] > :not(:first-child) { display: none !important; }
 .nw-kutu-gorsel { display: block; width: 100%; height: auto; aspect-ratio: 3 / 1; object-fit: cover; border-radius: 8px; margin: 2px 0 8px; background: #fff; }
+
+/* Telefonda sol menu (17.11.2026; bkz. network.php .nw-mobil-menu-dugme): dort kareli
+   dugme sol kenari tam ekran acar. Genis ekranda dugme ve ust serit yok. */
+.nw-mobil-menu-dugme, .nw-mobil-menu-ust { display: none; }
+@media (max-width: 860px) {
+    .nw-mobil-menu-dugme {
+        display: grid; place-items: center; position: fixed; left: 14px; z-index: 900;
+        /* Alttaki sekme cubugunun (yaklasik 62 px) ustunde. */
+        bottom: calc(74px + env(safe-area-inset-bottom));
+        width: 52px; height: 52px; border-radius: 16px; border: none; cursor: pointer;
+        background: var(--altin); color: var(--vurgu-ustu, #fff); box-shadow: 0 4px 14px rgba(0, 0, 0, .28);
+    }
+    .nw-uc .nw-yan-dugme { display: none; }
+    .nw-uc.mobil-acik .nw-sol {
+        display: grid; align-content: start; position: fixed; inset: 0; z-index: 1000;
+        max-height: none; overflow-y: auto; overscroll-behavior: contain;
+        padding: 0 14px 28px; background: var(--kart);
+    }
+    .nw-uc.mobil-acik .nw-mobil-menu-ust {
+        display: flex; align-items: center; justify-content: space-between;
+        position: sticky; top: 0; z-index: 1; margin: 0 -14px; padding: 12px 14px;
+        background: var(--kart); border-bottom: 1px solid var(--cizgi);
+    }
+    .nw-mobil-menu-ust strong { font-size: 1.1rem; font-weight: 800; }
+    .nw-mobil-menu-kapat {
+        width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--cizgi);
+        background: var(--zemin); color: var(--metin); font-size: 1.05rem; cursor: pointer;
+    }
+    .nw-uc.mobil-acik .nw-mobil-menu-dugme { display: none; }
+    .nw-uc.mobil-acik .nw-sol-satir { padding-top: 11px; padding-bottom: 11px; }
+    html.nw-kaydirma-kilit, html.nw-kaydirma-kilit body { overflow: hidden; }
+}

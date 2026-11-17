@@ -339,7 +339,17 @@ $solKenar = static function () use ($sayfa): void {
              "akis, mesajlar, profili duzenle sagdaki kullanici adinin alt menusu
              olsun; solda gazeteler ve konu basliklari olsun"). Hesap baglantilari
              ust bandin sagindaki menude (includes/network_ust.php). */ ?>
-    <aside class="nw-sol">
+    <?php /* TELEFONDA SOL MENU (17.11.2026, site sahibi: "telefondan goruntulemek icin sol menu
+             kapali; dort kareli dugmeye basinca acilan bir ekran gostersin"). Dar ekranda sol
+             kenar gizli; bu dugme onu tam ekran acar. Genis ekranda dugme gorunmez. */ ?>
+    <button type="button" class="nw-mobil-menu-dugme" aria-controls="nw-sol" aria-expanded="false" aria-label="Başlıklar ve gazeteler menüsünü aç">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>
+    </button>
+    <aside class="nw-sol" id="nw-sol">
+        <div class="nw-mobil-menu-ust">
+            <strong>Menü</strong>
+            <button type="button" class="nw-mobil-menu-kapat" aria-label="Menüyü kapat">✕</button>
+        </div>
         <button type="button" class="nw-yan-dugme" data-yan="sol" aria-expanded="true" aria-label="Sol menüyü daralt" title="Sol menüyü daralt / genişlet"><span aria-hidden="true">‹</span></button>
         <?php /* Basliklar ve gazeteler (13.11.2026): secilen baslik ya da gazetenin
                  haberleri ortada asagi dogru akar. data-konu: secim tarayicida
@@ -543,7 +553,19 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 });
             }
             function yaz() { try { if (bellek) { bellek.setItem('nw-yan', JSON.stringify(k)); } } catch (e) {} }
+            function mobil(ac) {
+                uc.classList.toggle('mobil-acik', ac);
+                document.documentElement.classList.toggle('nw-kaydirma-kilit', ac);
+                var m = uc.querySelector('.nw-mobil-menu-dugme');
+                if (m) { m.setAttribute('aria-expanded', ac ? 'true' : 'false'); }
+                if (ac) { var k = uc.querySelector('.nw-mobil-menu-kapat'); if (k) { k.focus(); } } else if (m) { m.focus(); }
+            }
+            document.addEventListener('keydown', function (o) { if (o.key === 'Escape' && uc.classList.contains('mobil-acik')) { mobil(false); } });
             function tikla(o) {
+                if (o.target.closest('.nw-mobil-menu-dugme')) { mobil(true); return; }
+                if (o.target.closest('.nw-mobil-menu-kapat')) { mobil(false); return; }
+                // Menude bir baglantiya basilinca ekran kapanir (sayfa yine de yuklenir).
+                if (uc.classList.contains('mobil-acik') && o.target.closest('.nw-sol a')) { mobil(false); }
                 var d = o.target.closest('.nw-yan-dugme');
                 if (d) { var y = d.getAttribute('data-yan'); k[y] = k[y] ? 0 : 1; yaz(); uygula(); return; }
                 var b = o.target.closest('[data-katla] > .nw-katla-bas');
