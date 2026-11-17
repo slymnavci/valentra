@@ -66,7 +66,8 @@
  * akis, sagda tanisilabilecek kisiler ve kurallar. Telefonda tek sutun,
  * ust bandin bolumleri alta yapisan bir sekme cubuguna donusuyor.
  */
-.nw-govde { background: color-mix(in srgb, var(--zemin) 70%, #e4e6eb); }
+/* 17.11.2026 (site sahibi: "arka renk biraz daha beyaza yakin olsun"): %70 -> %88 sayfa zemini. */
+.nw-govde { background: color-mix(in srgb, var(--zemin) 88%, #e4e6eb); }
 :where(:root[data-tema="koyu"]) .nw-govde { background: #18191a; }
 @media (prefers-color-scheme: dark) { :where(:root:not([data-tema="acik"])) .nw-govde { background: #18191a; }
 }
@@ -562,3 +563,21 @@ a.nw-hesap:hover { color: var(--altin); }
 .nw-manset-kutu li a { flex: 1; min-width: 0; color: var(--metin); text-decoration: none; font-weight: 600; font-size: .93rem; line-height: 1.35; }
 .nw-manset-kutu li a:hover { color: var(--altin); text-decoration: underline; }
 .nw-manset-kutu li time { color: var(--metin-soluk); font-size: .76rem; white-space: nowrap; }
+
+/* Gazete bolumleri (17.11.2026): Buyuk gazeteler, Yabanci medya, Yerel medya; altinda "Ulkelere gore". */
+.nw-bolum > summary { font-weight: 800; }
+.nw-sol-ara { display: block; margin: 14px 10px 6px; font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--metin-soluk); }
+
+/* Kucuk piyasa grafikleri (17.11.2026; bkz. nw_piyasa_grafigi_html): satirin altinda tam genislikte. */
+.nw-sag .nw-yan-kutu a.nw-grafikli { flex-wrap: wrap; }
+.nw-mini-grafik { flex: 1 0 100%; display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.nw-mini-grafik svg { flex: 1; min-width: 0; width: 100%; height: 30px; }
+.nw-mini-grafik small { font-size: .7rem; font-weight: 700; white-space: nowrap; }
+.nw-mini-grafik.artis { color: #1a7f37; }
+.nw-mini-grafik.dusus { color: #cf222e; }
+:where(:root[data-tema="koyu"]) .nw-mini-grafik.artis { color: #3fb950; }
+:where(:root[data-tema="koyu"]) .nw-mini-grafik.dusus { color: #f85149; }
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) .nw-mini-grafik.artis { color: #3fb950; }
+    :where(:root:not([data-tema="acik"])) .nw-mini-grafik.dusus { color: #f85149; }
+}

@@ -376,9 +376,27 @@ $solKenar = static function () use ($sayfa): void {
                 <strong class="nw-sol-baslik">Gazeteler</strong>
                 <a class="nw-sol-satir<?= $nwTumu ? ' aktif' : '' ?>" href="<?= e(nw_yol('', ['gorunum' => 'gazeteler'])) ?>" data-konu=""
                    <?= $nwTumu ? 'aria-current="page"' : '' ?>><span class="nw-sol-ad"><?= nw_konu_ikonu('gundem') ?>Tüm gazeteler</span></a>
+                <?php
+                /*
+                 * BOLUMLER (17.11.2026, site sahibi: "gazeteler menusunu toparlayalim; buyuk gazeteler,
+                 * yabanci medya (BBC, CNN, NYT, Fox...), yerel medya; sonra ulke ulke, basta Turkiye").
+                 * Buyuk gazeteler ve yabanci medya acik gelir; yerel medya ve ulkeler kapali.
+                 */
+                $nwBolum = nw_gazete_bolumleri();
+                foreach ([['buyuk', 'Büyük gazeteler', 'tr', true], ['yabanci', 'Yabancı medya', '', true], ['yerel', 'Yerel medya', 'tr', false]] as [$bk, $bAd, $bBayrak, $bAcik]):
+                    if ($nwBolum[$bk] === []) { continue; }
+                    $bSecili = isset($nwBolum[$bk][$nwGazete]); ?>
+                    <details class="nw-ulke nw-bolum" data-ulke="bolum-<?= e($bk) ?>"<?= $bAcik || $bSecili ? ' open' : '' ?>>
+                        <summary><?= $bBayrak !== '' ? nw_bayrak_html($bBayrak) : nw_konu_ikonu('dunya') ?><span><?= e($bAd) ?></span></summary>
+                        <div class="nw-ulke-ic">
+                            <?php foreach ($nwBolum[$bk] as $slug => $g): ?><?= $nwSatir((string) $slug, $g) ?><?php endforeach; ?>
+                        </div>
+                    </details>
+                <?php endforeach; ?>
+                <span class="nw-sol-ara">Ülkelere göre</span>
                 <?php foreach ($nwGruplar as $grup): ?>
                     <?php $secili = isset($grup['ana'][$nwGazete]) || isset($grup['yerel'][$nwGazete]); ?>
-                    <details class="nw-ulke" data-ulke="<?= e($grup['kod']) ?>"<?= $grup['kod'] === 'tr' || $secili ? ' open' : '' ?>>
+                    <details class="nw-ulke" data-ulke="<?= e($grup['kod']) ?>"<?= $secili && $grup['kod'] !== 'tr' ? ' open' : '' ?>>
                         <summary><?= nw_bayrak_html($grup['kod']) ?><span><?= e($grup['ad']) ?></span></summary>
                         <div class="nw-ulke-ic">
                             <?php if ($grup['kod'] === 'tr' && $grup['ana'] !== []): ?><span class="nw-ulke-alt">Ana gazeteler</span><?php endif; ?>
