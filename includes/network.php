@@ -1813,7 +1813,9 @@ function nw_ekonomi_kutusu_html(): string
             . '</a>';
     }
 
-    return '<div class="nw-yan-kutu nw-kutu-liste"><strong class="nw-kutu-bas">' . nw_konu_ikonu('ekonomi') . 'Ekonomi</strong>' . $html
+    // Kutu gorseli (17.11.2026, site sahibinin gonderdigi gorsel); basligin altinda, kutu daraltilinca gizlenir.
+    return '<div class="nw-yan-kutu nw-kutu-liste" data-katla="ekonomi"><strong class="nw-kutu-bas">' . nw_konu_ikonu('ekonomi') . 'Ekonomi</strong>'
+        . '<img class="nw-kutu-gorsel" src="/assets/network/ekonomi-960.webp" srcset="/assets/network/ekonomi-480.webp 480w, /assets/network/ekonomi-960.webp 960w" sizes="340px" width="960" height="320" loading="lazy" decoding="async" alt="">' . $html
         . '<a class="nw-kutu-tumu" href="' . e(piyasalar_yolu()) . '">Bütün piyasalar →</a></div>';
 }
 
@@ -1908,8 +1910,9 @@ function nw_spor_kutusu_html(): string
 
     $canli = count(array_filter($maclar, static fn (array $m): bool => !empty($m['canli'])));
 
-    return '<div class="nw-yan-kutu nw-kutu-liste nw-spor-kutu" data-canli-skor="/api/canli-skor.php">'
+    return '<div class="nw-yan-kutu nw-kutu-liste nw-spor-kutu" data-katla="spor" data-canli-skor="/api/canli-skor.php">'
         . '<strong class="nw-kutu-bas">' . nw_konu_ikonu('spor') . 'Spor</strong>'
+        . '<img class="nw-kutu-gorsel" src="/assets/network/spor-960.webp" srcset="/assets/network/spor-480.webp 480w, /assets/network/spor-960.webp 960w" sizes="340px" width="960" height="320" loading="lazy" decoding="async" alt="">'
         // Canli alan yalnizca mac oynanirken gorunur; betik mac baslayinca acar, bitince kapatir.
         . '<div class="nw-canli-alan"' . ($canli > 0 ? '' : ' hidden') . '>'
         . '<a class="nw-kutu-satir nw-canli-bas" href="' . e(spor_bolum_yolu('canli-skor')) . '"><span><strong>'

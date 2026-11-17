@@ -340,11 +340,12 @@ $solKenar = static function () use ($sayfa): void {
              olsun; solda gazeteler ve konu basliklari olsun"). Hesap baglantilari
              ust bandin sagindaki menude (includes/network_ust.php). */ ?>
     <aside class="nw-sol">
+        <button type="button" class="nw-yan-dugme" data-yan="sol" aria-expanded="true" aria-label="Sol menüyü daralt" title="Sol menüyü daralt / genişlet"><span aria-hidden="true">‹</span></button>
         <?php /* Basliklar ve gazeteler (13.11.2026): secilen baslik ya da gazetenin
                  haberleri ortada asagi dogru akar. data-konu: secim tarayicida
                  hatirlaniyor (assets/network-akis.js); gazete secimi hatirlanmaz. */ ?>
         <?php if ($nwKonular !== []): ?>
-            <nav class="nw-sol-grup" aria-label="Başlıklar">
+            <nav class="nw-sol-grup" aria-label="Başlıklar" data-katla="basliklar">
                 <strong class="nw-sol-baslik">Başlıklar</strong>
                 <?php $nwOnemli = $nwAkis && !empty($GLOBALS['onemli']); ?>
                 <a class="nw-sol-satir<?= $nwOnemli ? ' aktif' : '' ?>" href="<?= e(nw_yol()) ?>" data-konu=""
@@ -372,7 +373,7 @@ $solKenar = static function () use ($sayfa): void {
         };
         ?>
         <?php if ($nwGruplar !== []): ?>
-            <nav class="nw-sol-grup" aria-label="Gazeteler">
+            <nav class="nw-sol-grup" aria-label="Gazeteler" data-katla="gazeteler">
                 <strong class="nw-sol-baslik">Gazeteler</strong>
                 <a class="nw-sol-satir<?= $nwTumu ? ' aktif' : '' ?>" href="<?= e(nw_yol('', ['gorunum' => 'gazeteler'])) ?>" data-konu=""
                    <?= $nwTumu ? 'aria-current="page"' : '' ?>><span class="nw-sol-ad"><?= nw_konu_ikonu('gundem') ?>Tüm gazeteler</span></a>
@@ -456,7 +457,7 @@ $solKenar = static function () use ($sayfa): void {
 
 $kuralKutusu = static function (): void {
     ?>
-    <div class="nw-yan-kutu nw-kurallar">
+    <div class="nw-yan-kutu nw-kurallar" data-katla="kurallar">
         <strong>Topluluk kuralları</strong>
         <ul>
             <li>Küfür, hakaret ve nefret söylemi yasaktır.</li>
@@ -509,6 +510,56 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
 
 <?php if ($sayfa === 'akis'): ?>
     <div class="nw-uc">
+        <?php /*
+         * KISISEL YAN MENU (17.11.2026, site sahibi: "sag ve sol menuyu daraltma
+         * genisletme secenegi kisisel olsun; birisi bir kez duzeltirse her seferinde
+         * boyle acsin; basliklari da daraltma ve genisletme secenegi olsun").
+         * Secim bu tarayicida kalici (localStorage "nw-yan"): sol/sag menu daraltildi
+         * mi, hangi basliklar (data-katla) kapali. Sayfa kopyasi herkese ayni; tercih
+         * burada, cizimden ONCE uygulaniyor (menu acik gorunup sonra kapanmasin).
+         * Tiklamalar .nw-uc uzerinden yakalaniyor: asagida cizilen basliklar da calisir.
+         */ ?>
+        <script>
+        (function () {
+            var uc = document.currentScript.parentNode, bellek = null, k = { sol: 0, sag: 0, katli: [] };
+            try { bellek = window.localStorage; k = JSON.parse(bellek.getItem('nw-yan') || 'null') || k; } catch (e) {}
+            if (!Array.isArray(k.katli)) { k.katli = []; }
+            function uygula() {
+                uc.classList.toggle('sol-kapali', !!k.sol);
+                uc.classList.toggle('sag-kapali', !!k.sag);
+                uc.setAttribute('data-katli', k.katli.join(' '));
+                uc.querySelectorAll('.nw-yan-dugme').forEach(function (d) {
+                    var kapali = !!k[d.getAttribute('data-yan')], sol = d.getAttribute('data-yan') === 'sol';
+                    d.setAttribute('aria-expanded', kapali ? 'false' : 'true');
+                    d.setAttribute('aria-label', (sol ? 'Sol' : 'Sağ') + ' menüyü ' + (kapali ? 'genişlet' : 'daralt'));
+                    d.firstChild.textContent = (kapali === sol) ? '›' : '‹';
+                });
+                uc.querySelectorAll('[data-katla] > :first-child').forEach(function (b) {
+                    var ad = b.parentNode.getAttribute('data-katla');
+                    b.setAttribute('role', 'button');
+                    b.setAttribute('tabindex', '0');
+                    b.classList.add('nw-katla-bas');
+                    b.setAttribute('aria-expanded', k.katli.indexOf(ad) === -1 ? 'true' : 'false');
+                });
+            }
+            function yaz() { try { if (bellek) { bellek.setItem('nw-yan', JSON.stringify(k)); } } catch (e) {} }
+            function tikla(o) {
+                var d = o.target.closest('.nw-yan-dugme');
+                if (d) { var y = d.getAttribute('data-yan'); k[y] = k[y] ? 0 : 1; yaz(); uygula(); return; }
+                var b = o.target.closest('[data-katla] > .nw-katla-bas');
+                if (!b || o.target.closest('a')) { return; }
+                var ad = b.parentNode.getAttribute('data-katla'), i = k.katli.indexOf(ad);
+                if (i === -1) { k.katli.push(ad); } else { k.katli.splice(i, 1); }
+                yaz(); uygula();
+            }
+            uygula();
+            uc.addEventListener('click', tikla);
+            uc.addEventListener('keydown', function (o) {
+                if ((o.key === 'Enter' || o.key === ' ') && o.target.classList && o.target.classList.contains('nw-katla-bas')) { o.preventDefault(); tikla(o); }
+            });
+            document.addEventListener('DOMContentLoaded', uygula);
+        })();
+        </script>
         <?php $solKenar(); ?>
         <div class="nw-orta">
             <?php /* Akista paylasim kutusu, gorunum sekmeleri ve uye paylasimi yok (site sahibi,
@@ -676,9 +727,10 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
         try { sessionStorage.removeItem('nw-donus'); } catch (e) {}
         </script>
         <aside class="nw-sag">
+            <button type="button" class="nw-yan-dugme" data-yan="sag" aria-expanded="true" aria-label="Sağ menüyü daralt" title="Sağ menüyü daralt / genişlet"><span aria-hidden="true">›</span></button>
             <?php if ($uye === null): ?>
                 <?php // Uye olmayan ziyaretci sagdan uye olur (13.11.2026); ust banttaki "Uye ol" menusu de ayni secenekleri verir. ?>
-                <div class="nw-yan-kutu">
+                <div class="nw-yan-kutu" data-katla="katil">
                     <strong>V Network'e katılın</strong>
                     <p>Haberleri konuşun, paylaşım yapın, yeni insanlarla tanışın.</p>
                     <?php require_once __DIR__ . '/includes/uye_google.php'; ?>
@@ -691,7 +743,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <?= nw_ekonomi_kutusu_html() ?>
             <?= nw_spor_kutusu_html() ?>
             <?php if ($etkilesimHaberleri !== []): ?>
-                <div class="nw-yan-kutu nw-gundem">
+                <div class="nw-yan-kutu nw-gundem" data-katla="etkilesim">
                     <strong>En çok etkileşim alan haberler</strong>
                     <ol>
                         <?php foreach ($etkilesimHaberleri as $h): ?>
@@ -708,7 +760,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 </div>
             <?php endif; ?>
             <?php if ($begenilenHaberler !== []): ?>
-                <div class="nw-yan-kutu nw-gundem">
+                <div class="nw-yan-kutu nw-gundem" data-katla="begenilen">
                     <strong>En çok beğenilen haberler</strong>
                     <ol>
                         <?php foreach ($begenilenHaberler as $h): ?>
@@ -724,7 +776,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 </div>
             <?php endif; ?>
             <?php if ($populerKonular !== []): ?>
-                <div class="nw-yan-kutu nw-konular">
+                <div class="nw-yan-kutu nw-konular" data-katla="populer">
                     <strong>En popüler konular</strong>
                     <ul>
                         <?php foreach ($populerKonular as $k): ?>
@@ -734,7 +786,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 </div>
             <?php endif; ?>
             <?php if ($oneriler !== []): ?>
-                <div class="nw-yan-kutu">
+                <div class="nw-yan-kutu" data-katla="kisiler">
                     <strong>Tanışabileceğin kişiler</strong>
                     <?php foreach ($oneriler as $k): ?>
                         <?= nw_kisi_html($k, $takipEdilenler, $buYol, true) ?>

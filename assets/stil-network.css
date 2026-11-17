@@ -581,3 +581,46 @@ a.nw-hesap:hover { color: var(--altin); }
     :where(:root:not([data-tema="acik"])) .nw-mini-grafik.artis { color: #3fb950; }
     :where(:root:not([data-tema="acik"])) .nw-mini-grafik.dusus { color: #f85149; }
 }
+
+/* Kisisel yan menu (17.11.2026; bkz. network.php, "nw-yan"): sol / sag menu daraltilir,
+   basliklar katlanir. Tercih tarayicida kalici. */
+.nw-yan-dugme {
+    justify-self: end; width: 30px; height: 30px; border-radius: 50%;
+    border: 1px solid var(--cizgi); background: var(--kart); color: var(--metin-soluk);
+    font: 700 1.1rem/1 inherit; cursor: pointer; box-shadow: var(--golge);
+}
+.nw-sag .nw-yan-dugme { justify-self: start; }
+.nw-yan-dugme:hover { color: var(--altin); border-color: var(--altin); }
+.nw-uc.sol-kapali { grid-template-columns: 36px minmax(0, 980px) 340px; }
+.nw-uc.sag-kapali { grid-template-columns: 300px minmax(0, 980px) 36px; }
+.nw-uc.sol-kapali.sag-kapali { grid-template-columns: 36px minmax(0, 980px) 36px; }
+.nw-uc.sol-kapali .nw-sol > :not(.nw-yan-dugme),
+.nw-uc.sag-kapali .nw-sag > :not(.nw-yan-dugme) { display: none; }
+.nw-uc.sol-kapali .nw-sol { overflow: visible; padding-right: 0; }
+@media (max-width: 1180px) {
+    .nw-uc.sol-kapali, .nw-uc.sol-kapali.sag-kapali { grid-template-columns: 36px minmax(0, 1fr); }
+    .nw-uc.sag-kapali { grid-template-columns: 220px minmax(0, 1fr); }
+}
+@media (max-width: 860px) {
+    .nw-uc.sol-kapali, .nw-uc.sag-kapali, .nw-uc.sol-kapali.sag-kapali { grid-template-columns: minmax(0, 1fr); }
+}
+.nw-katla-bas { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 8px; }
+.nw-katla-bas::after {
+    content: ""; margin-left: auto; width: 7px; height: 7px; flex: none;
+    border-right: 2px solid var(--metin-soluk); border-bottom: 2px solid var(--metin-soluk);
+    transform: rotate(45deg) translateY(-2px); transition: transform .15s;
+}
+.nw-katla-bas[aria-expanded="false"]::after { transform: rotate(-45deg); }
+.nw-katla-bas:hover { color: var(--altin); }
+.nw-katla-bas:focus-visible { outline: 2px solid var(--altin); outline-offset: 2px; border-radius: 4px; }
+.nw-uc[data-katli~="basliklar"] [data-katla="basliklar"] > :not(:first-child),
+.nw-uc[data-katli~="gazeteler"] [data-katla="gazeteler"] > :not(:first-child),
+.nw-uc[data-katli~="ekonomi"] [data-katla="ekonomi"] > :not(:first-child),
+.nw-uc[data-katli~="spor"] [data-katla="spor"] > :not(:first-child),
+.nw-uc[data-katli~="katil"] [data-katla="katil"] > :not(:first-child),
+.nw-uc[data-katli~="etkilesim"] [data-katla="etkilesim"] > :not(:first-child),
+.nw-uc[data-katli~="begenilen"] [data-katla="begenilen"] > :not(:first-child),
+.nw-uc[data-katli~="populer"] [data-katla="populer"] > :not(:first-child),
+.nw-uc[data-katli~="kisiler"] [data-katla="kisiler"] > :not(:first-child),
+.nw-uc[data-katli~="kurallar"] [data-katla="kurallar"] > :not(:first-child) { display: none !important; }
+.nw-kutu-gorsel { display: block; width: 100%; height: auto; aspect-ratio: 3 / 1; object-fit: cover; border-radius: 8px; margin: 2px 0 8px; background: #fff; }
