@@ -1294,7 +1294,8 @@ function nw_gazete_adi(string $kaynakAdi): string
     $ad = kaynak_gorunen_ad($ad);
 
     // Ayni yayinin iki adi tek gazetede toplansin (14.11.2026: "Sözcü Gazetesi" ile "Sözcü Gündem" ayri gorunmesin).
-    return ['Sözcü Gazetesi' => 'Sözcü'][$ad] ?? $ad;
+    // "News" eki adin kendisi olan yayinlarda geri (17.11.2026: "Fox News" -> "Fox" oluyordu, Yabanci medya listesinde gorunmuyordu).
+    return ['Sözcü Gazetesi' => 'Sözcü', 'Fox' => 'Fox News', 'Sky' => 'Sky News'][$ad] ?? $ad;
 }
 
 /** Yayin adinin adresteki hali: "Habertürk" -> "haberturk". */
@@ -1302,6 +1303,9 @@ function nw_gazete_slug(string $ad): string
 {
     $s = strtr(mb_strtolower(strtr($ad, ['İ' => 'i', 'I' => 'ı']), 'UTF-8'), [
         'ç' => 'c', 'ğ' => 'g', 'ı' => 'i', 'ö' => 'o', 'ş' => 's', 'ü' => 'u', 'â' => 'a', 'î' => 'i', 'û' => 'u',
+        // Yabanci yayin adlari (17.11.2026: "El País" -> "el-pa-s" oluyordu).
+        'á' => 'a', 'à' => 'a', 'ä' => 'a', 'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e', 'í' => 'i', 'ì' => 'i', 'ï' => 'i',
+        'ó' => 'o', 'ò' => 'o', 'ô' => 'o', 'ú' => 'u', 'ù' => 'u', 'ñ' => 'n', 'ß' => 'ss', 'ø' => 'o', 'å' => 'a',
     ]);
 
     return trim((string) preg_replace('/[^a-z0-9]+/', '-', $s), '-');
