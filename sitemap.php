@@ -64,6 +64,14 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
         <loc><?= e($taban) ?>/</loc>
         <changefreq>hourly</changefreq>
     </url>
+    <?php /* Arama sayfalari (17.11.2026; bkz. NW_KONU_SEO): V Network'un baslik sayfalari. Kim ne yazdi dizin disi kalir: icerigi baska yayinlarin basliklari. */ ?>
+    <?php require_once __DIR__ . '/includes/network.php'; ?>
+    <?php foreach (array_keys(NW_KONU_SEO) as $nwKonu): ?>
+    <url>
+        <loc><?= e($taban . nw_yol('', ['konu' => $nwKonu])) ?></loc>
+        <changefreq>hourly</changefreq>
+    </url>
+    <?php endforeach; ?>
     <?php /* Haber sitesinin on sayfasi (14.11.2026: kok adres artik V Network). */ ?>
     <url>
         <loc><?= e($taban . haber_ana_yolu()) ?></loc>

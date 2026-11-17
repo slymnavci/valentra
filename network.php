@@ -318,8 +318,23 @@ if ($yol === '' && array_diff_key($_GET, ['yol' => 1]) === []) {
     // Buyuk gorsel izni (Google Discover / Haberler): haber sitesinin on sayfasiyla ayni etiket.
     $seoRobots     = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
     $seoAdres      = site_adresi() . '/';
-    $sayfaBasligi  = 'Valentra — Günün önemli haberleri, gazete gazete';
-    $sayfaAciklama = 'Türkiye ve dünyadan günün önemli haberleri: hangi gazete ne yazdı, manşetler, son haberler, ekonomi ve canlı skorlar. Her haberin özeti ve kaynağı.';
+    // Aranan sozcuklerle (17.11.2026): "haber ozetleri", "guncel haberler", "dunyadan haber".
+    $sayfaBasligi  = 'Valentra — Güncel Haber Özetleri: Türkiye ve Dünyadan Haberler, Gazete Gazete';
+    $sayfaAciklama = 'Güncel haber özetleri: Türkiye ve dünyadan günün önemli haberleri, gazetelerin manşetleri, son dakika, ekonomi, spor ve yapay zekâ haberleri. Her haberin kısa özeti ve kaynak gazetesi.';
+}
+
+/*
+ * Baslik sayfalari arama icin acik (17.11.2026; bkz. NW_KONU_SEO): yalnizca
+ * ?konu=... ile (baska parametre yokken).
+ */
+$nwKonuSeo = $yol === '' && ($konu ?? '') !== '' && isset(NW_KONU_SEO[$konu]) && array_diff_key($_GET, ['yol' => 1, 'konu' => 1]) === []
+    ? NW_KONU_SEO[$konu] : null;
+
+if ($nwKonuSeo !== null) {
+    $seoRobots     = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
+    $seoAdres      = site_adresi() . nw_yol('', ['konu' => $konu]);
+    $sayfaBasligi  = $nwKonuSeo[0];
+    $sayfaAciklama = $nwKonuSeo[2];
 }
 
 require __DIR__ . '/includes/sayfa_ust.php';
@@ -660,6 +675,14 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <?php if ($akisGorunumu && $onemli && (int) ($_GET['atla'] ?? 0) === 0): ?>
                 <?= nw_gazete_mansetleri_html() ?>
 
+            <?php endif; ?>
+
+            <?php /* Baslik sayfasinin tanitimi (17.11.2026; bkz. NW_KONU_SEO): aranan sozcukler sayfanin kendisinde de. */ ?>
+            <?php if ($konu !== '' && $gazete === '' && $dal === '' && isset(NW_KONU_SEO[$konu]) && (int) ($_GET['atla'] ?? 0) === 0 && $once === 0): ?>
+                <header class="nw-gazete-ust">
+                    <h1><?= nw_konu_ikonu($konu) ?><?= e(NW_KONU_SEO[$konu][1]) ?></h1>
+                    <p><?= e(NW_KONU_SEO[$konu][2]) ?></p>
+                </header>
             <?php endif; ?>
 
             <?php if ($gazete !== ''): ?>

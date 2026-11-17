@@ -1192,6 +1192,13 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     bekle(nw_gazete_adi('Hürriyet Ana Sayfa') === 'Hürriyet' && nw_gazete_adi('Habertürk Manşet') === 'Habertürk', 'ana sayfa / manşet beslemeleri yayının adında toplanıyor');
     db()->exec('DELETE FROM gundem_basliklari');
 
+    // Yapay zeka sanal konusu (17.11.2026): basliktan / etiketten, her kategoriden.
+    ekle([haber('OpenAI yeni yapay zeka modelini tanıttı', $olagan + ['kategori' => 'ekonomi']), haber('Belediye yeni park açtı', $olagan + ['kategori' => 'gundem'])]);
+    db()->exec("UPDATE haberler SET durum = 'yayinda', yayin_tarihi = COALESCE(yayin_tarihi, NOW()), guncellendi = guncellendi");
+    $yz = array_map(static fn (array $o): string => (string) $o['veri']['baslik'], nw_akis(30, 0, null, null, NW_YAPAY_ZEKA, '', true)['ogeler']);
+    bekle($yz === ['OpenAI yeni yapay zeka modelini tanıttı'], 'Yapay Zekâ başlığı: yalnızca başlığında / etiketinde yapay zekâ geçen haberler', implode(' | ', $yz));
+    bekle(isset(NW_KONU_SEO['dunya'], NW_KONU_SEO['yapay-zeka']) && str_contains(NW_KONU_SEO['dunya'][0], 'Dünya Haber Özetleri'), 'arama sayfalarının başlıkları aranan sözcükleri taşıyor');
+
     // Sag kenar kutulari (14.11.2026): kaynaklari beklemez, veri yoksa da cizilir.
     $eko = nw_ekonomi_kutusu_html();
     bekle(str_contains($eko, 'Döviz') && str_contains($eko, 'Kripto paralar') && str_contains($eko, 'bolum=doviz') && !str_contains($eko, '—'),
