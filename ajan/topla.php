@@ -1640,9 +1640,18 @@ if ($gundem !== []) {
  * SAYGIN_ONDE_ADET adayi, ayni kapsamdaki digerlerinin onune alinir (tek
  * yayin listeyi doldurmasin diye yalnizca birkac aday).
  */
-const SAYGIN_YAYIN_ALANLARI = ['cnn.com', 'foxnews.com', 'bbc.com', 'bbc.co.uk', 'nytimes.com', 'washingtonpost.com', 'reuters.com',
-    'apnews.com', 'theguardian.com', 'ft.com', 'economist.com', 'aljazeera.com', 'lemonde.fr', 'lefigaro.fr', 'spiegel.de',
-    'elpais.com', 'independent.co.uk', 'wsj.com'];
+/*
+ * Iki kademe (17.11.2026): ilk calismada 16 saygin yayinin hepsi one alininca
+ * 20 kisilik dunya kontenjani El Pais, Le Monde, Spiegel gibi yayinlarla
+ * doldu; site sahibinin adiyla istedigi CNN ve Fox yine giremedi. Kademe 2
+ * (adiyla istenenler ve ABD/Ingiltere'nin en bilinenleri) kademe 1'in onunde.
+ */
+const SAYGIN_YAYIN_ALANLARI = [
+    'cnn.com' => 2, 'foxnews.com' => 2, 'bbc.com' => 2, 'bbc.co.uk' => 2, 'nytimes.com' => 2, 'washingtonpost.com' => 2,
+    'reuters.com' => 2, 'apnews.com' => 2,
+    'theguardian.com' => 1, 'independent.co.uk' => 1, 'ft.com' => 1, 'economist.com' => 1, 'aljazeera.com' => 1, 'lemonde.fr' => 1,
+    'lefigaro.fr' => 1, 'spiegel.de' => 1, 'elpais.com' => 1, 'wsj.com' => 1,
+];
 const SAYGIN_ONDE_ADET = 3;
 
 $sayginSayac = [];
@@ -1651,8 +1660,16 @@ usort($sayginSira, static fn (int $x, int $y): int => $adaylar[$y]['puan'] <=> $
 
 foreach ($sayginSira as $i) {
     $alan = (string) preg_replace('/^(www|edition|feeds|rss|moxie)\./', '', strtolower((string) parse_url((string) ($adaylar[$i]['kaynak']['site_url'] ?? ''), PHP_URL_HOST)));
-    $saygin = array_filter(SAYGIN_YAYIN_ALANLARI, static fn (string $s): bool => $alan === $s || str_ends_with($alan, '.' . $s)) !== [];
-    $adaylar[$i]['saygin'] = $saygin && ($sayginSayac[$alan] = ($sayginSayac[$alan] ?? 0) + 1) <= SAYGIN_ONDE_ADET ? 1 : 0;
+    $kademe = 0;
+
+    foreach (SAYGIN_YAYIN_ALANLARI as $sAlan => $sKademe) {
+        if ($alan === $sAlan || str_ends_with($alan, '.' . $sAlan)) {
+            $kademe = $sKademe;
+            break;
+        }
+    }
+
+    $adaylar[$i]['saygin'] = $kademe > 0 && ($sayginSayac[$alan] = ($sayginSayac[$alan] ?? 0) + 1) <= SAYGIN_ONDE_ADET ? $kademe : 0;
 }
 
 // Önce Google'da çok arananlar, sonra çok kaynakta geçenler (kapsam), sonra
