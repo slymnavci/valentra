@@ -7,7 +7,7 @@
         <a href="<?= e(haber_ana_yolu()) ?>">Valentra Haber</a>
         <?php /* Guven sinyali (17.11.2026): yayin ilkeleri, kunye, hakkimizda Network sayfalarindan da. */ ?>
         <?php require_once __DIR__ . '/kurumsal.php'; ?>
-        <?php foreach (['hakkimizda' => 'Hakkımızda', 'yayin-ilkeleri' => 'Yayın İlkeleri', 'kunye' => 'Künye', 'iletisim' => 'İletişim'] as $kAnahtar => $kAd): ?>
+        <?php foreach (['hakkimizda' => 'Hakkımızda', 'yayin-ilkeleri' => 'Yayın İlkeleri', 'yayin-masalari' => 'Yayın Masaları', 'kunye' => 'Künye', 'iletisim' => 'İletişim'] as $kAnahtar => $kAd): ?>
             <a href="<?= e(kurumsal_yolu($kAnahtar)) ?>"><?= e($kAd) ?></a>
         <?php endforeach; ?>
     </footer>

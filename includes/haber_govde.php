@@ -63,7 +63,12 @@ foreach (($govdeVeri ?? []) as $ad => $deger) {
     ?>
     <div class="kunye">
         <?php /* Imza yayin ilkelerine bagli: kimin, hangi kurallarla hazirladigi tek tikla. */ ?>
-        <a class="hazirlayan" href="<?= e(kurumsal_yolu('yayin-ilkeleri')) ?>">Valentra Yayın Kurulu</a>
+        <?php
+        // Imza konunun masasi (19.11.2026; bkz. includes/masalar.php): Ekonomi Masasi, Teknoloji Masasi...
+        require_once __DIR__ . '/masalar.php';
+        $masa = haber_masasi($haber);
+        ?>
+        <a class="hazirlayan" href="<?= e($masa['yol']) ?>" rel="author">Valentra <?= e($masa['ad']) ?></a>
         <span>&middot; <?= e(tarih_bicimle($haber['yayin_tarihi'])) ?></span>
 
         <?php if ($revize): ?>

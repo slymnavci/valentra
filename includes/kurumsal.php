@@ -87,6 +87,8 @@ function kurumsal_sayfalar(): array
     return [
         'hakkimizda'     => 'Hakkımızda',
         'yayin-ilkeleri' => 'Yayın İlkeleri',
+        // Haber imzasi olan masalar (19.11.2026; bkz. includes/masalar.php).
+        'yayin-masalari' => 'Yayın Masaları',
         'kunye'          => 'Künye',
         'iletisim'       => 'İletişim',
         // Gizlilik ve cerezler (29.10.2026): Google Analytics ve AdSense icin

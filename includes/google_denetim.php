@@ -791,6 +791,37 @@ function google_denetimi(int $sureButcesi = 80): array
         $ekle('İçerik', 'Görselsiz / özetsiz haber (Google\'a sunulanlar)', ((int) $s['gorselsiz'] + (int) $s['ozetsiz']) === 0 ? 'tamam' : 'uyari',
             (int) $s['gorselsiz'] . ' görselsiz, ' . (int) $s['ozetsiz'] . ' özetsiz',
             ((int) $s['gorselsiz'] + (int) $s['ozetsiz']) === 0 ? '' : 'Discover ve Haberler görselsiz haberi göstermez; özet arama sonucundaki açıklamadır.');
+
+        // Discover gorsel olcusu (19.11.2026; bkz. HABER_DISCOVER_EN_AZ_GENISLIK): son 2 gunun Google'a sunulan haberleri.
+        require_once __DIR__ . '/gorsel_onbellek.php';
+        $buyuk = $kucuk = $olculemeyen = 0;
+        $ornekKucuk = [];
+
+        foreach (db()->query(
+            "SELECT h.id, h.slug, h.gorsel_url, k.slug AS kategori_slug FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
+              WHERE h.durum = 'yayinda' AND h.yayin_tarihi >= NOW() - INTERVAL 2 DAY AND " . haber_dizinlenir_kosulu('h') . '
+              ORDER BY h.yayin_tarihi DESC LIMIT 300'
+        )->fetchAll() as $hg) {
+            $boyut = haber_gorsel_boyutu(haber_gorsel($hg));
+
+            if ($boyut === null) {
+                $olculemeyen++;
+            } elseif ($boyut[0] >= HABER_DISCOVER_EN_AZ_GENISLIK) {
+                $buyuk++;
+            } else {
+                $kucuk++;
+                if (count($ornekKucuk) < 3) {
+                    $ornekKucuk[] = '/haber/' . $hg['slug'] . ' (' . $boyut[0] . ' px)';
+                }
+            }
+        }
+
+        $olculen = $buyuk + $kucuk;
+        $ekle('Google Discover / Haberler', 'Büyük görsel (en az ' . HABER_DISCOVER_EN_AZ_GENISLIK . ' piksel, son 2 gün)',
+            $olculen === 0 || $buyuk * 10 >= $olculen * 8 ? 'tamam' : 'uyari',
+            $buyuk . ' büyük, ' . $kucuk . ' küçük' . ($olculemeyen > 0 ? ', ' . $olculemeyen . ' ölçülemedi (görsel henüz sunucuda değil)' : '')
+            . ($olculen > 0 ? ' — büyük oranı %' . (int) round($buyuk * 100 / $olculen) : ''),
+            $kucuk > 0 ? 'Küçük görselli haber Discover\'da küçük resimle çıkar. Örnek: ' . implode(', ', $ornekKucuk) : '');
     } catch (Throwable $e) {
         $ekle('İçerik', 'Veritabanı', 'hata', $e->getMessage());
     }

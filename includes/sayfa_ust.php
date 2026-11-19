@@ -142,6 +142,10 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
     <meta property="og:description" content="<?= e($sayfaAciklama) ?>">
     <meta property="og:url" content="<?= e($seoAdres) ?>">
     <meta property="og:image" content="<?= e($seoGorsel) ?>">
+    <?php if (!empty($seoGorselBoyut)): ?>
+    <meta property="og:image:width" content="<?= (int) $seoGorselBoyut[0] ?>">
+    <meta property="og:image:height" content="<?= (int) $seoGorselBoyut[1] ?>">
+    <?php endif; ?>
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="<?= e($sayfaBasligi) ?>">
