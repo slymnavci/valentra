@@ -1340,6 +1340,14 @@ senaryo('Z', 'Ziyaret sayımı: her IP bir kişi; bot şüphelileri ayrı listed
     require_once __DIR__ . '/../includes/ziyaret_rapor.php';
 
     db()->exec("DELETE FROM ziyaretler WHERE yol LIKE '/sinama%'");
+
+    // Dogrulama basladi (sitede api/gorunum.php ilk dogrulamada yaziyor). Ayar yoksa
+    // ziyaret_insan_kosulu her satiri kabul ediyor (sayilar sifira inmesin) ve
+    // dogrulanmayan satir da ziyaretci sayilirdi. Satirlar bu andan sonra.
+    $eskiBaslangic = ayar_oku('olcum_baslangic');
+    ayar_yaz('olcum_baslangic', date('Y-m-d H:i:s', time() - 3600));
+    bekle(ziyaret_olcum_baslangici() !== '', 'doğrulama başlangıcı okunuyor (önbellekte boş kalmadı)');
+
     $e = db()->prepare('INSERT INTO ziyaretler (zaman, ziyaretci, ip, yol, insan, tarayici_id, cihaz) VALUES (NOW() - INTERVAL ? SECOND, ?, ?, ?, ?, ?, ?)');
     $e->execute([60, 'aaaaaaaaaaaaaaaa', '85.100.1.1', '/sinama1', 1, '1111111111111111', 'mobil']);
     $e->execute([50, 'bbbbbbbbbbbbbbbb', '85.100.1.1', '/sinama2', 1, '2222222222222222', 'masaustu']);
@@ -1372,6 +1380,11 @@ senaryo('Z', 'Ziyaret sayımı: her IP bir kişi; bot şüphelileri ayrı listed
     bekle(count(zr_gezinti('85.100.1.1')) === 2 && zr_gezinti("1' OR '1") === [], 'gezinti IP ile açılıyor; geçersiz kimlik sorguya girmiyor');
 
     db()->exec("DELETE FROM ziyaretler WHERE yol LIKE '/sinama%'");
+    if ($eskiBaslangic === '') {
+        ayar_sil('olcum_baslangic');
+    } else {
+        ayar_yaz('olcum_baslangic', $eskiBaslangic);
+    }
 });
 
 temizle();
