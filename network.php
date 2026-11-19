@@ -222,7 +222,8 @@ switch ($sayfa) {
     case 'profil':
         $kisi = nw_uye_bul($detayId);
 
-        if ($kisi === null) {
+        // Baskasinin profili yalnizca yoneticiye (bkz. nw_profil_acik).
+        if ($kisi === null || !nw_profil_acik($detayId)) {
             nw_bulunamadi();
         }
 
@@ -1009,7 +1010,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <?php if ($detayId > 0): ?>
                 <header class="nw-sohbet-ust">
                     <a class="nw-geri-mobil" href="<?= e(nw_yol('mesajlar')) ?>" aria-label="Sohbetlere dön">←</a>
-                    <a href="<?= e(nw_profil_yolu($detayId)) ?>"><?= uye_simge_html($karsi, 40) ?><strong><?= e((string) $karsi['ad']) ?></strong></a>
+                    <?= nw_profil_bag($detayId, uye_simge_html($karsi, 40) . '<strong>' . e((string) $karsi['ad']) . '</strong>', 'nw-sohbet-kisi') ?>
                 </header>
                 <div class="nw-baloncuklar" id="nw-baloncuklar">
                     <?php if ($mesajlar === []): ?>
@@ -1051,7 +1052,8 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                     <?php
                     $gid = (int) ($b['gonderi_id'] ?? 0);
                     [$hedef, $metin] = match ((string) $b['tur']) {
-                        'takip'  => [nw_profil_yolu((int) $b['yapan_id']), 'seni takip etmeye başladı.'],
+                        // Profil yalnizca yoneticiye acik: digerleri kendi takipci listesine gider.
+                        'takip'  => [nw_profil_acik((int) $b['yapan_id']) ? nw_profil_yolu((int) $b['yapan_id']) : nw_yol('u/' . (int) $uyeId, ['sekme' => 'takipciler']), 'seni takip etmeye başladı.'],
                         'begeni' => [nw_gonderi_yolu($gid), 'paylaşımını beğendi.'],
                         default  => [nw_gonderi_yolu($gid) . '#yorum-' . (int) $b['yorum_id'], 'paylaşımına yorum yaptı:'],
                     };

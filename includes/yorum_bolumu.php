@@ -49,10 +49,10 @@ function yorum_bolumu_html(array $hedef, ?array $ozet, string $donus, string $tu
             <ul class="yorum-listesi">
                 <?php foreach ($yorumlar as $y): ?>
                     <li class="yorum" id="yorum-<?= (int) $y['id'] ?>">
-                        <a href="<?= e(nw_profil_yolu((int) $y['uye_id'])) ?>" tabindex="-1" aria-hidden="true"><?= uye_simge_html($y) ?></a>
+                        <?= nw_profil_bag((int) $y['uye_id'], uye_simge_html($y), '', true) ?>
                         <div class="yorum-govde">
                             <div class="yorum-balon">
-                                <a class="yorum-ad" href="<?= e(nw_profil_yolu((int) $y['uye_id'])) ?>"><?= e((string) $y['ad']) ?><?= uye_rozet_html($y) ?></a>
+                                <?= nw_profil_bag((int) $y['uye_id'], e((string) $y['ad']) . uye_rozet_html($y), 'yorum-ad') ?>
                                 <p><?= yorum_metin_html((string) $y['metin']) ?></p>
                             </div>
                             <div class="yorum-alt">

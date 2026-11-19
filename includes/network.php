@@ -45,6 +45,38 @@ function nw_profil_yolu(int $uyeId): string
     return nw_yol('u/' . $uyeId);
 }
 
+/*
+ * PROFILLER YALNIZCA YONETICIYE VE KENDISINE (19.11.2026, site sahibi:
+ * "yonetici olmayanlar diger uyeleri gormesin"). Kisiler sayfasi zaten
+ * yalnizca yoneticideydi (01.11.2026) ama profiller herkese aciktı;
+ * adresler sirali (u/1, u/2...) oldugu icin tek tek denenerek butun uyeler
+ * bulunabiliyordu. Artik baskasinin profili yoneticiye acik, digerlerine
+ * 404. Yorum ve paylasimlardaki isimler de yalnizca yoneticide baglanti.
+ * Ziyaretci sayfalari onbellege giriyor ama ziyaretci yonetici olamaz;
+ * uye ve yonetici sayfalari onbellege girmiyor, yani baglantili hali sizmiyor.
+ */
+function nw_profil_acik(int $uyeId): bool
+{
+    $uye = aktif_uye();
+
+    return $uye !== null && (uye_yonetici_mi($uye) || (int) $uye['id'] === $uyeId);
+}
+
+/**
+ * Uyenin adi ya da simgesi: profili gorebilene baglanti, digerine duz metin.
+ * $ic HTML (cagiran kacisli verir).
+ */
+function nw_profil_bag(int $uyeId, string $ic, string $sinif = '', bool $sus = false): string
+{
+    $sinifHtml = $sinif !== '' ? ' class="' . e($sinif) . '"' : '';
+
+    if (!nw_profil_acik($uyeId)) {
+        return '<span' . $sinifHtml . ($sus ? ' aria-hidden="true"' : '') . '>' . $ic . '</span>';
+    }
+
+    return '<a' . $sinifHtml . ' href="' . e(nw_profil_yolu($uyeId)) . '"' . ($sus ? ' tabindex="-1" aria-hidden="true"' : '') . '>' . $ic . '</a>';
+}
+
 function nw_gonderi_yolu(int $gonderiId): string
 {
     return nw_yol('g/' . $gonderiId);
