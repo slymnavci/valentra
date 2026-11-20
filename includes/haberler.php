@@ -911,6 +911,8 @@ function haber_ana_akis_kosulu(bool $yerelDahil = false, bool $konuSiniri = true
         . ($yerelDahil ? '' : ' AND ' . haber_yerel_kosulu())
         // Siradan spor haberi ana akista yok ($sporDahil: "Senin Icin"de sporu secen okur).
         . ($sporDahil ? '' : ' AND ' . haber_siradan_spor_disi_kosulu())
+        // Tekrar diye isaretlenen haber yayinda ama ana sayfada yok (20.11.2026; bkz. haber_tekrar_bekletilir).
+        . (haber_sutun_var('tekrar_id') ? ' AND h.tekrar_id IS NULL' : '')
         . ($konuSiniri ? haber_konu_siniri_kosulu() : '');
 }
 
@@ -2045,11 +2047,25 @@ function haber_otomatik_yayinla(int $id, bool $hizli = false): bool
 
 /**
  * Tek konu, tek haber (08.11.2026; bkz. konu_tekrar_bul): haber yayindaki
- * bir haberin tekrariysa ya da konusu dolmussa taslakta birakilir ve
- * isaretlenir (tekrar_id); sonraki otomatik yayin turlarinda yeniden
- * denenmez. Ozgun veri haberleri (valentra-*) ve derlemeler bekletilmez.
+ * bir haberin tekrariysa ya da konusu dolmussa isaretlenir (tekrar_id).
+ * Ozgun veri haberleri (valentra-*) ve derlemeler isaretlenmez.
+ *
+ * ARTIK BEKLETMIYOR (20.11.2026, site sahibi: "haberler onay beklemeden
+ * yayinlansin demistim"): isaretli haber de yayina giriyor, yalnizca ana
+ * sayfa akisinda yok (haber_ana_akis_kosulu: tekrar_id IS NULL). Boylece
+ * panelde onay bekleyen haber kalmiyor, ana sayfada ayni olay yine iki
+ * kez cikmiyor. Haber sayfasi, konu sayfasi ve aramada duruyor. Islev
+ * her zaman false donuyor; isaretleme yan etkisi icin cagriliyor.
  */
 function haber_tekrar_bekletilir(int $id): bool
+{
+    haber_tekrar_isaretle($id);
+
+    return false;
+}
+
+/** Haberi tekrar diye işaretler (tekrar_id); işaretlendiyse true. */
+function haber_tekrar_isaretle(int $id): bool
 {
     if (!haber_sutun_var('tekrar_id')) {
         return false;
@@ -2134,7 +2150,7 @@ function haber_bugunku_taslaklari_yayinla(): int
         'SELECT id FROM haberler
           WHERE durum = :taslak
             AND ' . haber_guven_esigi_kosulu() . '
-            ' . (haber_sutun_var('tekrar_id') ? 'AND tekrar_id IS NULL' : '') . '
+            ' . /* tekrar diye bekletilenler de (20.11.2026; bkz. haber_tekrar_bekletilir) */ '
             ' . (haber_sutun_var('inceleme') ? "AND inceleme = ''" : '') . '
           ORDER BY id'
     );
