@@ -78,7 +78,7 @@
 .nw-sayfa { padding: 18px 0 40px; }
 .nw-bildirim { max-width: 680px; margin: 0 auto 14px; }
 
-.nw-uc { display: grid; grid-template-columns: 300px minmax(0, 980px) 340px; justify-content: space-between; gap: 24px; align-items: start; }
+.nw-uc { display: grid; grid-template-columns: 300px minmax(0, 980px) 300px; justify-content: space-between; gap: 24px; align-items: start; }
 .nw-sol, .nw-sag { position: sticky; top: 78px; display: grid; gap: 4px; }
 .nw-sag { gap: 16px; }
 .nw-sol-oge {
@@ -570,9 +570,10 @@ a.nw-hesap:hover { color: var(--altin); }
 
 /* Kucuk piyasa grafikleri (17.11.2026; bkz. nw_piyasa_grafigi_html): satirin altinda tam genislikte. */
 .nw-sag .nw-yan-kutu a.nw-grafikli { flex-wrap: wrap; }
-.nw-mini-grafik { flex: 1 0 100%; display: flex; align-items: center; gap: 8px; margin-top: 6px; }
-.nw-mini-grafik svg { flex: 1; min-width: 0; width: 100%; height: 30px; }
-.nw-mini-grafik small { font-size: .7rem; font-weight: 700; white-space: nowrap; }
+/* 20.11.2026, site sahibi: "grafikler biraz daha kucuk olabilir": 30 -> 22 piksel yukseklik, en fazla 170 piksel. */
+.nw-mini-grafik, .nw-kutu-satir .nw-mini-grafik { flex: 1 0 100%; display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.nw-mini-grafik svg { flex: 0 1 170px; min-width: 0; width: 100%; height: 22px; }
+.nw-mini-grafik small { margin-left: auto; font-size: .68rem; font-weight: 700; white-space: nowrap; }
 .nw-mini-grafik.artis { color: #1a7f37; }
 .nw-mini-grafik.dusus { color: #cf222e; }
 :where(:root[data-tema="koyu"]) .nw-mini-grafik.artis { color: #3fb950; }
@@ -591,7 +592,7 @@ a.nw-hesap:hover { color: var(--altin); }
 }
 .nw-sag .nw-yan-dugme { justify-self: start; }
 .nw-yan-dugme:hover { color: var(--altin); border-color: var(--altin); }
-.nw-uc.sol-kapali { grid-template-columns: 36px minmax(0, 980px) 340px; }
+.nw-uc.sol-kapali { grid-template-columns: 36px minmax(0, 980px) 300px; }
 .nw-uc.sag-kapali { grid-template-columns: 300px minmax(0, 980px) 36px; }
 .nw-uc.sol-kapali.sag-kapali { grid-template-columns: 36px minmax(0, 980px) 36px; }
 @media (min-width: 861px) {

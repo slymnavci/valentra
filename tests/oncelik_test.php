@@ -1201,8 +1201,8 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
 
     // Sag kenar kutulari (14.11.2026): kaynaklari beklemez, veri yoksa da cizilir.
     $eko = nw_ekonomi_kutusu_html();
-    bekle(str_contains($eko, 'Döviz') && str_contains($eko, 'Kripto paralar') && str_contains($eko, 'bolum=doviz') && !str_contains($eko, '—'),
-        'ekonomi kutusu: döviz, borsa, altın, kripto bağlantıları; değer yokken çizgi yerine açıklama');
+    bekle(str_contains($eko, '<strong>Dolar</strong>') && str_contains($eko, '<strong>Euro</strong>') && str_contains($eko, 'Kripto paralar') && str_contains($eko, 'bolum=doviz') && !str_contains($eko, '—'),
+        'ekonomi kutusu: dolar ve euro ayrı satır, borsa, altın, kripto bağlantıları; değer yokken çizgi yerine açıklama');
     // Renkli kalemler (16.11.2026): artis yesil, dusus kirmizi, altinda % degisim.
     require_once __DIR__ . '/../includes/ayarlar.php';
     $piyasaEski = ayar_oku('piyasa_onbellek');
@@ -1218,9 +1218,11 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     bekle(nw_piyasa_kalemi_html('Bitcoin', '97.350 $', null) === '<span class="nw-kalem"><b><i>Bitcoin</i> 97.350 $</b></span>',
         'değişimi bilinmeyen kalem renksiz, altında gösterge yok');
     $spor = nw_spor_kutusu_html();
-    bekle(str_contains($spor, '<div class="nw-canli-alan" hidden>') && strpos($spor, 'Canlı maçlar') < strpos($spor, 'Puan durumları')
+    // 20.11.2026: canli alan hep gorunur; mac yokken nokta sonuk, "su an oynanan mac yok".
+    bekle(str_contains($spor, '<div class="nw-canli-alan">') && str_contains($spor, '<i class="nw-canli-nokta" aria-hidden="true">')
+        && str_contains($spor, 'Şu an oynanan maç yok') && strpos($spor, 'Canlı maçlar') < strpos($spor, 'Puan durumları')
         && str_contains($spor, 'bolum=canli-skor') && str_contains($spor, 'bolum=fikstur'),
-        'spor kutusu: canlı maç yokken canlı alan kapalı; puan durumları ve fikstür yerinde');
+        'spor kutusu: canlı maçlar hep yerinde (maç yokken sönük); puan durumları ve fikstür yerinde');
     bekle(nw_spor_skor_satirlari_html([
             ['canli' => false, 'durum' => 'FT', 'durum_yazi' => 'MS', 'saat' => '17:00', 'ev' => 'Biten', 'dep' => 'Maç', 'ev_gol' => 0, 'dep_gol' => 0, 'adres' => '/b'],
             ['canli' => false, 'durum' => 'NS', 'durum_yazi' => '', 'saat' => '21:00', 'ev' => 'Başlamayan', 'dep' => 'Maç', 'ev_gol' => 0, 'dep_gol' => 0, 'adres' => '/c'],
