@@ -22,6 +22,12 @@ require_once __DIR__ . '/includes/seo.php';
 header('Content-Type: application/xml; charset=utf-8');
 header('Cache-Control: public, max-age=300');
 
+// Dosyadan sunulur (bkz. includes/harita_onbellek.php). Haber haritasi daha sik tazelenmeli:
+// yeni haber dakikalar icinde Google'a; bkz. HARITA_TAZE (15 dk) — bayat kopya hemen,
+// yenisi arka planda.
+require_once __DIR__ . '/includes/harita_onbellek.php';
+harita_onbellek_basla('haber-haritasi');
+
 $taban = site_adresi();
 
 // %70 ozgun kotasi taze olsun (bkz. haber_ozgun_kotasini_dagit).
