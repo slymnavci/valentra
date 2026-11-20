@@ -49,3 +49,6 @@ gorseller/gazete/*
 
 # Network kisa omurlu liste onbellegi (includes/network.php, nw_kisa_onbellek); sunucuda uretilir.
 onbellek/nw/
+
+# Site haritasi onbellegi (includes/harita_onbellek.php)
+onbellek/harita/

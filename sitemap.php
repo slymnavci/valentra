@@ -22,6 +22,10 @@ require_once __DIR__ . '/includes/konu.php';
 
 header('Content-Type: application/xml; charset=utf-8');
 
+// Dosyadan sunulur; ajan calisirken sunucu yavaslasa da bos donmez (bkz. includes/harita_onbellek.php).
+require_once __DIR__ . '/includes/harita_onbellek.php';
+harita_onbellek_basla('sitemap');
+
 $taban = site_adresi();
 
 // Google'a sunulan haberler (bkz. haber_dizinlenir_kosulu).

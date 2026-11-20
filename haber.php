@@ -258,7 +258,7 @@ $govdeVeri = [
                 yuklu++;
                 // Gelen haberin reklam alani: innerHTML ile eklenen betik calismadigi
                 // icin burada dolduruluyor (bkz. includes/olcum_reklam.php).
-                [].forEach.call(akis.querySelectorAll('ins.adsbygoogle:not([data-vz-dolu])'), function (r) {
+                [].forEach.call(akis.querySelectorAll('ins.adsbygoogle:not([data-vz-dolu]):not([data-vz-bekle])'), function (r) {
                     r.setAttribute('data-vz-dolu', '1');
                     try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {}
                 });
