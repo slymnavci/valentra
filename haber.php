@@ -160,6 +160,8 @@ $haberGorseli = haber_gorsel($haber);
 
 if ($haberGorseli !== '') {
     $seoGorsel = site_adresi() . $haberGorseli;
+    // Paylasim etiketlerinde boyut (og:image:width/height; bkz. haber_gorsel_boyutu).
+    $seoGorselBoyut = haber_gorsel_boyutu($haberGorseli);
 }
 
 /*
