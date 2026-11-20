@@ -564,6 +564,10 @@ a.nw-hesap:hover { color: var(--altin); }
 .nw-manset-kutu li a:hover { color: var(--altin); text-decoration: underline; }
 .nw-manset-kutu li time { color: var(--metin-soluk); font-size: .76rem; white-space: nowrap; }
 
+/* Kucuk gorsel buyutulmez (14.11.2026): kendi boyutunda, ortada; yanlari sayfa zemini. */
+.nw-gorsel-kucuk { background: var(--zemin); }
+.nw-gorsel-kucuk img { width: auto; max-width: 100%; height: auto; max-height: 460px; margin: 0 auto; object-fit: contain; }
+
 /* Gazete bolumleri (17.11.2026): Buyuk gazeteler, Yabanci medya, Yerel medya; altinda "Ulkelere gore". */
 .nw-bolum > summary { font-weight: 800; }
 .nw-sol-ara { display: block; margin: 14px 10px 6px; font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--metin-soluk); }

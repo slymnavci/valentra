@@ -16,8 +16,9 @@ require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/topluluk.php';
 
 $slug = (string) ($_GET['g'] ?? '');
-$g    = preg_match('/^[a-z0-9-]{1,60}$/', $slug) === 1 ? (nw_gazeteler()[$slug] ?? null) : null;
-$alan = $g !== null ? (string) $g['alan'] : '';
+// "Diger gazeteler"de toplanan yayinlarin simgesi de verilir (14.11.2026; bkz. nw_gazete_alani).
+$alan = preg_match('/^[a-z0-9-]{1,60}$/', $slug) === 1 && $slug !== NW_GAZETE_DIGER ? nw_gazete_alani($slug) : '';
+$g    = $alan !== '' ? ['alan' => $alan] : null;
 
 $yok = static function (): never {
     http_response_code(404);
