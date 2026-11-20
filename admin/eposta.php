@@ -89,7 +89,7 @@ require __DIR__ . '/ust.php';
     <p class="ipucu" style="margin:0;">
         V Network üyelerine <strong>e-posta doğrulama</strong> ve <strong>şifre yenileme</strong> bağlantıları bu ayarlarla gider.
         SMTP sunucusunu boş bırakırsanız barındırmanın kendi postacısı kullanılır; bu çoğu zaman çalışır ama e-postalar istenmeyen klasörüne düşebilir.
-        Daha güvenilir teslim için IHS panelinden bir e-posta hesabı açın (örnek: <code>bilgi@valentra.com.tr</code>) ve bilgilerini aşağıya girin.
+        Daha güvenilir teslim için IHS panelinden bir e-posta hesabı açın (örnek: <code>info@valentra.com.tr</code>) ve bilgilerini aşağıya girin.
         Kaydettikten sonra kendinize bir deneme e-postası gönderin.
     </p>
 </div>
@@ -99,7 +99,7 @@ require __DIR__ . '/ust.php';
     <input type="hidden" name="islem" value="kaydet">
 
     <label>Gönderen adresi
-        <input type="email" name="gonderen" value="<?= e($a['gonderen']) ?>" placeholder="bilgi@valentra.com.tr">
+        <input type="email" name="gonderen" value="<?= e($a['gonderen']) ?>" placeholder="info@valentra.com.tr">
     </label>
     <label>SMTP sunucusu (boş: sunucunun kendi postacısı)
         <input type="text" name="host" value="<?= e($a['host']) ?>" placeholder="mail.valentra.com.tr">

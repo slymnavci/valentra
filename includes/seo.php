@@ -390,7 +390,8 @@ function seo_site_semasi(): string
         'masthead'             => site_adresi() . kurumsal_yolu('kunye'),
     ];
 
-    $eposta = trim(ayar_oku('kunye_eposta'));
+    require_once __DIR__ . '/kurumsal.php';
+    $eposta = kunye_bilgileri()['kunye_eposta'];
 
     if ($eposta !== '') {
         $kurum['email'] = $eposta;
