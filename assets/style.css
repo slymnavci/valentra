@@ -4717,3 +4717,8 @@ img.uye-simge { object-fit: cover; padding: 0; background: var(--zemin); }
     .nw-konuk-don { padding: 7px 11px; font-size: .84rem; }
     .nw-konuk-haber { padding: 6px 9px; font-size: .78rem; }
 }
+
+/* Profil yalnizca yoneticiye (19.11.2026; bkz. nw_profil_bag): digerlerine ad ve simge baglantisiz. */
+span.nw-hesap { color: var(--metin); font-weight: 700; }
+.nw-sohbet-ust .nw-sohbet-kisi { display: flex; align-items: center; gap: 10px; color: var(--metin); text-decoration: none; }
+span.nw-kisi-bas { cursor: default; }
