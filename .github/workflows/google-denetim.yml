@@ -45,9 +45,11 @@ jobs:
           for tur in mobil masaustu; do
             ek=""
             [ "$tur" = masaustu ] && ek="--preset=desktop"
-            npx -y lighthouse@12.8.2 "$site/" $ek --quiet --output=json --output-path="lh-$tur.json" \
+            # JSON (olcum ve hiz_olcum.php icin) ve HTML (indirilip tarayicida acilacak rapor).
+            npx -y lighthouse@12.8.2 "$site/" $ek --quiet --output=json --output=html --output-path="lh-$tur" \
               --only-categories=performance,seo,best-practices,accessibility \
               --chrome-flags="--headless=new --no-sandbox" || { echo "::warning::Lighthouse $tur calismadi"; continue; }
+            mv "lh-$tur.report.json" "lh-$tur.json"; mv "lh-$tur.report.html" "lh-$tur.html"
             echo "== Lighthouse: $tur =="
             jq -r '.categories[] | "\(.title): \((.score*100)|round)"' "lh-$tur.json"
             jq -r '.audits | to_entries[] | select(.value.score != null and .value.score < 0.9
@@ -61,6 +63,23 @@ jobs:
             jq -r --arg tur "$tur" '.categories.accessibility.auditRefs[] as $r | .audits[$r.id] | select(.score == 0)
                    | "== Erisilebilirlik (\($tur)): \(.title)", (.details.items[]? | "  - \(.node.nodeLabel // "") | \(.node.selector // "") | \((.node.explanation // "") | gsub("\n"; " "))")' "lh-$tur.json" | head -60
           done
+          # SAYFAYI NE ENGELLIYOR (20.11.2026, site sahibi: "raporu da kaydet"):
+          # ucuncu taraflarin engelleme payi, en cok islemci tuketen betikler ve
+          # uzun isler (baslangic ani dahil: 8. saniyedeki is ertelenmis betiktir).
+          for tur in mobil masaustu; do
+            [ -f "lh-$tur.json" ] || continue
+            echo "== Engelleme dokumu ($tur) =="
+            jq -r '"  Toplam engelleme: \(.audits["total-blocking-time"].displayValue // "-") · ana is parcacigi: \(.audits["mainthread-work-breakdown"].displayValue // "-") · sayfa boyutu: \(.audits["total-byte-weight"].displayValue // "-")"' "lh-$tur.json"
+            echo "  -- Ucuncu taraflar (engelleme ms, aktarim KB):"
+            jq -r '[.audits["third-party-summary"].details.items[]? ] | sort_by(-(.blockingTime // 0)) | .[:8][]
+                   | "     \(.entity | if type == "object" then .text else . end): \((.blockingTime // 0) | round) ms, \(((.transferSize // 0) / 1024) | round) KB"' "lh-$tur.json"
+            echo "  -- En cok islemci tuketen betikler (toplam / betik ms):"
+            jq -r '[.audits["bootup-time"].details.items[]? ] | sort_by(-(.total // 0)) | .[:8][]
+                   | "     \(.url | .[0:110]): \((.total // 0) | round) / \((.scripting // 0) | round)"' "lh-$tur.json"
+            echo "  -- Uzun isler (baslangic ms, sure ms, kaynak):"
+            jq -r '[.audits["long-tasks"].details.items[]? ] | sort_by(-(.duration // 0)) | .[:10][]
+                   | "     \((.startTime // 0) | round) ms: \((.duration // 0) | round) ms · \(.url | .[0:100])"' "lh-$tur.json"
+          done
           # Lighthouse robots.txt'yi gecersiz bulursa sebebini ve dosyanin canli halini goster.
           for tur in mobil masaustu; do
             [ -f "lh-$tur.json" ] || continue
@@ -69,6 +88,21 @@ jobs:
           done
           echo "== Canli robots.txt =="
           curl -sS --max-time 20 "$site/robots.txt" | cat -A | head -60
+
+      # Raporlari sakla (20.11.2026): calisma sayfasindaki "Artifacts" bolumunden
+      # indirilir; lh-*.html tarayicida tam Lighthouse raporu olarak acilir.
+      - name: Lighthouse raporlarini sakla
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-raporu
+          path: |
+            lh-mobil.html
+            lh-masaustu.html
+            lh-mobil.json
+            lh-masaustu.json
+          retention-days: 30
+          if-no-files-found: ignore
 
       # Olcumu siteye yaz (08.11.2026): Lighthouse sonucu + PageSpeed
       # Insights gercek kullanici verisi (CrUX). Google tam denetiminin

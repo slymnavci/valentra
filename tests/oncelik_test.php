@@ -1387,6 +1387,51 @@ senaryo('Z', 'Ziyaret sayımı: her IP bir kişi; bot şüphelileri ayrı listed
     }
 });
 
+senaryo('AA', 'Yayın masaları, Discover görsel ölçüsü, Google payında odak dikeyler', static function (): void {
+    require_once __DIR__ . '/../includes/masalar.php';
+    require_once __DIR__ . '/../includes/seo.php';
+    require_once __DIR__ . '/../includes/gorsel_onbellek.php';
+
+    // Masalar (19.11.2026): imza konunun masasi.
+    bekle(haber_masa_anahtari(['kategori_slug' => 'kdv']) === 'ekonomi' && haber_masa_anahtari(['kategori_slug' => 'teknoloji']) === 'teknoloji'
+        && haber_masa_anahtari(['kategori_slug' => 'politika']) === 'gundem' && haber_masa_anahtari([]) === 'gundem',
+        'kategori → masa: KDV Ekonomi Masası\'nda, politika ve kategorisiz Gündem Masası\'nda');
+    $sema = json_decode(seo_haber_semasi(['baslik' => 'Test', 'ozet' => 'Test', 'slug' => 'test', 'yayin_tarihi' => date('Y-m-d H:i:s'),
+        'kategori_slug' => 'ekonomi', 'kategori_adi' => 'Ekonomi', 'gorsel_url' => '']), true);
+    $sema = isset($sema['@graph']) ? $sema['@graph'][0] : $sema;
+    bekle(($sema['author']['name'] ?? '') === 'Valentra Ekonomi Masası' && str_contains((string) ($sema['author']['url'] ?? ''), 'yayin-masalari#ekonomi'),
+        'NewsArticle yazarı haberin masası; adres masa sayfasına', json_encode($sema['author'] ?? null, JSON_UNESCAPED_UNICODE));
+
+    // Discover gorsel olcusu: sitedeki dosyanin boyutu; inmemis ya da dis adres olculmuyor.
+    $marka = haber_gorsel_boyutu('/assets/paylasim.jpg');
+    bekle($marka !== null && $marka[0] > 0 && haber_gorsel_boyutu('/gorsel.php?id=1') === null && haber_gorsel_boyutu('/../etc/passwd') === null
+        && haber_gorsel_boyutu('https://ornek.test/a.jpg') === null, 'görsel boyutu yalnızca sitedeki dosyadan ölçülüyor', json_encode($marka));
+    $img = $sema['image'][0] ?? null;
+    bekle(is_array($img) && ($img['@type'] ?? '') === 'ImageObject' && (int) ($img['width'] ?? 0) === $marka[0], 'şema görseli genişlik ve yükseklikle (ImageObject)', json_encode($img));
+
+    // Google payi: 7 ozgun haber -> 3 tek kaynakli haber hakki.
+    $ozgunler = [];
+    for ($i = 1; $i <= 7; $i++) {
+        $ozgunler[] = haber('Özgün derleme ' . $i, ['kaynak_url' => '', 'kaynak_adi' => 'Valentra']);
+    }
+    ekle($ozgunler);
+    ekle([
+        haber('Gündem tek kaynak A', ['onem' => 60]),
+        haber('Gündem tek kaynak B', ['onem' => 60]),
+        haber('Ekonomi tek kaynak A', ['onem' => 50, 'kategori' => 'ekonomi']),
+        haber('Ekonomi tek kaynak B', ['onem' => 50, 'kategori' => 'ekonomi']),
+        haber('Yerel tek kaynak', ['onem' => 90]),
+    ]);
+    db()->exec("UPDATE haberler SET durum = 'yayinda', google_kota = 0, guncellendi = guncellendi");
+    db()->exec("UPDATE haberler SET sehir = 'Kocaeli', guncellendi = guncellendi WHERE baslik = 'Yerel tek kaynak'");
+    $ozet = haber_ozgun_kotasini_dagit(true);
+    $kotada = db()->query('SELECT baslik FROM haberler WHERE google_kota = 1 ORDER BY baslik')->fetchAll(PDO::FETCH_COLUMN);
+    bekle(($ozet['kota'] ?? 0) === 3 && in_array('Ekonomi tek kaynak A', $kotada, true) && in_array('Ekonomi tek kaynak B', $kotada, true)
+        && count(array_intersect(['Gündem tek kaynak A', 'Gündem tek kaynak B'], $kotada)) === 1,
+        'Google payı: ekonomi haberleri odak ekiyle önde (50 + 15 > 60); kalan yer gündemde', implode(' | ', $kotada));
+    bekle(!in_array('Yerel tek kaynak', $kotada, true), 'yerel kaynağın tek kaynaklı haberi önemi yüksek olsa da paya girmiyor');
+});
+
 temizle();
 
 echo "\n" . str_repeat('─', 60) . "\n";

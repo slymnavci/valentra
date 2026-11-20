@@ -51,12 +51,42 @@ function kunye_alanlari(): array
 }
 
 /** @return array<string,string> anahtar => değer (boşlar dahil) */
+/*
+ * RESMI E-POSTA (site sahibinin istegi, 20.11.2026: "mail adresi
+ * info@valentra.com.tr adresini bildirelim, daha resmi olsun"). Kunyedeki
+ * adres bir kez buna cevriliyor; sonra panelden (Kunye ve iletisim)
+ * degistirilebilir. Bossa da bu adres gosteriliyor.
+ */
+const KUNYE_RESMI_EPOSTA = 'info@valentra.com.tr';
+
+/** Künyedeki e-postayı bir kez resmi adrese çevirir. */
+function kunye_eposta_gecisi(): void
+{
+    static $bakildi = false;
+
+    if ($bakildi) {
+        return;
+    }
+
+    $bakildi = true;
+
+    if (ayar_oku('kunye_eposta_gecis') !== KUNYE_RESMI_EPOSTA) {
+        ayar_yaz('kunye_eposta', KUNYE_RESMI_EPOSTA);
+        ayar_yaz('kunye_eposta_gecis', KUNYE_RESMI_EPOSTA);
+    }
+}
+
 function kunye_bilgileri(): array
 {
+    kunye_eposta_gecisi();
     $bilgi = [];
 
     foreach (array_keys(kunye_alanlari()) as $anahtar) {
         $bilgi[$anahtar] = trim(ayar_oku($anahtar));
+    }
+
+    if ($bilgi['kunye_eposta'] === '') {
+        $bilgi['kunye_eposta'] = KUNYE_RESMI_EPOSTA;
     }
 
     return $bilgi;
@@ -87,6 +117,8 @@ function kurumsal_sayfalar(): array
     return [
         'hakkimizda'     => 'Hakkımızda',
         'yayin-ilkeleri' => 'Yayın İlkeleri',
+        // Haber imzasi olan masalar (19.11.2026; bkz. includes/masalar.php).
+        'yayin-masalari' => 'Yayın Masaları',
         'kunye'          => 'Künye',
         'iletisim'       => 'İletişim',
         // Gizlilik ve cerezler (29.10.2026): Google Analytics ve AdSense icin

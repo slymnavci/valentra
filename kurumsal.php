@@ -37,6 +37,7 @@ $otomatik = haber_otomatik_yayin_acik();
 $aciklamalar = [
     'hakkimizda'     => 'Valentra nedir, haberler nasıl hazırlanır: kaynaklar, yapay zekâ desteği ve editör denetimi.',
     'yayin-ilkeleri' => 'Valentra yayın ilkeleri: kaynak gösterme, doğruluk, tarafsızlık, yapay zekâ kullanımı ve düzeltme politikası.',
+    'yayin-masalari' => 'Valentra yayın masaları: Ekonomi, Teknoloji, Dış Haberler, Spor, Sağlık, Kültür-Sanat ve Gündem masaları neyi izler, haberler nasıl hazırlanır.',
     'kunye'          => 'Valentra künyesi: yayın sahibi, sorumlu müdür, yönetim yeri ve iletişim bilgileri.',
     'iletisim'       => 'Valentra ile iletişim: düzeltme, içerik kaldırma ve genel talepler.',
     'gizlilik'       => 'Valentra gizlilik ve çerez politikası: ziyaret kayıtları, çerezler, Google Analytics ve reklamlar, KVKK kapsamındaki haklarınız.',
@@ -138,6 +139,27 @@ require __DIR__ . '/includes/sayfa_ust.php';
             <h2 id="yatirim">7. Piyasa bilgileri</h2>
             <p>Piyasa sayfalarındaki veriler, hesaplanan ölçüler ve aracı kurumların analist görüşleri
                 kaynağıyla birlikte, bilgilendirme amacıyla verilir; yatırım tavsiyesi değildir.</p>
+
+        <?php elseif ($sayfa === 'yayin-masalari'): ?>
+            <?php require_once __DIR__ . '/includes/masalar.php'; ?>
+
+            <p>Valentra'daki her haber, konusunun masası adıyla imzalanır. Masalar haberi seçer,
+                kaynaklarını karşılaştırır ve <a href="<?= e(kurumsal_yolu('yayin-ilkeleri')) ?>">yayın
+                ilkelerimize</a> göre yazar. Haber metinleri yapay zekâ desteğiyle hazırlanır;
+                <?= $otomatik
+                    ? 'editörlerin belirlediği kurallara göre yayına alınır ve yayından sonra denetlenir.'
+                    : 'yayına alınmadan önce editör onayından geçer.' ?>
+                Her haberin altında dayandığı kaynaklar bağlantılarıyla listelenir.</p>
+
+            <?php foreach (haber_masalari() as $masaAnahtar => $masa): ?>
+                <h2 id="<?= e($masaAnahtar) ?>"><?= e($masa['ad']) ?></h2>
+                <p><strong><?= e($masa['konular']) ?>.</strong> <?= e($masa['aciklama']) ?></p>
+            <?php endforeach; ?>
+
+            <h2 id="sorumluluk">Sorumluluk</h2>
+            <p>Yayımlanan içerikten <a href="<?= e(kurumsal_yolu('kunye')) ?>">künyede</a> adı geçen
+                sorumlu yazı işleri müdürü sorumludur. Hata bildirimi ve düzeltme talepleri için
+                <?= $epostaBag ?> üzerinden bize yazabilirsiniz.</p>
 
         <?php elseif ($sayfa === 'kunye'): ?>
 

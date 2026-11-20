@@ -305,9 +305,9 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
                     <?php endif; ?>
                 </div>
             <?php else: ?>
-                <a href="<?= e(nw_profil_yolu((int) $v['uye_id'])) ?>" tabindex="-1" aria-hidden="true"><?= uye_simge_html($v, 40) ?></a>
+                <?= nw_profil_bag((int) $v['uye_id'], uye_simge_html($v, 40), '', true) ?>
                 <div>
-                    <a class="nw-hesap" href="<?= e(nw_profil_yolu((int) $v['uye_id'])) ?>"><?= e((string) $v['ad']) ?><?= uye_rozet_html($v) ?></a>
+                    <?= nw_profil_bag((int) $v['uye_id'], e((string) $v['ad']) . uye_rozet_html($v), 'nw-hesap') ?>
                     <span class="nw-meta"><a href="<?= e($detayYol) ?>"><time datetime="<?= e(date('c', (int) strtotime($zaman))) ?>"><?= e(yorum_zaman($zaman)) ?></time></a></span>
                 </div>
                 <?php if ($uye !== null): ?>
@@ -416,9 +416,9 @@ function nw_yorum_kart_html(array $oge): string
     ?>
     <article class="nw-gonderi nw-yorum-kart" id="y<?= (int) $v['id'] ?>"<?= !empty($oge['zaman']) ? ' data-zaman="' . (int) $oge['zaman'] . '"' : '' ?>>
         <header class="nw-gonderi-ust">
-            <a href="<?= e(nw_profil_yolu((int) $v['uye_id'])) ?>" tabindex="-1" aria-hidden="true"><?= uye_simge_html($v, 40) ?></a>
+            <?= nw_profil_bag((int) $v['uye_id'], uye_simge_html($v, 40), '', true) ?>
             <div>
-                <a class="nw-hesap" href="<?= e(nw_profil_yolu((int) $v['uye_id'])) ?>"><?= e((string) $v['ad']) ?><?= uye_rozet_html($v) ?></a>
+                <?= nw_profil_bag((int) $v['uye_id'], e((string) $v['ad']) . uye_rozet_html($v), 'nw-hesap') ?>
                 <span class="nw-meta">bir haberi yorumladı · <a href="<?= e($yorumYol) ?>"><time datetime="<?= e(date('c', (int) strtotime($zaman))) ?>"><?= e(yorum_zaman($zaman)) ?></time></a></span>
             </div>
         </header>
@@ -483,11 +483,11 @@ function nw_kisi_html(array $k, array $takipEdilenler, string $donus, bool $kucu
     $id = (int) $k['id'];
 
     return '<div class="nw-kisi' . ($kucuk ? ' kucuk' : '') . '">'
-         . '<a class="nw-kisi-bas" href="' . e(nw_profil_yolu($id)) . '">' . uye_simge_html($k, $kucuk ? 40 : 56)
-         . '<span><strong>' . e((string) $k['ad']) . uye_rozet_html($k) . '</strong>'
-         . (isset($k['takipci']) ? '<small>' . (int) $k['takipci'] . ' takipçi</small>' : '')
-         . (!$kucuk && (string) ($k['hakkinda'] ?? '') !== '' ? '<small class="nw-kisi-hakkinda">' . e(kisalt((string) $k['hakkinda'], 90)) . '</small>' : '')
-         . '</span></a>'
+         . nw_profil_bag($id, uye_simge_html($k, $kucuk ? 40 : 56)
+             . '<span><strong>' . e((string) $k['ad']) . uye_rozet_html($k) . '</strong>'
+             . (isset($k['takipci']) ? '<small>' . (int) $k['takipci'] . ' takipçi</small>' : '')
+             . (!$kucuk && (string) ($k['hakkinda'] ?? '') !== '' ? '<small class="nw-kisi-hakkinda">' . e(kisalt((string) $k['hakkinda'], 90)) . '</small>' : '')
+             . '</span>', 'nw-kisi-bas')
          . nw_takip_html($id, in_array($id, $takipEdilenler, true), $donus, true)
          . '</div>';
 }
