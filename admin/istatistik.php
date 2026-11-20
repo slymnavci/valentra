@@ -50,7 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 /* --- Secimler -------------------------------------------------------- */
 
 $a     = zr_aralik($_GET);
-$ham   = ($_GET['ham'] ?? '') === '1';
+// Ilk acilista ham sayim (site sahibi, 20.11.2026: "ilk actiginda ham sayimi
+// gostersin. sonra bastigimizda dogrulanmisa gecsin"); ham=0 dogrulanmis.
+$ham   = ($_GET['ham'] ?? '1') !== '0';
 $sira  = (string) ($_GET['sira'] ?? 'okuyucu');
 $sira  = isset(zr_haber_siralari()[$sira]) ? $sira : 'okuyucu';
 $hepsi = ($_GET['hepsi'] ?? '') === '1';
@@ -63,8 +65,8 @@ if ($a['anahtar'] === 'ozel') {
     $temel['bit'] = $a['bit'];
 }
 
-if ($ham) {
-    $temel['ham'] = '1';
+if (!$ham) {
+    $temel['ham'] = '0';
 }
 
 $adres = static function (array $degisen = []) use ($temel, $sira): string {
@@ -183,13 +185,13 @@ require __DIR__ . '/ust.php';
 <div class="kutu rapor-secim">
     <nav class="sekmeler" style="margin:0;">
         <?php foreach (zr_hazir_araliklar() as $anahtar => $ad): ?>
-            <a href="<?= e('istatistik.php?' . http_build_query(['aralik' => $anahtar] + ($ham ? ['ham' => '1'] : []))) ?>"
+            <a href="<?= e('istatistik.php?' . http_build_query(['aralik' => $anahtar] + ($ham ? [] : ['ham' => '0']))) ?>"
                class="<?= $a['anahtar'] === $anahtar ? 'aktif' : '' ?>"><?= e($ad) ?></a>
         <?php endforeach; ?>
     </nav>
     <form method="get" action="istatistik.php" class="rapor-ozel">
         <input type="hidden" name="aralik" value="ozel">
-        <?php if ($ham): ?><input type="hidden" name="ham" value="1"><?php endif; ?>
+        <?php if (!$ham): ?><input type="hidden" name="ham" value="0"><?php endif; ?>
         <input type="date" name="bas" value="<?= e($a['bas']) ?>" max="<?= e(date('Y-m-d')) ?>" aria-label="Başlangıç">
         <span>–</span>
         <input type="date" name="bit" value="<?= e($a['bit']) ?>" max="<?= e(date('Y-m-d')) ?>" aria-label="Bitiş">
@@ -200,9 +202,9 @@ require __DIR__ . '/ust.php';
             (<?= e(date('d.m.Y', strtotime($a['bas']))) ?><?= $a['bas'] !== $a['bit'] ? ' – ' . e(date('d.m.Y', strtotime($a['bit']))) : '' ?>);
             karşılaştırma: <?= e(date('d.m.Y', strtotime($a['onceki_bas']))) ?><?= $a['onceki_bas'] !== $a['onceki_bit'] ? ' – ' . e(date('d.m.Y', strtotime($a['onceki_bit']))) : '' ?></span>
         <?php if ($ham): ?>
-            <a href="<?= e($adres(['ham' => null])) ?>" class="rozet rozet-reddedildi">Ham sayım gösteriliyor — doğrulanmış sayıma dön</a>
+            <a href="<?= e($adres(['ham' => '0'])) ?>" class="rozet rozet-reddedildi">Ham sayım gösteriliyor (doğrulanmayanlar dahil) — doğrulanmış sayıma geç</a>
         <?php else: ?>
-            <a href="<?= e($adres(['ham' => '1'])) ?>" class="ipucu">Ham sayımı göster (doğrulanmayanlar dahil)</a>
+            <a href="<?= e($adres(['ham' => null])) ?>" class="ipucu">Doğrulanmış sayım gösteriliyor — ham sayıma dön</a>
         <?php endif; ?>
     </div>
 </div>

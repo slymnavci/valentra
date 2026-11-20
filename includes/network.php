@@ -2541,7 +2541,9 @@ function begeni_bilgisi(string $tur, array $idler, ?int $uyeId): array
  * okumustur; okuyan da begenenden cok olur: her YZ begenisi 3-6 okuma
  * (carpan haber id'sinden, sabit). Yalnizca V Network'te GOSTERILEN
  * sayiya ekleniyor; ziyaretler tablosuna ve yonetim istatistiklerine
- * dokunulmuyor (onlar gercek okuyucuyu gosteriyor).
+ * dokunulmuyor (onlar gercek okuyucuyu gosteriyor). YZ begenileri ilk 6
+ * dakika hic gelmeyip sonra yavas arttigi icin (topluluk_begeni_orani,
+ * 20.11.2026) bu ek de yeni haberde ayni egriyle buyuyor.
  *
  * @param list<int> $idler haber id'leri
  * @return array<int,int>
