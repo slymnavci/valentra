@@ -749,12 +749,30 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
          * veritabani her adayin metnini (icerik) siralama icin tasiyordu.
          */
         if ($gundem || $onemli) {
-            $ifade = db()->prepare('SELECT h.id' . $govde . $siraSql);
+            /*
+             * Onemli haberlerde ayni olay tekrar etmesin (site sahibi, 20.11.2026: "kredi karti haberi
+             * pespese 3 kez onemli haberlerde gosterilmis; her gazeteden farkli haberler alarak mansetteki
+             * farkli haberleri gostermek gerekiyor"). Ayni olayi farkli gazetelerden ozetleyen kayitlar
+             * ayni manset puanini aliyordu. Bu yuzden siralamanin basindan genis bir aday listesi alinir,
+             * ayni olayi anlatanlarin yalniz ilki tutulur (nw_onemli_tekrarsiz) ve sayfa ($atla) bu
+             * ayiklanmis listeden kesilir.
+             */
+            $sinir = $onemli ? min(1500, ($atla + $adet) * 3 + 40) : $adet;
+            $ifade = db()->prepare('SELECT h.id' . $govde . ($onemli ? str_replace(' OFFSET ' . $atla, '', $siraSql) : $siraSql));
             $ifade->bindValue('d', HABER_YAYINDA);
             $ifade->bindValue('once', $once, PDO::PARAM_INT);
-            $ifade->bindValue('l', $adet, PDO::PARAM_INT);
+            $ifade->bindValue('l', $sinir, PDO::PARAM_INT);
             $ifade->execute();
             $numaralar = array_map('intval', $ifade->fetchAll(PDO::FETCH_COLUMN));
+            $dahaVar   = false;
+
+            if ($onemli) {
+                $adaySayisi = count($numaralar);
+                $numaralar  = nw_onemli_tekrarsiz($numaralar);
+                $dahaVar    = count($numaralar) > $atla + $adet || $adaySayisi === $sinir;
+                $numaralar  = array_slice($numaralar, $atla, $adet);
+            }
+
             $satirlar  = [];
 
             if ($numaralar !== []) {
@@ -770,7 +788,7 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
             }
 
             return ['ogeler' => array_map(static fn (array $h): array => ['tur' => 'haber', 'zaman' => 0, 'veri' => $h], $satirlar),
-                'sonraki' => 0, 'atla' => count($numaralar) === $adet ? $atla + $adet : 0];
+                'sonraki' => 0, 'atla' => count($numaralar) === $adet && (!$onemli || $dahaVar) ? $atla + $adet : 0];
         }
 
         $ifade = db()->prepare('SELECT ' . $sutunlar . $govde . $siraSql);
@@ -1132,6 +1150,94 @@ function nw_onemli_sirasi(): string
     // Bos haritada siralama ogesi hic yazilmiyor: "ORDER BY 0" MySQL'de sutun numarasi sayilir.
     return (($puanlar['m'] ?? []) !== [] ? $durum($puanlar['m']) . ' DESC, ' : '')
         . "FLOOR($yas / 1440) ASC, (h.onem + " . $durum($puanlar['g'] ?? []) . " - 4 * $yas / 60) DESC";
+}
+
+/**
+ * Onemli haberler listesinden ayni olayi anlatan tekrarlari ayiklar, mansetteki ust bolumde ardisik haberleri
+ * farkli gazetelerden secer (20.11.2026). Sira korunur; ayni olayin yalniz en ustteki kaydi kalir.
+ * Olcu, manset puanlamasindaki "ayni olay" olcusu (manset_sinyal_ayni_olay): baslik ve kaynak basligi kokleri.
+ *
+ * @param list<int> $numaralar onem sirasindaki haber numaralari
+ * @return list<int>
+ */
+function nw_onemli_tekrarsiz(array $numaralar): array
+{
+    if (count($numaralar) < 2) {
+        return $numaralar;
+    }
+
+    require_once __DIR__ . '/manset_sinyal.php';
+
+    try {
+        $bilgi = array_column(db()->query(
+            'SELECT id, baslik, kaynak_baslik, kaynak_adi FROM haberler WHERE id IN (' . implode(',', array_map('intval', $numaralar)) . ')'
+        )->fetchAll(), null, 'id');
+    } catch (Throwable $e) {
+        error_log('[valentra] onemli tekrarsiz: ' . $e->getMessage());
+
+        return $numaralar;
+    }
+
+    $kokler = static function (array $h): array {
+        return array_values(array_filter([
+            manset_sinyal_kokleri((string) $h['baslik']),
+            trim((string) ($h['kaynak_baslik'] ?? '')) !== '' ? manset_sinyal_kokleri((string) $h['kaynak_baslik']) : [],
+        ]));
+    };
+
+    // 1) Ayni olayin tekrarlarini at (ilk gorulen, yani en onemli sirada olan kalir).
+    $secilen = [];
+    $secKok  = [];
+
+    foreach ($numaralar as $n) {
+        if (!isset($bilgi[$n])) {
+            continue;
+        }
+
+        $k = $kokler($bilgi[$n]);
+        $ayni = false;
+
+        foreach ($secKok as $onceki) {
+            foreach ($k as $a) {
+                foreach ($onceki as $b) {
+                    if (manset_sinyal_ayni_olay($a, $b)) {
+                        $ayni = true;
+                        break 3;
+                    }
+                }
+            }
+        }
+
+        if (!$ayni) {
+            $secilen[] = $n;
+            $secKok[]  = $k;
+        }
+    }
+
+    // 2) Mansetteki ust bolumde ardisik iki haber ayni gazeteden gelmesin (baska gazete varsa one alinir).
+    $puan  = nw_guncel_manset_puanlari()['m'] ?? [];
+    $ust   = array_values(array_filter($secilen, static fn (int $n): bool => isset($puan[$n])));
+    $alt   = array_values(array_filter($secilen, static fn (int $n): bool => !isset($puan[$n])));
+    $gazete = static fn (int $n): string => nw_gazete_adi((string) ($bilgi[$n]['kaynak_adi'] ?? ''));
+    $dizi  = [];
+    $son   = null;
+
+    while ($ust !== []) {
+        $sec = 0;
+
+        foreach ($ust as $i => $n) {
+            if ($gazete($n) !== $son) {
+                $sec = $i;
+                break;
+            }
+        }
+
+        $dizi[] = $ust[$sec];
+        $son    = $gazete($ust[$sec]);
+        array_splice($ust, $sec, 1);
+    }
+
+    return array_merge($dizi, $alt);
 }
 
 /** "Su an mansette": manset beslemesinde en son bu kadar saat icinde gorulmus (ajan iki saatte bir tarar). */
