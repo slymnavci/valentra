@@ -1937,20 +1937,20 @@ function nw_ekonomi_kutusu_html(): string
      * icin"). Deger onbellekte yoksa kalem yerine bolumun icerigi yazilir.
      */
     $satirlar = [
-        ['Döviz', 'doviz', [['USD', $sayi('usd'), 2, '', $sayi('usd_degisim')], ['EUR', $sayi('eur'), 2, '', $sayi('eur_degisim')]], 'Dolar, euro, sterlin ve pariteler'],
-        ['Borsa', 'bist', [['BIST 100', $sayi('bist'), 0, '', $sayi('bist_degisim')]], 'BIST 100, endeksler ve hisseler'],
-        ['Altın', 'altin', [['Gram', $sayi('altin'), 0, ' TL', $sayi('altin_degisim')]], 'Gram, çeyrek ve ons altın'],
-        ['Kripto paralar', 'kripto', [['Bitcoin', is_numeric($btc['fiyat'] ?? null) ? (float) $btc['fiyat'] : null, 0, ' $', is_numeric($btc['degisim'] ?? null) ? (float) $btc['degisim'] : null]], 'Bitcoin, Ethereum ve diğerleri'],
-        ['Emtia', 'petrol', [], 'Petrol, gümüş, doğal gaz'],
-        ['Dünya borsaları', 'dunya', [], 'S&P 500, DAX, Nikkei'],
+        // Dolar ve euro ayri satir, her biri kendi grafigiyle (20.11.2026, site sahibi: "EUR ve USD ayri ayri olsun").
+        ['Dolar', 'doviz', [['USD', $sayi('usd'), 2, '', $sayi('usd_degisim')]], 'Dolar/TL', 'usd'],
+        ['Euro', 'doviz', [['EUR', $sayi('eur'), 2, '', $sayi('eur_degisim')]], 'Euro/TL', 'eur'],
+        ['Borsa', 'bist', [['BIST 100', $sayi('bist'), 0, '', $sayi('bist_degisim')]], 'BIST 100, endeksler ve hisseler', 'bist'],
+        ['Altın', 'altin', [['Gram', $sayi('altin'), 0, ' TL', $sayi('altin_degisim')]], 'Gram, çeyrek ve ons altın', 'altin'],
+        ['Kripto paralar', 'kripto', [['Bitcoin', is_numeric($btc['fiyat'] ?? null) ? (float) $btc['fiyat'] : null, 0, ' $', is_numeric($btc['degisim'] ?? null) ? (float) $btc['degisim'] : null]], 'Bitcoin, Ethereum ve diğerleri', ''],
+        ['Emtia', 'petrol', [], 'Petrol, gümüş, doğal gaz', ''],
+        ['Dünya borsaları', 'dunya', [], 'S&P 500, DAX, Nikkei', ''],
     ];
 
     $html = '';
 
-    // Kucuk grafikler (17.11.2026): doviz (dolar), borsa ve altin satirlarinin altinda.
-    $grafikAraci = ['doviz' => 'usd', 'bist' => 'bist', 'altin' => 'altin'];
-
-    foreach ($satirlar as [$ad, $bolum, $kalemler, $aciklama]) {
+    // Kucuk grafikler (17.11.2026): dolar, euro, borsa ve altin satirlarinin altinda (son eleman: grafik araci).
+    foreach ($satirlar as [$ad, $bolum, $kalemler, $aciklama, $grafikAraci]) {
         $kalemHtml = '';
 
         foreach ($kalemler as [$etiket, $deger, $hane, $birim, $degisim]) {
@@ -1959,7 +1959,7 @@ function nw_ekonomi_kutusu_html(): string
             }
         }
 
-        $grafik = isset($grafikAraci[$bolum]) ? nw_piyasa_grafigi_html($grafikAraci[$bolum]) : '';
+        $grafik = $grafikAraci !== '' ? nw_piyasa_grafigi_html($grafikAraci) : '';
 
         $html .= '<a class="nw-kutu-satir' . ($kalemHtml !== '' ? ' nw-piyasa-satir' : '') . ($grafik !== '' ? ' nw-grafikli' : '') . '" href="' . e(piyasa_bolum_yolu($bolum)) . '">'
             . ($kalemHtml !== ''
@@ -1971,7 +1971,7 @@ function nw_ekonomi_kutusu_html(): string
 
     // Kutu gorseli (17.11.2026, site sahibinin gonderdigi gorsel); basligin altinda, kutu daraltilinca gizlenir.
     return '<div class="nw-yan-kutu nw-kutu-liste" data-katla="ekonomi"><strong class="nw-kutu-bas">' . nw_konu_ikonu('ekonomi') . 'Ekonomi</strong>'
-        . '<img class="nw-kutu-gorsel" src="/assets/network/ekonomi-960.webp" srcset="/assets/network/ekonomi-480.webp 480w, /assets/network/ekonomi-960.webp 960w" sizes="340px" width="960" height="320" loading="lazy" decoding="async" alt="">' . $html
+        . '<img class="nw-kutu-gorsel" src="/assets/network/ekonomi-960.webp" srcset="/assets/network/ekonomi-480.webp 480w, /assets/network/ekonomi-960.webp 960w" sizes="300px" width="960" height="320" loading="lazy" decoding="async" alt="">' . $html
         . '<a class="nw-kutu-tumu" href="' . e(piyasalar_yolu()) . '">Bütün piyasalar →</a></div>';
 }
 
@@ -2007,7 +2007,7 @@ function nw_piyasa_grafigi_html(string $arac): string
         return '';
     }
 
-    $en = 120; $boy = 30;
+    $en = 120; $boy = 22;
     $min = min($degerler); $max = max($degerler); $ara = max($max - $min, 1e-9); $n = count($degerler);
     $nokta = [];
 
@@ -2029,6 +2029,12 @@ function nw_piyasa_grafigi_html(string $arac): string
         . '<polygon points="0,' . $boy . ' ' . implode(' ', $nokta) . ' ' . $en . ',' . $boy . '" fill="url(#' . $kimlik . ')"/>'
         . '<polyline points="' . implode(' ', $nokta) . '" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>'
         . '<small>3 ay ' . e(($yuzde >= 0 ? '▲ %' : '▼ %') . number_format(abs($yuzde), 1, ',', '.')) . '</small></span>';
+}
+
+/** Canli alanin alt yazisi (betikteki metinle ayni). */
+function nw_canli_ozet(int $canli): string
+{
+    return $canli > 0 ? $canli . ' maç oynanıyor' : 'Şu an oynanan maç yok';
 }
 
 /** Spor kutusundaki canli skor satirlari (api/canli-skor.php ile ayni veri). */
@@ -2222,12 +2228,13 @@ function nw_spor_kutusu_html(): string
 
     return '<div class="nw-yan-kutu nw-kutu-liste nw-spor-kutu" data-katla="spor" data-canli-skor="/api/canli-skor.php">'
         . '<strong class="nw-kutu-bas">' . nw_konu_ikonu('spor') . 'Spor</strong>'
-        . '<img class="nw-kutu-gorsel" src="/assets/network/spor-960.webp" srcset="/assets/network/spor-480.webp 480w, /assets/network/spor-960.webp 960w" sizes="340px" width="960" height="320" loading="lazy" decoding="async" alt="">'
-        // Canli alan yalnizca mac oynanirken gorunur; betik mac baslayinca acar, bitince kapatir.
-        . '<div class="nw-canli-alan"' . ($canli > 0 ? '' : ' hidden') . '>'
+        . '<img class="nw-kutu-gorsel" src="/assets/network/spor-960.webp" srcset="/assets/network/spor-480.webp 480w, /assets/network/spor-960.webp 960w" sizes="300px" width="960" height="320" loading="lazy" decoding="async" alt="">'
+        // Canli alan hep gorunur (20.11.2026, site sahibi: "canli mac yayinlarini cikardik mi, o da olsun"):
+        // mac oynanirken yesil yanan nokta ve skorlar, yokken "su an oynanan mac yok"; betik ikisini degistirir.
+        . '<div class="nw-canli-alan">'
         . '<a class="nw-kutu-satir nw-canli-bas" href="' . e(spor_bolum_yolu('canli-skor')) . '"><span><strong>'
-        . '<i class="nw-canli-nokta yaniyor" aria-hidden="true"></i>Canlı maçlar</strong>'
-        . '<em class="nw-canli-ozet">' . $canli . ' maç oynanıyor</em></span><small>→</small></a>'
+        . '<i class="nw-canli-nokta' . ($canli > 0 ? ' yaniyor' : '') . '" aria-hidden="true"></i>Canlı maçlar</strong>'
+        . '<em class="nw-canli-ozet">' . e(nw_canli_ozet($canli)) . '</em></span><small>→</small></a>'
         . '<div class="nw-skorlar">' . nw_spor_skor_satirlari_html($maclar) . '</div></div>'
         . ($puanHtml !== ''
             ? '<a class="nw-kutu-satir nw-spor-blok" href="' . e(spor_bolum_yolu('puan-durumu')) . '"><span><strong>Puan durumu</strong><em>Süper Lig, ilk 5</em></span>' . $puanHtml . '</a>'
@@ -2253,9 +2260,9 @@ function nw_spor_kutusu_betigi(): string
 (function () {
     var k = document.querySelector('.nw-spor-kutu[data-canli-skor]');
     if (!k || !window.fetch) { return; }
-    var alan = k.querySelector('.nw-canli-alan'), liste = k.querySelector('.nw-skorlar'), ozet = k.querySelector('.nw-canli-ozet');
+    var nokta = k.querySelector('.nw-canli-nokta'), liste = k.querySelector('.nw-skorlar'), ozet = k.querySelector('.nw-canli-ozet');
     function yaz(d) {
-        // Yalnizca oynanan maclar; hic yoksa canli alan kapanir (16.11.2026).
+        // Yalnizca oynanan maclar; hic yoksa alan kalir, nokta soner (20.11.2026).
         var canlilar = (d.maclar || []).filter(function (x) { return x.canli; });
         liste.textContent = '';
         canlilar.slice(0, 4).forEach(function (x) {
@@ -2269,8 +2276,8 @@ function nw_spor_kutusu_betigi(): string
             });
             liste.appendChild(a);
         });
-        alan.hidden = canlilar.length === 0;
-        ozet.textContent = canlilar.length + ' maç oynanıyor';
+        nokta.classList.toggle('yaniyor', canlilar.length > 0);
+        ozet.textContent = canlilar.length > 0 ? canlilar.length + ' maç oynanıyor' : 'Şu an oynanan maç yok';
     }
     function sor() {
         if (document.hidden) { setTimeout(sor, 15000); return; }
