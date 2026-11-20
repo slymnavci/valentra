@@ -2804,10 +2804,16 @@ CREATE TABLE IF NOT EXISTS gundem_basliklari (
     ozet         VARCHAR(400)  NOT NULL DEFAULT '',
     manset       TINYINT(1)    NOT NULL DEFAULT 0,
     zaman        DATETIME      NOT NULL,
+    -- Basligin yayinda EN SON goruldugu an ve manset beslemesinde en son
+    -- goruldugu an (15.11.2026): "zaman" ilk yayim ani; manseten inen
+    -- haberle hala mansette olani ayirmak icin (bkz. nw_guncel_manset_puanlari).
+    son_gorulme    DATETIME    NULL,
+    manset_gorulme DATETIME    NULL,
     olusturuldu  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_gundem_adres (adres_parmak),
-    KEY ix_gundem_zaman (zaman)
+    KEY ix_gundem_zaman (zaman),
+    KEY ix_gundem_gorulme (son_gorulme)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
@@ -2908,3 +2914,35 @@ UPDATE kaynaklar SET aktif = 1
    AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_sozcu_sabah_2026_11');
 
 INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_sozcu_sabah_2026_11', '14.11.2026');
+
+-- ---------------------------------------------------------------------------
+-- Yabanci medya (17.11.2026, site sahibi: "yabancida CNN, BBC, Fox gibi
+-- yurtdisinin en unlulerini koyalim"). Yirmi aday ajanin kostugu yerde
+-- SINANDI (kaynak-testi, calisma 44073379457). Eklenenler:
+--   Fox News Son Dakika (latest.xml): 25 girdi, son 2 saatte 13. Mevcut
+--     "Fox News" (world.xml) saatte bir haber verdiginden listede
+--     gorunemiyordu.
+--   The Independent (dunya): 74 girdi, son 2 saatte 13.
+-- Zaten var olanlar: BBC, The New York Times, The Guardian, The Washington
+-- Post, Le Figaro, El Pais, Times of India, Al Jazeera, Le Monde.
+--   CNN (site sayfasindan okuma, 'web'): CNN'in RSS beslemeleri HTTP 200 ama
+--     icerik 2023-2024'ten kalma (CNN RSS'i guncellemiyor). Dunya sayfasi
+--     edition.cnn.com/world, yalnizca /2026/ ile baslayan haber adresleri
+--     (calisma 44082119171: 40 baglanti, hepsi 11-17.11.2026). Baglanti
+--     metinleri cogu zaman fotograf atfi; baslik ve ozeti model haberin
+--     kendi sayfasindan yazar.
+-- EKLENMEYENLER:
+-- WSJ ve Corriere (girdi okunamadi), FAZ (302), NHK (100 gundur
+-- guncellenmiyor), Sky News (son 2 saatte girdi yok).
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO kaynaklar (ad, site_url, besleme_url, tur, kategori, aktif, aralik_dk) VALUES
+    ('Fox News Son Dakika', 'https://www.foxnews.com',      'https://moxie.foxnews.com/google-publisher/latest.xml', 'rss', 'dunya', 1, 120),
+    ('The Independent',     'https://www.independent.co.uk', 'https://www.independent.co.uk/news/world/rss',          'rss', 'dunya', 1, 120);
+-- CNN kaydi 2026'dan beri var ama eski RSS adresinde (rss.cnn.com, guncellenmiyor;
+-- tarihleri yeni gorunen 2023 haberleri veriyor). Tek seferlik: sayfa okumaya cevrilir.
+UPDATE kaynaklar
+   SET besleme_url = NULL, liste_url = 'https://edition.cnn.com/world', liste_secici = 'yol:/2026/', tur = 'web', aralik_dk = 120
+ WHERE ad = 'CNN' AND besleme_url = 'http://rss.cnn.com/rss/edition_world.rss'
+   AND NOT EXISTS (SELECT 1 FROM ayarlar WHERE anahtar = 'gecis_cnn_web_2026_11');
+
+INSERT IGNORE INTO ayarlar (anahtar, deger) VALUES ('gecis_cnn_web_2026_11', '17.11.2026');

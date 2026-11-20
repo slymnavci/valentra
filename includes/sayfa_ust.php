@@ -89,9 +89,10 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
              istekleri hep CORS kipinde, eksikse dosya iki kez iner. Adres
              style.css'teki @font-face ile ayni olmali. */ ?>
     <link rel="preload" as="font" type="font/woff2" href="/assets/yazi/source-sans-3.woff2" crossorigin>
-    <link rel="stylesheet" href="<?= e(varlik('/assets/style.css')) ?>">
-    <?php /* Sayfaya ozel stil paketleri (bkz. includes/stil_paketleri.php). */
-    require_once __DIR__ . '/stil_paketleri.php';
+    <?php /* Ortak stil: Network sayfalarinda ince kopyasi (14.11.2026; bkz. stil_temel). Sayfaya ozel paketler ondan sonra. */
+    require_once __DIR__ . '/stil_paketleri.php'; ?>
+    <link rel="stylesheet" href="<?= e(varlik(stil_temel())) ?>">
+    <?php
     foreach (stil_paketleri() as $stilPaketi): ?>
     <link rel="stylesheet" href="<?= e(varlik($stilPaketi)) ?>">
     <?php endforeach; ?>
@@ -141,6 +142,10 @@ $anaSayfa = ($_SERVER['SCRIPT_NAME'] ?? '') === '/index.php';
     <meta property="og:description" content="<?= e($sayfaAciklama) ?>">
     <meta property="og:url" content="<?= e($seoAdres) ?>">
     <meta property="og:image" content="<?= e($seoGorsel) ?>">
+    <?php if (!empty($seoGorselBoyut)): ?>
+    <meta property="og:image:width" content="<?= (int) $seoGorselBoyut[0] ?>">
+    <meta property="og:image:height" content="<?= (int) $seoGorselBoyut[1] ?>">
+    <?php endif; ?>
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="<?= e($sayfaBasligi) ?>">

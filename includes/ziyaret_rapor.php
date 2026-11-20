@@ -117,10 +117,14 @@ function zr_kosul(string $bas, string $bit, bool $ham, string $t = 'z'): string
 {
     $sonraki = (new DateTimeImmutable($bit))->modify('+1 day')->format('Y-m-d');
 
-    return $t . '.zaman >= ' . db()->quote($bas . ' 00:00:00')
-         . ' AND ' . $t . '.zaman < ' . db()->quote($sonraki . ' 00:00:00')
-         . ' AND ' . ziyaret_insan_kosulu($t, $ham);
+    $aralik = static fn (string $x): string => $x . '.zaman >= ' . db()->quote($bas . ' 00:00:00')
+        . ' AND ' . $x . '.zaman < ' . db()->quote($sonraki . ' 00:00:00');
+
+    // "Yalnizca haber okuyan IP" kosulu kaldirildi (16.11.2026, site sahibi: "gunde 20 bin kisi ziyaret ediyor ama
+    // sen 5 kisi yazmissin"): tarayicida dogrulanan her ziyaretci sayilir; haber okuyanlar ayri olcu (okur).
+    return $aralik($t) . ' AND ' . ziyaret_insan_kosulu($t, $ham);
 }
+
 
 /** Ziyaretçi kimliği (yeni şema yoksa takma imza). */
 function zr_kimlik(string $t = 'z'): string
@@ -158,6 +162,7 @@ function zr_olculer(string $bas, string $bit, bool $ham): array
     $temel = zr_sorgu(
         'SELECT COUNT(*) AS goruntulenme,
                 COUNT(DISTINCT ' . $id . ') AS ziyaretci,
+                COUNT(DISTINCT CASE WHEN z.haber_id IS NOT NULL THEN ' . $id . ' END) AS okur,
                 SUM(z.haber_id IS NOT NULL) AS haber_goruntulenme,
                 SUM(z.yol LIKE \'%' . ZIYARET_AKIS_IZI . '\') AS akis_kart'
         . ($yeniSema ? ',
@@ -183,6 +188,8 @@ function zr_olculer(string $bas, string $bit, bool $ham): array
 
     return [
         'ziyaretci'          => $ziyaretci,
+        // En az bir haber okuyan tekil ziyaretci (16.11.2026).
+        'okur'               => (int) ($temel['okur'] ?? 0),
         'goruntulenme'       => $goruntulenme,
         'haber_goruntulenme' => (int) ($temel['haber_goruntulenme'] ?? 0),
         // V Network akisinda okunan kartlar (goruntulenmenin icinde; bkz. ZIYARET_AKIS_IZI).
@@ -708,7 +715,9 @@ const ZR_BOT_HIZ_SANIYE          = 5;   // sayfa basina bundan kisa ortalama ara
  *
  *   - dogrulanmadi: actigi hicbir sayfa tarayicida goruntulenmedi (sayfadaki
  *     betik calismadi) ve en az ZR_BOT_DOGRULANMAMIS_SAYFA sayfa acti,
- *   - bulut: adres bir bulut / veri merkezi araliginda (ziyaret_bulut.php),
+ *   (16.11.2026: "hic haber okumadi" ve tek basina "bulut / yurt disi adresi"
+ *   artik bot isareti degil; site sahibi: Turkiye'deki okurlarin bir kismi yurt
+ *   disi cikisli internet kullaniyor. Bulut adresi yalnizca not olarak yazilir.)
  *   - cok sayfa: aralikta ZR_BOT_COK_SAYFA ve uzeri sayfa,
  *   - cok hizli: en az ZR_BOT_HIZ_SAYFA sayfa, sayfa basina ortalama
  *     ZR_BOT_HIZ_SANIYE saniyeden kisa aralikla.
@@ -732,12 +741,12 @@ function zr_bot_suphelileri(array $a, int $adet = 100): array
         "SELECT z.ip, COUNT(*) AS sayfa, SUM(z.insan = 1) AS dogru, MIN(z.zaman) AS ilk, MAX(z.zaman) AS son,
                 TIMESTAMPDIFF(SECOND, MIN(z.zaman), MAX(z.zaman)) AS saniye,
                 MAX(z.cihaz) AS cihaz, MAX(z.tarayici) AS tarayici, MAX(z.isletim) AS isletim,
-                MAX($bulut) AS bulut
+                MAX($bulut) AS bulut, SUM(z.haber_id IS NOT NULL AND z.insan = 1) AS okunan
            FROM ziyaretler z
           WHERE " . zr_kosul($a['bas'], $a['bit'], true) . " AND z.ip <> ''
           GROUP BY z.ip
+         -- 16.11.2026: tek basina veri merkezi / yurt disi adresi bot isareti degil.
          HAVING (dogru = 0 AND sayfa >= " . ZR_BOT_DOGRULANMAMIS_SAYFA . ")
-             OR bulut = 1
              OR sayfa >= " . ZR_BOT_COK_SAYFA . "
              OR (sayfa >= " . ZR_BOT_HIZ_SAYFA . " AND saniye < sayfa * " . ZR_BOT_HIZ_SANIYE . ")
           ORDER BY sayfa DESC, son DESC
@@ -748,8 +757,9 @@ function zr_bot_suphelileri(array $a, int $adet = 100): array
         $sayfa = (int) $s['sayfa'];
         $n     = [];
 
+        // Bulut / yurt disi adresi yalnizca not: tek basina bot sayilmaz.
         if ((int) $s['bulut'] === 1) {
-            $n[] = 'bulut / veri merkezi adresi';
+            $n[] = 'veri merkezi adresi (not)';
         }
         if ((int) $s['dogru'] === 0 && $sayfa >= ZR_BOT_DOGRULANMAMIS_SAYFA) {
             $n[] = 'hiçbir sayfası tarayıcıda doğrulanmadı';
@@ -803,6 +813,17 @@ function zr_dogruluk(): array
         )[0] ?? [];
         $tani['toplam']     = (int) ($s['toplam'] ?? 0);
         $tani['dogrulanan'] = (int) ($s['dogrulanan'] ?? 0);
+    }
+
+    // Bugunun ham sayilari (16.11.2026): panel sayisi ile baska araclar (Google Analytics) arasindaki farki gormek icin.
+    if ($tani['yeni_sema']) {
+        $b = zr_sorgu(
+            "SELECT COUNT(*) AS istek, SUM(insan = 1) AS dogru,
+                    COUNT(DISTINCT NULLIF(ip, '')) AS ip, COUNT(DISTINCT CASE WHEN insan = 1 THEN NULLIF(ip, '') END) AS dogru_ip,
+                    COUNT(DISTINCT NULLIF(tarayici_id, '')) AS tarayici
+               FROM ziyaretler WHERE zaman >= CURDATE()"
+        )[0] ?? [];
+        $tani['bugun'] = array_map('intval', $b + ['istek' => 0, 'dogru' => 0, 'ip' => 0, 'dogru_ip' => 0, 'tarayici' => 0]);
     }
 
     return $tani;

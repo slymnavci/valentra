@@ -1028,17 +1028,19 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     db()->exec("UPDATE haberler SET durum = 'yayinda', yayin_tarihi = NOW() - INTERVAL id MINUTE, guncellendi = guncellendi");
 
     $g = nw_gazeteler();
-    bekle(array_keys($g) === ['hurriyet', 'ntv', 'diger'] && $g['hurriyet']['adet'] === 3 && $g['diger']['adet'] === 2, 'gazete listesi: en çok haberi olan önce; tek haberli kaynaklar "Diğer"de, en sonda', json_encode(array_map(static fn (array $x): int => $x['adet'], $g)));
+    // Sozcu tek haberli ama "Yerli gazeteler" listesinde (NW_YERLI_YAYINLAR, 17.11.2026): ayri kalir.
+    bekle(array_keys($g) === ['hurriyet', 'ntv', 'sozcu', 'diger'] && $g['hurriyet']['adet'] === 3 && $g['diger']['adet'] === 1, 'gazete listesi: en çok haberi olan önce; listede olmayan tek haberli kaynak "Diğer"de, en sonda; seçili büyük gazete ayrı', json_encode(array_map(static fn (array $x): int => $x['adet'], $g)));
 
-    // Canlidaki esikle (40): az haberli Turk gazeteleri tek "Diger gazeteler" satirinda; akisi hepsinin haberleri.
+    // Canlidaki esikle (40): secili buyuk gazeteler (Hurriyet, NTV, Sozcu) ayri; kalan az haberli Turk
+    // yayinlari tek "Diger gazeteler" satirinda; akisi onlarin haberleri.
     $digerli = (array) json_decode((string) shell_exec('NW_GAZETE_AYRI_EN_AZ=40 ' . escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg(
         'require "' . __DIR__ . '/../includes/bootstrap.php"; require "' . __DIR__ . '/../includes/topluluk.php"; $g = nw_gazeteler();'
         . 'echo json_encode([array_keys($g), $g["diger"]["adet"] ?? 0, count(nw_akis(30, 0, null, null, "", "diger", true)["ogeler"]), nw_gazete_alani("hurriyet")]);'
     )), true);
-    bekle($digerli === [['diger'], 7, 7, 'hurriyet.com.tr'], 'az haberli gazeteler "Diğer gazeteler"de toplanıyor; akışı hepsinin haberleri; logoları korunuyor', json_encode($digerli));
+    bekle($digerli === [['hurriyet', 'ntv', 'sozcu', 'diger'], 1, 1, 'hurriyet.com.tr'], 'az haberli gazeteler "Diğer gazeteler"de toplanıyor, seçili büyük gazeteler ayrı; akışı Diğer\'in haberleri; logolar korunuyor', json_encode($digerli));
 
     $o = nw_gazete_ozetleri(10, 2);
-    bekle(count($o) === 3 && $o[0]['ad'] === 'Hürriyet' && count($o[0]['haberler']) === 2, '"gazete gazete" görünüm: her yayının son haberleri');
+    bekle(count($o) === 4 && $o[0]['ad'] === 'Hürriyet' && count($o[0]['haberler']) === 2, '"gazete gazete" görünüm: her yayının son haberleri');
 
     $akis = nw_akis(20, 0, null, null, '', 'hurriyet');
     $adlar = array_unique(array_map(static fn (array $x): string => (string) $x['tur'], $akis['ogeler']));
@@ -1105,18 +1107,34 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     bekle(!$var('Turizm geliri'), '"Son haberler": yabancı gazetenin haberi yok (ülke gruplarında durur)');
     bekle($var('Tapu harcı'), '"Son haberler": son yüklenenlerin tamamı (önem puanı düşük haber de var)');
 
-    // "Onemli haberler" (14.11.2026): o gunun gundemi; once buyuk yayinlarin ana sayfasindakiler, sonra onem puani.
-    db()->exec("UPDATE haberler SET manset_sinyal = 18, guncellendi = guncellendi WHERE baslik LIKE '%Sanayi üretimi%'");
+    // "Onemli haberler" (15.11.2026): SU AN gazetelerin mansetinde olanlar en ustte; gundem kucuk ek; sonra onem.
+    // Kalici isaretler (manset_sinyal, manset_yayinlar) siralamayi artik etkilemiyor.
+    require_once __DIR__ . '/../includes/kim_ne_yazdi.php';
+    $gundemSatiri = static fn (string $yayin, string $baslik, string $adres, bool $manset): array =>
+        ['yayin' => $yayin, 'baslik' => $baslik, 'adres' => $adres, 'manset' => $manset, 'zaman' => time() - 600];
+    kny_kaydet([
+        $gundemSatiri('hurriyet.com.tr', 'Sanayi üretimi verisi yayımlandı', 'https://www.hurriyet.com.tr/test-sanayi', false),
+        $gundemSatiri('sabah.com.tr', 'Sanayi üretimi verisi yayımlandı', 'https://www.sabah.com.tr/test-sanayi', false),
+        $gundemSatiri('ntv.com.tr', 'Sanayi üretimi verisi yayımlandı', 'https://www.ntv.com.tr/test-sanayi', false),
+    ]);
+    db()->exec("UPDATE haberler SET manset_sinyal = 18, manset_yayinlar = 'Hürriyet, Sabah (manşette)', guncellendi = guncellendi WHERE baslik LIKE '%Üniversite kontenjan%'");
     db()->exec("UPDATE haberler SET onem = 90, guncellendi = guncellendi WHERE baslik LIKE '%otobüs hattı%'");
     $onemliBasliklar = static fn (): array => array_map(static fn (array $o): string => (string) $o['veri']['baslik'], nw_akis(40, 0, null, null, '', '', true, '', true, 'onemli')['ogeler']);
     $onemliler = $onemliBasliklar();
     bekle(str_contains($onemliler[0] ?? '', 'otobüs hattı') && str_contains($onemliler[1] ?? '', 'Sanayi üretimi'),
-        '"Önemli haberler": önem puanı ve gazetelerin yer vermesi puanı yükseltiyor (90, sonra 70 + 18)', implode(' | ', $onemliler));
-    // Manset eki: ayni onemdeki iki haberden mansette olan once.
-    db()->exec("UPDATE haberler SET manset_yayinlar = 'Hürriyet, Sabah (manşette)', guncellendi = guncellendi WHERE baslik LIKE '%Tapu harcı%'");
-    db()->exec("UPDATE haberler SET onem = 70, guncellendi = guncellendi WHERE baslik LIKE '%Tapu harcı%'");
-    bekle(str_contains($onemliBasliklar()[2] ?? '', 'Tapu harcı'), '"Önemli haberler": gazetelerin manşetindeki haber aynı önemdeki diğerlerinin önünde', implode(' | ', $onemliBasliklar()));
-    db()->exec("UPDATE haberler SET onem = 30, manset_yayinlar = '', guncellendi = guncellendi WHERE baslik LIKE '%Tapu harcı%'");
+        '"Önemli haberler": üç gazetenin gündemindeki haber +15 (70 + 15), önemi 90 olanın arkasında; eski kalıcı manşet işareti sıra vermiyor', implode(' | ', $onemliler));
+    // Su an mansette: onemi dusuk olsa da en ustte.
+    db()->exec("UPDATE haberler SET onem = 50, guncellendi = guncellendi WHERE baslik LIKE '%Tapu harcı%'");
+    kny_kaydet([
+        $gundemSatiri('hurriyet.com.tr', 'Tapu harcı düzenlemesi Meclis\'te', 'https://www.hurriyet.com.tr/test-tapu', true),
+        $gundemSatiri('sabah.com.tr', 'Tapu harcı düzenlemesi Meclis\'te', 'https://www.sabah.com.tr/test-tapu', true),
+    ]);
+    bekle(str_contains($onemliBasliklar()[0] ?? '', 'Tapu harcı'), '"Önemli haberler": şu an iki gazetenin manşetindeki haber en üstte', implode(' | ', $onemliBasliklar()));
+    // Mansetten inen haber (son 3 saatte manset beslemesinde gorulmemis): ustte kalmiyor.
+    db()->exec("UPDATE gundem_basliklari SET manset_gorulme = NOW() - INTERVAL 6 HOUR, son_gorulme = NOW() - INTERVAL 6 HOUR WHERE adres LIKE '%test-tapu'");
+    bekle(!str_contains($onemliBasliklar()[0] ?? '', 'Tapu harcı'), '"Önemli haberler": 6 saat önce manşetten inen haber artık en üstte değil', implode(' | ', $onemliBasliklar()));
+    db()->exec("UPDATE haberler SET onem = 30, guncellendi = guncellendi WHERE baslik LIKE '%Tapu harcı%'");
+    db()->exec("UPDATE haberler SET manset_sinyal = 0, manset_yayinlar = '', guncellendi = guncellendi WHERE baslik LIKE '%Üniversite kontenjan%'");
     // Tazelik (14.11.2026): 14 saatlik haber, onemi yuksek olsa da bugunun taze haberlerinin arkasinda.
     db()->exec("UPDATE haberler SET yayin_tarihi = NOW() - INTERVAL 14 HOUR, guncellendi = guncellendi WHERE baslik LIKE '%otobüs hattı%'");
     $eskili = $onemliBasliklar();
@@ -1142,6 +1160,7 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     bekle($gazeteOnemli['ogeler'] !== [] && str_contains((string) $gazeteOnemli['ogeler'][0]['veri']['baslik'], 'otobüs hattı'),
         'gazete seçiliyken "Önemli haberler": o gazetenin en önemli haberi en üstte', (string) ($gazeteOnemli['ogeler'][0]['veri']['baslik'] ?? '-'));
     db()->exec("UPDATE haberler SET manset_sinyal = 0, guncellendi = guncellendi");
+    db()->exec("DELETE FROM gundem_basliklari WHERE adres LIKE '%/test-sanayi' OR adres LIKE '%/test-tapu'");
     bekle(!$var('Süper Lig') && !$var('EuroLeague') && !$var('Köprü bakım'), '"Son haberler": spor ve dünya başlığındaki haber yok');
     bekle(count(nw_akis(40, 0, null, null, '', '', true)['ogeler']) > count($sonBasliklar), 'başlık ve gazete akışları değişmedi (süzgeç yalnızca "Son haberler"de)');
     db()->exec("DELETE FROM kaynaklar WHERE id = $sId");
@@ -1173,7 +1192,7 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     kny_kaydet([['yayin' => 'ntv.com.tr', 'baslik' => 'NTV gündem haberi', 'adres' => 'https://www.ntv.com.tr/g1', 'manset' => true, 'zaman' => time() - 120]]);
     bekle((int) db()->query("SELECT manset FROM gundem_basliklari WHERE adres = 'https://www.ntv.com.tr/g1'")->fetchColumn() === 1
         && (int) db()->query('SELECT COUNT(*) FROM gundem_basliklari')->fetchColumn() === 3, 'aynı haber manşet beslemesinden de gelince manşet işareti yükseliyor, satır çoğalmıyor');
-    db()->exec("UPDATE gundem_basliklari SET manset = 0 WHERE adres = 'https://www.ntv.com.tr/g1'");
+    db()->exec("UPDATE gundem_basliklari SET manset = 0" . (kny_gorulme_sutunlari_var() ? ', manset_gorulme = NULL' : '') . " WHERE adres = 'https://www.ntv.com.tr/g1'");
     $mansetler = nw_gazete_mansetleri();
     bekle(count($mansetler) === 2 && $mansetler[0]['ad'] === 'Hürriyet' && $mansetler[0]['manset'] && $mansetler[0]['basliklar'][0]['baslik'] === 'Hürriyet manşet haberi'
         && !$mansetler[1]['manset'], 'gazetelerin manşetleri: manşet listesi olan yayın ve manşet başlığı önce; olmayan yayında gündem başlıkları');
@@ -1185,13 +1204,39 @@ senaryo('X', 'V Network: gazete gazete görünüm ve gazeteye göre akış', sta
     bekle(nw_gazete_adi('Hürriyet Ana Sayfa') === 'Hürriyet' && nw_gazete_adi('Habertürk Manşet') === 'Habertürk', 'ana sayfa / manşet beslemeleri yayının adında toplanıyor');
     db()->exec('DELETE FROM gundem_basliklari');
 
+    // Yapay zeka sanal konusu (17.11.2026): basliktan / etiketten, her kategoriden.
+    ekle([haber('OpenAI yeni yapay zeka modelini tanıttı', $olagan + ['kategori' => 'ekonomi']), haber('Belediye yeni park açtı', $olagan + ['kategori' => 'gundem'])]);
+    db()->exec("UPDATE haberler SET durum = 'yayinda', yayin_tarihi = COALESCE(yayin_tarihi, NOW()), guncellendi = guncellendi");
+    $yz = array_map(static fn (array $o): string => (string) $o['veri']['baslik'], nw_akis(30, 0, null, null, NW_YAPAY_ZEKA, '', true)['ogeler']);
+    bekle($yz === ['OpenAI yeni yapay zeka modelini tanıttı'], 'Yapay Zekâ başlığı: yalnızca başlığında / etiketinde yapay zekâ geçen haberler', implode(' | ', $yz));
+    bekle(isset(NW_KONU_SEO['dunya'], NW_KONU_SEO['yapay-zeka']) && str_contains(NW_KONU_SEO['dunya'][0], 'Dünya Haber Özetleri'), 'arama sayfalarının başlıkları aranan sözcükleri taşıyor');
+
     // Sag kenar kutulari (14.11.2026): kaynaklari beklemez, veri yoksa da cizilir.
     $eko = nw_ekonomi_kutusu_html();
     bekle(str_contains($eko, 'Döviz') && str_contains($eko, 'Kripto paralar') && str_contains($eko, 'bolum=doviz') && !str_contains($eko, '—'),
         'ekonomi kutusu: döviz, borsa, altın, kripto bağlantıları; değer yokken çizgi yerine açıklama');
+    // Renkli kalemler (16.11.2026): artis yesil, dusus kirmizi, altinda % degisim.
+    require_once __DIR__ . '/../includes/ayarlar.php';
+    $piyasaEski = ayar_oku('piyasa_onbellek');
+    ayar_yaz('piyasa_onbellek', (string) json_encode(['zaman' => date('Y-m-d H:i:s'), 'usd' => 42.18, 'eur' => 48.95, 'usd_degisim' => 0.32, 'eur_degisim' => -0.41,
+        'bist' => 10425.6, 'bist_degisim' => 1.27, 'altin' => 5712, 'altin_degisim' => -0.85]));
+    $ekoRenk = nw_ekonomi_kutusu_html();
+    ayar_yaz('piyasa_onbellek', $piyasaEski);
+    bekle(str_contains($ekoRenk, '<span class="nw-kalem artti"><b><i>USD</i> 42,18</b><small>▲ %0,32</small></span>')
+        && str_contains($ekoRenk, '<span class="nw-kalem dustu"><b><i>EUR</i> 48,95</b><small>▼ %0,41</small></span>')
+        && str_contains($ekoRenk, '<i>BIST 100</i> 10.426</b><small>▲ %1,27')
+        && str_contains($ekoRenk, 'nw-kalem dustu"><b><i>Gram</i> 5.712 TL</b><small>▼ %0,85'),
+        'ekonomi kutusu: USD ve EUR ayrı ayrı; artan yeşil, düşen kırmızı; altında yüzde değişim (borsa ve altın da)');
+    bekle(nw_piyasa_kalemi_html('Bitcoin', '97.350 $', null) === '<span class="nw-kalem"><b><i>Bitcoin</i> 97.350 $</b></span>',
+        'değişimi bilinmeyen kalem renksiz, altında gösterge yok');
     $spor = nw_spor_kutusu_html();
-    bekle(strpos($spor, 'Canlı skorlar') < strpos($spor, 'Puan durumları') && str_contains($spor, 'bolum=canli-skor') && str_contains($spor, 'bolum=fikstur'),
-        'spor kutusu: en başta canlı skorlar, sonra puan durumları ve fikstür');
+    bekle(str_contains($spor, '<div class="nw-canli-alan" hidden>') && strpos($spor, 'Canlı maçlar') < strpos($spor, 'Puan durumları')
+        && str_contains($spor, 'bolum=canli-skor') && str_contains($spor, 'bolum=fikstur'),
+        'spor kutusu: canlı maç yokken canlı alan kapalı; puan durumları ve fikstür yerinde');
+    bekle(nw_spor_skor_satirlari_html([
+            ['canli' => false, 'durum' => 'FT', 'durum_yazi' => 'MS', 'saat' => '17:00', 'ev' => 'Biten', 'dep' => 'Maç', 'ev_gol' => 0, 'dep_gol' => 0, 'adres' => '/b'],
+            ['canli' => false, 'durum' => 'NS', 'durum_yazi' => '', 'saat' => '21:00', 'ev' => 'Başlamayan', 'dep' => 'Maç', 'ev_gol' => 0, 'dep_gol' => 0, 'adres' => '/c'],
+        ]) === '', 'skor satırları: biten ve başlamayan maç gösterilmiyor (yalnızca oynananlar)');
     bekle(nw_spor_skor_satirlari_html([['canli' => true, 'durum' => 'LIVE', 'durum_yazi' => "34'", 'saat' => '20:00', 'ev' => 'A <b>', 'dep' => 'B', 'ev_gol' => 1, 'dep_gol' => 0, 'adres' => '/x']])
         === '<a class="nw-skor canli" href="/x"><span class="nw-skor-durum">34&#039;</span><span class="nw-skor-takim">A &lt;b&gt;</span><b class="nw-skor-sonuc">1 - 0</b><span class="nw-skor-takim">B</span></a>',
         'canlı skor satırı: dakika, takımlar, skor; takım adı güvenli yazılıyor');
@@ -1317,16 +1362,73 @@ senaryo('Z', 'Ziyaret sayımı: her IP bir kişi; bot şüphelileri ayrı listed
     }
     $e->execute([20, 'eeeeeeeeeeeeeeee', '47.74.1.1', '/sinama-b', 1, '5555555555555555', 'masaustu']);
 
-    bekle((int) db()->query("SELECT COUNT(DISTINCT " . zr_kimlik('z') . ") FROM ziyaretler z WHERE z.yol IN ('/sinama1', '/sinama2', '/sinama3')")->fetchColumn() === 2,
-        'aynı IP\'den iki ayrı tarayıcı tek kişi; iki IP iki kişi');
+    // 16.11.2026: kimlik tarayici (cihaz); IP paylasan iki cihaz iki kisi.
+    bekle((int) db()->query("SELECT COUNT(DISTINCT " . zr_kimlik('z') . ") FROM ziyaretler z WHERE z.yol IN ('/sinama1', '/sinama2', '/sinama3')")->fetchColumn() === 3,
+        'aynı IP\'yi paylaşan iki cihaz iki kişi (ara sunucu adresi herkesi tek kişi yapmasın)');
+    $_SERVER['REMOTE_ADDR'] = '203.0.113.9'; $_SERVER['HTTP_X_FORWARDED_FOR'] = '85.100.7.7, 10.0.0.1';
+    bekle(ziyaret_adresi() === '85.100.7.7', 'gerçek adres ara sunucunun bildirdiği başlıktan');
+    unset($_SERVER['HTTP_X_FORWARDED_FOR']);
+
+    // Ziyaretci = haber okuyan IP (14.11.2026): yalnizca 85.100.1.1 haber okudu.
+    db()->exec("UPDATE ziyaretler SET haber_id = 1 WHERE yol = '/sinama1'");
+    $okurlu = zr_olculer(date('Y-m-d'), date('Y-m-d'), false);
+    $hamOlcu = zr_olculer(date('Y-m-d'), date('Y-m-d'), true);
+    // 16.11.2026: dogrulanan her IP ziyaretci (haber okumayan da); haber okuyan ayri olcu.
+    bekle($okurlu['ziyaretci'] === 4 && $okurlu['okur'] === 1 && $hamOlcu['ziyaretci'] === 5,
+        'doğrulanan her IP ziyaretçi; haber okuyan ayrı ölçü; ham sayımda doğrulanmayan da var', json_encode([$okurlu['ziyaretci'], $okurlu['okur'], $hamOlcu['ziyaretci']]));
 
     $bot = array_column(zr_bot_suphelileri(zr_aralik(['aralik' => 'bugun'])), null, 'ip');
     bekle(isset($bot['45.9.9.9']) && str_contains(implode(' ', $bot['45.9.9.9']['nedenler']), 'doğrulanmadı'), 'hiçbir sayfası doğrulanmayan adres şüpheli listesinde');
-    bekle(isset($bot['47.74.1.1']) && str_contains(implode(' ', $bot['47.74.1.1']['nedenler']), 'bulut'), 'bulut / veri merkezi adresi şüpheli listesinde');
-    bekle(!isset($bot['85.100.1.1']) && !isset($bot['88.200.2.2']), 'olağan okuyucu şüpheli listesinde değil');
+    bekle(!isset($bot['47.74.1.1']), 'yurt dışı / veri merkezi adresi tek başına şüpheli değil');
+    bekle(!isset($bot['85.100.1.1']) && !isset($bot['88.200.2.2']), 'olağan okuyucu (haber okumamış olsa da) şüpheli listesinde değil');
     bekle(count(zr_gezinti('85.100.1.1')) === 2 && zr_gezinti("1' OR '1") === [], 'gezinti IP ile açılıyor; geçersiz kimlik sorguya girmiyor');
 
     db()->exec("DELETE FROM ziyaretler WHERE yol LIKE '/sinama%'");
+});
+
+senaryo('AA', 'Yayın masaları, Discover görsel ölçüsü, Google payında odak dikeyler', static function (): void {
+    require_once __DIR__ . '/../includes/masalar.php';
+    require_once __DIR__ . '/../includes/seo.php';
+    require_once __DIR__ . '/../includes/gorsel_onbellek.php';
+
+    // Masalar (19.11.2026): imza konunun masasi.
+    bekle(haber_masa_anahtari(['kategori_slug' => 'kdv']) === 'ekonomi' && haber_masa_anahtari(['kategori_slug' => 'teknoloji']) === 'teknoloji'
+        && haber_masa_anahtari(['kategori_slug' => 'politika']) === 'gundem' && haber_masa_anahtari([]) === 'gundem',
+        'kategori → masa: KDV Ekonomi Masası\'nda, politika ve kategorisiz Gündem Masası\'nda');
+    $sema = json_decode(seo_haber_semasi(['baslik' => 'Test', 'ozet' => 'Test', 'slug' => 'test', 'yayin_tarihi' => date('Y-m-d H:i:s'),
+        'kategori_slug' => 'ekonomi', 'kategori_adi' => 'Ekonomi', 'gorsel_url' => '']), true);
+    $sema = isset($sema['@graph']) ? $sema['@graph'][0] : $sema;
+    bekle(($sema['author']['name'] ?? '') === 'Valentra Ekonomi Masası' && str_contains((string) ($sema['author']['url'] ?? ''), 'yayin-masalari#ekonomi'),
+        'NewsArticle yazarı haberin masası; adres masa sayfasına', json_encode($sema['author'] ?? null, JSON_UNESCAPED_UNICODE));
+
+    // Discover gorsel olcusu: sitedeki dosyanin boyutu; inmemis ya da dis adres olculmuyor.
+    $marka = haber_gorsel_boyutu('/assets/paylasim.jpg');
+    bekle($marka !== null && $marka[0] > 0 && haber_gorsel_boyutu('/gorsel.php?id=1') === null && haber_gorsel_boyutu('/../etc/passwd') === null
+        && haber_gorsel_boyutu('https://ornek.test/a.jpg') === null, 'görsel boyutu yalnızca sitedeki dosyadan ölçülüyor', json_encode($marka));
+    $img = $sema['image'][0] ?? null;
+    bekle(is_array($img) && ($img['@type'] ?? '') === 'ImageObject' && (int) ($img['width'] ?? 0) === $marka[0], 'şema görseli genişlik ve yükseklikle (ImageObject)', json_encode($img));
+
+    // Google payi: 7 ozgun haber -> 3 tek kaynakli haber hakki.
+    $ozgunler = [];
+    for ($i = 1; $i <= 7; $i++) {
+        $ozgunler[] = haber('Özgün derleme ' . $i, ['kaynak_url' => '', 'kaynak_adi' => 'Valentra']);
+    }
+    ekle($ozgunler);
+    ekle([
+        haber('Gündem tek kaynak A', ['onem' => 60]),
+        haber('Gündem tek kaynak B', ['onem' => 60]),
+        haber('Ekonomi tek kaynak A', ['onem' => 50, 'kategori' => 'ekonomi']),
+        haber('Ekonomi tek kaynak B', ['onem' => 50, 'kategori' => 'ekonomi']),
+        haber('Yerel tek kaynak', ['onem' => 90]),
+    ]);
+    db()->exec("UPDATE haberler SET durum = 'yayinda', google_kota = 0, guncellendi = guncellendi");
+    db()->exec("UPDATE haberler SET sehir = 'Kocaeli', guncellendi = guncellendi WHERE baslik = 'Yerel tek kaynak'");
+    $ozet = haber_ozgun_kotasini_dagit(true);
+    $kotada = db()->query('SELECT baslik FROM haberler WHERE google_kota = 1 ORDER BY baslik')->fetchAll(PDO::FETCH_COLUMN);
+    bekle(($ozet['kota'] ?? 0) === 3 && in_array('Ekonomi tek kaynak A', $kotada, true) && in_array('Ekonomi tek kaynak B', $kotada, true)
+        && count(array_intersect(['Gündem tek kaynak A', 'Gündem tek kaynak B'], $kotada)) === 1,
+        'Google payı: ekonomi haberleri odak ekiyle önde (50 + 15 > 60); kalan yer gündemde', implode(' | ', $kotada));
+    bekle(!in_array('Yerel tek kaynak', $kotada, true), 'yerel kaynağın tek kaynaklı haberi önemi yüksek olsa da paya girmiyor');
 });
 
 temizle();

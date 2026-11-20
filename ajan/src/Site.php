@@ -80,6 +80,9 @@ final class Site
         ];
     }
 
+    /** Tek gonderim istegindeki en fazla haber (site siniri 100; bkz. api/ingest.php). */
+    private const HABER_PARCA = 50;
+
     /**
      * Haberleri taslak olarak gönderir.
      *
@@ -90,6 +93,32 @@ final class Site
     {
         if ($haberler === []) {
             return ['eklenen' => 0, 'yinelenen' => 0, 'hatalar' => []];
+        }
+
+        /*
+         * PARCA PARCA (16.11.2026). Site tek istekte en fazla 100 haber
+         * kabul ediyor (api/ingest.php). Aday sayisi 150'ye cikinca
+         * (15.11.2026) bekleyenlerle birlikte gonderim 400'u gecti, her
+         * calismada HTTP 400 aldi ve haberler GitHub'da birikti (492, 561,
+         * 608). Artik HABER_PARCA'lik parcalar; yanitlar toplanir: sayilar
+         * eklenir, listeler birlesir, digerlerinde son parcanin degeri.
+         */
+        if (count($haberler) > self::HABER_PARCA) {
+            $toplam = [];
+
+            foreach (array_chunk(array_values($haberler), self::HABER_PARCA) as $parca) {
+                foreach ($this->gonder($parca) as $alan => $deger) {
+                    if (is_int($deger) || is_float($deger)) {
+                        $toplam[$alan] = ($toplam[$alan] ?? 0) + $deger;
+                    } elseif (is_array($deger) && array_is_list($deger)) {
+                        $toplam[$alan] = array_merge(is_array($toplam[$alan] ?? null) ? $toplam[$alan] : [], $deger);
+                    } else {
+                        $toplam[$alan] = $deger;
+                    }
+                }
+            }
+
+            return $toplam;
         }
 
         [$kod, $govde] = $this->istek(

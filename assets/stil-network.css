@@ -66,7 +66,8 @@
  * akis, sagda tanisilabilecek kisiler ve kurallar. Telefonda tek sutun,
  * ust bandin bolumleri alta yapisan bir sekme cubuguna donusuyor.
  */
-.nw-govde { background: color-mix(in srgb, var(--zemin) 70%, #e4e6eb); }
+/* 17.11.2026 (site sahibi: "arka renk biraz daha beyaza yakin olsun"): %70 -> %88 sayfa zemini. */
+.nw-govde { background: color-mix(in srgb, var(--zemin) 88%, #e4e6eb); }
 :where(:root[data-tema="koyu"]) .nw-govde { background: #18191a; }
 @media (prefers-color-scheme: dark) { :where(:root:not([data-tema="acik"])) .nw-govde { background: #18191a; }
 }
@@ -488,8 +489,26 @@ a.nw-hesap:hover { color: var(--altin); }
 .nw-degisim.dustu { color: #c62828; }
 .nw-sag .nw-yan-kutu a.nw-kutu-tumu { display: block; padding-top: 10px; border-top: 1px solid var(--cizgi); font-size: .84rem; font-weight: 700; color: var(--vurgu); text-decoration: none; }
 .nw-sag .nw-yan-kutu a.nw-kutu-tumu:hover { text-decoration: underline; }
+/* Piyasa kalemleri (16.11.2026): artis yesil, dusus kirmizi; altinda % degisim. */
+.nw-sag .nw-yan-kutu a.nw-piyasa-satir { align-items: flex-start; }
+.nw-piyasa-satir > strong { padding-top: 1px; }
+.nw-kalemler { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 14px; }
+.nw-kalem { display: grid; justify-items: end; gap: 1px; color: var(--metin); font-variant-numeric: tabular-nums; }
+.nw-kalem b { font-size: .88rem; font-weight: 800; white-space: nowrap; }
+.nw-kalem b i { font-style: normal; font-weight: 600; font-size: .74rem; color: var(--metin-soluk); }
+.nw-kalem small { font-size: .72rem; font-weight: 700; color: var(--metin-soluk); }
+.nw-kalem.artti b, .nw-kalem.artti small { color: #1a8a4a; }
+.nw-kalem.dustu b, .nw-kalem.dustu small { color: #c62828; }
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) .nw-kalem.artti :is(b, small) { color: #3ecf7a; }
+    :where(:root:not([data-tema="acik"])) .nw-kalem.dustu :is(b, small) { color: #ff6b6b; }
+}
+:root[data-tema="koyu"] .nw-kalem.artti :is(b, small) { color: #3ecf7a; }
+:root[data-tema="koyu"] .nw-kalem.dustu :is(b, small) { color: #ff6b6b; }
+.nw-canli-alan[hidden] { display: none; }
 .nw-canli-nokta { width: 9px; height: 9px; border-radius: 50%; background: var(--metin-soluk); }
-.nw-canli-nokta.yaniyor { background: #d7141a; animation: nw-yanip 1.4s ease-in-out infinite; }
+/* Canli mac yesil (16.11.2026, site sahibi: "o an mac varsa gostersin ve yesil gorunsun"). */
+.nw-canli-nokta.yaniyor { background: #1a8a4a; animation: nw-yanip 1.4s ease-in-out infinite; }
 @keyframes nw-yanip { 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) { .nw-canli-nokta.yaniyor { animation: none; } }
 .nw-skorlar:empty { display: none; }
@@ -500,7 +519,14 @@ a.nw-hesap:hover { color: var(--altin); }
 }
 .nw-sag .nw-yan-kutu a.nw-skor:hover { outline: 1px solid var(--altin); }
 .nw-skor-durum { font-size: .72rem; font-weight: 700; color: var(--metin-soluk); }
-.nw-skor.canli .nw-skor-durum { color: #d7141a; }
+.nw-skor.canli .nw-skor-durum { color: #1a8a4a; }
+.nw-sag .nw-yan-kutu a.nw-skor.canli { background: color-mix(in srgb, #1a8a4a 12%, var(--kart)); box-shadow: inset 3px 0 0 #1a8a4a; }
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) :is(.nw-skor.canli .nw-skor-durum) { color: #3ecf7a; }
+    :where(:root:not([data-tema="acik"])) .nw-canli-nokta.yaniyor { background: #3ecf7a; }
+}
+:root[data-tema="koyu"] .nw-skor.canli .nw-skor-durum { color: #3ecf7a; }
+:root[data-tema="koyu"] .nw-canli-nokta.yaniyor { background: #3ecf7a; }
 .nw-skor-takim { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .nw-skor-takim:last-child { text-align: right; }
 .nw-skor-sonuc { font-variant-numeric: tabular-nums; font-weight: 800; }
@@ -541,3 +567,117 @@ a.nw-hesap:hover { color: var(--altin); }
 /* Kucuk gorsel buyutulmez (14.11.2026): kendi boyutunda, ortada; yanlari sayfa zemini. */
 .nw-gorsel-kucuk { background: var(--zemin); }
 .nw-gorsel-kucuk img { width: auto; max-width: 100%; height: auto; max-height: 460px; margin: 0 auto; object-fit: contain; }
+
+/* Gazete bolumleri (17.11.2026): Buyuk gazeteler, Yabanci medya, Yerel medya; altinda "Ulkelere gore". */
+.nw-bolum > summary { font-weight: 800; }
+.nw-sol-ara { display: block; margin: 14px 10px 6px; font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--metin-soluk); }
+
+/* Kucuk piyasa grafikleri (17.11.2026; bkz. nw_piyasa_grafigi_html): satirin altinda tam genislikte. */
+.nw-sag .nw-yan-kutu a.nw-grafikli { flex-wrap: wrap; }
+.nw-mini-grafik { flex: 1 0 100%; display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.nw-mini-grafik svg { flex: 1; min-width: 0; width: 100%; height: 30px; }
+.nw-mini-grafik small { font-size: .7rem; font-weight: 700; white-space: nowrap; }
+.nw-mini-grafik.artis { color: #1a7f37; }
+.nw-mini-grafik.dusus { color: #cf222e; }
+:where(:root[data-tema="koyu"]) .nw-mini-grafik.artis { color: #3fb950; }
+:where(:root[data-tema="koyu"]) .nw-mini-grafik.dusus { color: #f85149; }
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) .nw-mini-grafik.artis { color: #3fb950; }
+    :where(:root:not([data-tema="acik"])) .nw-mini-grafik.dusus { color: #f85149; }
+}
+
+/* Kisisel yan menu (17.11.2026; bkz. network.php, "nw-yan"): sol / sag menu daraltilir,
+   basliklar katlanir. Tercih tarayicida kalici. */
+.nw-yan-dugme {
+    justify-self: end; width: 30px; height: 30px; border-radius: 50%;
+    border: 1px solid var(--cizgi); background: var(--kart); color: var(--metin-soluk);
+    font: 700 1.1rem/1 inherit; cursor: pointer; box-shadow: var(--golge);
+}
+.nw-sag .nw-yan-dugme { justify-self: start; }
+.nw-yan-dugme:hover { color: var(--altin); border-color: var(--altin); }
+.nw-uc.sol-kapali { grid-template-columns: 36px minmax(0, 980px) 340px; }
+.nw-uc.sag-kapali { grid-template-columns: 300px minmax(0, 980px) 36px; }
+.nw-uc.sol-kapali.sag-kapali { grid-template-columns: 36px minmax(0, 980px) 36px; }
+@media (min-width: 861px) {
+    .nw-uc.sol-kapali .nw-sol > :not(.nw-yan-dugme),
+    .nw-uc.sag-kapali .nw-sag > :not(.nw-yan-dugme) { display: none; }
+}
+.nw-uc.sol-kapali .nw-sol { overflow: visible; padding-right: 0; }
+@media (max-width: 1180px) {
+    .nw-uc.sol-kapali, .nw-uc.sol-kapali.sag-kapali { grid-template-columns: 36px minmax(0, 1fr); }
+    .nw-uc.sag-kapali { grid-template-columns: 220px minmax(0, 1fr); }
+}
+@media (max-width: 860px) {
+    .nw-uc.sol-kapali, .nw-uc.sag-kapali, .nw-uc.sol-kapali.sag-kapali { grid-template-columns: minmax(0, 1fr); }
+}
+.nw-katla-bas { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 8px; }
+.nw-katla-bas::after {
+    content: ""; margin-left: auto; width: 7px; height: 7px; flex: none;
+    border-right: 2px solid var(--metin-soluk); border-bottom: 2px solid var(--metin-soluk);
+    transform: rotate(45deg) translateY(-2px); transition: transform .15s;
+}
+.nw-katla-bas[aria-expanded="false"]::after { transform: rotate(-45deg); }
+.nw-katla-bas:hover { color: var(--altin); }
+.nw-katla-bas:focus-visible { outline: 2px solid var(--altin); outline-offset: 2px; border-radius: 4px; }
+.nw-uc[data-katli~="basliklar"] [data-katla="basliklar"] > :not(:first-child),
+.nw-uc[data-katli~="gazeteler"] [data-katla="gazeteler"] > :not(:first-child),
+.nw-uc[data-katli~="ekonomi"] [data-katla="ekonomi"] > :not(:first-child),
+.nw-uc[data-katli~="spor"] [data-katla="spor"] > :not(:first-child),
+.nw-uc[data-katli~="katil"] [data-katla="katil"] > :not(:first-child),
+.nw-uc[data-katli~="etkilesim"] [data-katla="etkilesim"] > :not(:first-child),
+.nw-uc[data-katli~="begenilen"] [data-katla="begenilen"] > :not(:first-child),
+.nw-uc[data-katli~="populer"] [data-katla="populer"] > :not(:first-child),
+.nw-uc[data-katli~="kisiler"] [data-katla="kisiler"] > :not(:first-child),
+.nw-uc[data-katli~="kurallar"] [data-katla="kurallar"] > :not(:first-child) { display: none !important; }
+.nw-kutu-gorsel { display: block; width: 100%; height: auto; aspect-ratio: 3 / 1; object-fit: cover; border-radius: 8px; margin: 2px 0 8px; background: #fff; }
+
+/* Telefonda sol menu (17.11.2026; bkz. network.php .nw-mobil-menu-dugme): dort kareli
+   dugme sol kenari tam ekran acar. Genis ekranda dugme ve ust serit yok. */
+.nw-mobil-menu-dugme, .nw-mobil-menu-ust { display: none; }
+@media (max-width: 860px) {
+    .nw-mobil-menu-dugme {
+        display: grid; place-items: center; position: fixed; left: 14px; z-index: 900;
+        /* Alttaki sekme cubugunun (yaklasik 62 px) ustunde. */
+        bottom: calc(74px + env(safe-area-inset-bottom));
+        width: 52px; height: 52px; border-radius: 16px; border: none; cursor: pointer;
+        background: var(--altin); color: var(--vurgu-ustu, #fff); box-shadow: 0 4px 14px rgba(0, 0, 0, .28);
+    }
+    .nw-uc .nw-yan-dugme { display: none; }
+    .nw-uc.mobil-acik .nw-sol {
+        display: grid; align-content: start; position: fixed; inset: 0; z-index: 1000;
+        max-height: none; overflow-y: auto; overscroll-behavior: contain;
+        padding: 0 14px 28px; background: var(--kart);
+    }
+    .nw-uc.mobil-acik .nw-mobil-menu-ust {
+        display: flex; align-items: center; justify-content: space-between;
+        position: sticky; top: 0; z-index: 1; margin: 0 -14px; padding: 12px 14px;
+        background: var(--kart); border-bottom: 1px solid var(--cizgi);
+    }
+    .nw-mobil-menu-ust strong { font-size: 1.1rem; font-weight: 800; }
+    .nw-mobil-menu-kapat {
+        width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--cizgi);
+        background: var(--zemin); color: var(--metin); font-size: 1.05rem; cursor: pointer;
+    }
+    .nw-uc.mobil-acik .nw-mobil-menu-dugme { display: none; }
+    .nw-uc.mobil-acik .nw-sol-satir { padding-top: 11px; padding-bottom: 11px; }
+    html.nw-kaydirma-kilit, html.nw-kaydirma-kilit body { overflow: hidden; }
+}
+
+/* Kutu gorselleri daha kucuk (17.11.2026, site sahibi: "spor ve ekonomi logolarini biraz daha kucultelim, cok buyuk
+   gorunuyor"): tam genislik (yaklasik 300 x 100) yerine ortada, en fazla 64 piksel yukseklik. */
+.nw-kutu-gorsel { width: auto; max-width: 70%; height: 64px; aspect-ratio: 3 / 1; object-fit: contain; margin: 0 auto 6px; }
+
+/* Spor kutusu: Super Lig ilk 5 ve ilk 4 takimin bu haftaki maclari (17.11.2026). */
+.nw-sag .nw-yan-kutu a.nw-spor-blok { flex-wrap: wrap; }
+.nw-mini-tablo, .nw-mini-fikstur { flex: 1 0 100%; list-style: none; margin: 6px 0 0; padding: 0; font-size: .84rem; color: var(--metin); }
+.nw-mini-tablo li { display: grid; grid-template-columns: 18px 1fr auto 28px; gap: 6px; align-items: baseline; padding: 3px 0; }
+.nw-mini-tablo li b { color: var(--metin-soluk); font-weight: 700; text-align: right; }
+.nw-mini-tablo li span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.nw-mini-tablo li small { color: var(--metin-soluk); font-size: .72rem; }
+.nw-mini-tablo li strong { text-align: right; font-weight: 800; }
+.nw-mini-fikstur li { display: grid; grid-template-columns: 62px 1fr auto 1fr; gap: 6px; align-items: baseline; padding: 3px 0; }
+.nw-mini-fikstur li small { color: var(--metin-soluk); font-size: .72rem; white-space: nowrap; }
+.nw-mini-fikstur li span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nw-mini-fikstur li span:last-child { text-align: right; }
+.nw-mini-fikstur li b { font-weight: 800; }
+.nw-mini-fikstur li.oynandi { color: var(--metin-soluk); }

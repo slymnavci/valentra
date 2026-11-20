@@ -202,7 +202,7 @@ require __DIR__ . '/ust.php';
         <?php if ($ham): ?>
             <a href="<?= e($adres(['ham' => null])) ?>" class="rozet rozet-reddedildi">Ham sayım gösteriliyor — doğrulanmış sayıma dön</a>
         <?php else: ?>
-            <a href="<?= e($adres(['ham' => '1'])) ?>" class="ipucu">Ham sayımı göster (bot şüphelileri dahil)</a>
+            <a href="<?= e($adres(['ham' => '1'])) ?>" class="ipucu">Ham sayımı göster (doğrulanmayanlar dahil)</a>
         <?php endif; ?>
     </div>
 </div>
@@ -210,7 +210,7 @@ require __DIR__ . '/ust.php';
 <!-- Gosterge paneli (29.10.2026): ozet kutulari ve grafikler; ayrintilar asagida -->
 <?php
 $gsKutular = [
-    ['ad' => 'Ziyaretçi', 'alt' => 'tekil IP adresi', 'deger' => $sayi($olcu['ziyaretci']),
+    ['ad' => 'Ziyaretçi', 'alt' => 'tekil kişi (cihaz)', 'deger' => $sayi($olcu['ziyaretci']),
      'degisim' => $degisim($olcu['ziyaretci'], $onceki['ziyaretci']), 'seri' => array_column($gsSeri, 'ziyaretci')],
     ['ad' => 'Google’dan gelen', 'alt' => 'tekil okuyucu', 'deger' => $sayi($gsOzet['google']),
      'degisim' => $degisim($gsOzet['google'], $gsOnceki['google']), 'seri' => array_column($gsSeri, 'google')],
@@ -449,8 +449,13 @@ $gsHaberEnCok = max(1, (int) ($gsHaberler[0]['okuyucu'] ?? 1));
     </div>
     <div class="olcum">
         <span class="olcum-sayi"><?= $sayi($olcu['ziyaretci']) ?></span>
-        <span class="olcum-ad">ziyaretçi (tekil IP adresi)</span>
+        <span class="olcum-ad">ziyaretçi (tekil kişi)</span>
         <?= $degisim($olcu['ziyaretci'], $onceki['ziyaretci']) ?>
+    </div>
+    <div class="olcum">
+        <span class="olcum-sayi"><?= $sayi($olcu['okur']) ?></span>
+        <span class="olcum-ad">haber okuyan ziyaretçi</span>
+        <?= $degisim($olcu['okur'], $onceki['okur']) ?>
     </div>
     <div class="olcum">
         <span class="olcum-sayi"><?= $sayi($olcu['goruntulenme']) ?></span>
@@ -866,7 +871,8 @@ $gsHaberEnCok = max(1, (int) ($gsHaberler[0]['okuyucu'] ?? 1));
     <h2 style="margin-top:0;">Bot olma ihtimali olan adresler <span class="ipucu" style="font-weight:400;">(<?= e($a['ad']) ?>, en çok sayfa açan önce)</span></h2>
     <p class="ipucu">Kendini bot diye tanıtanlar (Google, yapay zekâ botları, WhatsApp önizlemesi) hiç kaydedilmez. Buradakiler kendini
         tarayıcı gibi gösteren ama aşağıdaki işaretlerden en az birini taşıyan adreslerdir. Şüpheli olmak kesin bot demek değildir.
-        "Doğrulanan" sütunu 0 olan adresler ziyaretçi sayılarına <?= $ham ? '<strong>şu an dahil</strong> (ham sayım açık)' : 'zaten girmiyor' ?>.</p>
+        "Doğrulanmadı" yazan adresler ziyaretçi sayılarına <?= $ham ? '<strong>şu an dahil</strong> (ham sayım açık)' : 'girmiyor' ?>;
+        diğer nedenlerle listelenenler sayılıyor. Yurt dışı / veri merkezi adresi tek başına şüphe nedeni değil.</p>
     <?php if ($botlar === []): ?>
         <p class="ipucu">Bu aralıkta şüpheli adres yok.</p>
     <?php else: ?>
@@ -914,11 +920,18 @@ $gsHaberEnCok = max(1, (int) ($gsHaberler[0]['okuyucu'] ?? 1));
                 <?php endif; ?>
             <?php endif; ?>
         </li>
+        <?php if (!empty($dogruluk['bugun'])): $bg = $dogruluk['bugun']; ?>
+        <li><strong>Bugün (ham):</strong> sunucuya <?= $sayi($bg['istek']) ?> sayfa isteği, <?= $sayi($bg['ip']) ?> farklı IP;
+            tarayıcıda doğrulanan <?= $sayi($bg['dogru']) ?> görüntülenme, <?= $sayi($bg['dogru_ip']) ?> IP.
+            <?= $sayi($bg['tarayici']) ?> farklı tarayıcı kimliği. Google Analytics ile büyük fark varsa bu satır nedenini gösterir.</li>
+        <?php endif; ?>
         <li><strong>Elenenler:</strong> arama motoru ve yapay zekâ botları, WhatsApp/Telegram önizlemeleri,
             izleme servisleri, panel oturumunuz açıkken yaptığınız ziyaretler ve “bu cihazı sayma” işaretli tarayıcılar.</li>
-        <li><strong>Tekil ziyaretçi:</strong> her IP adresi bir kişi sayılıyor (14.11.2026). Aynı adresi paylaşanlar
-            (ev, iş yeri, mobil operatörün ortak adresi) tek kişi; adresi değişen kişi (Wi-Fi'den mobil veriye geçen telefon) iki kişi
-            sayılır. Bot olma ihtimali olan adresler <a href="#botlar">ayrı tabloda</a>.</li>
+        <li><strong>Ziyaretçi:</strong> sayfası tarayıcıda gerçekten görüntülenen her cihaz bir kişi (16.11.2026). IP ile sayım
+            bırakıldı: kaydedilen adres çoğu zaman hosting'in önündeki ara sunucunun adresi olduğu için binlerce okur birkaç kişi görünüyordu.
+            Yurt dışı ya da veri merkezi görünen adresler (Türkiye'deki okurun yurt dışı çıkışlı interneti, VPN) bot sayılmıyor.
+            Yurt dışı ya da veri merkezi görünen adresler bot sayılmıyor. "Haber okuyan ziyaretçi" ayrı ölçü.
+            Bot olma ihtimali olan adresler <a href="#botlar">ayrı tabloda</a>.</li>
         <li><strong>Saat:</strong>
             sunucu <?= e($dogruluk['db_saat'] !== '' ? date('H:i', strtotime($dogruluk['db_saat'])) : '—') ?>,
             Türkiye <?= e(date('H:i')) ?>

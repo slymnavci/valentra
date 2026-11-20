@@ -159,9 +159,11 @@ switch ($sayfa) {
         $akis   = $gazeteGorunumu
             ? ['ogeler' => [], 'sonraki' => 0]
             // "Son haberler" (baslik ve gazete secili degilken): once Turkiye, onemli gundem (14.11.2026).
-            // Genel "Son haberler" (14.11.2026): once en cok gazetenin yer verdigi haberler ('gundem' sirasi, ?atla ile sayfalanir).
+            // Genel "Son haberler": saate gore (en yeni ustte), $once ile sayfalanir; "Onemli haberler" ?atla ile.
             : nw_akis(NW_AKIS_ADEDI, $once, null, null, $konu, $gazete, true, $dal, $konu === '' && $gazete === '',
-                $onemli ? 'onemli' : ($konu === '' && $gazete === '' && $sekme === 'herkes' ? 'gundem' : ''), max(0, (int) ($_GET['atla'] ?? 0)));
+                // Son haberler: SAATE GORE, en son yayimlanan en ustte (site sahibi, 14.11.2026: "son haberlerde hangisi
+                // en son yayinlandiysa o basta olacak"); gazete secilmemisse butun gazetelerin haberleri karisik.
+                $onemli ? 'onemli' : '', max(0, (int) ($_GET['atla'] ?? 0)));
         $baglam = nw_baglam($akis['ogeler']);
         $takipEdilenler = $uyeId !== null ? nw_takip_edilenler($uyeId) : [];
         $oneriler = !$kisilerAcik ? [] : array_slice(array_values(array_filter(
@@ -220,7 +222,8 @@ switch ($sayfa) {
     case 'profil':
         $kisi = nw_uye_bul($detayId);
 
-        if ($kisi === null) {
+        // Baskasinin profili yalnizca yoneticiye (bkz. nw_profil_acik).
+        if ($kisi === null || !nw_profil_acik($detayId)) {
             nw_bulunamadi();
         }
 
@@ -313,10 +316,26 @@ $seoAdres = site_adresi() . ($buYol ?? nw_yol($yol));
  * sayfasi aramadan duserdi) ve tek adresi kok adrestir.
  */
 if ($yol === '' && array_diff_key($_GET, ['yol' => 1]) === []) {
-    $seoRobots     = 'index, follow';
+    // Buyuk gorsel izni (Google Discover / Haberler): haber sitesinin on sayfasiyla ayni etiket.
+    $seoRobots     = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
     $seoAdres      = site_adresi() . '/';
-    $sayfaBasligi  = 'Valentra — Günün önemli haberleri, gazete gazete';
-    $sayfaAciklama = 'Türkiye ve dünyadan günün önemli haberleri: hangi gazete ne yazdı, manşetler, son haberler, ekonomi ve canlı skorlar. Her haberin özeti ve kaynağı.';
+    // Aranan sozcuklerle (17.11.2026): "haber ozetleri", "guncel haberler", "dunyadan haber".
+    $sayfaBasligi  = 'Valentra — Güncel Haber Özetleri: Türkiye ve Dünyadan Haberler, Gazete Gazete';
+    $sayfaAciklama = 'Güncel haber özetleri: Türkiye ve dünyadan günün önemli haberleri, gazetelerin manşetleri, son dakika, ekonomi, spor ve yapay zekâ haberleri. Her haberin kısa özeti ve kaynak gazetesi.';
+}
+
+/*
+ * Baslik sayfalari arama icin acik (17.11.2026; bkz. NW_KONU_SEO): yalnizca
+ * ?konu=... ile (baska parametre yokken).
+ */
+$nwKonuSeo = $yol === '' && ($konu ?? '') !== '' && isset(NW_KONU_SEO[$konu]) && array_diff_key($_GET, ['yol' => 1, 'konu' => 1]) === []
+    ? NW_KONU_SEO[$konu] : null;
+
+if ($nwKonuSeo !== null) {
+    $seoRobots     = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
+    $seoAdres      = site_adresi() . nw_yol('', ['konu' => $konu]);
+    $sayfaBasligi  = $nwKonuSeo[0];
+    $sayfaAciklama = $nwKonuSeo[2];
 }
 
 require __DIR__ . '/includes/sayfa_ust.php';
@@ -336,12 +355,23 @@ $solKenar = static function () use ($sayfa): void {
              "akis, mesajlar, profili duzenle sagdaki kullanici adinin alt menusu
              olsun; solda gazeteler ve konu basliklari olsun"). Hesap baglantilari
              ust bandin sagindaki menude (includes/network_ust.php). */ ?>
-    <aside class="nw-sol">
+    <?php /* TELEFONDA SOL MENU (17.11.2026, site sahibi: "telefondan goruntulemek icin sol menu
+             kapali; dort kareli dugmeye basinca acilan bir ekran gostersin"). Dar ekranda sol
+             kenar gizli; bu dugme onu tam ekran acar. Genis ekranda dugme gorunmez. */ ?>
+    <button type="button" class="nw-mobil-menu-dugme" aria-controls="nw-sol" aria-expanded="false" aria-label="Başlıklar ve gazeteler menüsünü aç">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>
+    </button>
+    <aside class="nw-sol" id="nw-sol">
+        <div class="nw-mobil-menu-ust">
+            <strong>Menü</strong>
+            <button type="button" class="nw-mobil-menu-kapat" aria-label="Menüyü kapat">✕</button>
+        </div>
+        <button type="button" class="nw-yan-dugme" data-yan="sol" aria-expanded="true" aria-label="Sol menüyü daralt" title="Sol menüyü daralt / genişlet"><span aria-hidden="true">‹</span></button>
         <?php /* Basliklar ve gazeteler (13.11.2026): secilen baslik ya da gazetenin
                  haberleri ortada asagi dogru akar. data-konu: secim tarayicida
                  hatirlaniyor (assets/network-akis.js); gazete secimi hatirlanmaz. */ ?>
         <?php if ($nwKonular !== []): ?>
-            <nav class="nw-sol-grup" aria-label="Başlıklar">
+            <nav class="nw-sol-grup" aria-label="Başlıklar" data-katla="basliklar">
                 <strong class="nw-sol-baslik">Başlıklar</strong>
                 <?php $nwOnemli = $nwAkis && !empty($GLOBALS['onemli']); ?>
                 <a class="nw-sol-satir<?= $nwOnemli ? ' aktif' : '' ?>" href="<?= e(nw_yol()) ?>" data-konu=""
@@ -369,13 +399,31 @@ $solKenar = static function () use ($sayfa): void {
         };
         ?>
         <?php if ($nwGruplar !== []): ?>
-            <nav class="nw-sol-grup" aria-label="Gazeteler">
+            <nav class="nw-sol-grup" aria-label="Gazeteler" data-katla="gazeteler">
                 <strong class="nw-sol-baslik">Gazeteler</strong>
                 <a class="nw-sol-satir<?= $nwTumu ? ' aktif' : '' ?>" href="<?= e(nw_yol('', ['gorunum' => 'gazeteler'])) ?>" data-konu=""
                    <?= $nwTumu ? 'aria-current="page"' : '' ?>><span class="nw-sol-ad"><?= nw_konu_ikonu('gundem') ?>Tüm gazeteler</span></a>
+                <?php
+                /*
+                 * BOLUMLER (17.11.2026, site sahibi: "gazeteler menusunu toparlayalim; buyuk gazeteler,
+                 * yabanci medya (BBC, CNN, NYT, Fox...), yerel medya; sonra ulke ulke, basta Turkiye").
+                 * Buyuk gazeteler ve yabanci medya acik gelir; yerel medya ve ulkeler kapali.
+                 */
+                $nwBolum = nw_gazete_bolumleri();
+                foreach ([['buyuk', 'Yerli gazeteler', 'tr', true], ['yabanci', 'Yabancı medya', '', true], ['yerel', 'Yerel medya', 'tr', false]] as [$bk, $bAd, $bBayrak, $bAcik]):
+                    if ($nwBolum[$bk] === []) { continue; }
+                    $bSecili = isset($nwBolum[$bk][$nwGazete]); ?>
+                    <details class="nw-ulke nw-bolum" data-ulke="bolum-<?= e($bk) ?>"<?= $bAcik || $bSecili ? ' open' : '' ?>>
+                        <summary><?= $bBayrak !== '' ? nw_bayrak_html($bBayrak) : nw_konu_ikonu('dunya') ?><span><?= e($bAd) ?></span></summary>
+                        <div class="nw-ulke-ic">
+                            <?php foreach ($nwBolum[$bk] as $slug => $g): ?><?= $nwSatir((string) $slug, $g) ?><?php endforeach; ?>
+                        </div>
+                    </details>
+                <?php endforeach; ?>
+                <span class="nw-sol-ara">Ülkelere göre</span>
                 <?php foreach ($nwGruplar as $grup): ?>
                     <?php $secili = isset($grup['ana'][$nwGazete]) || isset($grup['yerel'][$nwGazete]); ?>
-                    <details class="nw-ulke" data-ulke="<?= e($grup['kod']) ?>"<?= $grup['kod'] === 'tr' || $secili ? ' open' : '' ?>>
+                    <details class="nw-ulke" data-ulke="<?= e($grup['kod']) ?>"<?= $secili && $grup['kod'] !== 'tr' ? ' open' : '' ?>>
                         <summary><?= nw_bayrak_html($grup['kod']) ?><span><?= e($grup['ad']) ?></span></summary>
                         <div class="nw-ulke-ic">
                             <?php if ($grup['kod'] === 'tr' && $grup['ana'] !== []): ?><span class="nw-ulke-alt">Ana gazeteler</span><?php endif; ?>
@@ -435,7 +483,7 @@ $solKenar = static function () use ($sayfa): void {
 
 $kuralKutusu = static function (): void {
     ?>
-    <div class="nw-yan-kutu nw-kurallar">
+    <div class="nw-yan-kutu nw-kurallar" data-katla="kurallar">
         <strong>Topluluk kuralları</strong>
         <ul>
             <li>Küfür, hakaret ve nefret söylemi yasaktır.</li>
@@ -488,6 +536,68 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
 
 <?php if ($sayfa === 'akis'): ?>
     <div class="nw-uc">
+        <?php /*
+         * KISISEL YAN MENU (17.11.2026, site sahibi: "sag ve sol menuyu daraltma
+         * genisletme secenegi kisisel olsun; birisi bir kez duzeltirse her seferinde
+         * boyle acsin; basliklari da daraltma ve genisletme secenegi olsun").
+         * Secim bu tarayicida kalici (localStorage "nw-yan"): sol/sag menu daraltildi
+         * mi, hangi basliklar (data-katla) kapali. Sayfa kopyasi herkese ayni; tercih
+         * burada, cizimden ONCE uygulaniyor (menu acik gorunup sonra kapanmasin).
+         * Tiklamalar .nw-uc uzerinden yakalaniyor: asagida cizilen basliklar da calisir.
+         */ ?>
+        <script>
+        (function () {
+            var uc = document.currentScript.parentNode, bellek = null, k = { sol: 0, sag: 0, katli: [] };
+            try { bellek = window.localStorage; k = JSON.parse(bellek.getItem('nw-yan') || 'null') || k; } catch (e) {}
+            if (!Array.isArray(k.katli)) { k.katli = []; }
+            function uygula() {
+                uc.classList.toggle('sol-kapali', !!k.sol);
+                uc.classList.toggle('sag-kapali', !!k.sag);
+                uc.setAttribute('data-katli', k.katli.join(' '));
+                uc.querySelectorAll('.nw-yan-dugme').forEach(function (d) {
+                    var kapali = !!k[d.getAttribute('data-yan')], sol = d.getAttribute('data-yan') === 'sol';
+                    d.setAttribute('aria-expanded', kapali ? 'false' : 'true');
+                    d.setAttribute('aria-label', (sol ? 'Sol' : 'Sağ') + ' menüyü ' + (kapali ? 'genişlet' : 'daralt'));
+                    d.firstChild.textContent = (kapali === sol) ? '›' : '‹';
+                });
+                uc.querySelectorAll('[data-katla] > :first-child').forEach(function (b) {
+                    var ad = b.parentNode.getAttribute('data-katla');
+                    b.setAttribute('role', 'button');
+                    b.setAttribute('tabindex', '0');
+                    b.classList.add('nw-katla-bas');
+                    b.setAttribute('aria-expanded', k.katli.indexOf(ad) === -1 ? 'true' : 'false');
+                });
+            }
+            function yaz() { try { if (bellek) { bellek.setItem('nw-yan', JSON.stringify(k)); } } catch (e) {} }
+            function mobil(ac) {
+                uc.classList.toggle('mobil-acik', ac);
+                document.documentElement.classList.toggle('nw-kaydirma-kilit', ac);
+                var m = uc.querySelector('.nw-mobil-menu-dugme');
+                if (m) { m.setAttribute('aria-expanded', ac ? 'true' : 'false'); }
+                if (ac) { var k = uc.querySelector('.nw-mobil-menu-kapat'); if (k) { k.focus(); } } else if (m) { m.focus(); }
+            }
+            document.addEventListener('keydown', function (o) { if (o.key === 'Escape' && uc.classList.contains('mobil-acik')) { mobil(false); } });
+            function tikla(o) {
+                if (o.target.closest('.nw-mobil-menu-dugme')) { mobil(true); return; }
+                if (o.target.closest('.nw-mobil-menu-kapat')) { mobil(false); return; }
+                // Menude bir baglantiya basilinca ekran kapanir (sayfa yine de yuklenir).
+                if (uc.classList.contains('mobil-acik') && o.target.closest('.nw-sol a')) { mobil(false); }
+                var d = o.target.closest('.nw-yan-dugme');
+                if (d) { var y = d.getAttribute('data-yan'); k[y] = k[y] ? 0 : 1; yaz(); uygula(); return; }
+                var b = o.target.closest('[data-katla] > .nw-katla-bas');
+                if (!b || o.target.closest('a')) { return; }
+                var ad = b.parentNode.getAttribute('data-katla'), i = k.katli.indexOf(ad);
+                if (i === -1) { k.katli.push(ad); } else { k.katli.splice(i, 1); }
+                yaz(); uygula();
+            }
+            uygula();
+            uc.addEventListener('click', tikla);
+            uc.addEventListener('keydown', function (o) {
+                if ((o.key === 'Enter' || o.key === ' ') && o.target.classList && o.target.classList.contains('nw-katla-bas')) { o.preventDefault(); tikla(o); }
+            });
+            document.addEventListener('DOMContentLoaded', uygula);
+        })();
+        </script>
         <?php $solKenar(); ?>
         <div class="nw-orta">
             <?php /* Akista paylasim kutusu, gorunum sekmeleri ve uye paylasimi yok (site sahibi,
@@ -558,7 +668,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                     <h1><?= nw_bayrak_html('tr') ?><?= $onemli ? 'Önemli haberler' : 'Son haberler' ?></h1>
                     <p><?= $onemli
                         ? 'Önce gazetelerin manşetindeki haberler, sonra en çok gazetenin yer verdikleri; aşağı indikçe daha az öne çıkanlar ve önceki günler.'
-                        : 'Valentra Haber ana sayfasındaki sırayla: bugünün haberleri ve en çok gazetenin yer verdiği gelişmeler üstte, aşağı indikçe daha az öne çıkanlar.' ?></p>
+                        : 'Türkiye\'deki bütün gazetelerden en son yayımlanan haberler, en yenisi en üstte. Dünya haberleri "Dünya" başlığında ve ülke gruplarında.' ?></p>
                 </header>
             <?php endif; ?>
 
@@ -566,6 +676,14 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <?php if ($akisGorunumu && $onemli && (int) ($_GET['atla'] ?? 0) === 0): ?>
                 <?= nw_gazete_mansetleri_html() ?>
 
+            <?php endif; ?>
+
+            <?php /* Baslik sayfasinin tanitimi (17.11.2026; bkz. NW_KONU_SEO): aranan sozcukler sayfanin kendisinde de. */ ?>
+            <?php if ($konu !== '' && $gazete === '' && $dal === '' && isset(NW_KONU_SEO[$konu]) && (int) ($_GET['atla'] ?? 0) === 0 && $once === 0): ?>
+                <header class="nw-gazete-ust">
+                    <h1><?= nw_konu_ikonu($konu) ?><?= e(NW_KONU_SEO[$konu][1]) ?></h1>
+                    <p><?= e(NW_KONU_SEO[$konu][2]) ?></p>
+                </header>
             <?php endif; ?>
 
             <?php if ($gazete !== ''): ?>
@@ -655,9 +773,10 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
         try { sessionStorage.removeItem('nw-donus'); } catch (e) {}
         </script>
         <aside class="nw-sag">
+            <button type="button" class="nw-yan-dugme" data-yan="sag" aria-expanded="true" aria-label="Sağ menüyü daralt" title="Sağ menüyü daralt / genişlet"><span aria-hidden="true">›</span></button>
             <?php if ($uye === null): ?>
                 <?php // Uye olmayan ziyaretci sagdan uye olur (13.11.2026); ust banttaki "Uye ol" menusu de ayni secenekleri verir. ?>
-                <div class="nw-yan-kutu">
+                <div class="nw-yan-kutu" data-katla="katil">
                     <strong>V Network'e katılın</strong>
                     <p>Haberleri konuşun, paylaşım yapın, yeni insanlarla tanışın.</p>
                     <?php require_once __DIR__ . '/includes/uye_google.php'; ?>
@@ -670,7 +789,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <?= nw_ekonomi_kutusu_html() ?>
             <?= nw_spor_kutusu_html() ?>
             <?php if ($etkilesimHaberleri !== []): ?>
-                <div class="nw-yan-kutu nw-gundem">
+                <div class="nw-yan-kutu nw-gundem" data-katla="etkilesim">
                     <strong>En çok etkileşim alan haberler</strong>
                     <ol>
                         <?php foreach ($etkilesimHaberleri as $h): ?>
@@ -687,7 +806,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 </div>
             <?php endif; ?>
             <?php if ($begenilenHaberler !== []): ?>
-                <div class="nw-yan-kutu nw-gundem">
+                <div class="nw-yan-kutu nw-gundem" data-katla="begenilen">
                     <strong>En çok beğenilen haberler</strong>
                     <ol>
                         <?php foreach ($begenilenHaberler as $h): ?>
@@ -703,7 +822,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 </div>
             <?php endif; ?>
             <?php if ($populerKonular !== []): ?>
-                <div class="nw-yan-kutu nw-konular">
+                <div class="nw-yan-kutu nw-konular" data-katla="populer">
                     <strong>En popüler konular</strong>
                     <ul>
                         <?php foreach ($populerKonular as $k): ?>
@@ -713,7 +832,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 </div>
             <?php endif; ?>
             <?php if ($oneriler !== []): ?>
-                <div class="nw-yan-kutu">
+                <div class="nw-yan-kutu" data-katla="kisiler">
                     <strong>Tanışabileceğin kişiler</strong>
                     <?php foreach ($oneriler as $k): ?>
                         <?= nw_kisi_html($k, $takipEdilenler, $buYol, true) ?>
@@ -891,7 +1010,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
             <?php if ($detayId > 0): ?>
                 <header class="nw-sohbet-ust">
                     <a class="nw-geri-mobil" href="<?= e(nw_yol('mesajlar')) ?>" aria-label="Sohbetlere dön">←</a>
-                    <a href="<?= e(nw_profil_yolu($detayId)) ?>"><?= uye_simge_html($karsi, 40) ?><strong><?= e((string) $karsi['ad']) ?></strong></a>
+                    <?= nw_profil_bag($detayId, uye_simge_html($karsi, 40) . '<strong>' . e((string) $karsi['ad']) . '</strong>', 'nw-sohbet-kisi') ?>
                 </header>
                 <div class="nw-baloncuklar" id="nw-baloncuklar">
                     <?php if ($mesajlar === []): ?>
@@ -933,7 +1052,8 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                     <?php
                     $gid = (int) ($b['gonderi_id'] ?? 0);
                     [$hedef, $metin] = match ((string) $b['tur']) {
-                        'takip'  => [nw_profil_yolu((int) $b['yapan_id']), 'seni takip etmeye başladı.'],
+                        // Profil yalnizca yoneticiye acik: digerleri kendi takipci listesine gider.
+                        'takip'  => [nw_profil_acik((int) $b['yapan_id']) ? nw_profil_yolu((int) $b['yapan_id']) : nw_yol('u/' . (int) $uyeId, ['sekme' => 'takipciler']), 'seni takip etmeye başladı.'],
                         'begeni' => [nw_gonderi_yolu($gid), 'paylaşımını beğendi.'],
                         default  => [nw_gonderi_yolu($gid) . '#yorum-' . (int) $b['yorum_id'], 'paylaşımına yorum yaptı:'],
                     };

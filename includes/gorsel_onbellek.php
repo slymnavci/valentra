@@ -221,6 +221,39 @@ function haber_gorsel(array $haber): string
     return $id > 0 ? '/gorsel.php?id=' . $id : $url;
 }
 
+/*
+ * GOOGLE DISCOVER GORSEL OLCUSU (19.11.2026, dis SEO degerlendirmesi):
+ * Google Kesfet'te buyuk kart icin gorselin en az 1200 piksel genis olmasini
+ * istiyor; daha kucuk gorselde haber kucuk kucuk resimle gosteriliyor.
+ * Sema ve paylasim etiketlerine olculen genislik/yukseklik yaziliyor;
+ * Google denetimi Google'a sunulan haberlerde bu olcuyu tutanlarin payini
+ * raporluyor.
+ */
+const HABER_DISCOVER_EN_AZ_GENISLIK = 1200;
+
+/**
+ * Sitede duran gorselin boyutu (haber_gorsel'in dondurdugu yol). Dosya
+ * henuz inmemisse (gorsel.php?id=...) ya da dis adresse null.
+ *
+ * @return array{0:int,1:int}|null [genislik, yukseklik]
+ */
+function haber_gorsel_boyutu(string $yol): ?array
+{
+    static $onbellek = [];
+
+    if (!str_starts_with($yol, '/') || str_starts_with($yol, '//') || str_contains($yol, '?') || str_contains($yol, '..')) {
+        return null;
+    }
+
+    if (!array_key_exists($yol, $onbellek)) {
+        $dosya = dirname(__DIR__) . $yol;
+        $bilgi = is_file($dosya) ? @getimagesize($dosya) : false;
+        $onbellek[$yol] = $bilgi !== false && $bilgi[0] > 0 ? [(int) $bilgi[0], (int) $bilgi[1]] : null;
+    }
+
+    return $onbellek[$yol];
+}
+
 /**
  * Kaynaktan gelen gorsel denetimden gecti mi?
  *

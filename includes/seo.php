@@ -111,11 +111,18 @@ function seo_haber_semasi(array $haber): string
             '@type' => 'WebPage',
             '@id'   => site_adresi() . haber_yolu((string) $haber['slug']),
         ],
-        'author' => [
-            '@type' => 'Organization',
-            'name'  => 'Valentra Yayın Kurulu',
-            'url'   => site_adresi(),
-        ],
+        // Haberin masasi (19.11.2026; bkz. includes/masalar.php): sayfadaki imzayla ayni ad ve adres.
+        'author' => (static function () use ($haber): array {
+            require_once __DIR__ . '/masalar.php';
+            $masa = haber_masasi($haber);
+
+            return [
+                '@type' => 'Organization',
+                'name'  => 'Valentra ' . $masa['ad'],
+                'url'   => site_adresi() . $masa['yol'],
+                'parentOrganization' => ['@type' => 'NewsMediaOrganization', 'name' => 'Valentra', 'url' => site_adresi()],
+            ];
+        })(),
         'publisher' => [
             '@type' => 'Organization',
             'name'  => 'Valentra',
@@ -149,8 +156,14 @@ function seo_haber_semasi(array $haber): string
     $gorsel = haber_gorsel($haber);
 
     // Gorselsiz haberde marka gorseli: "image" alani bos kalmasin.
-    $sema['image'] = [$gorsel !== '' ? (str_starts_with($gorsel, '/') ? site_adresi() . $gorsel : $gorsel)
-                                     : site_adresi() . '/assets/paylasim.jpg'];
+    $gorselAdres = $gorsel !== '' ? (str_starts_with($gorsel, '/') ? site_adresi() . $gorsel : $gorsel)
+                                  : site_adresi() . '/assets/paylasim.jpg';
+    $boyut       = haber_gorsel_boyutu($gorsel !== '' ? $gorsel : '/assets/paylasim.jpg');
+
+    // Boyut biliniyorsa ImageObject (Discover icin genislik; bkz. HABER_DISCOVER_EN_AZ_GENISLIK).
+    $sema['image'] = [$boyut !== null
+        ? ['@type' => 'ImageObject', 'url' => $gorselAdres, 'width' => $boyut[0], 'height' => $boyut[1]]
+        : $gorselAdres];
 
     if (!empty($haber['kategori_adi'])) {
         $sema['articleSection'] = (string) $haber['kategori_adi'];
@@ -377,7 +390,8 @@ function seo_site_semasi(): string
         'masthead'             => site_adresi() . kurumsal_yolu('kunye'),
     ];
 
-    $eposta = trim(ayar_oku('kunye_eposta'));
+    require_once __DIR__ . '/kurumsal.php';
+    $eposta = kunye_bilgileri()['kunye_eposta'];
 
     if ($eposta !== '') {
         $kurum['email'] = $eposta;

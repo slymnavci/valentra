@@ -99,15 +99,30 @@ function olcum_head_html(): string
     }
 
     if ($ad !== '') {
-        $betikler[] = ['src' => 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' . rawurlencode($ad), 'co' => 1, 'gec' => 1];
+        /*
+         * Reklam yalnizca okur sayfayla etkilesince (20.11.2026, Lighthouse
+         * mobil: engelleme 16.11'de 25 ms, reklamlar gelmeye baslayinca 534 ms,
+         * sunucu yuku altinda 5.143 ms; masaustu sayfa 11,5 MB). 8 sn'lik
+         * zamanlayici kalkti: okur kaydirinca/dokununca ya da haberdeki reklam
+         * alani ekrana yaklasinca yuklenir. Hic etkilesmeden cikan okur reklam
+         * zaten gormuyordu.
+         */
+        $betikler[] = ['src' => 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' . rawurlencode($ad), 'co' => 1, 'gec' => 2];
     }
 
     $html .= '<script>(function(){var b=' . json_encode($betikler, JSON_UNESCAPED_SLASHES) . ',y={};'
-        . 'function yukle(g){if(y[g]){return;}y[g]=true;b.forEach(function(x){if((x.gec?1:0)!==g){return;}var s=document.createElement("script");s.async=true;s.src=x.src;if(x.co){s.crossOrigin="anonymous";}document.head.appendChild(s);});}'
+        . 'function yukle(g){if(y[g]){return;}y[g]=true;b.forEach(function(x){if((x.gec||0)!==g){return;}var s=document.createElement("script");s.async=true;s.src=x.src;if(x.co){s.crossOrigin="anonymous";}document.head.appendChild(s);});}'
         . 'function bosta(g,ms){setTimeout(function(){if(window.requestIdleCallback){requestIdleCallback(function(){yukle(g);},{timeout:3000});}else{yukle(g);}},ms);}'
         . 'function sonra(){bosta(0,1500);bosta(1,8000);}'
         . 'if(document.readyState==="complete"){sonra();}else{addEventListener("load",sonra);}'
-        . '["pointerdown","keydown","scroll","touchstart"].forEach(function(o){addEventListener(o,function(){yukle(0);yukle(1);},{once:true,passive:true});});'
+        . '["pointerdown","keydown","scroll","touchstart"].forEach(function(o){addEventListener(o,function(){yukle(0);yukle(1);yukle(2);},{once:true,passive:true});});'
+        // Bekleyen reklam alani ekrana yaklasinca (600 px) betik yuklenir ve alan doldurulur.
+        . 'function doldur(r){if(r.getAttribute("data-vz-dolu")){return;}r.setAttribute("data-vz-dolu","1");yukle(2);try{(window.adsbygoogle=window.adsbygoogle||[]).push({});}catch(e){}}'
+        . 'function izle(){var a=document.querySelectorAll("ins.adsbygoogle[data-vz-bekle]");if(!a.length){return;}'
+        . 'if(!("IntersectionObserver" in window)){[].forEach.call(a,doldur);return;}'
+        . 'var g=new IntersectionObserver(function(e){e.forEach(function(x){if(x.isIntersecting){g.unobserve(x.target);doldur(x.target);}});},{rootMargin:"600px 0px"});'
+        . '[].forEach.call(a,function(r){g.observe(r);});}'
+        . 'if(document.readyState==="loading"){addEventListener("DOMContentLoaded",izle);}else{izle();}'
         . "})();</script>\n";
 
     return $html;
@@ -133,8 +148,8 @@ function reklam_alani_html(bool $hemen = true): string
     return '<div class="reklam-alani"><span class="reklam-etiket">Reklam</span>'
         . '<ins class="adsbygoogle" style="display:block" data-ad-client="' . e($istemci) . '"'
         . ($birim !== '' ? ' data-ad-slot="' . e($birim) . '"' : '')
-        . ' data-ad-format="auto" data-full-width-responsive="true"' . ($hemen ? ' data-vz-dolu="1"' : '') . '></ins></div>'
-        . ($hemen ? '<script>(window.adsbygoogle = window.adsbygoogle || []).push({});</script>' : '');
+        // Sayfanin kendi reklam alani ekrana yaklasinca doldurulur (data-vz-bekle; bkz. olcum_head_html).
+        . ' data-ad-format="auto" data-full-width-responsive="true"' . ($hemen ? ' data-vz-bekle="1"' : '') . '></ins></div>';
 }
 
 /** Çerez bildirimi (yalnızca GA4 ya da AdSense açıksa). */

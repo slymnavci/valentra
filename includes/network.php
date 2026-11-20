@@ -45,6 +45,38 @@ function nw_profil_yolu(int $uyeId): string
     return nw_yol('u/' . $uyeId);
 }
 
+/*
+ * PROFILLER YALNIZCA YONETICIYE VE KENDISINE (19.11.2026, site sahibi:
+ * "yonetici olmayanlar diger uyeleri gormesin"). Kisiler sayfasi zaten
+ * yalnizca yoneticideydi (01.11.2026) ama profiller herkese aciktı;
+ * adresler sirali (u/1, u/2...) oldugu icin tek tek denenerek butun uyeler
+ * bulunabiliyordu. Artik baskasinin profili yoneticiye acik, digerlerine
+ * 404. Yorum ve paylasimlardaki isimler de yalnizca yoneticide baglanti.
+ * Ziyaretci sayfalari onbellege giriyor ama ziyaretci yonetici olamaz;
+ * uye ve yonetici sayfalari onbellege girmiyor, yani baglantili hali sizmiyor.
+ */
+function nw_profil_acik(int $uyeId): bool
+{
+    $uye = aktif_uye();
+
+    return $uye !== null && (uye_yonetici_mi($uye) || (int) $uye['id'] === $uyeId);
+}
+
+/**
+ * Uyenin adi ya da simgesi: profili gorebilene baglanti, digerine duz metin.
+ * $ic HTML (cagiran kacisli verir).
+ */
+function nw_profil_bag(int $uyeId, string $ic, string $sinif = '', bool $sus = false): string
+{
+    $sinifHtml = $sinif !== '' ? ' class="' . e($sinif) . '"' : '';
+
+    if (!nw_profil_acik($uyeId)) {
+        return '<span' . $sinifHtml . ($sus ? ' aria-hidden="true"' : '') . '>' . $ic . '</span>';
+    }
+
+    return '<a' . $sinifHtml . ' href="' . e(nw_profil_yolu($uyeId)) . '"' . ($sus ? ' tabindex="-1" aria-hidden="true"' : '') . '>' . $ic . '</a>';
+}
+
 function nw_gonderi_yolu(int $gonderiId): string
 {
     return nw_yol('g/' . $gonderiId);
@@ -706,7 +738,7 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
                " . ($gundem ? haber_okunma_birlesimi() : '') . "
               WHERE h.durum = :d" . ($turkiyeGundemi ? nw_turkiye_gundemi_kosulu() : '')
                   // Hiz (14.11.2026): onem siralari butun arsivi siralamasin; son NW_SIRA_PENCERE_GUN gun (durum, yayin_tarihi dizini).
-                  . ($onemli || $gundem ? ' AND h.yayin_tarihi >= NOW() - INTERVAL ' . ($gundem ? NW_GUNDEM_PENCERE_GUN : NW_SIRA_PENCERE_GUN) . ' DAY' : '') . " AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
+                  . ($onemli || $gundem ? ' AND h.yayin_tarihi >= NOW() - INTERVAL ' . ($gundem ? NW_GUNDEM_PENCERE_GUN : NW_SIRA_PENCERE_GUN) . ' DAY' : '') . " AND " . ($konu !== '' ? nw_konu_kosulu($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . "
                 AND h.yayin_tarihi < FROM_UNIXTIME(:once)" . $gazeteKosulu . ($konu === 'spor' ? nw_spor_dal_kosulu($dal) : '') . "";
         $siraSql  = "
               ORDER BY " . ($gundem ? haber_sirasi(true) . ', ' : ($onemli ? nw_onemli_sirasi() . ', ' : '')) . "h.yayin_tarihi DESC, h.id DESC LIMIT :l" . ($gundem || $onemli ? ' OFFSET ' . $atla : '');
@@ -808,7 +840,7 @@ function nw_akis(int $adet, int $once, ?int $takipEdenUye = null, ?int $yalnizUy
                LEFT JOIN kategoriler k ON k.id = h.kategori_id
               WHERE y.haber_id IS NOT NULL AND y.durum = 'yayinda' AND u.durum = 'aktif' AND u.tur <> 'yz'
                 AND h.durum = :d AND y.olusturuldu < FROM_UNIXTIME(:once) $kosul"
-              . ($konu !== '' ? ' AND k.slug = ' . db()->quote($konu) : '') . "
+              . ($konu !== '' ? ' AND ' . nw_konu_kosulu($konu, 'h') : '') . "
               ORDER BY y.olusturuldu DESC, y.id DESC LIMIT " . (int) $adet
         );
         $ifade->execute($deger + ['d' => HABER_YAYINDA]);
@@ -842,6 +874,61 @@ function nw_konular(): array
     return $bellek ??= nw_kisa_onbellek('konular', 300, static fn (): array => nw_konular_ham());
 }
 
+/*
+ * YAPAY ZEKA (17.11.2026, site sahibi: "yapay zeka haber gibi aramalarda
+ * Google'da one cikmak"). Ayri bir kategori degil: basliginda ya da
+ * etiketlerinde yapay zeka gecen haberler (her kategoriden). Sol menude
+ * Teknoloji'nin hemen altinda.
+ */
+const NW_YAPAY_ZEKA = 'yapay-zeka';
+const NW_YAPAY_ZEKA_IFADESI = 'yapay zek|ChatGPT|OpenAI|Anthropic|Claude|Gemini|DeepSeek|Copilot|yapay sinir|üretken yapay|makine öğren|büyük dil model';
+
+/*
+ * ARAMA SAYFALARI (17.11.2026, site sahibi: "yapay zeka haber, haber
+ * ozetleri, guncel haberler, dunyadan haber, dunya haber ozetleri gibi
+ * aramalarda Google'da one cikmak icin ne yapabiliriz -> hepsini yap").
+ * Baslik sayfalari (?konu=...) yalnizca konu parametresiyle acildiginda
+ * Google'a ACIK (index), aranan sozcukleri tasiyan baslik, aciklama ve
+ * sayfa ustunde kisa tanitim. Ayni sayfanin diger halleri (son haberler,
+ * spor dali, sayfalama) dizin disi kalir; canonical konu adresi.
+ *
+ * slug => [sayfa basligi (title), H1, tanitim / meta aciklama]
+ */
+const NW_KONU_SEO = [
+    'gundem'       => ['Güncel Haberler ve Haber Özetleri — Gündem | Valentra', 'Gündem: güncel haber özetleri',
+        'Türkiye gündeminden en güncel haberlerin kısa özetleri: Hürriyet, Milliyet, Sözcü, NTV, CNN Türk, Habertürk ve diğer gazetelerin haberleri tek akışta, her haberin kaynağıyla.'],
+    'politika'     => ['Politika Haberleri ve Özetleri | Valentra', 'Politika haberleri',
+        'Türkiye siyasetinden güncel haberlerin özetleri: Meclis, hükümet, partiler ve seçimler. Her haberin özeti ve kaynak gazetesi.'],
+    'ekonomi'      => ['Ekonomi Haberleri ve Özetleri — Döviz, Borsa, Altın | Valentra', 'Ekonomi haberleri',
+        'Ekonomiden güncel haber özetleri; döviz, borsa ve altın grafikleriyle. Türk ve dünya basınından ekonomi haberleri tek yerde.'],
+    'dunya'        => ['Dünya Haberleri ve Dünya Haber Özetleri — Dünyadan Haberler | Valentra', 'Dünyadan haberler: dünya haber özetleri',
+        'Dünyadan güncel haberlerin Türkçe özetleri: BBC, CNN, The New York Times, Fox News, The Guardian, Al Jazeera, Le Monde ve dünyanın önde gelen gazetelerinden.'],
+    'spor'         => ['Spor Haberleri ve Özetleri — Canlı Skor, Puan Durumu | Valentra', 'Spor haberleri',
+        'Futbol, basketbol ve diğer sporlardan güncel haber özetleri; canlı maçlar, Süper Lig puan durumu ve haftanın fikstürü.'],
+    'teknoloji'    => ['Teknoloji Haberleri ve Özetleri | Valentra', 'Teknoloji haberleri',
+        'Teknoloji dünyasından güncel haberlerin Türkçe özetleri: yeni ürünler, yazılım, internet ve bilim.'],
+    'yapay-zeka'   => ['Yapay Zekâ Haberleri — Yapay Zeka Haber Özetleri | Valentra', 'Yapay zekâ haberleri',
+        'Yapay zekâ ile ilgili en güncel haberlerin Türkçe özetleri: ChatGPT, OpenAI, Google Gemini, Claude ve dünyadan yapay zekâ gelişmeleri, Türk ve yabancı basından.'],
+    'saglik'       => ['Sağlık Haberleri ve Özetleri | Valentra', 'Sağlık haberleri',
+        'Sağlık ve tıp dünyasından güncel araştırma ve haberlerin Türkçe özetleri.'],
+    'kultur-sanat' => ['Kültür Sanat Haberleri | Valentra', 'Kültür ve sanat haberleri',
+        'Kültür, sanat, sinema, müzik ve edebiyattan güncel haber özetleri.'],
+    'magazin'      => ['Magazin Haberleri | Valentra', 'Magazin haberleri',
+        'Sanatçıların açıklamaları, yeni dizi, film ve albümler: ölçülü magazin haberlerinin özetleri.'],
+];
+
+/** Konu kosulu (SQL; k: kategoriler, $h: haberler takma adi). Yapay zeka sanal konusu baslik/etiketten. */
+function nw_konu_kosulu(string $konu, string $h = 'h'): string
+{
+    if ($konu === NW_YAPAY_ZEKA) {
+        $ifade = db()->quote(NW_YAPAY_ZEKA_IFADESI);
+
+        return "($h.baslik REGEXP $ifade OR $h.etiketler REGEXP $ifade)";
+    }
+
+    return 'k.slug = ' . db()->quote($konu);
+}
+
 function nw_konular_ham(): array
 {
     static $konular = null;
@@ -853,8 +940,15 @@ function nw_konular_ham(): array
             foreach (haber_akis_kategorileri() as $k) {
                 if ($k['adet'] > 0) {
                     $konular[$k['slug']] = $k['ad'];
+
+                    if ($k['slug'] === 'teknoloji') {
+                        $konular[NW_YAPAY_ZEKA] = 'Yapay Zekâ';
+                    }
                 }
             }
+
+            // Teknoloji basligi yoksa da (o gun haber gelmediyse) Yapay Zeka sonda.
+            $konular[NW_YAPAY_ZEKA] ??= 'Yapay Zekâ';
         } catch (PDOException $e) {
             $konular = [];
         }
@@ -1009,8 +1103,131 @@ function nw_onemli_sirasi(): string
 {
     $yas = 'GREATEST(0, TIMESTAMPDIFF(MINUTE, h.yayin_tarihi, NOW()))';
 
-    return "FLOOR($yas / 1440) ASC, "
-        . "(h.onem + h.manset_sinyal + IF(h.manset_yayinlar LIKE '%manşet%', 15, 0) - 4 * $yas / 60) DESC";
+    /*
+     * SU AN GAZETELERIN MANSETINDE OLANLAR EN USTTE (15.11.2026, site sahibi:
+     * "onemli haberler degismiyor; halen 12 saat onceki haberler var;
+     * gazetelerin mansetlerine gore burasi degissin"). Onceden h.manset_sinyal
+     * ve h.manset_yayinlar kullaniliyordu: haber bir kez mansette gorulunce
+     * puani kalici oluyordu, gazete haberi mansetten indirse de dusmuyordu.
+     * Artik son taramada hangi gazetenin mansetinde oldugu sayiliyor
+     * (nw_guncel_manset_puanlari); manseten inen haber bir sonraki taramada
+     * asagi iner. Kalanlar eskisi gibi gun gun, onem eksi yas.
+     */
+    $puanlar = nw_guncel_manset_puanlari();
+    $durum   = static function (array $harita): string {
+        if ($harita === []) {
+            return '0';
+        }
+
+        $case = '(CASE h.id';
+
+        foreach ($harita as $id => $deger) {
+            $case .= ' WHEN ' . (int) $id . ' THEN ' . (int) $deger;
+        }
+
+        return $case . ' ELSE 0 END)';
+    };
+
+    // 1) Su an kac gazetenin mansetinde; 2) gun dilimi; 3) onem + gundem eki - yas.
+    // Bos haritada siralama ogesi hic yazilmiyor: "ORDER BY 0" MySQL'de sutun numarasi sayilir.
+    return (($puanlar['m'] ?? []) !== [] ? $durum($puanlar['m']) . ' DESC, ' : '')
+        . "FLOOR($yas / 1440) ASC, (h.onem + " . $durum($puanlar['g'] ?? []) . " - 4 * $yas / 60) DESC";
+}
+
+/** "Su an mansette": manset beslemesinde en son bu kadar saat icinde gorulmus (ajan iki saatte bir tarar). */
+const NW_MANSET_GUNCEL_SAAT = 3;
+
+/**
+ * Son taramada gazetelerin mansetinde / gundeminde olan haberlerin puani.
+ *
+ * Her haber, gazetelerin SU AN yayindaki basliklariyla karsilastirilir
+ * (ayni olay mi: manset_sinyal_ayni_olay).
+ *   'm': haberi su an mansetinde tutan gazete sayisi (siralamanin ilk olcusu),
+ *   'g': en az iki gazetenin gundemindeyse gazete basina 5 puan (onem eki;
+ *        tek gazetenin gundeminde olmak puan getirmez).
+ * 5 dakika onbellek.
+ *
+ * @return array{m:array<int,int>,g:array<int,int>}
+ */
+function nw_guncel_manset_puanlari(): array
+{
+    // Sonuc {'p': ...} icinde: bos liste de onbellege girsin (nw_kisa_onbellek bosu saklamaz).
+    return nw_kisa_onbellek('guncel-manset', 300, static function (): array {
+        return ['p' => nw_guncel_manset_hesapla()];
+    })['p'] ?? ['m' => [], 'g' => []];
+}
+
+/** @return array{m:array<int,int>,g:array<int,int>} bkz. nw_guncel_manset_puanlari */
+function nw_guncel_manset_hesapla(): array
+{
+    return (static function (): array {
+        require_once __DIR__ . '/kim_ne_yazdi.php';
+        require_once __DIR__ . '/manset_sinyal.php';
+
+        if (!kny_hazir()) {
+            return ['m' => [], 'g' => []];
+        }
+
+        $saat = (int) NW_MANSET_GUNCEL_SAAT;
+
+        try {
+            $basliklar = db()->query(kny_gorulme_sutunlari_var()
+                ? "SELECT yayin, baslik, (COALESCE(manset_gorulme, IF(manset = 1, zaman, NULL)) >= NOW() - INTERVAL $saat HOUR) AS guncel_manset
+                     FROM gundem_basliklari WHERE COALESCE(son_gorulme, zaman) >= NOW() - INTERVAL $saat HOUR
+                    ORDER BY id DESC LIMIT 1500"
+                : "SELECT yayin, baslik, manset AS guncel_manset
+                     FROM gundem_basliklari WHERE zaman >= NOW() - INTERVAL $saat HOUR
+                    ORDER BY id DESC LIMIT 1500"
+            )->fetchAll();
+            $haberler = db()->query(
+                "SELECT id, baslik, kaynak_baslik FROM haberler
+                  WHERE durum = 'yayinda' AND yayin_tarihi >= NOW() - INTERVAL 2 DAY
+                  ORDER BY id DESC LIMIT 400"
+            )->fetchAll();
+        } catch (Throwable $e) {
+            error_log('[valentra] guncel manset: ' . $e->getMessage());
+
+            return ['m' => [], 'g' => []];
+        }
+
+        foreach ($basliklar as $i => $b) {
+            $basliklar[$i]['k'] = manset_sinyal_kokleri((string) $b['baslik']);
+        }
+
+        $puanlar = ['m' => [], 'g' => []];
+
+        foreach ($haberler as $h) {
+            $kokler = array_filter([
+                manset_sinyal_kokleri((string) $h['baslik']),
+                trim((string) ($h['kaynak_baslik'] ?? '')) !== '' ? manset_sinyal_kokleri((string) $h['kaynak_baslik']) : [],
+            ]);
+            $manset = $gundem = [];
+
+            foreach ($basliklar as $b) {
+                foreach ($kokler as $hk) {
+                    if (manset_sinyal_ayni_olay($hk, $b['k'])) {
+                        $gundem[(string) $b['yayin']] = true;
+
+                        if ((int) $b['guncel_manset'] === 1) {
+                            $manset[(string) $b['yayin']] = true;
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+            if ($manset !== []) {
+                $puanlar['m'][(int) $h['id']] = count($manset);
+            }
+
+            if (count($gundem) >= 2) {
+                $puanlar['g'][(int) $h['id']] = 5 * count($gundem);
+            }
+        }
+
+        return $puanlar;
+    })();
 }
 
 /* --- Gazetelerin mansetleri (14.11.2026) -----------------------------------
@@ -1038,10 +1255,17 @@ function nw_gazete_mansetleri(int $baslikAdet = 4, int $saat = 24): array
     }
 
     try {
-        $satirlar = db()->query(
-            'SELECT yayin, baslik, adres, manset, UNIX_TIMESTAMP(zaman) AS z FROM gundem_basliklari
-              WHERE zaman >= NOW() - INTERVAL ' . max(1, min(96, $saat)) . ' HOUR
-              ORDER BY manset DESC, zaman DESC, id DESC'
+        // Su an mansette olanlar once (15.11.2026; bkz. nw_guncel_manset_puanlari):
+        // bir kez mansette gorulmus ama inmis baslik "manset" sayilmiyor.
+        $guncel = (int) NW_MANSET_GUNCEL_SAAT;
+        $satirlar = db()->query(kny_gorulme_sutunlari_var()
+            ? "SELECT yayin, baslik, adres, (COALESCE(manset_gorulme, IF(manset = 1, zaman, NULL)) >= NOW() - INTERVAL $guncel HOUR) AS manset,
+                      UNIX_TIMESTAMP(zaman) AS z FROM gundem_basliklari
+                WHERE COALESCE(son_gorulme, zaman) >= NOW() - INTERVAL " . max(1, min(96, $saat)) . " HOUR
+                ORDER BY manset DESC, COALESCE(son_gorulme, zaman) DESC, zaman DESC, id DESC"
+            : 'SELECT yayin, baslik, adres, manset, UNIX_TIMESTAMP(zaman) AS z FROM gundem_basliklari
+                WHERE zaman >= NOW() - INTERVAL ' . max(1, min(96, $saat)) . ' HOUR
+                ORDER BY manset DESC, zaman DESC, id DESC'
         )->fetchAll();
     } catch (PDOException $e) {
         return [];
@@ -1164,7 +1388,8 @@ function nw_gazete_adi(string $kaynakAdi): string
     $ad = kaynak_gorunen_ad($ad);
 
     // Ayni yayinin iki adi tek gazetede toplansin (14.11.2026: "Sözcü Gazetesi" ile "Sözcü Gündem" ayri gorunmesin).
-    return ['Sözcü Gazetesi' => 'Sözcü'][$ad] ?? $ad;
+    // "News" eki adin kendisi olan yayinlarda geri (17.11.2026: "Fox News" -> "Fox" oluyordu, Yabanci medya listesinde gorunmuyordu).
+    return ['Sözcü Gazetesi' => 'Sözcü', 'Fox' => 'Fox News', 'Sky' => 'Sky News'][$ad] ?? $ad;
 }
 
 /** Yayin adinin adresteki hali: "Habertürk" -> "haberturk". */
@@ -1172,6 +1397,9 @@ function nw_gazete_slug(string $ad): string
 {
     $s = strtr(mb_strtolower(strtr($ad, ['İ' => 'i', 'I' => 'ı']), 'UTF-8'), [
         'ç' => 'c', 'ğ' => 'g', 'ı' => 'i', 'ö' => 'o', 'ş' => 's', 'ü' => 'u', 'â' => 'a', 'î' => 'i', 'û' => 'u',
+        // Yabanci yayin adlari (17.11.2026: "El País" -> "el-pa-s" oluyordu).
+        'á' => 'a', 'à' => 'a', 'ä' => 'a', 'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e', 'í' => 'i', 'ì' => 'i', 'ï' => 'i',
+        'ó' => 'o', 'ò' => 'o', 'ô' => 'o', 'ú' => 'u', 'ù' => 'u', 'ñ' => 'n', 'ß' => 'ss', 'ø' => 'o', 'å' => 'a',
     ]);
 
     return trim((string) preg_replace('/[^a-z0-9]+/', '-', $s), '-');
@@ -1261,6 +1489,7 @@ function nw_kaynak_ulkesi(string $siteUrl): string
 
 /** Basliklarin kucuk ikonlari (24x24, cizgi). Bilinmeyen baslik: genel ikon. */
 const NW_KONU_IKONLARI = [
+    'yapay-zeka' => '<rect x="6" y="6" width="12" height="12" rx="2.5"/><path d="M9 2.5v3.5M15 2.5v3.5M9 18v3.5M15 18v3.5M2.5 9h3.5M2.5 15h3.5M18 9h3.5M18 15h3.5M10 10h4v4h-4z"/>',
     'one-cikan' => '<path d="M13 3 5 13.500h6L10 21l9-10.500h-6z"/>',
     'gundem'          => '<path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v8a2 2 0 0 1-2 2"/><path d="M7.5 9h6M7.5 12.5h6M7.5 16h4"/>',
     'politika'        => '<path d="M3 20h18M5 20V10M9.5 20V10M14.5 20V10M19 20V10M3 10h18L12 4z"/>',
@@ -1378,6 +1607,68 @@ function nw_gazete_simge_html(string $slug, string $ad, int $boyut = 20): string
         . (is_file($yok = nw_gazete_simge_klasoru() . '/' . $dosya . '.yok') && filemtime($yok) > time() - 86400 ? ''
             : '<img src="' . e($src) . '" alt="" width="' . $boyut . '" height="' . $boyut . '" loading="lazy" onerror="this.remove()">')
         . '</span>';
+}
+
+/*
+ * YABANCI MEDYA (17.11.2026, site sahibi: "yabanci medyada BBC, CNN, The
+ * New York Times, Fox gibi onemli haber gazetelerini koyalim; dunyanin en
+ * sayin ve en onemli haber gazeteleri burada gorunsun"). Sol menude bu
+ * sirayla; listede olup haberi olmayan yayin gorunmez. Adres adi
+ * nw_gazete_slug(nw_gazete_adi(kaynak adi)).
+ */
+const NW_SAYGIN_YAYINLAR = [
+    'cnn', 'bbc', 'the-new-york-times', 'fox-news', 'the-washington-post', 'the-wall-street-journal', 'reuters',
+    'associated-press', 'the-guardian', 'financial-times', 'the-economist', 'al-jazeera', 'le-monde', 'le-figaro',
+    'der-spiegel', 'frankfurter-allgemeine', 'el-pais', 'corriere-della-sera', 'the-independent', 'sky-news', 'nhk',
+    'the-japan-times', 'the-times-of-india', 'south-china-morning-post', 'euronews', 'npr', 'cnbc', 'abc',
+];
+
+/*
+ * YERLI GAZETELER (17.11.2026, site sahibi: "Buyuk gazeteler yerine yerli
+ * gazeteler: Hurriyet, Milliyet, Sozcu, NTV, CNN Turk, Haberturk gibi en cok
+ * okunanlar olsun"). Sol menude bu sirayla; haberi olmayan gorunmez. Turkiye'nin
+ * diger yayinlari "Ulkelere gore > Turkiye" altinda.
+ */
+const NW_YERLI_YAYINLAR = [
+    'hurriyet', 'milliyet', 'sozcu', 'sabah', 'haberturk', 'ntv', 'cnn-turk', 'trt-haber', 'cumhuriyet',
+    'a-haber', 'tgrt-haber', 'haber-global', 'anadolu-ajansi', 'dha', 'iha', 'bbc-news-turkce', 'dunya-gazetesi', 'ekonomim',
+];
+
+/**
+ * Sol menunun gazete bolumleri (17.11.2026): Yerli gazeteler (NW_YERLI_YAYINLAR),
+ * Yabanci medya (NW_SAYGIN_YAYINLAR), Yerel medya (Turkiye'nin yerel gazeteleri).
+ *
+ * @return array{buyuk:array<string,array<string,mixed>>,yabanci:array<string,array<string,mixed>>,yerel:array<string,array<string,mixed>>}
+ */
+function nw_gazete_bolumleri(): array
+{
+    $g      = nw_gazeteler();
+    $bolum  = ['buyuk' => [], 'yabanci' => [], 'yerel' => []];
+
+    foreach (NW_YERLI_YAYINLAR as $slug) {
+        if (isset($g[$slug])) {
+            $bolum['buyuk'][$slug] = $g[$slug];
+        }
+    }
+
+    // Az haberli ulusal yayinlar (14.11.2026; bkz. nw_gazeteler_ham) yerli bolumun sonunda.
+    if (isset($g[NW_GAZETE_DIGER])) {
+        $bolum['buyuk'][NW_GAZETE_DIGER] = $g[NW_GAZETE_DIGER];
+    }
+
+    foreach ($g as $slug => $v) {
+        if ($v['ulke'] === 'tr' && $v['yerel']) {
+            $bolum['yerel'][$slug] = $v;
+        }
+    }
+
+    foreach (NW_SAYGIN_YAYINLAR as $slug) {
+        if (isset($g[$slug]) && $g[$slug]['ulke'] !== 'tr') {
+            $bolum['yabanci'][$slug] = $g[$slug];
+        }
+    }
+
+    return $bolum;
 }
 
 /**
@@ -1500,7 +1791,9 @@ function nw_gazeteler_ham(int $gun = NW_GAZETE_GUN): array
     $diger = null;
 
     foreach ($liste as $slug => $g) {
-        if ($g['ulke'] !== 'tr' || $g['adet'] >= $esik) {
+        // Yerel medya kendi bolumunde, secili buyuk gazeteler "Yerli gazeteler"de kalir
+        // (17.11.2026, nw_gazete_bolumleri); "Diger" yalnizca kalan kucuk ulusal yayinlar.
+        if ($g['ulke'] !== 'tr' || $g['yerel'] || $g['adet'] >= $esik || in_array($slug, NW_YERLI_YAYINLAR, true)) {
             continue;
         }
 
@@ -1610,6 +1903,18 @@ function nw_degisim_html(?float $yuzde): string
         . ($yuzde > 0 ? '▲' : ($yuzde < 0 ? '▼' : '')) . ' %' . number_format(abs($yuzde), 2, ',', '.') . '</small>';
 }
 
+/**
+ * Piyasa kalemi: deger artiyorsa yesil, dusuyorsa kirmizi; altinda gunluk
+ * yuzde degisim (▲ %0,32). Degisim bilinmiyorsa renksiz, altinda bir sey yok.
+ */
+function nw_piyasa_kalemi_html(string $etiket, string $deger, ?float $yuzde): string
+{
+    $yon = $yuzde === null ? '' : ($yuzde > 0 ? ' artti' : ($yuzde < 0 ? ' dustu' : ''));
+    $alt = $yuzde === null ? '' : '<small>' . ($yuzde > 0 ? '▲' : ($yuzde < 0 ? '▼' : '•')) . ' %' . number_format(abs($yuzde), 2, ',', '.') . '</small>';
+
+    return '<span class="nw-kalem' . $yon . '"><b><i>' . e($etiket) . '</i> ' . e($deger) . '</b>' . $alt . '</span>';
+}
+
 function nw_ekonomi_kutusu_html(): string
 {
     try {
@@ -1618,30 +1923,112 @@ function nw_ekonomi_kutusu_html(): string
         require_once __DIR__ . '/piyasa_tablolari.php';
 
         $p   = piyasa_onbellekten(true) ?? [];
-        $btc = canli_onbellek_oku('tablo_kripto')['veri']['BTC-USD']['fiyat'] ?? null;
+        $btc = canli_onbellek_oku('tablo_kripto')['veri']['BTC-USD'] ?? [];
     } catch (Throwable $e) {
         return '';
     }
 
-    // Deger onbellekte yoksa cizgi yerine bolumun icerigi yazilir.
+    $sayi = static fn (string $a): ?float => isset($p[$a]) && is_numeric($p[$a]) ? (float) $p[$a] : null;
+
+    /*
+     * Her kalem kendi rengiyle (16.11.2026, site sahibi: "USD artiyorsa
+     * yesil, azaliyorsa kirmizi, EUR da oyle; altina kucuk bir artis azalis
+     * gostergesi, % kac artti veya azaldi; ayni sey borsa, altin ve bitcoin
+     * icin"). Deger onbellekte yoksa kalem yerine bolumun icerigi yazilir.
+     */
     $satirlar = [
-        ['Döviz', 'doviz', isset($p['usd'], $p['eur']) ? 'Dolar ' . nw_sayi((float) $p['usd']) . ' · Euro ' . nw_sayi((float) $p['eur']) : 'Dolar, euro, sterlin ve pariteler', $p['usd_degisim'] ?? null],
-        ['Borsa', 'bist', isset($p['bist']) ? 'BIST 100 ' . nw_sayi((float) $p['bist'], 0) : 'BIST 100, endeksler ve hisseler', $p['bist_degisim'] ?? null],
-        ['Altın', 'altin', isset($p['altin']) ? 'Gram ' . nw_sayi((float) $p['altin'], 0) . ' TL' : 'Gram, çeyrek ve ons altın', $p['altin_degisim'] ?? null],
-        ['Kripto paralar', 'kripto', $btc !== null ? 'Bitcoin ' . nw_sayi((float) $btc, 0) . ' $' : 'Bitcoin, Ethereum ve diğerleri', null],
-        ['Emtia', 'petrol', 'Petrol, gümüş, doğal gaz', null],
-        ['Dünya borsaları', 'dunya', 'S&P 500, DAX, Nikkei', null],
+        ['Döviz', 'doviz', [['USD', $sayi('usd'), 2, '', $sayi('usd_degisim')], ['EUR', $sayi('eur'), 2, '', $sayi('eur_degisim')]], 'Dolar, euro, sterlin ve pariteler'],
+        ['Borsa', 'bist', [['BIST 100', $sayi('bist'), 0, '', $sayi('bist_degisim')]], 'BIST 100, endeksler ve hisseler'],
+        ['Altın', 'altin', [['Gram', $sayi('altin'), 0, ' TL', $sayi('altin_degisim')]], 'Gram, çeyrek ve ons altın'],
+        ['Kripto paralar', 'kripto', [['Bitcoin', is_numeric($btc['fiyat'] ?? null) ? (float) $btc['fiyat'] : null, 0, ' $', is_numeric($btc['degisim'] ?? null) ? (float) $btc['degisim'] : null]], 'Bitcoin, Ethereum ve diğerleri'],
+        ['Emtia', 'petrol', [], 'Petrol, gümüş, doğal gaz'],
+        ['Dünya borsaları', 'dunya', [], 'S&P 500, DAX, Nikkei'],
     ];
 
     $html = '';
 
-    foreach ($satirlar as [$ad, $bolum, $deger, $degisim]) {
-        $html .= '<a class="nw-kutu-satir" href="' . e(piyasa_bolum_yolu($bolum)) . '"><span><strong>' . e($ad) . '</strong><em>' . e($deger) . '</em></span>'
-            . nw_degisim_html(is_numeric($degisim) ? (float) $degisim : null) . '</a>';
+    // Kucuk grafikler (17.11.2026): doviz (dolar), borsa ve altin satirlarinin altinda.
+    $grafikAraci = ['doviz' => 'usd', 'bist' => 'bist', 'altin' => 'altin'];
+
+    foreach ($satirlar as [$ad, $bolum, $kalemler, $aciklama]) {
+        $kalemHtml = '';
+
+        foreach ($kalemler as [$etiket, $deger, $hane, $birim, $degisim]) {
+            if ($deger !== null) {
+                $kalemHtml .= nw_piyasa_kalemi_html($etiket, nw_sayi($deger, $hane) . $birim, $degisim);
+            }
+        }
+
+        $grafik = isset($grafikAraci[$bolum]) ? nw_piyasa_grafigi_html($grafikAraci[$bolum]) : '';
+
+        $html .= '<a class="nw-kutu-satir' . ($kalemHtml !== '' ? ' nw-piyasa-satir' : '') . ($grafik !== '' ? ' nw-grafikli' : '') . '" href="' . e(piyasa_bolum_yolu($bolum)) . '">'
+            . ($kalemHtml !== ''
+                ? '<strong>' . e($ad) . '</strong><span class="nw-kalemler">' . $kalemHtml . '</span>'
+                : '<span><strong>' . e($ad) . '</strong><em>' . e($aciklama) . '</em></span>')
+            . $grafik
+            . '</a>';
     }
 
-    return '<div class="nw-yan-kutu nw-kutu-liste"><strong class="nw-kutu-bas">' . nw_konu_ikonu('ekonomi') . 'Ekonomi</strong>' . $html
+    // Kutu gorseli (17.11.2026, site sahibinin gonderdigi gorsel); basligin altinda, kutu daraltilinca gizlenir.
+    return '<div class="nw-yan-kutu nw-kutu-liste" data-katla="ekonomi"><strong class="nw-kutu-bas">' . nw_konu_ikonu('ekonomi') . 'Ekonomi</strong>'
+        . '<img class="nw-kutu-gorsel" src="/assets/network/ekonomi-960.webp" srcset="/assets/network/ekonomi-480.webp 480w, /assets/network/ekonomi-960.webp 960w" sizes="340px" width="960" height="320" loading="lazy" decoding="async" alt="">' . $html
         . '<a class="nw-kutu-tumu" href="' . e(piyasalar_yolu()) . '">Bütün piyasalar →</a></div>';
+}
+
+/**
+ * Kucuk fiyat grafigi (17.11.2026, site sahibi: "doviz, borsa ve altinin
+ * altinda grafiklere yer verelim; piyasalar sayfasindaki grafikleri kucuk
+ * bir sekilde burada gorebiliriz"). Piyasalar sayfasinin 3 aylik serisi,
+ * YALNIZCA onbellekten (sayfa Yahoo'yu beklemez); seri yoksa bos. Donem
+ * basindan sonuna yukseliste yesil, dususte kirmizi; tiklayinca o bolum.
+ */
+function nw_piyasa_grafigi_html(string $arac): string
+{
+    try {
+        require_once __DIR__ . '/piyasalar.php';
+        require_once __DIR__ . '/canli_onbellek.php';
+
+        $oku = static function (string $a): array {
+            $sembol = (string) (piyasa_araclari()[$a]['sembol'] ?? '');
+            $veri   = $sembol !== '' ? (canli_onbellek_oku('piyasa_' . $sembol . '_3mo')['veri'] ?? null) : null;
+
+            return is_array($veri) && is_array($veri['noktalar'] ?? null) ? $veri['noktalar'] : [];
+        };
+
+        $noktalar = $arac === 'altin' ? piyasa_gram_serisi($oku('ons'), $oku('usd'), 43200) : $oku($arac);
+    } catch (Throwable $e) {
+        return '';
+    }
+
+    $degerler = array_values(array_filter(array_map(static fn ($n): ?float => is_array($n) && is_numeric($n[1] ?? null) ? (float) $n[1] : null, $noktalar),
+        static fn (?float $v): bool => $v !== null));
+
+    if (count($degerler) < 5) {
+        return '';
+    }
+
+    $en = 120; $boy = 30;
+    $min = min($degerler); $max = max($degerler); $ara = max($max - $min, 1e-9); $n = count($degerler);
+    $nokta = [];
+
+    foreach ($degerler as $i => $v) {
+        $nokta[] = round($i / ($n - 1) * $en, 1) . ',' . round($boy - 2 - ($v - $min) / $ara * ($boy - 4), 1);
+    }
+
+    $yukari = end($degerler) >= $degerler[0];
+    $yuzde  = $degerler[0] != 0.0 ? (end($degerler) / $degerler[0] - 1) * 100 : 0.0;
+
+    // Golgeli cizgi (17.11.2026, site sahibi: "sayfadaki gibi golgeli cizgi"): cizginin alti renkten saydama gecen dolgu.
+    static $sira = 0;
+    $kimlik = 'nwg' . (++$sira);
+
+    return '<span class="nw-mini-grafik ' . ($yukari ? 'artis' : 'dusus') . '" title="Son 3 ay: ' . e(($yuzde >= 0 ? '+' : '') . number_format($yuzde, 1, ',', '.')) . '%">'
+        . '<svg viewBox="0 0 ' . $en . ' ' . $boy . '" width="100%" height="' . $boy . '" preserveAspectRatio="none" aria-hidden="true">'
+        . '<defs><linearGradient id="' . $kimlik . '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".32"/>'
+        . '<stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>'
+        . '<polygon points="0,' . $boy . ' ' . implode(' ', $nokta) . ' ' . $en . ',' . $boy . '" fill="url(#' . $kimlik . ')"/>'
+        . '<polyline points="' . implode(' ', $nokta) . '" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>'
+        . '<small>3 ay ' . e(($yuzde >= 0 ? '▲ %' : '▼ %') . number_format(abs($yuzde), 1, ',', '.')) . '</small></span>';
 }
 
 /** Spor kutusundaki canli skor satirlari (api/canli-skor.php ile ayni veri). */
@@ -1649,8 +2036,10 @@ function nw_spor_skor_satirlari_html(array $maclar, int $adet = 4): string
 {
     $html = '';
 
-    foreach (array_slice($maclar, 0, $adet) as $m) {
-        $oynandi = $m['canli'] || in_array($m['durum'], FUTBOL_BITTI, true);
+    // Yalnizca SU AN oynanan maclar (16.11.2026, site sahibi: "canli mac alaninda o an mac varsa
+    // gostersin ve yesil gorunsun; bittiginde kapatabiliriz").
+    foreach (array_slice(array_values(array_filter($maclar, static fn (array $m): bool => !empty($m['canli']))), 0, $adet) as $m) {
+        $oynandi = true;
 
         $html .= '<a class="nw-skor' . ($m['canli'] ? ' canli' : '') . '" href="' . e((string) $m['adres']) . '">'
             . '<span class="nw-skor-durum">' . e($m['canli'] || $oynandi ? (string) $m['durum_yazi'] : (string) $m['saat']) . '</span>'
@@ -1660,6 +2049,152 @@ function nw_spor_skor_satirlari_html(array $maclar, int $adet = 4): string
     }
 
     return $html;
+}
+
+/*
+ * SPOR KUTUSUNDA PUAN DURUMU VE FIKSTUR (17.11.2026, site sahibi: "puan
+ * durumunda Turkiye'den ilk 5 takim gosterilsin; fiksturde ilk 4 takimin bu
+ * haftaki maclarini gostersin"). Veri ESPN (includes/futbol.php), YALNIZCA
+ * onbellekten: sayfa ESPN'i beklemez. Onbellek yoksa ya da eskiyse yanit
+ * gittikten sonra tazelenir (nw_spor_onbellegi_tazele); o ana kadar satir
+ * eskisi gibi baglanti olarak kalir.
+ */
+const NW_FIKSTUR_LIGLERI = ['tur.1', 'tur.cup', 'uefa.champions', 'uefa.europa', 'uefa.europa.conf'];
+
+/** @return list<array<string,mixed>> Super Lig puan tablosu (onbellekten; yoksa bos). */
+function nw_super_lig_tablosu(): array
+{
+    require_once __DIR__ . '/futbol.php';
+    require_once __DIR__ . '/canli_onbellek.php';
+
+    $kayit = canli_onbellek_oku(futbol_onbellek_anahtari('/v2/sports/soccer/tur.1/standings', []));
+    $grup  = $kayit['veri'][0] ?? null;
+
+    if ($kayit === null || time() - (int) $kayit['zaman'] > 600) {
+        nw_spor_onbellegi_tazele();
+    }
+
+    return is_array($grup) ? $grup : [];
+}
+
+/** Bu haftanin (Istanbul, pazartesi-pazar) gunleri, Ymd. @return list<string> */
+function nw_bu_hafta_gunleri(): array
+{
+    $bugun = new DateTimeImmutable('today', new DateTimeZone('Europe/Istanbul'));
+    $pzt   = $bugun->modify('-' . ((int) $bugun->format('N') - 1) . ' days');
+
+    return array_map(static fn (int $i): string => $pzt->modify('+' . $i . ' days')->format('Ymd'), range(0, 6));
+}
+
+/** Yanit gittikten sonra puan tablosu ve bu haftanin maclari ESPN'den tazelenir (en fazla 10 dakikada bir). */
+function nw_spor_onbellegi_tazele(): void
+{
+    static $kuruldu = false;
+
+    if ($kuruldu || PHP_SAPI === 'cli') {
+        return;
+    }
+
+    $kuruldu = true;
+
+    register_shutdown_function(static function (): void {
+        try {
+            if (time() - (int) ayar_oku('nw_spor_tazele', '0') < 600) {
+                return;
+            }
+
+            ayar_yaz('nw_spor_tazele', (string) time());
+
+            if (function_exists('fastcgi_finish_request')) {
+                fastcgi_finish_request();
+            } elseif (function_exists('litespeed_finish_request')) {
+                litespeed_finish_request();
+            }
+
+            @set_time_limit(60);
+            require_once __DIR__ . '/futbol.php';
+            futbol_puan_durumu('tur.1');
+
+            foreach (NW_FIKSTUR_LIGLERI as $lig) {
+                foreach (nw_bu_hafta_gunleri() as $gun) {
+                    futbol_gun_maclari($lig, $gun);
+                }
+            }
+        } catch (Throwable $e) {
+            error_log('[valentra] spor kutusu tazeleme: ' . $e->getMessage());
+        }
+    });
+}
+
+/** Puan durumu: Super Lig'in ilk 5 takimi. */
+function nw_puan_ilk5_html(array $tablo): string
+{
+    if (count($tablo) < 5) {
+        return '';
+    }
+
+    $html = '';
+
+    foreach (array_slice($tablo, 0, 5) as $s) {
+        $html .= '<li><b>' . (int) $s['sira'] . '</b><span>' . e((string) $s['takim']) . '</span><small>' . (int) $s['o'] . ' m</small><strong>' . (int) $s['p'] . '</strong></li>';
+    }
+
+    return '<ol class="nw-mini-tablo">' . $html . '</ol>';
+}
+
+/** Fikstur: ilk 4 takimin bu haftaki maclari (Super Lig, kupa ve Avrupa). */
+function nw_fikstur_ilk4_html(array $tablo): string
+{
+    $ilk4 = array_flip(array_map(static fn (array $s): int => (int) $s['id'], array_slice($tablo, 0, 4)));
+
+    if (count($ilk4) < 4) {
+        return '';
+    }
+
+    require_once __DIR__ . '/futbol.php';
+    require_once __DIR__ . '/canli_onbellek.php';
+
+    $maclar = [];
+    $eksik  = false;
+
+    foreach (NW_FIKSTUR_LIGLERI as $lig) {
+        foreach (nw_bu_hafta_gunleri() as $gun) {
+            $kayit = canli_onbellek_oku(futbol_onbellek_anahtari('/site/v2/sports/soccer/' . $lig . '/scoreboard', ['dates' => $gun, 'limit' => 200]));
+
+            if ($kayit === null) {
+                $eksik = true;
+                continue;
+            }
+
+            foreach ($kayit['veri']['maclar'] ?? [] as $m) {
+                if (isset($ilk4[(int) ($m['ev_id'] ?? 0)]) || isset($ilk4[(int) ($m['dep_id'] ?? 0)])) {
+                    $maclar[(int) $m['id']] = $m;
+                }
+            }
+        }
+    }
+
+    if ($eksik) {
+        nw_spor_onbellegi_tazele();
+    }
+
+    if ($maclar === []) {
+        return '';
+    }
+
+    usort($maclar, static fn (array $a, array $b): int => $a['zaman'] <=> $b['zaman']);
+    $gunAdi = ['', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+    $tz     = new DateTimeZone('Europe/Istanbul');
+    $html   = '';
+
+    foreach ($maclar as $m) {
+        $t      = (new DateTimeImmutable('@' . (int) $m['zaman']))->setTimezone($tz);
+        $oynandi = ($m['ev_gol'] ?? null) !== null && ($m['durum'] ?? '') !== 'NS';
+        $html  .= '<li' . ($oynandi ? ' class="oynandi"' : '') . '><small>' . e($gunAdi[(int) $t->format('N')] . ' ' . $t->format('H:i')) . '</small>'
+            . '<span>' . e((string) $m['ev']) . '</span><b>' . ($oynandi ? (int) $m['ev_gol'] . '-' . (int) $m['dep_gol'] : '–') . '</b><span>' . e((string) $m['dep']) . '</span></li>';
+    }
+
+    return '<ul class="nw-mini-fikstur">' . $html . '</ul>';
 }
 
 function nw_spor_kutusu_html(): string
@@ -1677,14 +2212,29 @@ function nw_spor_kutusu_html(): string
 
     $canli = count(array_filter($maclar, static fn (array $m): bool => !empty($m['canli'])));
 
-    return '<div class="nw-yan-kutu nw-kutu-liste nw-spor-kutu" data-canli-skor="/api/canli-skor.php">'
+    try {
+        $tablo       = nw_super_lig_tablosu();
+        $puanHtml    = nw_puan_ilk5_html($tablo);
+        $fiksturHtml = nw_fikstur_ilk4_html($tablo);
+    } catch (Throwable $e) {
+        $puanHtml = $fiksturHtml = '';
+    }
+
+    return '<div class="nw-yan-kutu nw-kutu-liste nw-spor-kutu" data-katla="spor" data-canli-skor="/api/canli-skor.php">'
         . '<strong class="nw-kutu-bas">' . nw_konu_ikonu('spor') . 'Spor</strong>'
+        . '<img class="nw-kutu-gorsel" src="/assets/network/spor-960.webp" srcset="/assets/network/spor-480.webp 480w, /assets/network/spor-960.webp 960w" sizes="340px" width="960" height="320" loading="lazy" decoding="async" alt="">'
+        // Canli alan yalnizca mac oynanirken gorunur; betik mac baslayinca acar, bitince kapatir.
+        . '<div class="nw-canli-alan"' . ($canli > 0 ? '' : ' hidden') . '>'
         . '<a class="nw-kutu-satir nw-canli-bas" href="' . e(spor_bolum_yolu('canli-skor')) . '"><span><strong>'
-        . '<i class="nw-canli-nokta' . ($canli > 0 ? ' yaniyor' : '') . '" aria-hidden="true"></i>Canlı skorlar</strong>'
-        . '<em class="nw-canli-ozet">' . ($canli > 0 ? $canli . ' maç oynanıyor' : ($maclar !== [] ? 'Bugünün maçları' : 'Bugünün maçları ve sonuçları')) . '</em></span><small>→</small></a>'
-        . '<div class="nw-skorlar">' . nw_spor_skor_satirlari_html($maclar) . '</div>'
-        . '<a class="nw-kutu-satir" href="' . e(spor_bolum_yolu('puan-durumu')) . '"><span><strong>Puan durumları</strong><em>Süper Lig ve Avrupa ligleri</em></span></a>'
-        . '<a class="nw-kutu-satir" href="' . e(spor_bolum_yolu('fikstur')) . '"><span><strong>Fikstür</strong><em>Haftanın maçları ve sonuçlar</em></span></a>'
+        . '<i class="nw-canli-nokta yaniyor" aria-hidden="true"></i>Canlı maçlar</strong>'
+        . '<em class="nw-canli-ozet">' . $canli . ' maç oynanıyor</em></span><small>→</small></a>'
+        . '<div class="nw-skorlar">' . nw_spor_skor_satirlari_html($maclar) . '</div></div>'
+        . ($puanHtml !== ''
+            ? '<a class="nw-kutu-satir nw-spor-blok" href="' . e(spor_bolum_yolu('puan-durumu')) . '"><span><strong>Puan durumu</strong><em>Süper Lig, ilk 5</em></span>' . $puanHtml . '</a>'
+            : '<a class="nw-kutu-satir" href="' . e(spor_bolum_yolu('puan-durumu')) . '"><span><strong>Puan durumları</strong><em>Süper Lig ve Avrupa ligleri</em></span></a>')
+        . ($fiksturHtml !== ''
+            ? '<a class="nw-kutu-satir nw-spor-blok" href="' . e(spor_bolum_yolu('fikstur')) . '"><span><strong>Fikstür</strong><em>İlk 4 takımın bu haftaki maçları</em></span>' . $fiksturHtml . '</a>'
+            : '<a class="nw-kutu-satir" href="' . e(spor_bolum_yolu('fikstur')) . '"><span><strong>Fikstür</strong><em>Haftanın maçları ve sonuçlar</em></span></a>')
         . '<a class="nw-kutu-satir" href="' . e(spor_bolum_yolu('gol-kralligi')) . '"><span><strong>Gol krallığı</strong><em>Gol ve asist sıralaması</em></span></a>'
         . '<a class="nw-kutu-satir" href="' . e(mac_ozetleri_yolu()) . '"><span><strong>Maç özetleri</strong><em>Videolu özetler</em></span></a>'
         . '<a class="nw-kutu-tumu" href="' . e(nw_yol('', ['konu' => 'spor'])) . '">Spor haberleri →</a></div>'
@@ -1703,26 +2253,24 @@ function nw_spor_kutusu_betigi(): string
 (function () {
     var k = document.querySelector('.nw-spor-kutu[data-canli-skor]');
     if (!k || !window.fetch) { return; }
-    var liste = k.querySelector('.nw-skorlar'), nokta = k.querySelector('.nw-canli-nokta'), ozet = k.querySelector('.nw-canli-ozet');
+    var alan = k.querySelector('.nw-canli-alan'), liste = k.querySelector('.nw-skorlar'), ozet = k.querySelector('.nw-canli-ozet');
     function yaz(d) {
-        var m = (d.maclar || []).slice(0, 4), canli = 0;
+        // Yalnizca oynanan maclar; hic yoksa canli alan kapanir (16.11.2026).
+        var canlilar = (d.maclar || []).filter(function (x) { return x.canli; });
         liste.textContent = '';
-        m.forEach(function (x) {
-            var bitti = ['FT', 'AET', 'PEN'].indexOf(x.durum) !== -1, oynandi = x.canli || bitti;
-            if (x.canli) { canli++; }
+        canlilar.slice(0, 4).forEach(function (x) {
             var a = document.createElement('a');
-            a.className = 'nw-skor' + (x.canli ? ' canli' : '');
+            a.className = 'nw-skor canli';
             a.href = x.adres;
-            [['nw-skor-durum', oynandi ? x.durum_yazi : x.saat], ['nw-skor-takim', x.ev],
-             ['nw-skor-sonuc', oynandi ? (x.ev_gol || 0) + ' - ' + (x.dep_gol || 0) : 'vs'], ['nw-skor-takim', x.dep]].forEach(function (p, i) {
+            [['nw-skor-durum', x.durum_yazi], ['nw-skor-takim', x.ev],
+             ['nw-skor-sonuc', (x.ev_gol || 0) + ' - ' + (x.dep_gol || 0)], ['nw-skor-takim', x.dep]].forEach(function (p, i) {
                 var e = document.createElement(i === 2 ? 'b' : 'span');
                 e.className = p[0]; e.textContent = p[1]; a.appendChild(e);
             });
             liste.appendChild(a);
         });
-        (d.maclar || []).forEach(function (x, i) { if (i >= 4 && x.canli) { canli++; } });
-        nokta.classList.toggle('yaniyor', canli > 0);
-        ozet.textContent = canli > 0 ? canli + ' maç oynanıyor' : 'Bugünün maçları ve sonuçları';
+        alan.hidden = canlilar.length === 0;
+        ozet.textContent = canlilar.length + ' maç oynanıyor';
     }
     function sor() {
         if (document.hidden) { setTimeout(sor, 15000); return; }

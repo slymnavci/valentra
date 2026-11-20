@@ -1632,10 +1632,50 @@ if ($gundem !== []) {
     gunluk('  ' . count($karsilanan) . ' çok aranan konu adaylarda var' . ($yeniGundem > 0 ? ' (' . $yeniGundem . ' tanesi Google Trends haberinden eklendi)' : '') . '; bunlar öne alındı.');
 }
 
+/*
+ * DUNYANIN SAYGIN YAYINLARI ONDE (17.11.2026, site sahibi: "yabancida CNN,
+ * BBC, Fox gibi yurtdisinin en unlulerini koyalim"). Dunya basliginda 60'i
+ * askin kaynaktan 20 aday seciliyordu; CNN 39, Fox 12 aday verdigi halde en
+ * yeniler arasinda siraya giremiyordu. Bu yayinlarin her birinin en yeni
+ * SAYGIN_ONDE_ADET adayi, ayni kapsamdaki digerlerinin onune alinir (tek
+ * yayin listeyi doldurmasin diye yalnizca birkac aday).
+ */
+/*
+ * Iki kademe (17.11.2026): ilk calismada 16 saygin yayinin hepsi one alininca
+ * 20 kisilik dunya kontenjani El Pais, Le Monde, Spiegel gibi yayinlarla
+ * doldu; site sahibinin adiyla istedigi CNN ve Fox yine giremedi. Kademe 2
+ * (adiyla istenenler ve ABD/Ingiltere'nin en bilinenleri) kademe 1'in onunde.
+ */
+const SAYGIN_YAYIN_ALANLARI = [
+    'cnn.com' => 2, 'foxnews.com' => 2, 'bbc.com' => 2, 'bbc.co.uk' => 2, 'nytimes.com' => 2, 'washingtonpost.com' => 2,
+    'reuters.com' => 2, 'apnews.com' => 2,
+    'theguardian.com' => 1, 'independent.co.uk' => 1, 'ft.com' => 1, 'economist.com' => 1, 'aljazeera.com' => 1, 'lemonde.fr' => 1,
+    'lefigaro.fr' => 1, 'spiegel.de' => 1, 'elpais.com' => 1, 'wsj.com' => 1,
+];
+const SAYGIN_ONDE_ADET = 3;
+
+$sayginSayac = [];
+$sayginSira  = array_keys($adaylar);
+usort($sayginSira, static fn (int $x, int $y): int => $adaylar[$y]['puan'] <=> $adaylar[$x]['puan']);
+
+foreach ($sayginSira as $i) {
+    $alan = (string) preg_replace('/^(www|edition|feeds|rss|moxie)\./', '', strtolower((string) parse_url((string) ($adaylar[$i]['kaynak']['site_url'] ?? ''), PHP_URL_HOST)));
+    $kademe = 0;
+
+    foreach (SAYGIN_YAYIN_ALANLARI as $sAlan => $sKademe) {
+        if ($alan === $sAlan || str_ends_with($alan, '.' . $sAlan)) {
+            $kademe = $sKademe;
+            break;
+        }
+    }
+
+    $adaylar[$i]['saygin'] = $kademe > 0 && ($sayginSayac[$alan] = ($sayginSayac[$alan] ?? 0) + 1) <= SAYGIN_ONDE_ADET ? $kademe : 0;
+}
+
 // Önce Google'da çok arananlar, sonra çok kaynakta geçenler (kapsam), sonra
-// en yeniler; bütçe sınırına takılırsa gündemdeki ve güncel olanlar işlensin.
+// saygın yayınlar, sonra en yeniler; bütçe sınırına takılırsa gündemdeki ve güncel olanlar işlensin.
 usort($adaylar, static fn (array $a, array $b): int =>
-    [(int) ($b['gundem']['trafik'] ?? -1), $b['kapsam'], $b['puan']] <=> [(int) ($a['gundem']['trafik'] ?? -1), $a['kapsam'], $a['puan']]);
+    [(int) ($b['gundem']['trafik'] ?? -1), $b['kapsam'], $b['saygin'] ?? 0, $b['puan']] <=> [(int) ($a['gundem']['trafik'] ?? -1), $a['kapsam'], $a['saygin'] ?? 0, $a['puan']]);
 
 /*
  * ON TARAMA VE HIZLI YOL (12.11.2026; bkz. Yazar::onTarama). Basliklar tek
@@ -1739,7 +1779,8 @@ $kaynakBasinaTavan = max(1, (int) ($secenekler['kaynakbasina'] ?? ($videoModu
     ? 3
     : ($konular !== []
         ? max(10, 2 * (int) ceil($enFazlaAday / max(1, count($kaynaklar))))
-        : 6))));
+        // 6'dan 8'e (15.11.2026, daha cok haber): kaynak basina tavan buyuk gazetelerin haberini kesmesin.
+        : 8))));
 $kaynakSayaci      = [];
 $secilen           = [];
 $tarifDegil        = 0;

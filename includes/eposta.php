@@ -6,7 +6,7 @@ declare(strict_types=1);
  * ve "sifremi unuttum" icin, site sahibinin secimi).
  *
  * Ayarlar panelde (admin/eposta.php, ayarlar tablosu):
- *   eposta_gonderen   gonderen adresi (or. bilgi@valentra.com.tr)
+ *   eposta_gonderen   gonderen adresi (or. info@valentra.com.tr)
  *   eposta_smtp_host  bossa PHP'nin mail() islevi (barindirmanin kendi
  *                     postacisi); doluysa asagidaki SMTP sunucusu
  *   eposta_smtp_port  465 (SSL) ya da 587 (STARTTLS)
@@ -30,7 +30,7 @@ function eposta_ayarlari(): array
     $gonderen = trim(ayar_oku('eposta_gonderen', ''));
 
     return [
-        'gonderen'  => $gonderen !== '' ? $gonderen : 'bilgi@valentra.com.tr',
+        'gonderen'  => $gonderen !== '' ? $gonderen : 'info@valentra.com.tr',
         'host'      => trim(ayar_oku('eposta_smtp_host', '')),
         'port'      => (int) (ayar_oku('eposta_smtp_port', '465') ?: 465),
         'guvenlik'  => ayar_oku('eposta_smtp_guvenlik', 'ssl') === 'tls' ? 'tls' : 'ssl',

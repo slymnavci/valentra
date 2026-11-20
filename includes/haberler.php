@@ -3144,6 +3144,11 @@ function haber_dusuk_ilgi_disi_kosulu(string $takma = ''): string
 /** false: eski davranis (bkz. HABER_YALNIZCA_OZGUN_DIZINDE). */
 const HABER_OZGUN_KOTASI_ACIK = true;
 
+/** Tek kaynakli haberin Google payinda one gecen masalar (bkz. includes/masalar.php) ve eki. */
+const HABER_KOTA_ODAK_MASALARI = ['ekonomi', 'teknoloji'];
+const HABER_KOTA_ODAK_EKI = 15;
+
+
 /** Google'a sunulan haberlerde özgün payı (yüzde). */
 const HABER_OZGUN_HEDEF_YUZDE = 70;
 
@@ -3257,10 +3262,30 @@ function haber_ozgun_kotasini_dagit(bool $zorla = false): ?array
     )->fetchColumn();
 
     $tekler = db()->query(
-        "SELECT id, slug, onem, google_kota, TIMESTAMPDIFF(HOUR, yayin_tarihi, NOW()) AS saat
-           FROM haberler
-          WHERE durum = 'yayinda' AND " . $ince . ' AND NOT ' . $ozgunK
+        "SELECT h.id, h.slug, h.onem, h.google_kota, h.sehir, k.slug AS kategori_slug,
+                TIMESTAMPDIFF(HOUR, h.yayin_tarihi, NOW()) AS saat
+           FROM haberler h LEFT JOIN kategoriler k ON k.id = h.kategori_id
+          WHERE h.durum = 'yayinda' AND "
+            . (HABER_KISA_DA_DIZINDE ? '1 = 1' : 'CHAR_LENGTH(h.icerik) + CHAR_LENGTH(h.neden_onemli) >= ' . HABER_INCE_KARAKTER)
+            . ' AND ' . haber_dusuk_ilgi_disi_kosulu('h') . ' AND NOT ' . haber_ozgun_kosulu('h')
     )->fetchAll();
+
+    /*
+     * ODAK DIKEYLER (19.11.2026, dis SEO degerlendirmesi; site sahibi
+     * "evet basla"): tek kaynakli haberin Google payinda ekonomi masasi
+     * (ekonomi, vergi, muhasebe) ve teknoloji/yapay zeka one geciyor
+     * (HABER_KOTA_ODAK_EKI); yerel kaynagin tek kaynakli haberi (sehir dolu)
+     * paya girmiyor: buyuk ajanslarla yarisamayan, kalici okur getirmeyen
+     * haber tarama butcesini harcamasin. Trafik alan sayfa (korunan) ve
+     * daha once Google'a sunulmus haber oldugu gibi kaliyor.
+     */
+    require_once __DIR__ . '/masalar.php';
+
+    foreach ($tekler as $i => $t) {
+        $masa = haber_masa_anahtari($t);
+        $tekler[$i]['odak'] = in_array($masa, HABER_KOTA_ODAK_MASALARI, true) ? HABER_KOTA_ODAK_EKI : 0;
+        $tekler[$i]['yerel'] = trim((string) ($t['sehir'] ?? '')) !== '';
+    }
 
     $korunanAd = haber_kota_korunanlar();
     $kota      = intdiv($ozgun * (100 - HABER_OZGUN_HEDEF_YUZDE), HABER_OZGUN_HEDEF_YUZDE);
@@ -3274,8 +3299,8 @@ function haber_ozgun_kotasini_dagit(bool $zorla = false): ?array
             return $kb <=> $ka;
         }
 
-        $pa = (int) $a['onem'] - max(0, (int) $a['saat']) / 24 * HABER_KOTA_GUNLUK_CEZA;
-        $pb = (int) $b['onem'] - max(0, (int) $b['saat']) / 24 * HABER_KOTA_GUNLUK_CEZA;
+        $pa = (int) $a['onem'] + $a['odak'] - max(0, (int) $a['saat']) / 24 * HABER_KOTA_GUNLUK_CEZA;
+        $pb = (int) $b['onem'] + $b['odak'] - max(0, (int) $b['saat']) / 24 * HABER_KOTA_GUNLUK_CEZA;
 
         return $pb <=> $pa ?: (int) $b['id'] <=> (int) $a['id'];
     });
@@ -3295,7 +3320,7 @@ function haber_ozgun_kotasini_dagit(bool $zorla = false): ?array
      */
     foreach ($tekler as $t) {
         $koru = isset($korunanAd[$t['slug']]) || (int) $t['google_kota'] === 1;
-        $sec  = $koru || $secilen < $kota;
+        $sec  = $koru || ($secilen < $kota && !$t['yerel']);
 
         if ($sec) {
             $secilen++;

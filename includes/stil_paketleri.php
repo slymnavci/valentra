@@ -73,6 +73,22 @@ const STIL_SAYFA_PAKETLERI = [
 ];
 
 /**
+ * Ortak stil dosyasi (14.11.2026, hiz): V Network sayfalari style.css'in
+ * tamami yerine ince kopyasini yukler (assets/stil-temel-network.css;
+ * .github/stil/temel.py uretir, deploy her yuklemede yeniler). Kopya yoksa
+ * style.css (guvenli taraf).
+ */
+const STIL_TEMEL_NETWORK = ['network.php', 'uye.php', 'uye-eposta.php'];
+
+function stil_temel(?string $betik = null): string
+{
+    $betik ??= basename((string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+
+    return in_array($betik, STIL_TEMEL_NETWORK, true) && is_file(__DIR__ . '/../assets/stil-temel-network.css')
+        ? '/assets/stil-temel-network.css' : '/assets/style.css';
+}
+
+/**
  * Bu istekte style.css'ten sonra yuklenecek paket dosyalari.
  *
  * @return list<string> /assets/stil-*.css yollari

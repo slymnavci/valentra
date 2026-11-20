@@ -596,7 +596,8 @@ function ajan_otomatik_tetikle_arada(): void
             // Kose yazilari zamanli calismadaki gibi ogleden sonra (bkz.
             // ajan.yml, kose.php --zamanli); "gunluk" toplama + kose yazisi.
             $saat  = (int) (new DateTimeImmutable('now', new DateTimeZone('Europe/Istanbul')))->format('G');
-            $sonuc = ajan_tetikle(false, 2, 0, $saat >= 12 ? 'gunluk' : 'topla');
+            // 15.11.2026: geriye bakis 3 saat (ajan.yml ile ayni); kose yazisi artik yazilmiyor, 'gunluk' = toplama + derleme.
+            $sonuc = ajan_tetikle(false, 3, 0, $saat >= 12 ? 'gunluk' : 'topla');
 
             if (!$sonuc['tamam']) {
                 error_log('[valentra] ajan otomatik tetiklenemedi: ' . $sonuc['mesaj']);

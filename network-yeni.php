@@ -52,7 +52,7 @@ try {
           " . ($konu === '' && $gazete === '' ? 'LEFT JOIN kaynaklar ky ON ky.id = h.kaynak_id' : '') . "
           WHERE h.durum = :d AND h.yayin_tarihi > FROM_UNIXTIME(:o) AND h.yayin_tarihi <= NOW()
             " . ($konu === '' && $gazete === '' ? nw_turkiye_gundemi_kosulu() : '') . "
-            AND " . ($konu !== '' ? 'k.slug = ' . db()->quote($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . $gazeteKosulu
+            AND " . ($konu !== '' ? nw_konu_kosulu($konu) : "(k.slug IS NULL OR k.slug <> 'yemek-tarifleri')") . $gazeteKosulu
             // Spor dali secili akis (14.11.2026): yalnizca o dalin yeni haberleri.
             . ($konu === 'spor' ? nw_spor_dal_kosulu((string) ($_GET['dal'] ?? '')) : '')
     );
@@ -77,7 +77,7 @@ try {
                           JOIN haberler h ON h.id = y.haber_id LEFT JOIN kategoriler k ON k.id = h.kategori_id
                          WHERE y.haber_id IS NOT NULL AND y.durum = 'yayinda' AND u.durum = 'aktif' AND u.tur <> 'yz'
                            AND y.olusturuldu > FROM_UNIXTIME(:o)" . str_replace('g.uye_id', 'y.uye_id', $kosul)
-                        . ($konu !== '' ? ' AND k.slug = ' . db()->quote($konu) : ''));
+                        . ($konu !== '' ? ' AND ' . nw_konu_kosulu($konu) : ''));
     $y->execute(['o' => $once] + ($takip ? ['u1' => (int) $uye['id'], 'u2' => (int) $uye['id']] : []));
     $sayi += (int) $y->fetchColumn();
 } catch (PDOException $e) {
