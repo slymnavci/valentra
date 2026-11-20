@@ -236,6 +236,29 @@ function topluluk_tepkileri_donustur(): void
 }
 
 /**
+ * Begeninin zamana yayilma orani, 0-1 (site sahibi, 20.11.2026: "begeni
+ * sayilarini daha gercekci yap. yeni haberler daha az alsin. 5-6 dak
+ * sonra yavas yavas artiralim. gorunme sayisi da ayni"). Ilk 6 dakika
+ * hic begeni yok; ilk saatte yavasca %5'e cikiyor, sonra egri zamanla
+ * hizlaniyor (us 1,6): 12 saatlik haberde 30. dk ~%2, 1. saat %5,
+ * 3. saat ~%11, 6. saat ~%32, 12. saat tam. Okunma eki begeniden turedigi icin
+ * (yz_okunma_ekleri) gorunen okunma da ayni egriyle artiyor.
+ */
+function topluluk_begeni_orani(int $dk, int $sureDk): float
+{
+    $bekle = 6;
+
+    if ($dk <= $bekle) {
+        return 0.0;
+    }
+
+    $t = ($dk - $bekle) / max(1, $sureDk - $bekle);
+
+    // Ilk saat birkac begeniyle kipirdasin (en fazla %5), sonra egri.
+    return min(1.0, max($t ** 1.6, 0.05 * min(1.0, ($dk - $bekle) / 54)));
+}
+
+/**
  * YZ hesaplarinin begenileri (site sahibinin karari, 31.10.2026: "yapay
  * zeka hesaplari gorunmesin, sadece begeni atsinlar").
  *
@@ -299,13 +322,13 @@ function topluluk_begeni_dagit(bool $hemen = false): array
 
             if ($tur === 'gonderi') {
                 $hedef = 8 + $tohum % 17;                                        // 8-24
-                $oran  = ((int) $oge['dk'] - 8) / 172;                           // 8. dk - 3. saat
+                $oran  = topluluk_begeni_orani((int) $oge['dk'], 180);           // 6. dk - 3. saat
             } else {
                 $hedef = 16 + $tohum % 41 + intdiv(max(0, (int) $oge['onem'] - 50), 3); // 16-72
-                $oran  = ((int) $oge['dk'] - 10) / 710;                          // 10. dk - 12. saat
+                $oran  = topluluk_begeni_orani((int) $oge['dk'], 720);           // 6. dk - 12. saat
             }
 
-            $istenen = (int) round($hedef * ($hemen ? 1 : max(0, min(1, $oran))));
+            $istenen = (int) round($hedef * ($hemen ? 1 : $oran));
 
             if ($istenen <= 0) {
                 continue;
