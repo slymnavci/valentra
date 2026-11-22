@@ -298,7 +298,7 @@ function nw_kart_html(array $oge, array $baglam, string $donus, bool $detay = fa
                     <?php else: ?>
                         <strong class="nw-hesap">Val<span>Haber</span></strong>
                     <?php endif; ?>
-                    <span class="nw-meta"><a href="<?= e($detayYol) ?>"><time datetime="<?= e(date('c', (int) strtotime($zaman))) ?>"><?= e(yorum_zaman($zaman)) ?></time></a><?php if (!empty($v['kategori_adi'])): ?> · <?= e((string) $v['kategori_adi']) ?><?php endif; ?></span>
+                    <span class="nw-meta"><a href="<?= e($detayYol) ?>"><time datetime="<?= e(date('c', (int) strtotime($zaman))) ?>"><?= e(yorum_zaman($zaman)) ?></time></a><?php /* Secili baslikta kartta ayni baslik adi yazmiyor (site sahibi, 21.11.2026: "sporda da spor yazmasina gerek yok"). */ ?><?php if (!empty($v['kategori_adi']) && ($v['kategori_slug'] ?? '') !== (string) ($GLOBALS['konu'] ?? '')): ?> · <?= e((string) $v['kategori_adi']) ?><?php endif; ?></span>
                     <?php /* Haberi mansetine / gundemine tasiyan gazeteler (14.11.2026; bkz. manset_sinyal.php). */ ?>
                     <?php if (trim((string) ($v['manset_yayinlar'] ?? '')) !== ''): ?>
                         <span class="nw-manset-rozet"><?php /* Eski kayitlarda ek "(TRT manşetinde)" diye yaziliydi; ikisi de taninir. */ ?><?= str_contains((string) $v['manset_yayinlar'], 'manşet') ? 'Manşette' : 'Gündeminde' ?>: <?= e(trim((string) preg_replace('/\s*\((TRT manşetinde|manşette)\)/u', '', (string) $v['manset_yayinlar']))) ?></span>
