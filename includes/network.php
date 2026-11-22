@@ -2042,21 +2042,47 @@ function nw_ekonomi_kutusu_html(): string
      * gostergesi, % kac artti veya azaldi; ayni sey borsa, altin ve bitcoin
      * icin"). Deger onbellekte yoksa kalem yerine bolumun icerigi yazilir.
      */
-    $satirlar = [
-        // Dolar ve euro ayri satir, her biri kendi grafigiyle (20.11.2026, site sahibi: "EUR ve USD ayri ayri olsun").
-        ['Dolar', 'doviz', [['USD', $sayi('usd'), 2, '', $sayi('usd_degisim')]], 'Dolar/TL', 'usd'],
-        ['Euro', 'doviz', [['EUR', $sayi('eur'), 2, '', $sayi('eur_degisim')]], 'Euro/TL', 'eur'],
-        ['Borsa', 'bist', [['BIST 100', $sayi('bist'), 0, '', $sayi('bist_degisim')]], 'BIST 100, endeksler ve hisseler', 'bist'],
-        ['Altın', 'altin', [['Gram', $sayi('altin'), 0, ' TL', $sayi('altin_degisim')]], 'Gram, çeyrek ve ons altın', 'altin'],
-        ['Kripto paralar', 'kripto', [['Bitcoin', is_numeric($btc['fiyat'] ?? null) ? (float) $btc['fiyat'] : null, 0, ' $', is_numeric($btc['degisim'] ?? null) ? (float) $btc['degisim'] : null]], 'Bitcoin, Ethereum ve diğerleri', ''],
-        ['Emtia', 'petrol', [], 'Petrol, gümüş, doğal gaz', ''],
-        ['Dünya borsaları', 'dunya', [], 'S&P 500, DAX, Nikkei', ''],
+    /*
+     * IKISERLI KARTLAR (22.11.2026, site sahibi: "USD ve EUR yan yana olsun;
+     * grafikler daha kucuk hemen altina gelsin, sadece goruntu olsun; altin
+     * ile borsa da yan yana dursun; ekonomi yazisini kaldiralim, sadece gorsel
+     * yeterli; biraz daraltalim"). Her kart: kisa ad, deger, gunluk degisim ve
+     * altinda yazisiz kucuk grafik. Deger onbellekte yoksa kart yazilmaz.
+     */
+    $kartlar = [
+        ['USD', 'doviz', $sayi('usd'), 2, '', $sayi('usd_degisim'), 'usd'],
+        ['EUR', 'doviz', $sayi('eur'), 2, '', $sayi('eur_degisim'), 'eur'],
+        ['Gram altın', 'altin', $sayi('altin'), 0, ' TL', $sayi('altin_degisim'), 'altin'],
+        ['BIST 100', 'bist', $sayi('bist'), 0, '', $sayi('bist_degisim'), 'bist'],
     ];
 
-    $html = '';
+    $kartHtml = '';
 
-    // Kucuk grafikler (17.11.2026): dolar, euro, borsa ve altin satirlarinin altinda (son eleman: grafik araci).
-    foreach ($satirlar as [$ad, $bolum, $kalemler, $aciklama, $grafikAraci]) {
+    foreach ($kartlar as [$ad, $bolum, $deger, $hane, $birim, $degisim, $grafikAraci]) {
+        if ($deger === null) {
+            continue;
+        }
+
+        $yon = $degisim === null ? '' : ($degisim > 0 ? ' artti' : ($degisim < 0 ? ' dustu' : ''));
+
+        $kartHtml .= '<a class="nw-piyasa-kart' . $yon . '" href="' . e(piyasa_bolum_yolu($bolum)) . '">'
+            . '<i>' . e($ad) . '</i>'
+            . '<b>' . e(nw_sayi($deger, $hane) . $birim) . '</b>'
+            . ($degisim !== null ? '<small>' . ($degisim > 0 ? '▲' : ($degisim < 0 ? '▼' : '•')) . ' %' . number_format(abs($degisim), 2, ',', '.') . '</small>' : '')
+            . nw_piyasa_grafigi_html($grafikAraci, false)
+            . '</a>';
+    }
+
+    // Grafiksiz kalemler eskisi gibi satir satir (kisa).
+    $satirlar = [
+        ['Kripto paralar', 'kripto', [['Bitcoin', is_numeric($btc['fiyat'] ?? null) ? (float) $btc['fiyat'] : null, 0, ' $', is_numeric($btc['degisim'] ?? null) ? (float) $btc['degisim'] : null]], 'Bitcoin, Ethereum ve diğerleri'],
+        ['Emtia', 'petrol', [], 'Petrol, gümüş, doğal gaz'],
+        ['Dünya borsaları', 'dunya', [], 'S&P 500, DAX, Nikkei'],
+    ];
+
+    $html = $kartHtml !== '' ? '<div class="nw-piyasa-kartlar">' . $kartHtml . '</div>' : '';
+
+    foreach ($satirlar as [$ad, $bolum, $kalemler, $aciklama]) {
         $kalemHtml = '';
 
         foreach ($kalemler as [$etiket, $deger, $hane, $birim, $degisim]) {
@@ -2065,19 +2091,19 @@ function nw_ekonomi_kutusu_html(): string
             }
         }
 
-        $grafik = $grafikAraci !== '' ? nw_piyasa_grafigi_html($grafikAraci) : '';
-
-        $html .= '<a class="nw-kutu-satir' . ($kalemHtml !== '' ? ' nw-piyasa-satir' : '') . ($grafik !== '' ? ' nw-grafikli' : '') . '" href="' . e(piyasa_bolum_yolu($bolum)) . '">'
+        $html .= '<a class="nw-kutu-satir' . ($kalemHtml !== '' ? ' nw-piyasa-satir' : '') . '" href="' . e(piyasa_bolum_yolu($bolum)) . '">'
             . ($kalemHtml !== ''
                 ? '<strong>' . e($ad) . '</strong><span class="nw-kalemler">' . $kalemHtml . '</span>'
                 : '<span><strong>' . e($ad) . '</strong><em>' . e($aciklama) . '</em></span>')
-            . $grafik
             . '</a>';
     }
 
-    // Kutu gorseli (17.11.2026, site sahibinin gonderdigi gorsel); basligin altinda, kutu daraltilinca gizlenir.
-    return '<div class="nw-yan-kutu nw-kutu-liste" data-katla="ekonomi"><strong class="nw-kutu-bas">' . nw_konu_ikonu('ekonomi') . 'Ekonomi</strong>'
-        . '<img class="nw-kutu-gorsel" src="/assets/network/ekonomi-960.webp" srcset="/assets/network/ekonomi-480.webp 480w, /assets/network/ekonomi-960.webp 960w" sizes="300px" width="960" height="320" loading="lazy" decoding="async" alt="">' . $html
+    // "Ekonomi" yazisi yok, yalnizca gorsel (22.11.2026). Gorsel kutunun basligi:
+    // tiklayinca kutu katlanir (bkz. network.php, data-katla); ekran okuyucuya adi okunur.
+    return '<div class="nw-yan-kutu nw-kutu-liste nw-ekonomi-kutu" data-katla="ekonomi">'
+        . '<div class="nw-kutu-bas nw-kutu-bas-gorsel" aria-label="Ekonomi">'
+        . '<img class="nw-kutu-gorsel" src="/assets/network/ekonomi-960.webp" srcset="/assets/network/ekonomi-480.webp 480w, /assets/network/ekonomi-960.webp 960w" sizes="200px" width="960" height="320" loading="lazy" decoding="async" alt="Ekonomi"></div>'
+        . $html
         . '<a class="nw-kutu-tumu" href="' . e(piyasalar_yolu()) . '">Bütün piyasalar →</a></div>';
 }
 
@@ -2088,7 +2114,7 @@ function nw_ekonomi_kutusu_html(): string
  * YALNIZCA onbellekten (sayfa Yahoo'yu beklemez); seri yoksa bos. Donem
  * basindan sonuna yukseliste yesil, dususte kirmizi; tiklayinca o bolum.
  */
-function nw_piyasa_grafigi_html(string $arac): string
+function nw_piyasa_grafigi_html(string $arac, bool $yazili = true): string
 {
     try {
         require_once __DIR__ . '/piyasalar.php';
@@ -2134,7 +2160,8 @@ function nw_piyasa_grafigi_html(string $arac): string
         . '<stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>'
         . '<polygon points="0,' . $boy . ' ' . implode(' ', $nokta) . ' ' . $en . ',' . $boy . '" fill="url(#' . $kimlik . ')"/>'
         . '<polyline points="' . implode(' ', $nokta) . '" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>'
-        . '<small>3 ay ' . e(($yuzde >= 0 ? '▲ %' : '▼ %') . number_format(abs($yuzde), 1, ',', '.')) . '</small></span>';
+        // $yazili false: yalnizca cizgi (ekonomi kutusundaki kartlar, 22.11.2026); donem bilgisi title'da.
+        . ($yazili ? '<small>3 ay ' . e(($yuzde >= 0 ? '▲ %' : '▼ %') . number_format(abs($yuzde), 1, ',', '.')) . '</small>' : '') . '</span>';
 }
 
 /** Canli alanin alt yazisi (betikteki metinle ayni). */
