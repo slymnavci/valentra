@@ -682,3 +682,33 @@ a.nw-hesap:hover { color: var(--altin); }
 .nw-mini-fikstur li span:last-child { text-align: right; }
 .nw-mini-fikstur li b { font-weight: 800; }
 .nw-mini-fikstur li.oynandi { color: var(--metin-soluk); }
+
+/* Ekonomi kutusu (22.11.2026, site sahibi: "USD ve EUR yan yana, grafikler daha kucuk hemen
+   altinda, sadece goruntu; altin ile borsa da yan yana; ekonomi yazisi yok, sadece gorsel;
+   biraz daraltalim"). Ikiserli kartlar; kutunun basligi gorsel. */
+.nw-ekonomi-kutu { padding-top: 10px; }
+.nw-kutu-bas-gorsel { justify-content: center; margin-bottom: 4px; }
+.nw-kutu-bas-gorsel .nw-kutu-gorsel { height: 52px; margin: 0; }
+.nw-kutu-bas-gorsel.nw-katla-bas::after { position: absolute; right: 18px; margin: 0; }
+.nw-ekonomi-kutu { position: relative; }
+.nw-piyasa-kartlar { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 2px 0 4px; }
+.nw-sag .nw-yan-kutu a.nw-piyasa-kart {
+    display: grid; gap: 0; padding: 7px 9px 5px; border-radius: 8px; min-width: 0;
+    background: var(--zemin); border: 1px solid var(--cizgi);
+    color: var(--metin); text-decoration: none; font-variant-numeric: tabular-nums;
+}
+.nw-sag .nw-yan-kutu a.nw-piyasa-kart:hover { border-color: var(--altin); }
+.nw-piyasa-kart i { font-style: normal; font-size: .7rem; font-weight: 700; color: var(--metin-soluk); }
+.nw-piyasa-kart b { font-size: .95rem; font-weight: 800; white-space: nowrap; line-height: 1.25; }
+.nw-piyasa-kart small { font-size: .7rem; font-weight: 700; color: var(--metin-soluk); }
+.nw-piyasa-kart.artti :is(b, small) { color: #1a8a4a; }
+.nw-piyasa-kart.dustu :is(b, small) { color: #c62828; }
+:root[data-tema="koyu"] .nw-piyasa-kart.artti :is(b, small) { color: #3ecf7a; }
+:root[data-tema="koyu"] .nw-piyasa-kart.dustu :is(b, small) { color: #ff6b6b; }
+@media (prefers-color-scheme: dark) {
+    :where(:root:not([data-tema="acik"])) .nw-piyasa-kart.artti :is(b, small) { color: #3ecf7a; }
+    :where(:root:not([data-tema="acik"])) .nw-piyasa-kart.dustu :is(b, small) { color: #ff6b6b; }
+}
+.nw-piyasa-kart .nw-mini-grafik { margin-top: 3px; }
+.nw-piyasa-kart .nw-mini-grafik svg { flex: 1 1 auto; height: 16px; }
+.nw-sag .nw-yan-kutu.nw-ekonomi-kutu a.nw-kutu-satir { padding-top: 7px; padding-bottom: 7px; }
