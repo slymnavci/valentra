@@ -661,20 +661,13 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
 
             <?php endif; ?>
 
-            <?php /* Baslik sayfasinin tanitimi (17.11.2026; bkz. NW_KONU_SEO): aranan sozcukler sayfanin kendisinde de. */ ?>
+            <?php /* Akisin ustunde gorunen baslik kutusu yok (site sahibi, 21.11.2026: "politika haberi de olunca
+                     baslik koyma yani hicbirinde koyma"). Baslik ve gazete sayfalarinda arama motorlari ve ekran
+                     okuyucular icin yalnizca gorunmez bir H1 kaliyor. */ ?>
             <?php if ($konu !== '' && $gazete === '' && $dal === '' && isset(NW_KONU_SEO[$konu]) && (int) ($_GET['atla'] ?? 0) === 0 && $once === 0): ?>
-                <header class="nw-gazete-ust">
-                    <h1><?= nw_konu_ikonu($konu) ?><?= e(NW_KONU_SEO[$konu][1]) ?></h1>
-                    <p><?= e(NW_KONU_SEO[$konu][2]) ?></p>
-                </header>
-            <?php endif; ?>
-
-            <?php if ($gazete !== ''): ?>
-                <header class="nw-gazete-ust">
-                    <h1><?= nw_gazete_simge_html($gazete, $gazeteler[$gazete]['ad'], 28) ?><?= e($gazeteler[$gazete]['ad']) ?>
-                        <small><?= nw_bayrak_html($gazeteler[$gazete]['ulke']) ?><?= e(NW_ULKELER[$gazeteler[$gazete]['ulke']] ?? '') ?></small></h1>
-                    <p>Bu yayından özetlenen haberler. Özetleri Valentra yazdı; her haberde kaynağın bağlantısı var.</p>
-                </header>
+                <h1 class="gizli-etiket"><?= e(NW_KONU_SEO[$konu][1]) ?></h1>
+            <?php elseif ($gazete !== ''): ?>
+                <h1 class="gizli-etiket"><?= e($gazeteler[$gazete]['ad']) ?> haberleri</h1>
             <?php endif; ?>
 
             <?php if ($gazeteGorunumu): ?>
