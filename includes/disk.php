@@ -24,12 +24,18 @@ declare(strict_types=1);
  * birkac turda biter; sunucu tek seferde yorulmasin).
  */
 
-const DISK_GORSEL_SAKLAMA_GUN = 30;
+/*
+ * 7 gun (23.11.2026): ilk olcumde gorseller/haber 4,1 GB / 40.793 dosya,
+ * disk 5 GB'nin 4,69'unda. Haberlerin cogu son bir ayda eklendigi icin 30
+ * gun neredeyse hicbir sey sildirmiyordu. Eski habere girilirse gorsel
+ * yeniden iner (o zaman 3 gun "yeni" sayilir).
+ */
+const DISK_GORSEL_SAKLAMA_GUN = 7;
 const DISK_GORSEL_EN_GENC_GUN = 3;
 const DISK_SILME_TAVANI       = 5000;
 const DISK_GUNLUK_SINIR       = 20 * 1024 * 1024;
 const DISK_GUNLUK_KALAN       = 1024 * 1024;
-const DISK_BAKIM_ARALIK       = 6 * 3600;
+const DISK_BAKIM_ARALIK       = 3600;
 
 /** Klasorun toplam boyutu ve dosya sayisi (alt klasorler dahil; baglantilar izlenmez). @return array{0:int,1:int} */
 function disk_klasor_boyutu(string $klasor): array
@@ -143,8 +149,10 @@ function disk_olcumu(): array
  *
  * @return array{silinen:int,bayt:int,korunan:int,tavan:bool}
  */
-function disk_gorselleri_temizle(int $gun = DISK_GORSEL_SAKLAMA_GUN, int $enGenc = DISK_GORSEL_EN_GENC_GUN, int $tavan = DISK_SILME_TAVANI): array
+function disk_gorselleri_temizle(int $gun = DISK_GORSEL_SAKLAMA_GUN, int $enGenc = DISK_GORSEL_EN_GENC_GUN, int $tavan = DISK_SILME_TAVANI, int $saniye = 0): array
 {
+    $bitis = $saniye > 0 ? microtime(true) + $saniye : 0.0;
+
     require_once __DIR__ . '/gorsel_onbellek.php';
 
     $sonuc  = ['silinen' => 0, 'bayt' => 0, 'korunan' => 0, 'tavan' => false];
@@ -178,7 +186,7 @@ function disk_gorselleri_temizle(int $gun = DISK_GORSEL_SAKLAMA_GUN, int $enGenc
             continue;
         }
 
-        if ($sonuc['silinen'] >= $tavan) {
+        if ($sonuc['silinen'] >= $tavan || ($bitis > 0 && microtime(true) > $bitis)) {
             $sonuc['tavan'] = true;
             break;
         }
@@ -225,12 +233,18 @@ function disk_gunlukleri_kirp(int $sinir = DISK_GUNLUK_SINIR, int $kalan = DISK_
     return $sonuc;
 }
 
-/** Bakim: gorseller ve gunlukler; sonucu "disk_bakim_sonuc" ayarina yazar. @return array<string,mixed> */
-function disk_bakim(): array
+/**
+ * Bakim: gorseller ve gunlukler; sonucu "disk_bakim_sonuc" ayarina yazar.
+ * $tavan/$saniye: Google denetimi (elle tetiklenebilir) daha cok siler ama
+ * sure siniriyla.
+ *
+ * @return array<string,mixed>
+ */
+function disk_bakim(int $tavan = DISK_SILME_TAVANI, int $saniye = 0): array
 {
     require_once __DIR__ . '/ayarlar.php';
 
-    $gorsel = disk_gorselleri_temizle();
+    $gorsel = disk_gorselleri_temizle(DISK_GORSEL_SAKLAMA_GUN, DISK_GORSEL_EN_GENC_GUN, $tavan, $saniye);
     $gunluk = disk_gunlukleri_kirp();
     $sonuc  = ['zaman' => date('Y-m-d H:i:s'), 'gorsel' => $gorsel, 'gunluk' => $gunluk];
 

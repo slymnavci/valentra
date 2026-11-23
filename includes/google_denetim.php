@@ -847,6 +847,9 @@ function google_denetimi(int $sureButcesi = 80): array
      * -------------------------------------------------------------- */
     try {
         require_once __DIR__ . '/disk.php';
+        // Once temizlik (23.11.2026, disk dolmak uzereydi): denetim elle de
+        // tetiklenebildigi icin acil bosaltma yolu; 25 sn sinirla (denetim istegi 150 sn).
+        disk_bakim(100000, 25);
         $disk = disk_olcumu();
 
         foreach ($disk['klasorler'] as $klasor => [$bayt, $adet]) {
