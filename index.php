@@ -70,6 +70,11 @@ ajan_teslim_sayfa_sonunda();
 require_once __DIR__ . '/includes/deprem.php';
 deprem_denetle_sayfa_sonunda();
 
+// Disk bakimi: kullanilmayan haber gorselleri ve buyuyen hata gunlukleri
+// (alti saatte bir, yanittan sonra; bkz. includes/disk.php).
+require_once __DIR__ . '/includes/disk.php';
+disk_bakim_sayfa_sonunda();
+
 $tuketilen = min($mansetAdet, $toplam);
 
 /*
