@@ -842,6 +842,38 @@ function google_denetimi(int $sureButcesi = 80): array
     }
 
     /* -------------------------------------------------------------- *
+     * Disk kullanimi (23.11.2026; bkz. includes/disk.php): neyin ne kadar
+     * yer tuttugu ve son bakimin sonucu.
+     * -------------------------------------------------------------- */
+    try {
+        require_once __DIR__ . '/disk.php';
+        $disk = disk_olcumu();
+
+        foreach ($disk['klasorler'] as $klasor => [$bayt, $adet]) {
+            $ekle('Disk kullanımı', $klasor, 'bilgi', disk_boyut_yaz($bayt) . ', ' . number_format($adet, 0, ',', '.') . ' dosya');
+        }
+
+        $gunlukToplam = array_sum(array_column($disk['gunlukler'], 'bayt'));
+        $ekle('Disk kullanımı', 'Hata günlükleri (error_log, *.log)', $gunlukToplam > DISK_GUNLUK_SINIR ? 'uyari' : 'bilgi',
+            disk_boyut_yaz($gunlukToplam) . ' toplam, ' . count($disk['gunlukler']) . ' dosya'
+            . ($disk['gunlukler'] !== [] ? '; en büyüğü ' . $disk['gunlukler'][0]['yol'] . ' (' . disk_boyut_yaz($disk['gunlukler'][0]['bayt']) . ')' : ''));
+
+        $vtToplam = array_sum(array_column($disk['tablolar'], 'bayt'));
+        $ekle('Disk kullanımı', 'Veritabanı', 'bilgi', disk_boyut_yaz($vtToplam) . ' toplam; en büyükler: '
+            . implode(', ', array_map(static fn (array $t): string => $t['tablo'] . ' ' . disk_boyut_yaz($t['bayt'])
+                . ' (~' . number_format($t['satir'], 0, ',', '.') . ' satır)', array_slice($disk['tablolar'], 0, 5))));
+
+        $bakim = json_decode(ayar_oku('disk_bakim_sonuc'), true);
+        $ekle('Disk kullanımı', 'Son bakım', 'bilgi', is_array($bakim)
+            ? $bakim['zaman'] . ': ' . (int) $bakim['gorsel']['silinen'] . ' görsel silindi (' . disk_boyut_yaz((int) $bakim['gorsel']['bayt']) . ')'
+                . (!empty($bakim['gorsel']['tavan']) ? ', devamı sonraki bakımda' : '')
+                . ', ' . (int) $bakim['gunluk']['kirpilan'] . ' günlük kırpıldı (' . disk_boyut_yaz((int) $bakim['gunluk']['bayt']) . ')'
+            : 'henüz çalışmadı (ana sayfa açıldıktan sonra altı saatte bir çalışır)');
+    } catch (Throwable $e) {
+        $ekle('Disk kullanımı', 'Ölçüm', 'uyari', $e->getMessage());
+    }
+
+    /* -------------------------------------------------------------- *
      * 8. Hiz ve kayma (Core Web Vitals; bkz. api/hiz-olcum.php)
      * -------------------------------------------------------------- */
     foreach (hiz_olcum_maddeleri(hiz_olcum_oku()) as $m) {

@@ -1446,6 +1446,52 @@ senaryo('AA', 'Yayın masaları, Discover görsel ölçüsü, Google payında od
     bekle(!in_array('Yerel tek kaynak', $kotada, true), 'yerel kaynağın tek kaynaklı haberi önemi yüksek olsa da paya girmiyor');
 });
 
+senaryo('AB', 'Disk bakımı: kullanılmayan haber görselleri ve büyüyen hata günlükleri', static function (): void {
+    require_once __DIR__ . '/../includes/disk.php';
+    require_once __DIR__ . '/../includes/gorsel_onbellek.php';
+
+    ekle([haber('Görselli güncel haber', ['gorsel_url' => 'https://ornek.test/guncel.jpg'])]);
+    db()->exec("UPDATE haberler SET durum = 'yayinda', guncellendi = guncellendi");
+
+    $k = haber_gorsel_klasoru();
+    $guncel = sha1('https://ornek.test/guncel.jpg');
+    $eski   = sha1('https://ornek.test/eski-' . bin2hex(random_bytes(3)) . '.jpg');
+    $taze   = sha1('https://ornek.test/taze-' . bin2hex(random_bytes(3)) . '.jpg');
+    $dosyalar = [
+        $guncel . '.jpg' => 10, $guncel . '-480.webp' => 10,   // guncel haberin: korunur (eski olsa da)
+        $eski . '.jpg' => 10, $eski . '-960.webp' => 10,       // sahipsiz ve 10 gunluk: silinir
+        $taze . '.jpg' => 1,                                   // sahipsiz ama 1 gunluk: korunur
+    ];
+    foreach ($dosyalar as $ad => $gun) {
+        file_put_contents($k . '/' . $ad, str_repeat('x', 100));
+        touch($k . '/' . $ad, time() - $gun * 86400);
+    }
+    $indexVardi = is_file($k . '/index.html');
+
+    $sonuc = disk_gorselleri_temizle();
+    $kalan = static fn (string $ad): bool => is_file($k . '/' . $ad);
+    bekle(!$kalan($eski . '.jpg') && !$kalan($eski . '-960.webp') && $sonuc['silinen'] >= 2,
+        'sahipsiz ve 10 günlük görsel (kopyasıyla) silindi', json_encode($sonuc));
+    bekle($kalan($guncel . '.jpg') && $kalan($guncel . '-480.webp') && $kalan($taze . '.jpg') && $kalan('index.html') === $indexVardi,
+        'güncel haberin görseli, yeni indirilmiş görsel ve klasörün kendi dosyaları korundu');
+    foreach (array_keys($dosyalar) as $ad) {
+        @unlink($k . '/' . $ad);
+    }
+
+    // Buyuyen hata gunlugu: yalnizca sonu tutulur.
+    $gunluk = dirname(__DIR__) . '/tests/error_log';
+    file_put_contents($gunluk, str_repeat("eski satir\n", 2_000_000) . "SON SATIR\n");
+    $kirp = disk_gunlukleri_kirp();
+    $boyut = filesize($gunluk);
+    bekle($kirp['kirpilan'] >= 1 && $boyut < DISK_GUNLUK_KALAN + 200 && str_ends_with((string) file_get_contents($gunluk), "SON SATIR\n"),
+        '21 MB hata günlüğü son 1 MB\'a kırpıldı; son satırlar duruyor', $boyut . ' bayt');
+    @unlink($gunluk);
+
+    $olcum = disk_olcumu();
+    bekle(isset($olcum['klasorler']['gorseller/haber']) && $olcum['tablolar'] !== [] && ($olcum['tablolar'][0]['bayt'] ?? 0) > 0,
+        'ölçüm: klasör boyutları ve veritabanı tabloları', json_encode(array_slice($olcum['tablolar'], 0, 2)));
+});
+
 temizle();
 
 echo "\n" . str_repeat('─', 60) . "\n";
