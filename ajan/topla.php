@@ -52,7 +52,7 @@ date_default_timezone_set('Europe/Istanbul');
 mb_internal_encoding('UTF-8');
 
 /** Komut satırı seçenekleri */
-$secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::', 'sitetavani::', 'sitearaligi::', 'kaynakbasina::', 'konu::', 'video', 'nobet']);
+$secenekler = getopt('', ['kuru', 'saat::', 'enfazla::', 'grup::', 'sitetavani::', 'sitearaligi::', 'kaynakbasina::', 'konu::', 'video', 'nobet', 'toplu']);
 $kuruCalisma = isset($secenekler['kuru']);
 /*
  * --nobet: NOBET TARAMASI (12.11.2026; .github/workflows/nobet.yml). Site
@@ -1995,8 +1995,265 @@ $ekKaynakliAday = 0;
 $eskiElenen  = 0;
 $tarihsizElenen = 0;
 
+/*
+ * Bir grubun adaylarini modele hazirlar: sayfa metni, tarih denetimi,
+ * gorsel, ek kaynaklar (25.11.2026'dan once dongunun icindeydi; toplu
+ * gonderim icin butun gruplar modele gitmeden ONCE hazirlanabilsin diye
+ * isleve alindi, davranis ayni).
+ *
+ * @return array{0:list<array<string,mixed>>,1:list<array<string,mixed>>,2:list<string>,3:list<string>} tutulan, modelAdaylari, gorseller, videolar
+ */
+$hazirla = static function (array $grup) use (&$elenen, &$elenenler, $sayfa, $saat, &$tarihsizElenen, &$gorselsiz, &$eskiElenen, &$ekKaynakliAday): array {
+        // Sayfa metinleri once toplanir; model cagrisi tek seferde yapilir.
+        $modelAdaylari = [];
+
+        /** @var array<int,string> Aday sirasina gore gorsel adresi */
+        $gorseller = [];
+
+        /** @var array<int,string> Aday sirasina gore video oynatici adresi */
+        $videolar = [];
+
+        /*
+         * GORSELSIZ HABER ALINMIYOR (site sahibinin karari, 22.10.2026: "tum
+         * haberlerde goruntu olacak, goruntusuz haberleri alma").
+         *
+         * Gorselsiz aday modele hic gitmiyor; grup bu yuzden tutulanlarla
+         * YENIDEN kuruluyor. $grup, $modelAdaylari, $gorseller ve $videolar
+         * ayni sirayla birlikte dolduruluyor: model sonuclari siraya gore
+         * eslestirildigi icin biri digerinden ayri kisalirsa sonuclar kayar
+         * (asagidaki uyari).
+         */
+        $tutulan = [];
+
+        foreach ($grup as $aday) {
+            // Tarif kaynaklarinin tarif olmadigi basligindan belli olan
+            // icerigi ("... Nerede Yenir", "Günün Menüsü") modele hic
+            // gondermiyoruz; model zaten eliyor, istek bosa gidiyordu.
+            if (HaberAkisi::kova($aday['kaynak']) === 'yemek-tarifleri' && !tarif_basligi_mi($aday['girdi']['baslik'])) {
+                $elenen++;
+                $elenenler[url_parmak($aday['girdi']['baglanti'])] = time();
+                gunluk('  tarif değil, atlandı — ' . mb_substr($aday['girdi']['baslik'], 0, 60, 'UTF-8'));
+                continue;
+            }
+
+            /*
+             * Sayfa genis okunuyor.
+             *
+             * Varsayilan 6.000 karakterdi; haberin ayrintisi (yururluk
+             * tarihi, gecis hukumleri, tutar tablosu) cogu kaynakta metnin
+             * asagisinda duruyor ve bu sinirla hic okunmuyordu. Modele
+             * giden miktari Yazar ayrica kendi sinirina gore kirpar.
+             */
+            /*
+             * Sayfa okumasi da kalkanli — ama ADAY ATLANMAZ. (Gorselsiz aday
+             * ise bilerek atlaniyor; o durumda dort dizi birlikte kisaliyor,
+             * bkz. yukaridaki GORSELSIZ notu.)
+             *
+             * Hata yakalanip bos metinle devam ediliyor. Adayi listeden
+             * duşurmek cazip gorunuyor ama TEHLIKELI: model sonuclari
+             * siraya gore eslestiriliyor ve $grup'ta duran bir aday
+             * $modelAdaylari'ndan cikarilirsa sonraki butun sonuclar bir
+             * kayar. Sonuc sessizce YANLIS olur — haber metni baska bir
+             * kaynaga baglanir. Ayni tuzaga pratik bilgilerde dusulmus
+             * ve SGK'nin notu TCMB faizine iliştirilmişti.
+             *
+             * Bos metinle giden aday zararsiz: model baslik ve ozete
+             * bakar, yetersiz bulursa "ilgili degil" der.
+             */
+            try {
+                $okunan = $sayfa->oku($aday['girdi']['baglanti'], 30000);
+            } catch (Throwable $e) {
+                gunluk(sprintf(
+                    '  sayfa okunamadı, yalnızca başlıkla değerlendirilecek — %s (%s)',
+                    mb_substr($aday['girdi']['baslik'], 0, 60),
+                    $e->getMessage()
+                ));
+                $okunan = ['metin' => '', 'gorsel' => '', 'video' => '', 'zaman' => null];
+            }
+
+            /*
+             * Haberin kendisi bir video (YouTube kanal beslemesi): oynatici
+             * dogrudan baglantidan; modele sayfa metni yerine videonun
+             * aciklamasi gidiyor (YouTube sayfasinin metni betik artigi).
+             */
+            $baglantiVideo = Sayfa::oynaticiAdresi((string) $aday['girdi']['baglanti']);
+
+            if ($baglantiVideo !== '') {
+                $okunan['video'] = $baglantiVideo;
+                $okunan['metin'] = trim((string) ($aday['girdi']['ozet'] ?? ''));
+            }
+
+            /*
+             * TARIHSIZ ADAY: sayfanin kendi yayin zamani (23.10.2026).
+             *
+             * Kazinan kaynaklarin (IHA, DHA ana sayfasi) girdilerinde tarih
+             * yok; sitede haberin yasi toplandigi andan sayiliyor ve dunku
+             * haber "yeni" gorunuyordu (IHA'nin dunku Sergen Yalcin haberi
+             * ertesi gun ana sayfada 1. oldu). Sayfadan okunan zaman
+             * girdiye yaziliyor; site onu kaynak_tarihi olarak sakliyor.
+             *
+             * Taranan pencereden ($saat) eski haber modele hic gitmiyor:
+             * beslemeler bu suzgecten zaten geciyor, kazima gecmiyordu.
+             * Tarifler eskimiyor (bkz. tarif kaynaklari), onlarda suzgec yok.
+             */
+            /*
+             * TARIH DENETIMI (site sahibi, 23.10.2026: "haberlerin tarihleri
+             * cok onemli, onlari mutlaka kontrol edelim").
+             *
+             *   - Beslemenin tarihi ile sayfanin kendi tarihinden ERKEN olani
+             *     geciyor: bazi beslemeler eski haberi yeni tarihle yeniden
+             *     yayimliyor; sayfa haberin ilk yayin anini veriyor.
+             *   - Gelecekteki tarih (15 dakikadan fazla ileri; yanlis saat
+             *     dilimi) gecersiz sayiliyor.
+             *   - Tarihi hicbir yerden bulunamayan haber ALINMIYOR: ne zaman
+             *     yayimlandigi bilinmeyen haber ana sayfada "bugunun haberi"
+             *     diye gorunebiliyordu.
+             * Tarifler bu denetimden muaf (tarihleri onemli degil).
+             */
+            $tarif         = HaberAkisi::kova($aday['kaynak']) === 'yemek-tarifleri';
+            $beslemeZamani = ($aday['girdi']['tarih'] ?? null) !== null ? (int) strtotime((string) $aday['girdi']['tarih']) : 0;
+            $sayfaZamani   = (int) ($okunan['zaman'] ?? 0);
+            $gecerli       = array_filter(
+                [$beslemeZamani, $sayfaZamani],
+                static fn (int $z): bool => $z > 0 && $z <= time() + 900
+            );
+            $adayZamani    = $gecerli !== [] ? min($gecerli) : 0;
+
+            if ($adayZamani > 0) {
+                $aday['girdi']['tarih'] = date('Y-m-d H:i:s', $adayZamani);
+            } elseif (!$tarif) {
+                $tarihsizElenen++;
+                $elenenler[url_parmak($aday['girdi']['baglanti'])] = time();
+                video_kaydet($aday['girdi'], $aday['kaynak'], 'tarihsiz — yayın tarihi bulunamadı');
+                gunluk('  tarihsiz haber, atlandı — ' . mb_substr($aday['girdi']['baslik'], 0, 60, 'UTF-8'));
+                continue;
+            }
+
+            if ($adayZamani > 0 && $adayZamani < time() - kaynak_saati($aday['kaynak'], $saat) * 3600 && !$tarif) {
+                $eskiElenen++;
+                $elenenler[url_parmak($aday['girdi']['baglanti'])] = time();
+                video_kaydet($aday['girdi'], $aday['kaynak'], 'eski — yayın ' . date('d.m H:i', $adayZamani));
+                gunluk('  eski haber, atlandı — ' . mb_substr($aday['girdi']['baslik'], 0, 60, 'UTF-8')
+                    . ' (yayın: ' . date('d.m H:i', $adayZamani) . ')');
+                continue;
+            }
+
+            /*
+             * Gorsel once haber sayfasinin og:image'inden, yoksa beslemeden
+             * (11.11.2026, site sahibi: "resimler bulanik"). Onceden tersiydi;
+             * besleme gorseli cogu kaynakta kucuk bir onizleme (300-480 piksel)
+             * ve mansette buyutulunce bulaniklasiyordu; og:image haberin buyuk
+             * boy fotografi. og:image genel site kapagi/logosu gibi duruyorsa
+             * (adresinde logo, default, placeholder...) besleme gorseli.
+             */
+            $sayfaGorseli   = (string) $okunan['gorsel'];
+            $beslemeGorseli = (string) ($aday['girdi']['gorsel'] ?? '');
+            $genelKapak     = preg_match('~logo|default|placeholder|no[-_]?image|og[-_]?image|share[-_]?image|favicon|/static/img/~i',
+                                         (string) parse_url($sayfaGorseli, PHP_URL_PATH)) === 1;
+            $gorsel = $sayfaGorseli !== '' && !($genelKapak && $beslemeGorseli !== '') ? $sayfaGorseli : $beslemeGorseli;
+
+            /*
+             * Gorselsiz haber artik ELENMIYOR (11.11.2026, site sahibi: "haber
+             * fotografi yoksa konu okunsun, konuya gore bir resim secilip
+             * eklensin"). Haber gorselsiz yaziliyor; hemen ardindan calisan
+             * gorsel adimi (gorsel_denetle.php) haberin metninden konuya uygun,
+             * ozgur lisansli bir fotograf ariyor. Bulunana kadar (ya da
+             * bulunamazsa) sitede konu gorseli gorunuyor.
+             */
+            if ($gorsel === '') {
+                $gorselsiz++;
+            }
+
+            $tutulan[]   = $aday;
+            $gorseller[] = $gorsel;
+            $videolar[]  = (string) ($okunan['video'] ?? '');
+
+            /*
+             * Ek kaynaklarin metni (bkz. EK_KAYNAK_TAVANI). Okunamayan ya da
+             * cok kisa olan atlaniyor; ana haber yine tek kaynaktan yazilir.
+             */
+            $ekKaynaklar = [];
+
+            foreach ($aday['ekler'] ?? [] as $ek) {
+                try {
+                    $ekMetin = trim((string) ($sayfa->oku((string) $ek['girdi']['baglanti'], 12000)['metin'] ?? ''));
+                } catch (Throwable $e) {
+                    $ekMetin = '';
+                }
+
+                if (mb_strlen($ekMetin, 'UTF-8') >= 300) {
+                    $ekKaynaklar[] = [
+                        'kaynakAdi' => (string) $ek['kaynak']['ad'],
+                        'baglanti'  => (string) $ek['girdi']['baglanti'],
+                        // Beslemedeki yazar alani: haberi ilk veren ajans (bkz. kaynak_ajans).
+                        'ajans'     => (string) ($ek['girdi']['yazar'] ?? ''),
+                        'metin'     => $ekMetin,
+                    ];
+                }
+            }
+
+            if ($ekKaynaklar !== []) {
+                $ekKaynakliAday++;
+            }
+
+            $modelAdaylari[] = [
+                'girdi'      => $aday['girdi'],
+                'ekKaynaklar' => $ekKaynaklar,
+                'sayfaMetni' => $okunan['metin'],
+                'kaynakAdi'  => (string) $aday['kaynak']['ad'],
+                'kaynakTuru' => (string) ($aday['kaynak']['tur'] ?? 'rss'),
+                'kapsam'     => (int) ($aday['kapsam'] ?? 1),
+                // Google'da cok aranan konu (bkz. GUNDEM_TAVANI).
+                'gundem'     => $aday['gundem'] ?? null,
+                // Adayin kendisi bir video (YouTube kanal beslemesi): model
+                // kisa video haberi yazar (Yazar::YONERGE, VIDEO HABERLERI).
+                'video'      => $baglantiVideo !== '',
+            ];
+        }
+
+    return [$tutulan, $modelAdaylari, $gorseller, $videolar];
+};
+
+/*
+ * TOPLU GONDERIM (25.11.2026, site sahibi: "maliyet artiyor" — onerilen ilk
+ * iki adim: yonerge onbellegi ve toplu gonderim). --toplu ile: oncelikli
+ * (on tarama) grup her zamanki gibi hemen yazilip gonderilir; kalan
+ * gruplarin hepsi hazirlanip TEK toplu iste Claude'a gider (yari fiyat).
+ * Yaniti gelmeyen grup dongude normal yoldan (yedek model zinciriyle)
+ * istenir. Toplu iste gruplar birbirinin yeni basliklarini goremez;
+ * ayni olayin tekrari site tarafindaki kopya denetimine kalir.
+ */
+$topluAcik  = isset($secenekler['toplu']) && !$kuruCalisma && !$nobetModu;
+$topluHazir = false;
+/** @var array<int,array{0:list<array<string,mixed>>,1:list<array<string,mixed>>,2:list<string>,3:list<string>}> */
+$hazir = [];
+/** @var array<int,array<int,array<string,mixed>>> */
+$topluSonuc = [];
+const TOPLU_BEKLEME_SN = 15 * 60;
+
 foreach ($gruplar as $grupNo => $grup) {
-    if ($grupNo > 0) {
+    if ($topluAcik && !$topluHazir && $grupBasligi[$grupNo] !== 'oncelikli') {
+        $topluHazir = true;
+        $topluIstekleri = [];
+
+        foreach ($gruplar as $sonrakiNo => $sonraki) {
+            if ($sonrakiNo < $grupNo) {
+                continue;
+            }
+
+            $hazir[$sonrakiNo] = $hazirla($sonraki);
+
+            if ($hazir[$sonrakiNo][0] !== []) {
+                $topluIstekleri[$sonrakiNo] = ['adaylar' => $hazir[$sonrakiNo][1], 'kategoriler' => $kategoriler, 'onceki' => $modeleGosterilecek];
+            }
+        }
+
+        if (count($topluIstekleri) >= 2) {
+            $topluSonuc = $yazar->topluOnIsle($topluIstekleri, TOPLU_BEKLEME_SN, static fn (string $m) => gunluk($m));
+        }
+    }
+
+    if ($grupNo > 0 && !isset($topluSonuc[$grupNo])) {
         sleep(4);
     }
 
@@ -2008,212 +2265,9 @@ foreach ($gruplar as $grupNo => $grup) {
 
     $islenenAday += count($grup);
 
-    // Sayfa metinleri once toplanir; model cagrisi tek seferde yapilir.
-    $modelAdaylari = [];
-
-    /** @var array<int,string> Aday sirasina gore gorsel adresi */
-    $gorseller = [];
-
-    /** @var array<int,string> Aday sirasina gore video oynatici adresi */
-    $videolar = [];
-
-    /*
-     * GORSELSIZ HABER ALINMIYOR (site sahibinin karari, 22.10.2026: "tum
-     * haberlerde goruntu olacak, goruntusuz haberleri alma").
-     *
-     * Gorselsiz aday modele hic gitmiyor; grup bu yuzden tutulanlarla
-     * YENIDEN kuruluyor. $grup, $modelAdaylari, $gorseller ve $videolar
-     * ayni sirayla birlikte dolduruluyor: model sonuclari siraya gore
-     * eslestirildigi icin biri digerinden ayri kisalirsa sonuclar kayar
-     * (asagidaki uyari).
-     */
-    $tutulan = [];
-
-    foreach ($grup as $aday) {
-        // Tarif kaynaklarinin tarif olmadigi basligindan belli olan
-        // icerigi ("... Nerede Yenir", "Günün Menüsü") modele hic
-        // gondermiyoruz; model zaten eliyor, istek bosa gidiyordu.
-        if (HaberAkisi::kova($aday['kaynak']) === 'yemek-tarifleri' && !tarif_basligi_mi($aday['girdi']['baslik'])) {
-            $elenen++;
-            $elenenler[url_parmak($aday['girdi']['baglanti'])] = time();
-            gunluk('  tarif değil, atlandı — ' . mb_substr($aday['girdi']['baslik'], 0, 60, 'UTF-8'));
-            continue;
-        }
-
-        /*
-         * Sayfa genis okunuyor.
-         *
-         * Varsayilan 6.000 karakterdi; haberin ayrintisi (yururluk
-         * tarihi, gecis hukumleri, tutar tablosu) cogu kaynakta metnin
-         * asagisinda duruyor ve bu sinirla hic okunmuyordu. Modele
-         * giden miktari Yazar ayrica kendi sinirina gore kirpar.
-         */
-        /*
-         * Sayfa okumasi da kalkanli — ama ADAY ATLANMAZ. (Gorselsiz aday
-         * ise bilerek atlaniyor; o durumda dort dizi birlikte kisaliyor,
-         * bkz. yukaridaki GORSELSIZ notu.)
-         *
-         * Hata yakalanip bos metinle devam ediliyor. Adayi listeden
-         * duşurmek cazip gorunuyor ama TEHLIKELI: model sonuclari
-         * siraya gore eslestiriliyor ve $grup'ta duran bir aday
-         * $modelAdaylari'ndan cikarilirsa sonraki butun sonuclar bir
-         * kayar. Sonuc sessizce YANLIS olur — haber metni baska bir
-         * kaynaga baglanir. Ayni tuzaga pratik bilgilerde dusulmus
-         * ve SGK'nin notu TCMB faizine iliştirilmişti.
-         *
-         * Bos metinle giden aday zararsiz: model baslik ve ozete
-         * bakar, yetersiz bulursa "ilgili degil" der.
-         */
-        try {
-            $okunan = $sayfa->oku($aday['girdi']['baglanti'], 30000);
-        } catch (Throwable $e) {
-            gunluk(sprintf(
-                '  sayfa okunamadı, yalnızca başlıkla değerlendirilecek — %s (%s)',
-                mb_substr($aday['girdi']['baslik'], 0, 60),
-                $e->getMessage()
-            ));
-            $okunan = ['metin' => '', 'gorsel' => '', 'video' => '', 'zaman' => null];
-        }
-
-        /*
-         * Haberin kendisi bir video (YouTube kanal beslemesi): oynatici
-         * dogrudan baglantidan; modele sayfa metni yerine videonun
-         * aciklamasi gidiyor (YouTube sayfasinin metni betik artigi).
-         */
-        $baglantiVideo = Sayfa::oynaticiAdresi((string) $aday['girdi']['baglanti']);
-
-        if ($baglantiVideo !== '') {
-            $okunan['video'] = $baglantiVideo;
-            $okunan['metin'] = trim((string) ($aday['girdi']['ozet'] ?? ''));
-        }
-
-        /*
-         * TARIHSIZ ADAY: sayfanin kendi yayin zamani (23.10.2026).
-         *
-         * Kazinan kaynaklarin (IHA, DHA ana sayfasi) girdilerinde tarih
-         * yok; sitede haberin yasi toplandigi andan sayiliyor ve dunku
-         * haber "yeni" gorunuyordu (IHA'nin dunku Sergen Yalcin haberi
-         * ertesi gun ana sayfada 1. oldu). Sayfadan okunan zaman
-         * girdiye yaziliyor; site onu kaynak_tarihi olarak sakliyor.
-         *
-         * Taranan pencereden ($saat) eski haber modele hic gitmiyor:
-         * beslemeler bu suzgecten zaten geciyor, kazima gecmiyordu.
-         * Tarifler eskimiyor (bkz. tarif kaynaklari), onlarda suzgec yok.
-         */
-        /*
-         * TARIH DENETIMI (site sahibi, 23.10.2026: "haberlerin tarihleri
-         * cok onemli, onlari mutlaka kontrol edelim").
-         *
-         *   - Beslemenin tarihi ile sayfanin kendi tarihinden ERKEN olani
-         *     geciyor: bazi beslemeler eski haberi yeni tarihle yeniden
-         *     yayimliyor; sayfa haberin ilk yayin anini veriyor.
-         *   - Gelecekteki tarih (15 dakikadan fazla ileri; yanlis saat
-         *     dilimi) gecersiz sayiliyor.
-         *   - Tarihi hicbir yerden bulunamayan haber ALINMIYOR: ne zaman
-         *     yayimlandigi bilinmeyen haber ana sayfada "bugunun haberi"
-         *     diye gorunebiliyordu.
-         * Tarifler bu denetimden muaf (tarihleri onemli degil).
-         */
-        $tarif         = HaberAkisi::kova($aday['kaynak']) === 'yemek-tarifleri';
-        $beslemeZamani = ($aday['girdi']['tarih'] ?? null) !== null ? (int) strtotime((string) $aday['girdi']['tarih']) : 0;
-        $sayfaZamani   = (int) ($okunan['zaman'] ?? 0);
-        $gecerli       = array_filter(
-            [$beslemeZamani, $sayfaZamani],
-            static fn (int $z): bool => $z > 0 && $z <= time() + 900
-        );
-        $adayZamani    = $gecerli !== [] ? min($gecerli) : 0;
-
-        if ($adayZamani > 0) {
-            $aday['girdi']['tarih'] = date('Y-m-d H:i:s', $adayZamani);
-        } elseif (!$tarif) {
-            $tarihsizElenen++;
-            $elenenler[url_parmak($aday['girdi']['baglanti'])] = time();
-            video_kaydet($aday['girdi'], $aday['kaynak'], 'tarihsiz — yayın tarihi bulunamadı');
-            gunluk('  tarihsiz haber, atlandı — ' . mb_substr($aday['girdi']['baslik'], 0, 60, 'UTF-8'));
-            continue;
-        }
-
-        if ($adayZamani > 0 && $adayZamani < time() - kaynak_saati($aday['kaynak'], $saat) * 3600 && !$tarif) {
-            $eskiElenen++;
-            $elenenler[url_parmak($aday['girdi']['baglanti'])] = time();
-            video_kaydet($aday['girdi'], $aday['kaynak'], 'eski — yayın ' . date('d.m H:i', $adayZamani));
-            gunluk('  eski haber, atlandı — ' . mb_substr($aday['girdi']['baslik'], 0, 60, 'UTF-8')
-                . ' (yayın: ' . date('d.m H:i', $adayZamani) . ')');
-            continue;
-        }
-
-        /*
-         * Gorsel once haber sayfasinin og:image'inden, yoksa beslemeden
-         * (11.11.2026, site sahibi: "resimler bulanik"). Onceden tersiydi;
-         * besleme gorseli cogu kaynakta kucuk bir onizleme (300-480 piksel)
-         * ve mansette buyutulunce bulaniklasiyordu; og:image haberin buyuk
-         * boy fotografi. og:image genel site kapagi/logosu gibi duruyorsa
-         * (adresinde logo, default, placeholder...) besleme gorseli.
-         */
-        $sayfaGorseli   = (string) $okunan['gorsel'];
-        $beslemeGorseli = (string) ($aday['girdi']['gorsel'] ?? '');
-        $genelKapak     = preg_match('~logo|default|placeholder|no[-_]?image|og[-_]?image|share[-_]?image|favicon|/static/img/~i',
-                                     (string) parse_url($sayfaGorseli, PHP_URL_PATH)) === 1;
-        $gorsel = $sayfaGorseli !== '' && !($genelKapak && $beslemeGorseli !== '') ? $sayfaGorseli : $beslemeGorseli;
-
-        /*
-         * Gorselsiz haber artik ELENMIYOR (11.11.2026, site sahibi: "haber
-         * fotografi yoksa konu okunsun, konuya gore bir resim secilip
-         * eklensin"). Haber gorselsiz yaziliyor; hemen ardindan calisan
-         * gorsel adimi (gorsel_denetle.php) haberin metninden konuya uygun,
-         * ozgur lisansli bir fotograf ariyor. Bulunana kadar (ya da
-         * bulunamazsa) sitede konu gorseli gorunuyor.
-         */
-        if ($gorsel === '') {
-            $gorselsiz++;
-        }
-
-        $tutulan[]   = $aday;
-        $gorseller[] = $gorsel;
-        $videolar[]  = (string) ($okunan['video'] ?? '');
-
-        /*
-         * Ek kaynaklarin metni (bkz. EK_KAYNAK_TAVANI). Okunamayan ya da
-         * cok kisa olan atlaniyor; ana haber yine tek kaynaktan yazilir.
-         */
-        $ekKaynaklar = [];
-
-        foreach ($aday['ekler'] ?? [] as $ek) {
-            try {
-                $ekMetin = trim((string) ($sayfa->oku((string) $ek['girdi']['baglanti'], 12000)['metin'] ?? ''));
-            } catch (Throwable $e) {
-                $ekMetin = '';
-            }
-
-            if (mb_strlen($ekMetin, 'UTF-8') >= 300) {
-                $ekKaynaklar[] = [
-                    'kaynakAdi' => (string) $ek['kaynak']['ad'],
-                    'baglanti'  => (string) $ek['girdi']['baglanti'],
-                    // Beslemedeki yazar alani: haberi ilk veren ajans (bkz. kaynak_ajans).
-                    'ajans'     => (string) ($ek['girdi']['yazar'] ?? ''),
-                    'metin'     => $ekMetin,
-                ];
-            }
-        }
-
-        if ($ekKaynaklar !== []) {
-            $ekKaynakliAday++;
-        }
-
-        $modelAdaylari[] = [
-            'girdi'      => $aday['girdi'],
-            'ekKaynaklar' => $ekKaynaklar,
-            'sayfaMetni' => $okunan['metin'],
-            'kaynakAdi'  => (string) $aday['kaynak']['ad'],
-            'kaynakTuru' => (string) ($aday['kaynak']['tur'] ?? 'rss'),
-            'kapsam'     => (int) ($aday['kapsam'] ?? 1),
-            // Google'da cok aranan konu (bkz. GUNDEM_TAVANI).
-            'gundem'     => $aday['gundem'] ?? null,
-            // Adayin kendisi bir video (YouTube kanal beslemesi): model
-            // kisa video haberi yazar (Yazar::YONERGE, VIDEO HABERLERI).
-            'video'      => $baglantiVideo !== '',
-        ];
-    }
+    // Toplu gonderimde (bkz. TOPLU GONDERIM) grup zaten hazirlandi.
+    [$tutulan, $modelAdaylari, $gorseller, $videolar] = $hazir[$grupNo] ?? $hazirla($grup);
+    unset($hazir[$grupNo]);
 
     $grup = $tutulan;
     $no   = $grupNo + 1;
@@ -2223,7 +2277,14 @@ foreach ($gruplar as $grupNo => $grup) {
     }
 
     try {
-        $sonuclar = $yazar->topluIsle($modelAdaylari, $kategoriler, $modeleGosterilecek);
+        if (isset($topluSonuc[$grupNo])) {
+            $sonuclar = $topluSonuc[$grupNo];
+            unset($topluSonuc[$grupNo]);
+            $yazar->topluYanitlayanAyarla();
+        } else {
+            $sonuclar = $yazar->topluIsle($modelAdaylari, $kategoriler, $modeleGosterilecek);
+        }
+
         $yanitlayanModel = $yazar->sonYanitlayan();
     } catch (ModelErisimYokException $e) {
         gunluk("  [grup {$no}] model kullanılamıyor — çalışma erken bitiyor.");
@@ -2532,6 +2593,26 @@ if ($kullanim['istek'] > 0) {
         number_format($kullanim['girdi']),
         number_format($kullanim['cikti'])
     ));
+
+    // Onbellek ve toplu gonderim (25.11.2026; bkz. TOPLU GONDERIM): maliyetin
+    // ne kadar dustugu gunlukte gorunsun. Tahmin Haiku 5.5 liste fiyatiyla
+    // (1M token: girdi 0,10 $, cikti 0,50 $; onbellek okuma 0,1x, yazma
+    // 1,25x; toplu is yari fiyat) ve yalnizca Claude icin.
+    $ob = $yazar->claudeOnbellek();
+
+    if ($ob !== null && ($ob['okuma'] + $ob['yazma'] + $ob['toplu_istek']) > 0) {
+        $ck = array_values(array_filter($yazar->saglayicilar(), static fn (array $x): bool => str_starts_with((string) $x['model'], 'claude')))[0]['kullanim'] ?? ['girdi' => 0, 'cikti' => 0];
+        $tahmin = (($ck['girdi'] - $ob['toplu_girdi']) * 0.10 + $ob['toplu_girdi'] * 0.05
+                 + ($ck['cikti'] - $ob['toplu_cikti']) * 0.50 + $ob['toplu_cikti'] * 0.25
+                 + $ob['okuma'] * 0.01 + $ob['yazma'] * 0.125) / 1e6;
+        gunluk(sprintf(
+            '  Claude önbellek: %s token önbellekten okundu, %s token önbelleğe yazıldı; toplu (yarı fiyat): %d istek. Tahmini Claude maliyeti: %.3f $.',
+            number_format($ob['okuma']),
+            number_format($ob['yazma']),
+            $ob['toplu_istek'],
+            $tahmin
+        ));
+    }
 
     $saglayici = $yazar->saglayicilar();
 
