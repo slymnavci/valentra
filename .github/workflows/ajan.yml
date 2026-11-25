@@ -333,6 +333,11 @@ jobs:
             BAYRAKLAR="$BAYRAKLAR --kuru"
           fi
 
+          # Toplu gonderim (25.11.2026, site sahibi: "maliyet artiyor"): oncelikli
+          # haberler hemen yazilir; kalan gruplar Anthropic'e tek toplu iste
+          # (yari fiyat) gider. Yaniti gelmeyen grup normal yoldan istenir.
+          BAYRAKLAR="$BAYRAKLAR --toplu"
+
           php topla.php $BAYRAKLAR
 
       # Son iki gunde toplanan haberlerin yayin tarihi kaynak sayfadan

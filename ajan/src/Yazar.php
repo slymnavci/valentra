@@ -1491,6 +1491,79 @@ final class Yazar implements SemaliIstemci
         );
     }
 
+    /**
+     * TOPLU ON ISLEME (25.11.2026; bkz. ClaudeIstemci::topluGonder). Haber
+     * gruplarini tek toplu iste (Batch, yari fiyat) Claude'a gonderir.
+     * Yalnizca gecerli yaniti olan gruplar doner; donmeyen grup icin
+     * cagiran topluIsle() ile normal yoldan (yedek model zinciriyle) ister.
+     * Claude yoksa ya da kapaliysa bos dizi.
+     *
+     * @param array<int,array{adaylar:list<array<string,mixed>>,kategoriler:list<array<string,mixed>>,onceki:list<string>}> $gruplar
+     * @param callable(string):void $gunluk
+     * @return array<int,array<int,array<string,mixed>>> grup no => sonuclar
+     */
+    public function topluOnIsle(array $gruplar, int $beklemeSn, callable $gunluk): array
+    {
+        if ($gruplar === [] || $this->claude === null || $this->claudeKapali) {
+            return [];
+        }
+
+        $istekler = [];
+
+        foreach ($gruplar as $no => $g) {
+            $istekler[(string) $no] = [
+                'yonerge' => self::YONERGE,
+                'istem'   => $this->topluIstemHazirla($g['adaylar'], $g['kategoriler'], $g['onceki']),
+                'sema'    => self::TOPLU_SEMA,
+                'token'   => 48000,
+            ];
+        }
+
+        try {
+            $yanitlar = $this->claude->topluGonder($istekler, $beklemeSn, $gunluk);
+        } catch (ClaudeErisimYokException $e) {
+            $this->claudeErisimSorunu = ['tur' => $e->tur, 'mesaj' => $e->getMessage()];
+            $this->claudeKapat('erişim yok (' . $e->getMessage() . ')');
+
+            return [];
+        }
+
+        $sonuc = [];
+
+        foreach ($yanitlar as $anahtar => $veri) {
+            $no = (int) $anahtar;
+
+            if (!is_array($veri)) {
+                continue;
+            }
+
+            $ayik = $this->sonuclariAyikla($veri, count($gruplar[$no]['adaylar']), 'ilgili');
+
+            if ($ayik === []) {
+                continue;
+            }
+
+            $sonuc[$no] = $ayik;
+            $this->claudeSayac++;
+        }
+
+        return $sonuc;
+    }
+
+    /** Claude onbellek/toplu olcumu; Claude yoksa null. */
+    public function claudeOnbellek(): ?array
+    {
+        return $this->claude?->onbellek();
+    }
+
+    /** Toplu on islemeden gelen grubun yanitlayan modeli (gunluk ve site icin). */
+    public function topluYanitlayanAyarla(): void
+    {
+        if ($this->claude !== null) {
+            $this->sonYanitlayan = $this->claude->model();
+        }
+    }
+
     /*
      * ON TARAMA (12.11.2026; site sahibi: "kritik haber olagan kuyrugu
      * beklemesin"). Toplanan adaylarin BASLIKLARI tek kucuk istekte
