@@ -180,7 +180,11 @@
         yukleniyor = true;
         gezinti.classList.add('nw-yukleniyor');
 
-        fetch(bag.href, { credentials: 'same-origin' })
+        // Akis sayfasinda yalnizca kartlar istenir (?parca=1, 26.11.2026; bkz. network.php); profil tam sayfa.
+        var adres = bag.href;
+        if (gezinti.closest('.nw-orta')) { adres += (adres.indexOf('?') < 0 ? '?' : '&') + 'parca=1'; }
+
+        fetch(adres, { credentials: 'same-origin' })
             .then(function (y) { if (!y.ok) { throw new Error('yanit ' + y.status); } return y.text(); })
             .then(function (html) {
                 var belge = new DOMParser().parseFromString(html, 'text/html');

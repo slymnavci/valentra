@@ -517,3 +517,23 @@ function nw_bildirim_html(): string
 
     return '<p class="yorum-sonuc yorum-sonuc-' . $tur . ' nw-bildirim" role="status">' . e(mb_substr($metin, 0, 300)) . '</p>';
 }
+
+/**
+ * Akışın altındaki sonraki sayfa bağlantısı (sayfa ve ?parca=1 yanıtı aynı bağlantıyı veriyor).
+ *
+ * @param array<string,mixed> $akis nw_akis sonucu
+ */
+function nw_akis_sonraki_html(array $akis, string $sekme, string $konu, string $dal, string $gazete, bool $akisGorunumu, bool $onemli): string
+{
+    if (($akis['atla'] ?? 0) > 0) {
+        return '<nav class="nw-sayfalar"><a href="' . e(nw_yol('', ['konu' => $konu, 'dal' => $dal, 'gazete' => $gazete, 'gorunum' => $akisGorunumu ? 'akis' : '',
+            'sec' => $onemli && $sekme === 'herkes' ? 'onemli' : '', 'atla' => $akis['atla']])) . '">Daha fazla haber →</a></nav>';
+    }
+
+    if (($akis['sonraki'] ?? 0) > 0) {
+        return '<nav class="nw-sayfalar"><a href="' . e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'dal' => $dal, 'gazete' => $gazete,
+            'once' => $akis['sonraki']])) . '">Daha eski haberler →</a></nav>';
+    }
+
+    return '';
+}

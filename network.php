@@ -45,7 +45,7 @@ topluluk_begeni_zamanla();
 
 // Ikinci parametre (14.11.2026, hiz): suresi dolan kopya hemen verilir, yenisi yanit gittikten sonra uretilir;
 // dakikada bir ziyaretci sayfanin uretilmesini (~0,5 sn) beklemez. Ana sayfa (index.php) ile ayni yol.
-sayfa_onbellek(['yol', 'sekme', 'once', 'ara', 'sira', 'konu', 'gazete', 'gorunum', 'dal', 'sec', 'atla'], true);
+sayfa_onbellek(['yol', 'sekme', 'once', 'ara', 'sira', 'konu', 'gazete', 'gorunum', 'dal', 'sec', 'atla', 'parca'], true);
 
 require_once __DIR__ . '/includes/seo.php';
 require_once __DIR__ . '/includes/network_gorunum.php';
@@ -165,6 +165,33 @@ switch ($sayfa) {
                 // en son yayinlandiysa o basta olacak"); gazete secilmemisse butun gazetelerin haberleri karisik.
                 $onemli ? 'onemli' : '', max(0, (int) ($_GET['atla'] ?? 0)));
         $baglam = nw_baglam($akis['ogeler']);
+        $akisGorunumu = !$gazeteGorunumu && $gazete === '' && $konu === '' && $sekme === 'herkes';
+        $buYol  = nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'dal' => $dal, 'gazete' => $gazete,
+            'gorunum' => $akisGorunumu ? 'akis' : '', 'sec' => $onemli && $sekme === 'herkes' ? 'onemli' : '', 'once' => $once]);
+        $sonrakiBag = static fn (): string => nw_akis_sonraki_html($akis, $sekme, $konu, $dal, $gazete, $akisGorunumu, $onemli);
+
+        /*
+         * PARCA (26.11.2026, site sahibi: "en altta yeni haberlerin yuklenmesi
+         * cok uzun suruyor"). Asagi indikce akis (assets/network-akis.js) bir
+         * sonraki sayfayi ?parca=1 ile istiyor: yalnizca kartlar ve sonraki
+         * sayfanin baglantisi. Onceden BUTUN sayfa uretiliyordu (ust bant,
+         * gazete menusu, ekonomi grafikleri, mac kutusu, populer konular) ve
+         * bunlarin hepsi atiliyordu; her "once" degeri ayri adres oldugu icin
+         * sayfa kopyasindan da gelmiyordu.
+         */
+        if (($_GET['parca'] ?? '') === '1') {
+            header('Content-Type: text/html; charset=utf-8');
+            header('X-Robots-Tag: noindex');
+            echo '<div class="nw-orta">';
+
+            foreach ($akis['ogeler'] as $oge) {
+                echo nw_kart_html($oge, $baglam, $buYol);
+            }
+
+            echo $sonrakiBag(), '</div>';
+            exit;
+        }
+
         $takipEdilenler = $uyeId !== null ? nw_takip_edilenler($uyeId) : [];
         $oneriler = !$kisilerAcik ? [] : array_slice(array_values(array_filter(
             nw_kisiler('', 'populer', 20),
@@ -173,9 +200,6 @@ switch ($sayfa) {
         $populerKonular = nw_populer_konular(10);
         $etkilesimHaberleri = nw_etkilesim_haberleri(6);
         $begenilenHaberler  = nw_begenilen_haberler(6);
-        $akisGorunumu = !$gazeteGorunumu && $gazete === '' && $konu === '' && $sekme === 'herkes';
-        $buYol  = nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'dal' => $dal, 'gazete' => $gazete,
-            'gorunum' => $akisGorunumu ? 'akis' : '', 'sec' => $onemli && $sekme === 'herkes' ? 'onemli' : '', 'once' => $once]);
         $sayfaBasligi = match (true) {
             $gazete !== '' => $gazeteler[$gazete]['ad'] . ' haberleri — V Network | Valentra',
             $dal !== ''    => NW_SPOR_DALLARI[$dal][0] . ' haberleri — V Network | Valentra',
@@ -712,13 +736,7 @@ $paylasimKutusu = static function (string $donus) use ($uye): void {
                 <?= nw_kart_html($oge, $baglam, $buYol) ?>
             <?php endforeach; ?>
 
-            <?php if (($akis['atla'] ?? 0) > 0): ?>
-                <nav class="nw-sayfalar"><a href="<?= e(nw_yol('', ['konu' => $konu, 'dal' => $dal, 'gazete' => $gazete, 'gorunum' => $akisGorunumu ? 'akis' : '',
-                    'sec' => $onemli && $sekme === 'herkes' ? 'onemli' : '', 'atla' => $akis['atla']])) ?>">Daha fazla haber →</a></nav>
-            <?php elseif ($akis['sonraki'] > 0): ?>
-                <nav class="nw-sayfalar"><a href="<?= e(nw_yol('', ['sekme' => $sekme === 'takip' ? 'takip' : '', 'konu' => $konu, 'dal' => $dal, 'gazete' => $gazete,
-                    'once' => $akis['sonraki']])) ?>">Daha eski haberler →</a></nav>
-            <?php endif; ?>
+            <?= $sonrakiBag() ?>
         </div>
         <?php /* Sag kutulardan haber sitesine gidene "Network'e don" seridi (14.11.2026; bkz. sayfa_ust.php):
                  donulecek adres tarayicida saklanir. */ ?>
